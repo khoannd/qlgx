@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<application value="GiaoXu" xmlns="urn:newversion-schema">
+  <version-info value="2.1.1.9" display="2.22" exename="GiaoXu.exe">
+    <info>
+      Phiên bản 2.22:
+      - Sửa lỗi mất nút "Cập nhật" trong màn hình nhập thông tin giáo xứ khi sử dụng màn hình độ phân giải thấp.
+	  - Sửa lỗi nhập dữ liệu từ chương trình MGC không thành công trong một số trường hợp.
+	  - Khi nhập dữ liệu từ chương trình MGC thì sẽ tạo sổ bí tích tự động sau khi nhập dữ liệu xong.
+    </info>
+    <downloadpath value="download.asp?opt=update">http://quanlygiaoxu.net/</downloadpath>
+    <dateupdate>2016.04.09</dateupdate>
+    <size>6.28</size>
+  </version-info>
+</application>

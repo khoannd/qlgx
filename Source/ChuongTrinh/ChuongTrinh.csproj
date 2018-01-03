@@ -1,0 +1,305 @@
+﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{38A3B654-5EAA-45E6-84B2-2B2B55D7B36A}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>GiaoXu</RootNamespace>
+    <AssemblyName>GiaoXu</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\BIN\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\BIN\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Janus.Data.v3, Version=3.0.0.0, Culture=neutral, PublicKeyToken=21d5517571b185bf, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="Janus.Windows.ButtonBar.v3, Version=3.0.0.0, Culture=neutral, PublicKeyToken=21d5517571b185bf, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Visual Studio 2005\Controls\Janus WinForms Controls v3\Janus.Windows.ButtonBar.v3.dll</HintPath>
+    </Reference>
+    <Reference Include="Janus.Windows.CalendarCombo.v3, Version=3.0.0.0, Culture=neutral, PublicKeyToken=21d5517571b185bf, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Visual Studio 2005\Controls\Janus WinForms Controls v3\Janus.Windows.CalendarCombo.v3.dll</HintPath>
+    </Reference>
+    <Reference Include="Janus.Windows.Common.v3, Version=3.0.0.0, Culture=neutral, PublicKeyToken=21d5517571b185bf, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="Janus.Windows.ExplorerBar.v3, Version=3.0.0.0, Culture=neutral, PublicKeyToken=21d5517571b185bf, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Visual Studio 2005\Controls\Janus WinForms Controls v3\Janus.Windows.ExplorerBar.v3.dll</HintPath>
+    </Reference>
+    <Reference Include="Janus.Windows.GridEX.v3, Version=3.0.0.0, Culture=neutral, PublicKeyToken=21d5517571b185bf, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Visual Studio 2005\Controls\Janus WinForms Controls v3\Janus.Windows.GridEX.v3.dll</HintPath>
+    </Reference>
+    <Reference Include="Janus.Windows.Ribbon.v3, Version=3.5.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Softs\Develops\Janus 3.5.0.4.0\Patched\Janus.Windows.Ribbon.v3.dll</HintPath>
+    </Reference>
+    <Reference Include="Janus.Windows.UI.v3, Version=3.0.0.0, Culture=neutral, PublicKeyToken=21d5517571b185bf, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Visual Studio 2005\Controls\Janus WinForms Controls v3\Janus.Windows.UI.v3.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Design" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="TabStrip, Version=2.0.2523.29272, Culture=neutral, processorArchitecture=MSIL" />
+    <Reference Include="vnConvert, Version=1.2.0.1, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\DbfontConvert\MainSolution\Bin\vnConvert.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="frmAbout.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmAbout.Designer.cs">
+      <DependentUpon>frmAbout.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmBiTichChiTiet.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmBiTichChiTiet.Designer.cs">
+      <DependentUpon>frmBiTichChiTiet.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmDotBiTichList.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmDotBiTichList.Designer.cs">
+      <DependentUpon>frmDotBiTichList.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmGiaDinhLuuTruList.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmGiaDinhLuuTruList.Designer.cs">
+      <DependentUpon>frmGiaDinhLuuTruList.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmGiaoDanLuuTruList.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmGiaoDanLuuTruList.Designer.cs">
+      <DependentUpon>frmGiaoDanLuuTruList.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmMergeData.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmMergeData.Designer.cs">
+      <DependentUpon>frmMergeData.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmCauTrucGiaoXu.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmCauTrucGiaoXu.Designer.cs">
+      <DependentUpon>frmCauTrucGiaoXu.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmImport.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmImport.Designer.cs">
+      <DependentUpon>frmImport.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmLinhMuc.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmLinhMuc.Designer.cs">
+      <DependentUpon>frmLinhMuc.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmGiaoDanList.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmGiaoDanList.Designer.cs">
+      <DependentUpon>frmGiaoDanList.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmGiaDinhList.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmGiaDinhList.Designer.cs">
+      <DependentUpon>frmGiaDinhList.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmGiaoHo.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmGiaoHo.Designer.cs">
+      <DependentUpon>frmGiaoHo.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmGiaoXu.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmGiaoXu.Designer.cs">
+      <DependentUpon>frmGiaoXu.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmMain.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmMain.Designer.cs">
+      <DependentUpon>frmMain.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmGiaDinh.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmGiaDinh.Designer.cs">
+      <DependentUpon>frmGiaDinh.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmThongKeChung.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmThongKeChung.Designer.cs">
+      <DependentUpon>frmThongKeChung.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmTimGiaoDan.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmTimGiaoDan.Designer.cs">
+      <DependentUpon>frmTimGiaoDan.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmUpdateProcess.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmUpdateProcess.Designer.cs">
+      <DependentUpon>frmUpdateProcess.cs</DependentUpon>
+    </Compile>
+    <Compile Include="IGxProcess.cs" />
+    <Compile Include="ImportData.cs" />
+    <Compile Include="MergeData.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="frmAbout.resx">
+      <DependentUpon>frmAbout.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmBiTichChiTiet.resx">
+      <DependentUpon>frmBiTichChiTiet.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmDotBiTichList.resx">
+      <DependentUpon>frmDotBiTichList.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmGiaDinhLuuTruList.resx">
+      <DependentUpon>frmGiaDinhLuuTruList.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmGiaoDanLuuTruList.resx">
+      <DependentUpon>frmGiaoDanLuuTruList.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmMergeData.resx">
+      <DependentUpon>frmMergeData.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmCauTrucGiaoXu.resx">
+      <SubType>Designer</SubType>
+      <DependentUpon>frmCauTrucGiaoXu.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmImport.resx">
+      <SubType>Designer</SubType>
+      <DependentUpon>frmImport.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmLinhMuc.resx">
+      <DependentUpon>frmLinhMuc.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmGiaoDanList.resx">
+      <DependentUpon>frmGiaoDanList.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmGiaDinhList.resx">
+      <SubType>Designer</SubType>
+      <DependentUpon>frmGiaDinhList.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmGiaoHo.resx">
+      <SubType>Designer</SubType>
+      <DependentUpon>frmGiaoHo.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmGiaoXu.resx">
+      <SubType>Designer</SubType>
+      <DependentUpon>frmGiaoXu.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmMain.resx">
+      <SubType>Designer</SubType>
+      <DependentUpon>frmMain.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmGiaDinh.resx">
+      <DependentUpon>frmGiaDinh.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmThongKeChung.resx">
+      <SubType>Designer</SubType>
+      <DependentUpon>frmThongKeChung.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmTimGiaoDan.resx">
+      <DependentUpon>frmTimGiaoDan.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmUpdateProcess.resx">
+      <DependentUpon>frmUpdateProcess.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\licenses.licx" />
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <Compile Include="TreeObject.cs" />
+    <Compile Include="UpdateProcess.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DBAccess\GXGlobal.csproj">
+      <Project>{9712914B-5500-4833-887B-2733F2B3FE97}</Project>
+      <Name>GXGlobal</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ExcelReport\ExcelReport.csproj">
+      <Project>{410FD24C-6FB4-4277-9D48-2415BF92D612}</Project>
+      <Name>ExcelReport</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\GXControl\GXControl.csproj">
+      <Project>{019A8FA6-9FB3-4D3E-9C62-FDB7F0FD4D0B}</Project>
+      <Name>GXControl</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

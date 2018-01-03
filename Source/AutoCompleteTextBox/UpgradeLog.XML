@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet type='text/xsl' href='_UpgradeReport_Files/UpgradeReport.xslt'?><UpgradeLog>
+<Properties><Property Name="Solution" Value="AutoCompleteTextBox Demo">
+</Property><Property Name="Solution File" Value="D:\QuanLyGiaoXu\AutoCompleteTextBox_demo\AutoCompleteTextBox\AutoCompleteTextBox Demo.sln">
+</Property><Property Name="Date" Value="2010年2月3日">
+</Property><Property Name="Time" Value="17:24">
+</Property></Properties><Event ErrorLevel="0" Project="AutoCompleteTextBox Demo" Source="AutoCompleteTextBox Demo.csproj" Description="Project converted successfully">
+</Event><Event ErrorLevel="3" Project="AutoCompleteTextBox Demo" Source="AutoCompleteTextBox Demo.csproj" Description="Converted">
+</Event><Event ErrorLevel="0" Project="Femiani.Forms.UI" Source="Femiani.Forms.UI\Femiani.Forms.UI.csproj" Description="Project converted successfully">
+</Event><Event ErrorLevel="3" Project="Femiani.Forms.UI" Source="Femiani.Forms.UI\Femiani.Forms.UI.csproj" Description="Converted">
+</Event><Event ErrorLevel="0" Project="" Source="AutoCompleteTextBox Demo.sln" Description="Solution converted successfully">
+</Event><Event ErrorLevel="3" Project="" Source="AutoCompleteTextBox Demo.sln" Description="Converted">
+</Event><Event ErrorLevel="0" Project="AutoCompleteTextBox Demo" Source="AutoCompleteTextBox Demo.csproj" Description="Scan complete: Upgrade not required for project files.">
+</Event><Event ErrorLevel="0" Project="Femiani.Forms.UI" Source="Femiani.Forms.UI\Femiani.Forms.UI.csproj" Description="Scan complete: Upgrade not required for project files.">
+</Event></UpgradeLog>
