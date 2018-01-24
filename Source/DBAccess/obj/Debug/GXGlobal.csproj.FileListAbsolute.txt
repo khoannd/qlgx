@@ -1,0 +1,7 @@
+C:\Users\huyen\qlgx\BIN\GXGlobal.dll
+C:\Users\huyen\qlgx\BIN\GXGlobal.pdb
+C:\Users\huyen\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csprojResolveAssemblyReference.cache
+C:\Users\huyen\qlgx\Source\DBAccess\obj\Debug\GxGlobal.Properties.Resources.resources
+C:\Users\huyen\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csproj.GenerateResource.Cache
+C:\Users\huyen\qlgx\Source\DBAccess\obj\Debug\GXGlobal.dll
+C:\Users\huyen\qlgx\Source\DBAccess\obj\Debug\GXGlobal.pdb

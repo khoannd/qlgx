@@ -93,6 +93,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ExportDataToExcel.cs" />
+    <Compile Include="Extract.cs" />
+    <Compile Include="frmAvatar.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmAvatar.Designer.cs">
+      <DependentUpon>frmAvatar.cs</DependentUpon>
+    </Compile>
     <Compile Include="frmChonGiaoDan.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -118,6 +125,12 @@
       <DependentUpon>frmXemGiaDinhGiaoDan.cs</DependentUpon>
     </Compile>
     <Compile Include="GenerateDotBiTichProcess.cs" />
+    <Compile Include="GxExtract.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GxExtract.Designer.cs">
+      <DependentUpon>GxExtract.cs</DependentUpon>
+    </Compile>
     <Compile Include="GxGiaDinhImportList.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -137,6 +150,18 @@
       <DependentUpon>GxDanToc.cs</DependentUpon>
     </Compile>
     <Compile Include="GxKiemTraThongBao.cs" />
+    <Compile Include="GxListAccout.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="GxListAccout.Designer.cs">
+      <DependentUpon>GxListAccout.cs</DependentUpon>
+    </Compile>
+    <Compile Include="GxPictureField.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GxPictureField.Designer.cs">
+      <DependentUpon>GxPictureField.cs</DependentUpon>
+    </Compile>
     <Compile Include="GxThongKeOnGoi.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -455,6 +480,9 @@
     <Service Include="{94E38DFF-614B-4cbd-B67C-F211BB35CE8B}" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="frmAvatar.resx">
+      <DependentUpon>frmAvatar.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="frmChonGiaoDan.resx">
       <DependentUpon>frmChonGiaoDan.cs</DependentUpon>
     </EmbeddedResource>
@@ -468,6 +496,9 @@
     <EmbeddedResource Include="frmXemGiaDinhGiaoDan.resx">
       <DependentUpon>frmXemGiaDinhGiaoDan.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="GxExtract.resx">
+      <DependentUpon>GxExtract.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="GxGiaDinhImportList.resx">
       <DependentUpon>GxGiaDinhImportList.cs</DependentUpon>
       <SubType>Designer</SubType>
@@ -478,6 +509,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="GxHonPhoiList.resx">
       <DependentUpon>GxHonPhoiList.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="GxPictureField.resx">
+      <DependentUpon>GxPictureField.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="GxThongKeOnGoi.resx">
       <DependentUpon>GxThongKeOnGoi.cs</DependentUpon>
@@ -640,6 +674,24 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\btn1.BackgroundImage.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\church.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\church1.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\avatar.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\DCFS-Visitation-Center.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\family-hope-cntr-icon.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\family-hope-cntr-icon1.png" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

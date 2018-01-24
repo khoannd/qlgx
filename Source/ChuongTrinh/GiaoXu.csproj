@@ -100,11 +100,41 @@
     <Reference Include="TabStrip, Version=2.0.2523.29272, Culture=neutral, processorArchitecture=MSIL" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AddNewFeature\frmExtract.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AddNewFeature\frmExtract.Designer.cs">
+      <DependentUpon>frmExtract.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmChangePass.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmChangePass.Designer.cs">
+      <DependentUpon>frmChangePass.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmAccoutList.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmAccoutList.Designer.cs">
+      <DependentUpon>frmAccoutList.cs</DependentUpon>
+    </Compile>
     <Compile Include="frmBieuDo.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="frmBieuDo.Designer.cs">
       <DependentUpon>frmBieuDo.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmLogin.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmLogin.Designer.cs">
+      <DependentUpon>frmLogin.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmResetPWord.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmResetPWord.Designer.cs">
+      <DependentUpon>frmResetPWord.cs</DependentUpon>
     </Compile>
     <Compile Include="frmShowUpdateInfo.cs">
       <SubType>Form</SubType>
@@ -273,6 +303,15 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="AddNewFeature\frmExtract.resx">
+      <DependentUpon>frmExtract.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmChangePass.resx">
+      <DependentUpon>frmChangePass.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmAccoutList.resx">
+      <DependentUpon>frmAccoutList.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="frmGopY.resx">
       <SubType>Designer</SubType>
       <DependentUpon>frmGopY.cs</DependentUpon>
@@ -284,6 +323,12 @@
     <EmbeddedResource Include="frmKiemTraGiaoDanList.resx">
       <DependentUpon>frmKiemTraGiaoDanList.cs</DependentUpon>
       <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmLogin.resx">
+      <DependentUpon>frmLogin.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmResetPWord.resx">
+      <DependentUpon>frmResetPWord.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="frmTimGiaoDan.resx">
       <DependentUpon>frmTimGiaoDan.cs</DependentUpon>
@@ -367,6 +412,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
+    <None Include="ClassDiagram1.cd" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -449,6 +495,7 @@
     <EmbeddedResource Include="Resources\giaoxu.mdb">
     </EmbeddedResource>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

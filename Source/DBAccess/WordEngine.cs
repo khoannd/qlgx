@@ -103,6 +103,7 @@ namespace GxGlobal
                 WordDoc = WordDocs.Open(ref _pathFile, ref fal, ref fal, ref fal, ref oMissing,
                                         ref oMissing, ref oMissing, ref oMissing, ref oMissing, ref oMissing, ref oMissing,
                                         ref fal, ref oMissing, ref oMissing, ref oMissing, ref oMissing);
+             
                 WordDoc.Activate();
                 //CurrentSelection = WordDoc.Application.Selection;
 
@@ -1143,12 +1144,12 @@ namespace GxGlobal
                 tmpRange.Find.MatchCase = false;
                 tmpRange.Find.Text = string.Concat("[", findWhat, "]");
                 tmpRange.Find.Replacement.Text = replaceWith.ToString();
-
+                
                 // Set the Find.Wrap property to continue (so it doesn't
                 // prompt the user or stop when it hits the end of
                 // the section)
                 tmpRange.Find.Wrap = Word.WdFindWrap.wdFindContinue;
-
+                
                 // Declare an object to pass as a parameter that sets
                 // the Replace parameter to the "wdReplaceAll" enum
                 object replaceAll = Word.WdReplace.wdReplaceAll;

@@ -26,6 +26,16 @@ namespace GiaoXu
                 MessageBox.Show("Xin vui lòng chọn một loại biểu đồ cần xem", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+            if (dtDateFrom.Value == DBNull.Value)
+            {
+                MessageBox.Show("Xin vui lòng chọn ngày bắt đầu", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            if (dtDateTo.Value == DBNull.Value)
+            {
+                MessageBox.Show("Xin vui lòng chọn ngày kết thúc", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
             int iDateFrom = int.Parse(Memory.GetIntOfDateFrom(dtDateFrom.DateInput.Day.Trim(), dtDateFrom.DateInput.Month.Trim(), dtDateFrom.DateInput.Year.Trim()));
             int iDateTo = int.Parse(Memory.GetIntOfDateTo(dtDateTo.DateInput.Day.Trim(), dtDateTo.DateInput.Month.Trim(), dtDateTo.DateInput.Year.Trim()));
@@ -34,6 +44,7 @@ namespace GiaoXu
                 Memory.ShowError("Từ ngày không thể lớn hơn đến ngày");
                 return;
             }
+            
             if (rdTongGiaoDan.Checked)
             {
                 exportTongGiaoDan(iDateFrom, iDateTo);
@@ -77,6 +88,7 @@ namespace GiaoXu
             int fromYear = (int)(iDateFrom / 10000);
             int toYear = (int)(iDateTo / 10000);
             DataTable tbl = new DataTable();
+            //lỗi
             for (int i = fromYear; i <= toYear; i++)
             {
                 tbl.Columns.Add(i.ToString(), typeof(int));

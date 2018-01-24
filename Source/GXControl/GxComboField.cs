@@ -17,6 +17,12 @@ namespace GxControl
             InitializeComponent();
             InitControl();
             combo.SelectedValueChanged += new EventHandler(combo_SelectedValueChanged);
+            //combo.VisibleChanged += Combo_VisibleChanged;
+        }
+
+        private void Combo_VisibleChanged(object sender, EventArgs e)
+        {
+            combo.SelectedIndex = -1;
         }
 
         public int SelectedIndex

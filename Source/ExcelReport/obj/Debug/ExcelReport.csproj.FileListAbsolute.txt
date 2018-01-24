@@ -1,0 +1,5 @@
+C:\Users\huyen\qlgx\BIN\ExcelReport.dll
+C:\Users\huyen\qlgx\BIN\ExcelReport.pdb
+C:\Users\huyen\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.csprojResolveAssemblyReference.cache
+C:\Users\huyen\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.dll
+C:\Users\huyen\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.pdb

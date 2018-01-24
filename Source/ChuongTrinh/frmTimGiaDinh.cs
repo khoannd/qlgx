@@ -38,5 +38,10 @@ namespace GiaoXu
             Dispatcher.ShowTab(frm);
             this.DialogResult = DialogResult.OK;
         }
+
+        private void gxCommand1_Load(object sender, EventArgs e)
+        {
+
+        }
     }
 }

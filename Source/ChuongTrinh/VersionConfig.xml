@@ -1,14 +1,24 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <application value="GiaoXu" xmlns="urn:newversion-schema">
-  <version-info value="2.1.1.9" display="2.22" exename="GiaoXu.exe">
+  <version-info value="2.1.2.0" display="3.0" exename="GiaoXu.exe">
     <info>
-      Phiên bản 2.22:
-      - Sửa lỗi mất nút "Cập nhật" trong màn hình nhập thông tin giáo xứ khi sử dụng màn hình độ phân giải thấp.
-	  - Sửa lỗi nhập dữ liệu từ chương trình MGC không thành công trong một số trường hợp.
-	  - Khi nhập dữ liệu từ chương trình MGC thì sẽ tạo sổ bí tích tự động sau khi nhập dữ liệu xong.
+      Phiên bản 3.0:
+     -Cập nhật tính năng hiển thị ảnh cho cá nhân và gia đình.
+     -Sửa lỗi đếm số thành viên trong gia đình (loại bỏ những thành viên đã có gia đình hoặc đã mất)
+     -Cập nhật thêm một số loại thống kê : 
+          + Danh sách chủ hộ
+          + Dan sách gia trưởng
+          + Danh sách hiền mẫu
+          + Danh sách cao niên
+          + Danh sách giới trẻ
+          + Danh sách thiếu nhi
+          + Danh sách gia đình theo từn tình trạng hôn phối
+     -Cập nhật tính năng : quản lý tài khoản người dùng,bảo mật
+     -Bổ xung cho chức năng "Giới thiệu hôn phối" => khi làm giấy giới thiệu hôn phối,đối tượng được giới thiệu sẽ trở thành một 
+     thành viên mới của giáo xứ
     </info>
     <downloadpath value="download.asp?opt=update">http://quanlygiaoxu.net/</downloadpath>
-    <dateupdate>2016.04.09</dateupdate>
+    <dateupdate>2018-01-23</dateupdate>
     <size>6.28</size>
   </version-info>
 </application>

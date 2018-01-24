@@ -1,0 +1,15 @@
+C:\Users\huyen\qlgx\BIN\Giaoly.dll.config
+C:\Users\huyen\qlgx\BIN\Giaoly.dll
+C:\Users\huyen\qlgx\BIN\Giaoly.pdb
+C:\Users\huyen\qlgx\Source\Giaoly\obj\Debug\GiaoLy.csprojResolveAssemblyReference.cache
+C:\Users\huyen\qlgx\Source\Giaoly\obj\Debug\GiaoLy.frmImportHocVien.resources
+C:\Users\huyen\qlgx\Source\Giaoly\obj\Debug\GiaoLy.frmKhoiGiaoLyList.resources
+C:\Users\huyen\qlgx\Source\Giaoly\obj\Debug\GiaoLy.frmChuyenLop.resources
+C:\Users\huyen\qlgx\Source\Giaoly\obj\Debug\GiaoLy.frmHocSinh.resources
+C:\Users\huyen\qlgx\Source\Giaoly\obj\Debug\GiaoLy.frmKhoiGiaoLy.resources
+C:\Users\huyen\qlgx\Source\Giaoly\obj\Debug\GiaoLy.frmLopGiaoLyList.resources
+C:\Users\huyen\qlgx\Source\Giaoly\obj\Debug\Giaoly.Properties.Resources.resources
+C:\Users\huyen\qlgx\Source\Giaoly\obj\Debug\GiaoLy.csproj.GenerateResource.Cache
+C:\Users\huyen\qlgx\Source\Giaoly\obj\Debug\Giaoly.dll.licenses
+C:\Users\huyen\qlgx\Source\Giaoly\obj\Debug\Giaoly.dll
+C:\Users\huyen\qlgx\Source\Giaoly\obj\Debug\Giaoly.pdb

@@ -1,0 +1,244 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="GiaoXu.frmAbout" Collapsed="true">
+    <Position X="6" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AgAAAAAAACAAABAAABCAIQAGCAACAAAAgAAAAQAAAAA=</HashCode>
+      <FileName>frmAbout.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmBieuDo" Collapsed="true">
+    <Position X="7.75" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>QABAEAIABGAAQIGCCACAIAACCCAAAAAEAAEJAAQABAA=</HashCode>
+      <FileName>frmBieuDo.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmBiTichChiTiet" Collapsed="true">
+    <Position X="9.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AKBAgAiAACBAABlDCACBGAACCAAQIACgQASgAAAzAAA=</HashCode>
+      <FileName>frmBiTichChiTiet.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmChuyenHoGiaDinh" Collapsed="true">
+    <Position X="3.5" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>gQAGAAEAAKIAQEAAAACAACAmAAAAEAAAAAAAIAAAAAA=</HashCode>
+      <FileName>frmChuyenHoGiaDinh.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmChuyenHoGiaoDan" Collapsed="true">
+    <Position X="0.5" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>gwAAAAEAACIAAEAAAACAAAACAEAgAAAAAAAAYAAAAAA=</HashCode>
+      <FileName>frmChuyenHoGiaoDan.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmDotBiTichList" Collapsed="true">
+    <Position X="11.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BABAAAAQACDAABECBACAEAACAAAQAAAgSAQiAAACAAI=</HashCode>
+      <FileName>frmDotBiTichList.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmGiaDinhList" Collapsed="true">
+    <Position X="3.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AABgCAgDACBAAIECAACQEACHGAAwYQAgcAAAAAACIQg=</HashCode>
+      <FileName>frmGiaDinhList.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmGiaDinhLuuTruList" Collapsed="true">
+    <Position X="13" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AABgCAgDACBAAAECAACQEACGGBAQIAAgUAAAAAACIQg=</HashCode>
+      <FileName>frmGiaDinhLuuTruList.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmGiaoDanList" Collapsed="true">
+    <Position X="0.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BQBgAAIDASBAAAECAACQEACDCAAwAQCgYAABUAACgYg=</HashCode>
+      <FileName>frmGiaoDanList.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmGiaoDanLuuTruList" Collapsed="true">
+    <Position X="14.75" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BABgAAIDASBAAAECAACQEACCCBAQAACgQAABUAACgYg=</HashCode>
+      <FileName>frmGiaoDanLuuTruList.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmGiaoHo" Collapsed="true">
+    <Position X="6" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AChACACE0C1AIBECICCAEAACSAEQCAAgRUAgAAACAAQ=</HashCode>
+      <FileName>frmGiaoHo.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmGiaoXu" Collapsed="true">
+    <Position X="7.75" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ABCAAAAAFCBAAFEQQAig0kACAAgQAIA4RIAAAAACGAA=</HashCode>
+      <FileName>frmGiaoXu.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmGopY" Collapsed="true">
+    <Position X="9.5" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAACgAABACAACAIAACCQEAAIAAAAAAAAAAAAA=</HashCode>
+      <FileName>frmGopY.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmImport" Collapsed="true">
+    <Position X="11.25" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>IKBgAAAQAmBEEBEJQACBYGICGAIAAAABAAAQCIAAAAA=</HashCode>
+      <FileName>frmImport.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmKiemTraGiaDinhList" Collapsed="true">
+    <Position X="13" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAJACAgCACBQAAECAACQMACHGIAwYQAgcgAIAAASIQA=</HashCode>
+      <FileName>frmKiemTraGiaDinhList.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmKiemTraGiaoDanList" Collapsed="true">
+    <Position X="14.75" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BABACQICAShCAAECQACQMAiDCBAwAQCgYAABUAAqgYA=</HashCode>
+      <FileName>frmKiemTraGiaoDanList.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmLinhMuc" Collapsed="true">
+    <Position X="6" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ACAAAACACCJAAAQAYACAAoACCAEAAIAIAACQAEAgAAA=</HashCode>
+      <FileName>frmLinhMuc.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmMain" Collapsed="true">
+    <Position X="7.75" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>IYQDCqpUQTAAUOQSgAiUihC6wkCCs01CIGiAAIJCEgA=</HashCode>
+      <FileName>frmMain.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmMergeData" Collapsed="true">
+    <Position X="9.5" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>KaBSMBASA2AEEBEIYCCRZGLCGYJAQECAEIBwAJQCAAE=</HashCode>
+      <FileName>frmMergeData.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmOption" Collapsed="true">
+    <Position X="11.25" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ACAoAKCCAGAgGEKKAACEICACDgBAAgwAAoAAICQAAgA=</HashCode>
+      <FileName>frmOption.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmProcess" Collapsed="true">
+    <Position X="13" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAQACCACBBEAACAAAACAEAAFEBAAEgAAABAAAA=</HashCode>
+      <FileName>frmProcess.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmRaoHonPhoiList" Collapsed="true">
+    <Position X="14.75" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AABAAAADACBAAAECAACIkBCHCCAwAQAgYBAAAgACCQA=</HashCode>
+      <FileName>frmRaoHonPhoiList.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmRestore" Collapsed="true">
+    <Position X="6" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAASABAAAABACBYAACCAAAAAAiAAACAJAIAQQ=</HashCode>
+      <FileName>frmRestore.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmShowUpdateInfo" Collapsed="true">
+    <Position X="7.75" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAIAACAgABEAAACAAMACAAAAAEAAQCAEAUAAAAA=</HashCode>
+      <FileName>frmShowUpdateInfo.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmTaoDotBiTich" Collapsed="true">
+    <Position X="9.5" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>RABAAAAAAGAAABgCBACAIAACCAAAAAAAAEAAAAAQAAA=</HashCode>
+      <FileName>frmTaoDotBiTich.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmThongKeChung" Collapsed="true">
+    <Position X="11.25" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAQBAACIAAAAAAACAAABCAAAAAAAAAAAAIAAABAA=</HashCode>
+      <FileName>frmThongKeChung.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmTimGiaDinh" Collapsed="true">
+    <Position X="13" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAASBAAAACAACQAABCCAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>frmTimGiaDinh.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.frmTimGiaoDan" Collapsed="true">
+    <Position X="14.75" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAASBAAAACAACQAAACCACAAAAAAAQAAAAAAAA=</HashCode>
+      <FileName>frmTimGiaoDan.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.GxCheckVersion" Collapsed="true">
+    <Position X="6" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAEQAAAAAECAAAQAMACAAAAAAAIACAACEADgQgAAAAI=</HashCode>
+      <FileName>GxCheckVersion.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.Program" Collapsed="true">
+    <Position X="7.75" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAEAAAAAAAAAAAAAEAAAAQAAAAAAABAAAAAA=</HashCode>
+      <FileName>Program.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GiaoXu.ReviewGiaDinhProcess" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="11.25" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>EAIAQBABIGCAABRAEAAAAAIQAAgCiAAAABAQBAAACEg=</HashCode>
+      <FileName>ReviewGiaDinhProcess.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="GiaoXu.ReviewGiaoDanProcess" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="13" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>EAgAQBiAIACAAAwAEgAIQAAABCwAiAEAIAAwBCAAiEg=</HashCode>
+      <FileName>ReviewGiaoDanProcess.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="GiaoXu.UpdateProcess" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="6" Y="5.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>EIABQBAAAAKAAASAWgAIAQUAAAEICAQAAAwABAAEBEA=</HashCode>
+      <FileName>UpdateProcess.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="GiaoXu.Properties.Resources" Collapsed="true">
+    <Position X="9.5" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAACAAAAAAAAAAAABEAAAAQAAAAAAAAAAAAAAAIA=</HashCode>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

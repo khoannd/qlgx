@@ -1,0 +1,7 @@
+C:\Users\huyen\qlgx\BIN\AutoUpdate.exe
+C:\Users\huyen\qlgx\BIN\AutoUpdate.pdb
+C:\Users\huyen\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.frmProcess.resources
+C:\Users\huyen\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.Properties.Resources.resources
+C:\Users\huyen\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.csproj.GenerateResource.Cache
+C:\Users\huyen\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.exe
+C:\Users\huyen\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.pdb
