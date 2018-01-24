@@ -100,12 +100,6 @@
     <Reference Include="TabStrip, Version=2.0.2523.29272, Culture=neutral, processorArchitecture=MSIL" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AddNewFeature\frmExtract.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="AddNewFeature\frmExtract.Designer.cs">
-      <DependentUpon>frmExtract.cs</DependentUpon>
-    </Compile>
     <Compile Include="frmChangePass.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -303,9 +297,6 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <EmbeddedResource Include="AddNewFeature\frmExtract.resx">
-      <DependentUpon>frmExtract.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="frmChangePass.resx">
       <DependentUpon>frmChangePass.cs</DependentUpon>
     </EmbeddedResource>
@@ -412,7 +403,6 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
-    <None Include="ClassDiagram1.cd" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
