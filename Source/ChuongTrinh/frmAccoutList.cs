@@ -81,7 +81,7 @@ namespace GiaoXu
         }
         public void EnableWhenRowIsZezo()
         {
-            if (gxListAccout1.DataSource == null) return;
+            //if (gxListAccout1.DataSource == null) return;
             if (gxListAccout1.RowCount == 0)
             {
                 gxAddEdit.DeleteButton.Enabled = false;
@@ -245,6 +245,8 @@ namespace GiaoXu
                         row1[AccountConst.Email] = txtEmail.Text;
                         row1[AccountConst.SoDienThoai] = txtPhone.Text;
                         row1[AccountConst.TenLoai] = cbPhanQuyen.combo.Items[cbPhanQuyen.SelectedIndex];
+                        row1[AccountConst.CauHoiGoiY] = txtQuestion.Text;
+                        row1[AccountConst.CauTraLoiGoiY] = txtAnswer.Text;
                         tbl1.Rows.Add(row1);
                         //tại đây
                         gxListAccout1.Row = gxListAccout1.RowCount - 1;
@@ -257,13 +259,6 @@ namespace GiaoXu
                     if (gxListAccout1.CurrentRow != null && (gxListAccout1.CurrentRow.DataRow as DataRowView) != null)
                     {
 
-                        DataRow row = (gxListAccout1.CurrentRow.DataRow as DataRowView).Row;
-
-                        row[AccountConst.HoTenNguoiDung] = txtFullName.Text;
-                        row[AccountConst.TenTaiKhoan] = txtUserName.Text;
-                        row[AccountConst.Email] = txtEmail.Text;
-                        row[AccountConst.SoDienThoai] = txtPhone.Text;
-                        row[AccountConst.TenLoai] = cbPhanQuyen.combo.Items[cbPhanQuyen.SelectedIndex];
                         if (txtPassword.Text != "")
                         {
                             Memory.ExecuteSqlCommand(SqlConstants.UPDATE_TAIKHOAN, new object[] { txtFullName.Text, Memory.EnCodePassword(txtPassword.Text), txtEmail.Text, txtPhone.Text, cbPhanQuyen.SelectedIndex, txtQuestion.Text, txtAnswer.Text, txtUserName.Text });
@@ -274,12 +269,13 @@ namespace GiaoXu
                         }
                         if (!Memory.ShowError())
                         {
-                            row.AcceptChanges();
                             MessageBox.Show("Tài khoản đã được cập nhật!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            gxListAccout1.LoadData();
                             return true;
+
                         }
                         MessageBox.Show("Cập nhật tài khoản không thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        row.RejectChanges();
+                        
                     }
                 }
             }
@@ -344,6 +340,7 @@ namespace GiaoXu
             this.AcceptButton = gxAddEdit.SelectButton;
 
         }
+
         private void changeSelection()
         {
             if (gxListAccout1.CurrentRow != null && (gxListAccout1.CurrentRow.DataRow as DataRowView) != null)
@@ -368,7 +365,6 @@ namespace GiaoXu
                 {
                     changeSelection();
                 }
-
             }
         }
         public void Clear()
@@ -428,6 +424,8 @@ namespace GiaoXu
                 txtAnswer.Text = "";
             }
         }
+
+      
     }
     public enum LoaiTaiKhoan
     {

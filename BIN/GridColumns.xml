@@ -153,7 +153,7 @@
   <tblColumnWidth>
     <key>frmAccoutList_gxListAccout1</key>
     <columns>HoTenNguoiDung,TenTaiKhoan,Email,SoDienThoai,TenLoai</columns>
-    <widths>233,233,233,175,117</widths>
+    <widths>232,233,233,176,117</widths>
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmAccoutList_gxGiaoHoList1</key>

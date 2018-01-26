@@ -305,6 +305,7 @@
             this.gxListAccout1.TabIndex = 0;
             this.gxListAccout1.VisualStyle = Janus.Windows.GridEX.VisualStyle.Office2003;
             this.gxListAccout1.WhereSQL = "";
+           
             // 
             // gxGroupBox3
             // 
