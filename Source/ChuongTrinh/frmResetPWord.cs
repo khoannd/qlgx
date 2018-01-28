@@ -21,9 +21,23 @@ namespace GiaoXu
             txtCofirmPassword.TextBox.PasswordChar = '*';
             pnQuestion.Visible = false;
             pnPassword.Visible = false;
+            txtUserName.TextBox.TextChanged += TextBox_TextChanged;
             txtQuestion.TextBox.ReadOnly = true;
         }
 
+        private void TextBox_TextChanged(object sender, EventArgs e)
+        {
+            if (txtQuestion.Visible)
+            {
+                pnQuestion.Visible = false;
+                pnPassword.Visible = false;
+                txtPassword.Text = "";
+                txtCofirmPassword.Text = "";
+                txtAnswer.Text = "";
+                txtQuestion.Text = "";
+            }
+        }
+        
         private void gxTextField1_Load(object sender, EventArgs e)
         {
 

@@ -34,6 +34,7 @@ namespace GiaoXu
             gxAddEdit.ReloadClick += GxAddEdit_ReloadClick;
             gxAddEdit.EditButton.Text = "&Sửa";
             Operation = GxOperation.NONE;
+            HelpKey = "Quan_ly_tai_khoan";
         }
         /// <summary>
         /// Event xử lý khi người dùng nhấn "Tải lại danh sách"
