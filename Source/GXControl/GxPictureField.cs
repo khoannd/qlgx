@@ -45,8 +45,9 @@ namespace GxControl
             {
 
                 FileInfo img = new FileInfo(openFileDialog1.FileName);
-                this.fileName = string.Concat(@"Images\", Path.GetFileName(openFileDialog1.FileName));
-
+                string name = string.Concat(img.Name.Substring(0, img.Name.IndexOf('.')),DateTime.Now.Ticks,img.Extension);
+                this.fileName = string.Concat(@"Images\",name);
+                
                
                 string dest = string.Concat(Memory.AppPath,fileName);
                 try//????
@@ -62,7 +63,7 @@ namespace GxControl
             }
         }
         /// <summary>
-        /// ahihih
+        /// 
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -70,8 +71,7 @@ namespace GxControl
         {
             frmAvatar avatar = new frmAvatar();
             avatar.Source = picAvatar.Image;
-            avatar.ShowDialog();
-            
+            avatar.ShowDialog();           
         }
 
         public Image ImagePicture

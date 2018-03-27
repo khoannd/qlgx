@@ -47,12 +47,13 @@ namespace GxControl
             this.txtYear.TabIndex = 4;
             this.txtYear.Text = "2009";
             this.txtYear.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
-            this.txtYear.MouseMove += new System.Windows.Forms.MouseEventHandler(this.txtYear_MouseMove);
-            this.txtYear.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtYear_KeyDown);
-            this.txtYear.Leave += new System.EventHandler(this.txtYear_Leave);
-            this.txtYear.KeyUp += new System.Windows.Forms.KeyEventHandler(this.txtYear_KeyUp);
-            this.txtYear.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.txtYear_KeyPress);
+            this.txtYear.TextChanged += new System.EventHandler(this.t);
             this.txtYear.Enter += new System.EventHandler(this.txtYear_Enter);
+            this.txtYear.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtYear_KeyDown);
+            this.txtYear.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.txtYear_KeyPress);
+            this.txtYear.KeyUp += new System.Windows.Forms.KeyEventHandler(this.txtYear_KeyUp);
+            this.txtYear.Leave += new System.EventHandler(this.txtYear_Leave);
+            this.txtYear.MouseMove += new System.Windows.Forms.MouseEventHandler(this.txtYear_MouseMove);
             this.txtYear.Validating += new System.ComponentModel.CancelEventHandler(this.txtYear_Validating);
             // 
             // txtMonth
@@ -65,11 +66,11 @@ namespace GxControl
             this.txtMonth.TabIndex = 3;
             this.txtMonth.Text = "05";
             this.txtMonth.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
-            this.txtMonth.MouseMove += new System.Windows.Forms.MouseEventHandler(this.txtMonth_MouseMove);
-            this.txtMonth.Leave += new System.EventHandler(this.txtMonth_Leave);
-            this.txtMonth.KeyUp += new System.Windows.Forms.KeyEventHandler(this.txtMonth_KeyUp);
-            this.txtMonth.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.txtMonth_KeyPress);
             this.txtMonth.Enter += new System.EventHandler(this.txtMonth_Enter);
+            this.txtMonth.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.txtMonth_KeyPress);
+            this.txtMonth.KeyUp += new System.Windows.Forms.KeyEventHandler(this.txtMonth_KeyUp);
+            this.txtMonth.Leave += new System.EventHandler(this.txtMonth_Leave);
+            this.txtMonth.MouseMove += new System.Windows.Forms.MouseEventHandler(this.txtMonth_MouseMove);
             this.txtMonth.Validating += new System.ComponentModel.CancelEventHandler(this.txtMonth_Validating);
             // 
             // txtDay
@@ -82,11 +83,11 @@ namespace GxControl
             this.txtDay.TabIndex = 2;
             this.txtDay.Text = "05";
             this.txtDay.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
-            this.txtDay.MouseMove += new System.Windows.Forms.MouseEventHandler(this.txtDay_MouseMove);
-            this.txtDay.Leave += new System.EventHandler(this.txtDay_Leave);
-            this.txtDay.KeyUp += new System.Windows.Forms.KeyEventHandler(this.txtDay_KeyUp);
-            this.txtDay.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.txtDay_KeyPress);
             this.txtDay.Enter += new System.EventHandler(this.txtDay_Enter);
+            this.txtDay.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.txtDay_KeyPress);
+            this.txtDay.KeyUp += new System.Windows.Forms.KeyEventHandler(this.txtDay_KeyUp);
+            this.txtDay.Leave += new System.EventHandler(this.txtDay_Leave);
+            this.txtDay.MouseMove += new System.Windows.Forms.MouseEventHandler(this.txtDay_MouseMove);
             this.txtDay.Validating += new System.ComponentModel.CancelEventHandler(this.txtDay_Validating);
             // 
             // label2
@@ -123,10 +124,10 @@ namespace GxControl
             this.dateTimePicker1.Name = "dateTimePicker1";
             this.dateTimePicker1.Size = new System.Drawing.Size(19, 20);
             this.dateTimePicker1.TabIndex = 8;
-            this.dateTimePicker1.MouseMove += new System.Windows.Forms.MouseEventHandler(this.dateTimePicker1_MouseMove);
             this.dateTimePicker1.ValueChanged += new System.EventHandler(this.dateTimePicker1_ValueChanged);
             this.dateTimePicker1.DropDown += new System.EventHandler(this.dateTimePicker1_DropDown);
             this.dateTimePicker1.Enter += new System.EventHandler(this.dateTimePicker1_Enter);
+            this.dateTimePicker1.MouseMove += new System.Windows.Forms.MouseEventHandler(this.dateTimePicker1_MouseMove);
             // 
             // GxDateInput
             // 
@@ -141,8 +142,8 @@ namespace GxControl
             this.Controls.Add(this.dateTimePicker1);
             this.Name = "GxDateInput";
             this.Size = new System.Drawing.Size(117, 23);
-            this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.GxDateInput_MouseMove);
             this.Leave += new System.EventHandler(this.GxDateInput_Leave);
+            this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.GxDateInput_MouseMove);
             this.ResumeLayout(false);
             this.PerformLayout();
 
