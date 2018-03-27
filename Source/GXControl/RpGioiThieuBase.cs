@@ -45,6 +45,9 @@ namespace GxControl
             {
                 word = new WordEngine();
                 word.CreateObject(outputPath, templatePath);
+                var time = DateTime.Now;
+                var date = string.Concat("ngày ", time.Day, " tháng ", time.Month, " năm ", time.Year);
+                word.Replace("NgayThangNam",date);
                 SetReplace(tblGiaoXuNhan, tblGiaoXu, tblGiaoDan);
                 word.End_Write();
                 System.Diagnostics.Process.Start(outputPath);

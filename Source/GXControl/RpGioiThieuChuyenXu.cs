@@ -26,8 +26,16 @@ namespace GxControl
                 word.Replace("FullNameLinhMuc", TenLinhMuc);
                 //Chu ho
                 var chuHoRow = GetChuHo(tblGiaoDan);
+                if(chuHoRow != null)
+                {
+                    word.Replace(GetName(ThanhVienGiaDinhConst.VaiTro, 0), "Chủ hộ");
+                }
+                else
+                {
+                    chuHoRow = tblGiaoDan.Rows[0];
+                }
                 word.Replace(RpChuyenGiaoXuConst.FullTenChuHo, string.Concat(chuHoRow[GiaoDanConst.TenThanh], " ", chuHoRow[GiaoDanConst.HoTen]));
-                word.Replace(GetName(ThanhVienGiaDinhConst.VaiTro, 0),"Chủ hộ");
+
                 SetTableFimaly(tblGiaoDan);
 
             }
@@ -59,6 +67,7 @@ namespace GxControl
                     word.Replace(GetName(GiaoDanConst.NgaySinh, i), dataRow[GiaoDanConst.NgaySinh]);
                     word.Replace(GetName(GiaoDanConst.NoiSinh, i), dataRow[GiaoDanConst.NoiSinh]);
                     word.Replace(GetName(ThanhVienGiaDinhConst.VaiTro, i), vaiTro[(int)dataRow[ThanhVienGiaDinhConst.VaiTro]]);
+                    
                 }
                 else
                 {
