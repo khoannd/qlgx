@@ -1,0 +1,235 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<application value="GiaoXu" xmlns="urn:autocomplete-schema">
+  <forms>
+    <frmMain>
+      <controls>
+      </controls>
+    </frmMain>
+    <frmGiaoXu xmlns="">
+      <txtDiaChi caption="Địa chỉ">
+        <item>HCM</item>
+        <item>Thôn Bình Thuận, xã Đức Minh, huyện Đăk Mil, tỉnh Đăk Nông</item>
+      </txtDiaChi>
+      <txtTenGiaoPhan caption="Tên giáo phận">
+        <item>VCS</item>
+        <item>Ban Mê Thuột</item>
+      </txtTenGiaoPhan>
+      <txtTenGiaoHat caption="Tên giáo hạt">
+        <item>King</item>
+        <item>Đăk Mil</item>
+      </txtTenGiaoHat>
+      <txtTenGiaoXu caption="Tên giáo xứ">
+        <item>Heo bech</item>
+        <item>Vinh An</item>
+      </txtTenGiaoXu>
+      <txtDienThoai caption="Điện thoại">
+        <item>0913439979</item>
+      </txtDienThoai>
+      <txtEmail caption="Email">
+        <item>tienngoc7365@gmail.com</item>
+      </txtEmail>
+      <txtHinh caption="Hình giáo xứ">
+        <item>gx.jpg</item>
+      </txtHinh>
+    </frmGiaoXu>
+    <frmGiaoDan xmlns="">
+      <txtLinhMucRuaToi caption="Người ban bí tích">
+        <item>Px Trần Xuân Phương</item>
+      </txtLinhMucRuaToi>
+      <txtNoiRuaToi caption="Nơi rửa tội">
+        <item>Vinh An</item>
+      </txtNoiRuaToi>
+      <txtNguoiDoDauRuaToi caption="Người đỡ đầu">
+        <item>Anna Nguyễn Thị Kim Dung</item>
+      </txtNguoiDoDauRuaToi>
+      <txtTenMe caption="Tên Mẹ">
+        <item>Maria Phạm Thị Đình</item>
+        <item>Anna Trần Nữ Hồng Khương</item>
+        <item>Matta Nguyễn Thị Kim Hồng</item>
+        <item>Maria Nguyễn Thị Hảo</item>
+        <item>Anna Nguyễn Thị Hạnh</item>
+        <item>Maria Nguyễn Thị Phúc</item>
+        <item>Têrêsa Cao Thị Hồng Vân</item>
+        <item>Maria Trần Thị Chung</item>
+        <item>Têrêxa Cao Thị Hồng Huyên</item>
+        <item>Maria Võ Thị Lệ</item>
+        <item>Maria Trần Thị Ngọc Điệp</item>
+        <item>Maria Trần Thị Phương</item>
+        <item>Anna Đinh Thị Mỹ</item>
+        <item>Maria Nguyễn Thị Thùy Yến</item>
+        <item>Têrêxa Hồ Vỹ Tuyến</item>
+        <item>Anna Nguyễn Thị Thế</item>
+        <item>Têrêxa Nguyễn Thị Bạch Tuyết</item>
+        <item>Anna Nguyễn Thị Thùy Dung</item>
+      </txtTenMe>
+      <txtTenCha caption="Tên Cha">
+        <item>Gb Nguyễn Văn Niệm</item>
+        <item>Đa Minh Nguyễn Duy Chất</item>
+        <item>Phaolô Nguyễn Đình Công</item>
+        <item>Phaolô Nguyễn Đình Hợp</item>
+        <item>Gb Nguyễn Hồng Danh</item>
+        <item>Phaolô Nguyễn Văn Lộc</item>
+        <item>Giuse Trần Ngọc Lịch</item>
+        <item>Phêrô Nguyễn Văn Cảnh</item>
+        <item>Antôn Nguyễn Văn Luyên</item>
+        <item>Stêphanô Nguyễn Đình Quốc Thuận</item>
+        <item>Giuse Nguyễn Ngọc Hiếu</item>
+        <item>Phêrô Nguyễn Minh Điểm</item>
+        <item>Giuse Trần Ngọc Phi</item>
+        <item>Giuse Trần Ngọc Phú</item>
+        <item>Antôn Đinh Bạt Nhã</item>
+        <item>Giuse Nguyễn Ngọc Hùng Chinh</item>
+        <item>Antôn Nguyễn Ngọc Hùng Phong</item>
+      </txtTenCha>
+      <txtHoTen caption="Họ tên">
+        <item>Nguyễn Phạm Thiên Nhân</item>
+        <item>Nguyễn Duy Chất</item>
+        <item>Trần Nữ Hồng Khương</item>
+        <item>Nguyễn Thanh Bình</item>
+        <item>Nguyễn Hồng Thiên</item>
+        <item>Nguyễn Thị Hảo</item>
+        <item>Nguyễn Thị Nhung</item>
+        <item>Nguyễn Thanh Lý</item>
+        <item>Nguyễn Thị Phúc</item>
+        <item>Nguyễn Văn Niệm</item>
+        <item>Nguyễn Duy Hạ</item>
+        <item>Nguyễn Công Đức</item>
+        <item>Nguyễn Thị Mỹ Công</item>
+        <item>Nguyễn Thị Kim Hồng</item>
+        <item>Đặng Nữ Lệ Quyên</item>
+        <item>Phạm T Thúy Hằng</item>
+        <item>Trần Thị Hồng Thắm</item>
+        <item>Nguyễn Thị Thùy Trâm</item>
+        <item>Ngô Thị Mỹ Kiều</item>
+        <item>Lê Thị Hường</item>
+        <item>Lang Văn Lý</item>
+        <item>Trần Ngọc Phú</item>
+        <item>Nguyễn Tùng Dương</item>
+        <item>Nguyễn Ngọc Hùng Tiến</item>
+        <item>Võ Đắc Tín</item>
+        <item>Hà Thanh Phước</item>
+        <item>Lại Thị Bích Liên</item>
+        <item>Nguyễn Trung Trực</item>
+        <item>Ngô Quang Thân</item>
+        <item>Nguyễn Nữ Quỳnh Trâm</item>
+        <item>Nguyễn Hồng Đức Oai</item>
+        <item>Nguyễn Trần Bảo Nhi</item>
+        <item>Nguyễn Nữ Quỳnh Mây</item>
+        <item>Nguyễn Thị Hòa</item>
+        <item>Nguyễn Ngọc Tiến</item>
+        <item>Nguyễn Ngọc Quốc</item>
+        <item>Nguyễn Thị Thảo Lan</item>
+        <item>Nguyễn Minh Kim Điền</item>
+        <item>Nguyễn Thị Hồng Diễm</item>
+        <item>Phạm Trọng Cang</item>
+        <item>Trần Ngọc Việt</item>
+        <item>Trần Ngọc Anh Minh</item>
+        <item>Trần Ngọc Thiên Minh</item>
+        <item>Đinh Bạt Thanh</item>
+        <item>Đinh Thế Hào</item>
+        <item>Nguyễn Ngọc Hiếu</item>
+        <item>Nguyễn Minh Điểm</item>
+        <item>Trần Thị Phương</item>
+        <item>Nguyễn Quang Huy</item>
+        <item>Nguyễn Hoàng Mai Duy</item>
+      </txtHoTen>
+      <txtNoiSinh caption="Nơi sinh">
+        <item>Đăk Nông</item>
+        <item>Trang Nứa</item>
+        <item>Xuân Thành</item>
+        <item>Nghệ An</item>
+        <item>Đak Nông</item>
+        <item>Đaknông</item>
+        <item>Đức Minh, Đăk Mil, Đăk Nông</item>
+      </txtNoiSinh>
+      <txtDiaChi caption="Địa chỉ">
+        <item>123 Đỗ Xuân Hợp</item>
+        <item>Xuân Sơn</item>
+      </txtDiaChi>
+      <gxTextCmnd caption="CMND">
+        <item>0010123123</item>
+        <item>3123123vasd</item>
+        <item>12312asd</item>
+        <item>123123asd</item>
+        <item>00120123</item>
+        <item>King123</item>
+      </gxTextCmnd>
+    </frmGiaoDan>
+    <frmGiaDinh xmlns="">
+      <txtMaGiaDinh caption="Mã gia đình">
+        <item>2813</item>
+        <item>2812</item>
+        <item>2747</item>
+        <item>2743</item>
+        <item>2746</item>
+        <item>2753</item>
+        <item>2750</item>
+        <item>2748</item>
+        <item>2749</item>
+        <item>3117</item>
+        <item>3</item>
+        <item>13</item>
+        <item>16</item>
+        <item>10</item>
+        <item>4</item>
+        <item>5</item>
+      </txtMaGiaDinh>
+      <txtNguoiChong caption="Người nam">
+        <item>Phêrô Nguyễn Văn Hòa</item>
+        <item>Phaolô Trần Bá Thành</item>
+        <item>Phaolô Nguyễn Đình Hợp</item>
+        <item>Phanxicô Xaviê Nguyễn Hữu Hoàn</item>
+        <item>Luca Nguyễn Thanh Nghĩa</item>
+        <item>Phaolô Nguyễn Duy Nhàn</item>
+        <item>Giuse Nguyễn Duy Dung</item>
+        <item>Anna Nguyễn Thị Hồng Tuyết</item>
+        <item>Giuse Nguyễn Ngọc Tiến</item>
+        <item>Phêrô Đặng Hồng Phúc</item>
+        <item>Gioan Baotixita Bùi Đình Vương</item>
+        <item>Antôn Nguyễn Ngọc Hùng Phong</item>
+        <item>Giuse Nguyễn Ngọc Hùng Chinh</item>
+        <item>Giuse Nguyễn Văn Tòng</item>
+      </txtNguoiChong>
+      <txtNguoiVo caption="Người nữ">
+        <item>Maria Nguyễn Thị Hương</item>
+        <item>Anna Đặng Thị Quang</item>
+        <item>Anna Hoàng Thị Lễ</item>
+        <item>Maria Nguyễn Thị Hảo</item>
+        <item>Maria Nguyễn Thị Thành</item>
+        <item>Anna Nguyễn Thị Xuân</item>
+        <item>Maria Nguyễn Thị Châu</item>
+        <item>Isave Nguyễn Thị Điều</item>
+        <item>Phêrô Nguyễn Trung Trực</item>
+        <item>Maria Nguyễn Thị Hòa</item>
+        <item>Têrêxa Trần Thị Mỹ Huệ</item>
+        <item>Maria Nguyễn Thị Kim Đào</item>
+        <item>Anna Nguyễn Thị Thùy Dung</item>
+        <item>Têrêxa Nguyễn Thị Bạch Tuyết</item>
+        <item>Anna Đinh Thị Tuyết</item>
+      </txtNguoiVo>
+      <txtDiaChi caption="Địa chỉ">
+        <item>123 Đỗ Xuân Hợp</item>
+        <item>Xuân Sơn</item>
+      </txtDiaChi>
+    </frmGiaDinh>
+    <frmTimGiaDinh xmlns="">
+      <txtTuKhoa caption="Tên giáo dân">
+        <item>King</item>
+      </txtTuKhoa>
+      <txtSoHoKhau caption="Số hộ khẩu">
+        <item>King123123</item>
+        <item>King12312</item>
+      </txtSoHoKhau>
+    </frmTimGiaDinh>
+    <frmTimGiaoDan xmlns="">
+      <txtTuKhoa caption="Tên giáo dân">
+        <item>King</item>
+        <item>Bình Thuận</item>
+      </txtTuKhoa>
+      <txtCmnd caption="CMND">
+        <item>00120123</item>
+        <item>king123</item>
+      </txtCmnd>
+    </frmTimGiaoDan>
+  </forms>
+</application>

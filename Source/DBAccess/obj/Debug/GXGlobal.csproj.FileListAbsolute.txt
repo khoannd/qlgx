@@ -1,0 +1,9 @@
+E:\qlgx_form_update\qlgx_update\qlgx\BIN\GXGlobal.dll
+E:\qlgx_form_update\qlgx_update\qlgx\BIN\GXGlobal.pdb
+E:\qlgx_form_update\qlgx_update\qlgx\Source\DBAccess\obj\Debug\GxGlobal.Properties.Resources.resources
+E:\qlgx_form_update\qlgx_update\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csproj.GenerateResource.cache
+E:\qlgx_form_update\qlgx_update\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csproj.CoreCompileInputs.cache
+E:\qlgx_form_update\qlgx_update\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csproj.CopyComplete
+E:\qlgx_form_update\qlgx_update\qlgx\Source\DBAccess\obj\Debug\GXGlobal.dll
+E:\qlgx_form_update\qlgx_update\qlgx\Source\DBAccess\obj\Debug\GXGlobal.pdb
+E:\qlgx_form_update\qlgx_update\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csprojAssemblyReference.cache

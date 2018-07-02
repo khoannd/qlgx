@@ -50,6 +50,11 @@ namespace GiaoXu
             {
                 where += " AND GiaoDan.MaGiaoHo=" + cbGiaoHo.MaGiaoHo.ToString();
             }
+            if(txtCmnd.Text != "")
+            {
+                where += "  AND CMND LIKE ? ";
+                args.Add("%" + txtCmnd.Text.Replace("\"", "") + "%");
+            }
             frmGiaoDanList frm = new frmGiaoDanList();
             //frm.LoadGiaoDanList(string.Format(SqlConstants.SELECT_GIAODAN_LIST_CO_GIAOHO, where), new object[] { "%" + txtTuKhoa.Text.Replace("\"", "") + "%" });
             frm.QueryString = string.Concat(SqlConstants.SELECT_GIAODAN_LIST_CO_GIAOHO, where);

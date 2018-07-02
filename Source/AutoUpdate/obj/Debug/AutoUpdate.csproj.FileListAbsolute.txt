@@ -1,0 +1,10 @@
+E:\qlgx_form_update\qlgx_update\qlgx\BIN\AutoUpdate.exe.config
+E:\qlgx_form_update\qlgx_update\qlgx\BIN\AutoUpdate.exe
+E:\qlgx_form_update\qlgx_update\qlgx\BIN\AutoUpdate.pdb
+E:\qlgx_form_update\qlgx_update\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.frmProcess.resources
+E:\qlgx_form_update\qlgx_update\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.Properties.Resources.resources
+E:\qlgx_form_update\qlgx_update\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.csproj.GenerateResource.cache
+E:\qlgx_form_update\qlgx_update\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.csproj.CoreCompileInputs.cache
+E:\qlgx_form_update\qlgx_update\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.csproj.CopyComplete
+E:\qlgx_form_update\qlgx_update\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.exe
+E:\qlgx_form_update\qlgx_update\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.pdb

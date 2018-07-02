@@ -1,0 +1,17 @@
+E:\qlgx_form_update\qlgx_update\qlgx\BIN\Giaoly.dll.config
+E:\qlgx_form_update\qlgx_update\qlgx\BIN\Giaoly.dll
+E:\qlgx_form_update\qlgx_update\qlgx\BIN\Giaoly.pdb
+E:\qlgx_form_update\qlgx_update\qlgx\Source\Giaoly\obj\Debug\GiaoLy.csprojAssemblyReference.cache
+E:\qlgx_form_update\qlgx_update\qlgx\Source\Giaoly\obj\Debug\GiaoLy.frmImportHocVien.resources
+E:\qlgx_form_update\qlgx_update\qlgx\Source\Giaoly\obj\Debug\GiaoLy.frmKhoiGiaoLyList.resources
+E:\qlgx_form_update\qlgx_update\qlgx\Source\Giaoly\obj\Debug\GiaoLy.frmChuyenLop.resources
+E:\qlgx_form_update\qlgx_update\qlgx\Source\Giaoly\obj\Debug\GiaoLy.frmHocSinh.resources
+E:\qlgx_form_update\qlgx_update\qlgx\Source\Giaoly\obj\Debug\GiaoLy.frmKhoiGiaoLy.resources
+E:\qlgx_form_update\qlgx_update\qlgx\Source\Giaoly\obj\Debug\GiaoLy.frmLopGiaoLyList.resources
+E:\qlgx_form_update\qlgx_update\qlgx\Source\Giaoly\obj\Debug\Giaoly.Properties.Resources.resources
+E:\qlgx_form_update\qlgx_update\qlgx\Source\Giaoly\obj\Debug\GiaoLy.csproj.GenerateResource.cache
+E:\qlgx_form_update\qlgx_update\qlgx\Source\Giaoly\obj\Debug\Giaoly.dll.licenses
+E:\qlgx_form_update\qlgx_update\qlgx\Source\Giaoly\obj\Debug\GiaoLy.csproj.CoreCompileInputs.cache
+E:\qlgx_form_update\qlgx_update\qlgx\Source\Giaoly\obj\Debug\GiaoLy.csproj.CopyComplete
+E:\qlgx_form_update\qlgx_update\qlgx\Source\Giaoly\obj\Debug\Giaoly.dll
+E:\qlgx_form_update\qlgx_update\qlgx\Source\Giaoly\obj\Debug\Giaoly.pdb
