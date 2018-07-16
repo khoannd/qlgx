@@ -1,7 +1,0 @@
-E:\qlgx_form_update\qlgx_update\qlgx\BIN\ExcelReport.dll
-E:\qlgx_form_update\qlgx_update\qlgx\BIN\ExcelReport.pdb
-E:\qlgx_form_update\qlgx_update\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.csproj.CoreCompileInputs.cache
-E:\qlgx_form_update\qlgx_update\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.csproj.CopyComplete
-E:\qlgx_form_update\qlgx_update\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.dll
-E:\qlgx_form_update\qlgx_update\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.pdb
-E:\qlgx_form_update\qlgx_update\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.csprojAssemblyReference.cache

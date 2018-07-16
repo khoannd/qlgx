@@ -173,6 +173,7 @@
         <item>10</item>
         <item>4</item>
         <item>5</item>
+        <item>14</item>
       </txtMaGiaDinh>
       <txtNguoiChong caption="Người nam">
         <item>Phêrô Nguyễn Văn Hòa</item>
@@ -189,6 +190,7 @@
         <item>Antôn Nguyễn Ngọc Hùng Phong</item>
         <item>Giuse Nguyễn Ngọc Hùng Chinh</item>
         <item>Giuse Nguyễn Văn Tòng</item>
+        <item>Gioan Baotixita Bùi Đình Quế</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Hương</item>
@@ -206,6 +208,7 @@
         <item>Anna Nguyễn Thị Thùy Dung</item>
         <item>Têrêxa Nguyễn Thị Bạch Tuyết</item>
         <item>Anna Đinh Thị Tuyết</item>
+        <item>Maria Nguyễn Thị Khương</item>
       </txtNguoiVo>
       <txtDiaChi caption="Địa chỉ">
         <item>123 Đỗ Xuân Hợp</item>
