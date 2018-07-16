@@ -9,18 +9,22 @@
       <txtDiaChi caption="Địa chỉ">
         <item>HCM</item>
         <item>Thôn Bình Thuận, xã Đức Minh, huyện Đăk Mil, tỉnh Đăk Nông</item>
+        <item>1232</item>
       </txtDiaChi>
       <txtTenGiaoPhan caption="Tên giáo phận">
         <item>VCS</item>
         <item>Ban Mê Thuột</item>
+        <item>King</item>
       </txtTenGiaoPhan>
       <txtTenGiaoHat caption="Tên giáo hạt">
         <item>King</item>
         <item>Đăk Mil</item>
+        <item>Batman</item>
       </txtTenGiaoHat>
       <txtTenGiaoXu caption="Tên giáo xứ">
         <item>Heo bech</item>
         <item>Vinh An</item>
+        <item>King</item>
       </txtTenGiaoXu>
       <txtDienThoai caption="Điện thoại">
         <item>0913439979</item>
