@@ -134,6 +134,12 @@
       <DependentUpon>frmXemGiaDinhGiaoDan.cs</DependentUpon>
     </Compile>
     <Compile Include="GenerateDotBiTichProcess.cs" />
+    <Compile Include="GxDienGiaDinh.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GxDienGiaDinh.Designer.cs">
+      <DependentUpon>GxDienGiaDinh.cs</DependentUpon>
+    </Compile>
     <Compile Include="GxExtract.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -464,6 +470,18 @@
     </Compile>
     <Compile Include="GxTenThanh.Designer.cs">
       <DependentUpon>GxTenThanh.cs</DependentUpon>
+    </Compile>
+    <Compile Include="GxTrinhDoHocVan.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GxTrinhDoHocVan.Designer.cs">
+      <DependentUpon>GxTrinhDoHocVan.cs</DependentUpon>
+    </Compile>
+    <Compile Include="GxTrinhDoVanHoa.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GxTrinhDoVanHoa.Designer.cs">
+      <DependentUpon>GxTrinhDoVanHoa.cs</DependentUpon>
     </Compile>
     <Compile Include="IGxProcess.cs" />
     <Compile Include="ImportDataMGC.cs" />

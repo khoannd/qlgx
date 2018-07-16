@@ -1,0 +1,8 @@
+D:\GoogleDriver\Demo_Git\finish\qlgx\BIN\AutoUpdate.exe.config
+D:\GoogleDriver\Demo_Git\finish\qlgx\BIN\AutoUpdate.exe
+D:\GoogleDriver\Demo_Git\finish\qlgx\BIN\AutoUpdate.pdb
+D:\GoogleDriver\Demo_Git\finish\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.frmProcess.resources
+D:\GoogleDriver\Demo_Git\finish\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.Properties.Resources.resources
+D:\GoogleDriver\Demo_Git\finish\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.csproj.GenerateResource.Cache
+D:\GoogleDriver\Demo_Git\finish\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.exe
+D:\GoogleDriver\Demo_Git\finish\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.pdb

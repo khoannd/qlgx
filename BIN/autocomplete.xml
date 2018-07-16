@@ -9,18 +9,26 @@
       <txtDiaChi caption="Địa chỉ">
         <item>HCM</item>
         <item>Thôn Bình Thuận, xã Đức Minh, huyện Đăk Mil, tỉnh Đăk Nông</item>
+        <item>Thủ Đức</item>
+        <item>td</item>
       </txtDiaChi>
       <txtTenGiaoPhan caption="Tên giáo phận">
         <item>VCS</item>
         <item>Ban Mê Thuột</item>
+        <item>Thủ Đức</item>
+        <item>td</item>
       </txtTenGiaoPhan>
       <txtTenGiaoHat caption="Tên giáo hạt">
         <item>King</item>
         <item>Đăk Mil</item>
+        <item>td</item>
+        <item>t</item>
       </txtTenGiaoHat>
       <txtTenGiaoXu caption="Tên giáo xứ">
         <item>Heo bech</item>
         <item>Vinh An</item>
+        <item>Thủ Đức</item>
+        <item>td</item>
       </txtTenGiaoXu>
       <txtDienThoai caption="Điện thoại">
         <item>0913439979</item>
@@ -132,6 +140,13 @@
         <item>Trần Thị Phương</item>
         <item>Nguyễn Quang Huy</item>
         <item>Nguyễn Hoàng Mai Duy</item>
+        <item>Ád</item>
+        <item>Dsd</item>
+        <item>Sadsad</item>
+        <item>Dsads</item>
+        <item>Dsadsad</item>
+        <item>Dsadsd</item>
+        <item>Dasds</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Đăk Nông</item>
@@ -154,6 +169,14 @@
         <item>00120123</item>
         <item>King123</item>
       </gxTextCmnd>
+      <cbChuyenMon caption="Trình độ chuyên môn">
+        <item>Kỹ sư</item>
+        <item>dsdsd</item>
+        <item>ky su</item>
+      </cbChuyenMon>
+      <txtGiaoXu caption="Giáo xứ">
+        <item>D</item>
+      </txtGiaoXu>
     </frmGiaoDan>
     <frmGiaDinh xmlns="">
       <txtMaGiaDinh caption="Mã gia đình">
@@ -174,6 +197,8 @@
         <item>4</item>
         <item>5</item>
         <item>14</item>
+        <item>1</item>
+        <item>2</item>
       </txtMaGiaDinh>
       <txtNguoiChong caption="Người nam">
         <item>Phêrô Nguyễn Văn Hòa</item>
@@ -191,6 +216,10 @@
         <item>Giuse Nguyễn Ngọc Hùng Chinh</item>
         <item>Giuse Nguyễn Văn Tòng</item>
         <item>Gioan Baotixita Bùi Đình Quế</item>
+        <item>Achillêô Ád</item>
+        <item>Dsad Sadsad</item>
+        <item>Ađalbertô Dsadsad</item>
+        <item>Ađalbertô Dasds</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Hương</item>
@@ -209,6 +238,9 @@
         <item>Têrêxa Nguyễn Thị Bạch Tuyết</item>
         <item>Anna Đinh Thị Tuyết</item>
         <item>Maria Nguyễn Thị Khương</item>
+        <item>Achillêô Dsd</item>
+        <item>Ađalbertô Dsads</item>
+        <item>Albertô Dsadsd</item>
       </txtNguoiVo>
       <txtDiaChi caption="Địa chỉ">
         <item>123 Đỗ Xuân Hợp</item>
