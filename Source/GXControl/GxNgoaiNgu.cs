@@ -13,8 +13,12 @@ namespace GxControl
         public GxNgoaiNgu()
         {
             InitializeComponent();
-            this.Combo.Items.Add("Tiếng anh");
-            this.Combo.Items.Add("Tiếng nhật");
+            this.Combo.Items.Add("Tiếng Anh");
+            this.Combo.Items.Add("Tiếng Pháp");
+            this.Combo.Items.Add("Tiếng Nga");
+            this.Combo.Items.Add("Tiếng Đức");
+            this.Combo.Items.Add("Tiếng Trung Quốc");
+            this.Combo.Items.Add("Tiếng Nhật");
             
         }
     }
