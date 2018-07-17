@@ -171,6 +171,12 @@
     <Compile Include="GxListAccout.Designer.cs">
       <DependentUpon>GxListAccout.cs</DependentUpon>
     </Compile>
+    <Compile Include="GxNgoaiNgu.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GxNgoaiNgu.Designer.cs">
+      <DependentUpon>GxNgoaiNgu.cs</DependentUpon>
+    </Compile>
     <Compile Include="GxPictureField.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -470,12 +476,6 @@
     </Compile>
     <Compile Include="GxTenThanh.Designer.cs">
       <DependentUpon>GxTenThanh.cs</DependentUpon>
-    </Compile>
-    <Compile Include="GxTrinhDoHocVan.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="GxTrinhDoHocVan.Designer.cs">
-      <DependentUpon>GxTrinhDoHocVan.cs</DependentUpon>
     </Compile>
     <Compile Include="GxTrinhDoVanHoa.cs">
       <SubType>UserControl</SubType>

@@ -148,6 +148,11 @@
         <item>Dsadsd</item>
         <item>Dasds</item>
         <item>Ds1</item>
+        <item>Dhsadg</item>
+        <item>Hsagdsad</item>
+        <item>Dsadsagdh</item>
+        <item>Dhasdv</item>
+        <item>Đasad</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Đăk Nông</item>
@@ -174,10 +179,19 @@
         <item>Kỹ sư</item>
         <item>dsdsd</item>
         <item>ky su</item>
+        <item>dsad</item>
+        <item>dsadsđsad</item>
+        <item>dhsadsjadsdwdsd</item>
       </cbChuyenMon>
       <txtGiaoXu caption="Giáo xứ">
         <item>D</item>
+        <item>Dsadsdasdawd</item>
+        <item>Dvhsavdsad</item>
+        <item>Dsadsadwdadsad</item>
       </txtGiaoXu>
+      <txtGiaoPhan caption="Giáo phận">
+        <item>Dsadsd</item>
+      </txtGiaoPhan>
     </frmGiaoDan>
     <frmGiaDinh xmlns="">
       <txtMaGiaDinh caption="Mã gia đình">
@@ -222,6 +236,8 @@
         <item>Ađalbertô Dsadsad</item>
         <item>Ađalbertô Dasds</item>
         <item>Albertô Ds1</item>
+        <item>Albertô Hsagdsad</item>
+        <item>Ađalbertô Dhasdv</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Hương</item>
@@ -268,5 +284,10 @@
         <item>king123</item>
       </txtCmnd>
     </frmTimGiaoDan>
+    <frmReportGioiThieuHP xmlns="">
+      <txtNguoi1 caption="Giới thiệu cho:">
+        <item>Agatha Dhsadg</item>
+      </txtNguoi1>
+    </frmReportGioiThieuHP>
   </forms>
 </application>

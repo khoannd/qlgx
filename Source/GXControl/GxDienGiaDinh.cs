@@ -13,7 +13,6 @@ namespace GxControl
         public GxDienGiaDinh()
         {
             InitializeComponent();
-            this.Combo.Items.Add("(Trống)");
             this.Combo.Items.Add("Nghèo");
             this.Combo.Items.Add("Cận nghèo");
             this.Combo.Items.Add("Neo đơn");

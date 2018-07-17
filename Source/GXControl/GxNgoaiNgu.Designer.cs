@@ -1,6 +1,6 @@
 ﻿namespace GxControl
 {
-    partial class GxTrinhDoHocVan
+    partial class GxNgoaiNgu
     {
         /// <summary> 
         /// Required designer variable.
