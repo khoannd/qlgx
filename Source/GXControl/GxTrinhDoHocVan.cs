@@ -13,6 +13,7 @@ namespace GxControl
         public GxTrinhDoHocVan()
         {
             InitializeComponent();
+            this.Combo.Items.Add("(Trống)");
             this.Combo.Items.Add("Trung cấp");
             this.Combo.Items.Add("Cao đẳng");
             this.Combo.Items.Add("Đại học");

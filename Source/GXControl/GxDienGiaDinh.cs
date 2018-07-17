@@ -13,10 +13,11 @@ namespace GxControl
         public GxDienGiaDinh()
         {
             InitializeComponent();
+            this.Combo.Items.Add("(Trống)");
             this.Combo.Items.Add("Nghèo");
-            this.Combo.Items.Add("Cận Nghèo");
-            this.Combo.Items.Add("Neo Đơn");
-            this.Combo.Items.Add("Khuyết Tật");
+            this.Combo.Items.Add("Cận nghèo");
+            this.Combo.Items.Add("Neo đơn");
+            this.Combo.Items.Add("Khuyết tật");
         }
     }
 }

@@ -13,6 +13,7 @@ namespace GxControl
         public GxTrinhDoVanHoa()
         {
             InitializeComponent();
+            this.Combo.Items.Add("(Trống)");
             for (int i = 0; i < 12; i++)
             {
                 this.Combo.Items.Add("Lớp " + (i + 1));
