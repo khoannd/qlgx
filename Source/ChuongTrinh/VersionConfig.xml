@@ -18,10 +18,11 @@
      thành viên mới của giáo xứ-->
       Phiên bản 3.1:
       -Chỉnh sửa "Trình độ văn hóa".
-      -Bổ sung "Trình độ chuyên môn", "Ngoại ngữ"
+      -Bổ sung "Trình độ chuyên môn", "Ngoại ngữ".
+      -Chỉnh sửa hôn phối giáo dân.
     </info>
     <downloadpath value="download.asp?opt=update">http://quanlygiaoxu.net/</downloadpath>
-    <dateupdate>2018-07-17</dateupdate>
+    <dateupdate>2018-07-19</dateupdate>
     <size>6.28</size>
   </version-info>
 </application>

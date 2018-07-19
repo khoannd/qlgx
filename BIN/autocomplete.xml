@@ -163,6 +163,7 @@
         <item>Aa</item>
         <item>E</item>
         <item>F</item>
+        <item>G</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Đăk Nông</item>
@@ -216,6 +217,7 @@
         <item>Aa Aa</item>
         <item>Achillêô B</item>
         <item>Đamasô D</item>
+        <item>Gabriel G</item>
       </txtNguoiChong>
       <txtTenHonPhoi caption="Đôi hôn phối">
         <item>A - B</item>
@@ -228,6 +230,7 @@
         <item>Aa</item>
         <item>D - E</item>
         <item>D - F</item>
+        <item>G - F</item>
       </txtTenHonPhoi>
     </frmGiaoDan>
     <frmGiaDinh xmlns="">
