@@ -184,6 +184,21 @@
         <item>Ba</item>
         <item>Ong</item>
         <item>Dhsagdsa</item>
+        <item>Cona</item>
+        <item>Voa</item>
+        <item>V O</item>
+        <item>Ddsad</item>
+        <item>C2</item>
+        <item>Cc3</item>
+        <item>C1</item>
+        <item>C11</item>
+        <item>Gddg</item>
+        <item>Hghgj</item>
+        <item>V</item>
+        <item>Dsda</item>
+        <item>Cha1</item>
+        <item>Dshadg</item>
+        <item>T</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Đăk Nông</item>
@@ -239,6 +254,15 @@
         <item>Melchor Xuyên Me</item>
         <item>Dsad Djsadgj</item>
         <item>Barnaba Ba</item>
+        <item>Callistô I Voa</item>
+        <item>Venceslaô V O</item>
+        <item>Ađalbertô Ddsad</item>
+        <item>Cc Cc3</item>
+        <item>C11 C11</item>
+        <item>Gdhs Hghgj</item>
+        <item>Venceslaô V</item>
+        <item>Das Dshadg</item>
+        <item>Têrêsa Bênêđicta T</item>
       </txtNguoiVo>
       <txtNguoiChong caption="Người nam">
         <item>Achillêô A</item>
@@ -253,6 +277,13 @@
         <item>Fiđêlê Sigmaringen F</item>
         <item>Ong Ong</item>
         <item>Fdhsads Dhsagdsa</item>
+        <item>Callistô I Cona</item>
+        <item>O Ong</item>
+        <item>Cc C2</item>
+        <item>C1 C1</item>
+        <item>Fshad Gddg</item>
+        <item>D Dsda</item>
+        <item>Callistô I Cha1</item>
       </txtNguoiChong>
       <txtTenHonPhoi caption="Đôi hôn phối">
         <item>A - B</item>
@@ -276,6 +307,15 @@
         <item>F - Djsadgj</item>
         <item>Ong - Ba</item>
         <item>Dhsagdsa - Ba</item>
+        <item>Cona - Voa</item>
+        <item>Ong - O</item>
+        <item>Cona - Ddsad</item>
+        <item>C2 - Cc3</item>
+        <item>C1 - C11</item>
+        <item>Gddg - Hghgj</item>
+        <item>Dsda - V</item>
+        <item>Cha1 - Dshadg</item>
+        <item>C - T</item>
       </txtTenHonPhoi>
     </frmGiaoDan>
     <frmGiaDinh xmlns="">
@@ -398,6 +438,7 @@
         <item>A - B22</item>
         <item>A - C</item>
         <item>C - D</item>
+        <item>Cona - Voa</item>
       </txtTenHonPhoi>
       <txtMaHonPhoi caption="Mã hôn phối">
         <item>1</item>
@@ -407,12 +448,14 @@
       <txtNguoiChong caption="Người nam">
         <item>Achillêô A</item>
         <item>Callistô I C</item>
+        <item>Callistô I Cona</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Barnaba B22</item>
         <item>Callistô I C</item>
         <item>Barnaba B</item>
         <item>D D</item>
+        <item>Callistô I Voa</item>
       </txtNguoiVo>
     </frmHonPhoi>
   </forms>

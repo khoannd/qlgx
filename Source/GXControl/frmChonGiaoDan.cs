@@ -65,7 +65,7 @@ namespace GxControl
         {
             if (!isSearching)
             {
-                if (txtHoTen.Text.Trim().Length >= 2)
+                if (txtHoTen.Text.Trim().Length >= 1)
                 {
                     isSearching = true;
                     lastSearch = txtHoTen.Text;
