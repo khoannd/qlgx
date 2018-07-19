@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -8,6 +9,9 @@ using System.Windows.Forms;
 
 namespace GxControl
 {
+    /// <summary>
+    /// 2018-07-18 Gia add start
+    /// </summary>
     public partial class GxDienGiaDinh : GxComboField
     {
         public GxDienGiaDinh()

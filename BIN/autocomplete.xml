@@ -74,6 +74,12 @@
         <item>Têrêsa Nguyễn Thị Nguyệt</item>
         <item>Anna Lê Thị Quận</item>
         <item>Barnaba B</item>
+        <item>Maria Bùi Thị Thanh Hồng</item>
+        <item>Anna Trương Thị Ái</item>
+        <item>Maria Trương Thị Thanh Lam</item>
+        <item>Maria Mađalêna Tống Thị Huyền Trâm</item>
+        <item>Anna Hoàng Thị Hòe</item>
+        <item>Maria Phạm Thị Hoa</item>
       </txtTenMe>
       <txtTenCha caption="Tên Cha">
         <item>Gb Nguyễn Văn Niệm</item>
@@ -95,6 +101,11 @@
         <item>Antôn Nguyễn Ngọc Hùng Phong</item>
         <item>Luca Phạm Trọng Phúc</item>
         <item>Achillêô A</item>
+        <item>Gioan Baotixita Bùi Phi Khánh</item>
+        <item>Gioan Baotixita Bùi Đình Sỹ</item>
+        <item>Gioan Baotixita Bùi Đình Phương</item>
+        <item>Giuse Hoàng Đức Minh</item>
+        <item>Gioan Baotixita Đặng Xuân Cầm</item>
       </txtTenCha>
       <txtHoTen caption="Họ tên">
         <item>Nguyễn Phạm Thiên Nhân</item>
@@ -199,6 +210,18 @@
         <item>Cha1</item>
         <item>Dshadg</item>
         <item>T</item>
+        <item>Bùi Hoàng Minh Nghĩa</item>
+        <item>Bùi Tấn Kha</item>
+        <item>Nguyễn Ngọc Hoàng Gia</item>
+        <item>Ngô Thị Hoaa</item>
+        <item>Nguyễn Hữu Hòa</item>
+        <item>Bùi Đình Hòa</item>
+        <item>Hoàng Đức Chính</item>
+        <item>Đặng Mai Hòa</item>
+        <item>Hoàng Đức Nhuận</item>
+        <item>Nguyễn Thị Hoa</item>
+        <item>Dashdgas</item>
+        <item>Đặng Thị Hòa</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Đăk Nông</item>
@@ -208,6 +231,7 @@
         <item>Đak Nông</item>
         <item>Đaknông</item>
         <item>Đức Minh, Đăk Mil, Đăk Nông</item>
+        <item>Đức Minh, Dakmil, Đaknông</item>
       </txtNoiSinh>
       <txtDiaChi caption="Địa chỉ">
         <item>123 Đỗ Xuân Hợp</item>
@@ -263,6 +287,14 @@
         <item>Venceslaô V</item>
         <item>Das Dshadg</item>
         <item>Têrêsa Bênêđicta T</item>
+        <item>Maria Nguyễn Phạm Thiên Mỹ</item>
+        <item>Maria Nguyễn Phạm Thiên Nhân</item>
+        <item>Têrexa Ngô Thị Hoa</item>
+        <item>Têrexa Ngô Thị Hoaa</item>
+        <item>Maria Đặng Mai Hòa</item>
+        <item>Maria Nguyễn Thị Hoa</item>
+        <item>Têrêxa Phạm Thị Yến Kha</item>
+        <item>Anna Đặng Thị Hòa</item>
       </txtNguoiVo>
       <txtNguoiChong caption="Người nam">
         <item>Achillêô A</item>
@@ -284,6 +316,17 @@
         <item>Fshad Gddg</item>
         <item>D Dsda</item>
         <item>Callistô I Cha1</item>
+        <item>Gioan Baotixita Bùi Hoàng Minh Nghĩa</item>
+        <item>Gioan Baotixita Bùi Tấn Kha</item>
+        <item>Antôn Maria Nguyễn Ngọc Hoàng Gia</item>
+        <item>Phaolô Trần Quốc Khoa</item>
+        <item>Phaolô Bường Bùi Đình Hòa</item>
+        <item>Giuse Bùi Đăng Khoa</item>
+        <item>Giuse Hoàng Đức Chính</item>
+        <item>Phêrô Nguyễn Minh Kim Điền</item>
+        <item>D Dashdgas</item>
+        <item>Dsadad Dsadsa</item>
+        <item>Dsadsad Dsad</item>
       </txtNguoiChong>
       <txtTenHonPhoi caption="Đôi hôn phối">
         <item>A - B</item>
@@ -316,6 +359,17 @@
         <item>Dsda - V</item>
         <item>Cha1 - Dshadg</item>
         <item>C - T</item>
+        <item>Nghĩa - Mỹ</item>
+        <item>Kha - Mỹ</item>
+        <item>Gia - Nhân</item>
+        <item>Khoa - Hoa</item>
+        <item>Hòa - Hoaa</item>
+        <item>Khoa - Nhân</item>
+        <item>Chính - Hòa</item>
+        <item>Điền - Hoa</item>
+        <item>Dashdgas - Hoa</item>
+        <item>Dsadsa - Kha</item>
+        <item>Dsad - Hòa</item>
       </txtTenHonPhoi>
     </frmGiaoDan>
     <frmGiaDinh xmlns="">
@@ -347,6 +401,8 @@
         <item>2739</item>
         <item>2740</item>
         <item>3351</item>
+        <item>2741</item>
+        <item>210</item>
       </txtMaGiaDinh>
       <txtNguoiChong caption="Người nam">
         <item>Phêrô Nguyễn Văn Hòa</item>
@@ -377,6 +433,9 @@
         <item>Gb Nguyễn Văn Niệm</item>
         <item>Phaolô Nguyễn Đình Công</item>
         <item>Đa Minh Nguyễn Duy Chất</item>
+        <item>Giuse Hoàng Đức Minh</item>
+        <item>Phêrô Nguyễn Minh Điểm</item>
+        <item>Giuse Nguyễn Ngọc Hiếu</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Hương</item>
@@ -403,6 +462,10 @@
         <item>Maria Phạm Thị Đình</item>
         <item>Matta Nguyễn Thị Kim Hồng</item>
         <item>Anna Trần Nữ Hồng Khương</item>
+        <item>Maria Nguyễn Thị Phúc</item>
+        <item>Anna Hoàng Thị Hòe</item>
+        <item>Anna Đinh Thị Mỹ</item>
+        <item>Maria Trần Thị Phương</item>
       </txtNguoiVo>
       <txtDiaChi caption="Địa chỉ">
         <item>123 Đỗ Xuân Hợp</item>
