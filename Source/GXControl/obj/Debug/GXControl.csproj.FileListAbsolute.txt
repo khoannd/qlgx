@@ -208,3 +208,4 @@ D:\GoogleDriver\Demo_Git\demov6\qlgx\Source\GXControl\obj\Debug\GXControl.csproj
 D:\GoogleDriver\Demo_Git\demov6\qlgx\Source\GXControl\obj\Debug\GXControl.dll.licenses
 D:\GoogleDriver\Demo_Git\demov6\qlgx\Source\GXControl\obj\Debug\GXControl.dll
 D:\GoogleDriver\Demo_Git\demov6\qlgx\Source\GXControl\obj\Debug\GXControl.pdb
+D:\GoogleDriver\Demo_Git\demov6\qlgx\Source\GXControl\obj\Debug\GxControl.Form1.resources

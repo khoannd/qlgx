@@ -43,12 +43,14 @@
     <frmGiaoDan xmlns="">
       <txtLinhMucRuaToi caption="Người ban bí tích">
         <item>Px Trần Xuân Phương</item>
+        <item>Phêrô Ngô Xuân Thinh</item>
       </txtLinhMucRuaToi>
       <txtNoiRuaToi caption="Nơi rửa tội">
         <item>Vinh An</item>
       </txtNoiRuaToi>
       <txtNguoiDoDauRuaToi caption="Người đỡ đầu">
         <item>Anna Nguyễn Thị Kim Dung</item>
+        <item>Maria Phạm Thị Điều</item>
       </txtNguoiDoDauRuaToi>
       <txtTenMe caption="Tên Mẹ">
         <item>Maria Phạm Thị Đình</item>
@@ -69,6 +71,9 @@
         <item>Anna Nguyễn Thị Thế</item>
         <item>Têrêxa Nguyễn Thị Bạch Tuyết</item>
         <item>Anna Nguyễn Thị Thùy Dung</item>
+        <item>Têrêsa Nguyễn Thị Nguyệt</item>
+        <item>Anna Lê Thị Quận</item>
+        <item>Barnaba B</item>
       </txtTenMe>
       <txtTenCha caption="Tên Cha">
         <item>Gb Nguyễn Văn Niệm</item>
@@ -88,6 +93,8 @@
         <item>Antôn Đinh Bạt Nhã</item>
         <item>Giuse Nguyễn Ngọc Hùng Chinh</item>
         <item>Antôn Nguyễn Ngọc Hùng Phong</item>
+        <item>Luca Phạm Trọng Phúc</item>
+        <item>Achillêô A</item>
       </txtTenCha>
       <txtHoTen caption="Họ tên">
         <item>Nguyễn Phạm Thiên Nhân</item>
@@ -164,6 +171,19 @@
         <item>E</item>
         <item>F</item>
         <item>G</item>
+        <item>Phạm Thị Đình</item>
+        <item>Nguyễn Phạm Thiên Mỹ</item>
+        <item>Dsadhsa</item>
+        <item>Dsahdfg</item>
+        <item>Dsad</item>
+        <item>Bo</item>
+        <item>Me</item>
+        <item>M</item>
+        <item>Dsadsa</item>
+        <item>Djsadgj</item>
+        <item>Ba</item>
+        <item>Ong</item>
+        <item>Dhsagdsa</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Đăk Nông</item>
@@ -211,6 +231,14 @@
         <item>Callistô I D</item>
         <item>Elisabeth Ann Senton E</item>
         <item>Fiđêlê Sigmaringen F</item>
+        <item>Dsad Dsadhsa</item>
+        <item>D D</item>
+        <item>Đamasô D</item>
+        <item>Marcellinô Me</item>
+        <item>Marcellinô M</item>
+        <item>Melchor Xuyên Me</item>
+        <item>Dsad Djsadgj</item>
+        <item>Barnaba Ba</item>
       </txtNguoiVo>
       <txtNguoiChong caption="Người nam">
         <item>Achillêô A</item>
@@ -218,6 +246,13 @@
         <item>Achillêô B</item>
         <item>Đamasô D</item>
         <item>Gabriel G</item>
+        <item>Gb Nguyễn Văn Niệm</item>
+        <item>Callistô I C</item>
+        <item>Barnaba Bo</item>
+        <item>Dsad Dsadsa</item>
+        <item>Fiđêlê Sigmaringen F</item>
+        <item>Ong Ong</item>
+        <item>Fdhsads Dhsagdsa</item>
       </txtNguoiChong>
       <txtTenHonPhoi caption="Đôi hôn phối">
         <item>A - B</item>
@@ -231,6 +266,16 @@
         <item>D - E</item>
         <item>D - F</item>
         <item>G - F</item>
+        <item>Niệm - Dsadhsa</item>
+        <item>Niệm - D</item>
+        <item>C - D</item>
+        <item>C - E</item>
+        <item>Bo - Me</item>
+        <item>Dsadsa - M</item>
+        <item>C - Me</item>
+        <item>F - Djsadgj</item>
+        <item>Ong - Ba</item>
+        <item>Dhsagdsa - Ba</item>
       </txtTenHonPhoi>
     </frmGiaoDan>
     <frmGiaDinh xmlns="">
@@ -254,6 +299,14 @@
         <item>14</item>
         <item>1</item>
         <item>2</item>
+        <item>2738</item>
+        <item>2742</item>
+        <item>2999</item>
+        <item>3006</item>
+        <item>1325</item>
+        <item>2739</item>
+        <item>2740</item>
+        <item>3351</item>
       </txtMaGiaDinh>
       <txtNguoiChong caption="Người nam">
         <item>Phêrô Nguyễn Văn Hòa</item>
@@ -280,6 +333,10 @@
         <item>Ađalbertô Dhasdv</item>
         <item>Ađalbertô Trần Nữ Hồng Khương</item>
         <item>Albertô Dghsfds</item>
+        <item>Achillêô A</item>
+        <item>Gb Nguyễn Văn Niệm</item>
+        <item>Phaolô Nguyễn Đình Công</item>
+        <item>Đa Minh Nguyễn Duy Chất</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Hương</item>
@@ -301,6 +358,11 @@
         <item>Achillêô Dsd</item>
         <item>Ađalbertô Dsads</item>
         <item>Albertô Dsadsd</item>
+        <item>Barnaba B</item>
+        <item>Anna Lê Thị Quận</item>
+        <item>Maria Phạm Thị Đình</item>
+        <item>Matta Nguyễn Thị Kim Hồng</item>
+        <item>Anna Trần Nữ Hồng Khương</item>
       </txtNguoiVo>
       <txtDiaChi caption="Địa chỉ">
         <item>123 Đỗ Xuân Hợp</item>
@@ -335,6 +397,7 @@
       <txtTenHonPhoi caption="Đôi hôn phối">
         <item>A - B22</item>
         <item>A - C</item>
+        <item>C - D</item>
       </txtTenHonPhoi>
       <txtMaHonPhoi caption="Mã hôn phối">
         <item>1</item>
@@ -343,11 +406,13 @@
       </txtMaHonPhoi>
       <txtNguoiChong caption="Người nam">
         <item>Achillêô A</item>
+        <item>Callistô I C</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Barnaba B22</item>
         <item>Callistô I C</item>
         <item>Barnaba B</item>
+        <item>D D</item>
       </txtNguoiVo>
     </frmHonPhoi>
   </forms>

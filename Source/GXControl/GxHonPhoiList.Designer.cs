@@ -34,7 +34,6 @@ namespace GxControl
             // GxHonPhoiList
             // 
             this.RowDoubleClick += new Janus.Windows.GridEX.RowActionEventHandler(this.GxHonPhoiList_RowDoubleClick);
-            this.FormattingRow += new Janus.Windows.GridEX.RowLoadEventHandler(this.GxHonPhoiList_FormattingRow);
             this.Controls.SetChildIndex(this.LblLoadData, 0);
             ((System.ComponentModel.ISupportInitialize)(this)).EndInit();
             this.ResumeLayout(false);
