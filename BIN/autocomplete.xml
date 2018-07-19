@@ -154,6 +154,15 @@
         <item>Dhasdv</item>
         <item>Đasad</item>
         <item>Dghsfds</item>
+        <item>A</item>
+        <item>B</item>
+        <item>B2</item>
+        <item>B22</item>
+        <item>C</item>
+        <item>D</item>
+        <item>Aa</item>
+        <item>E</item>
+        <item>F</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Đăk Nông</item>
@@ -193,6 +202,33 @@
       <txtGiaoPhan caption="Giáo phận">
         <item>Dsadsd</item>
       </txtGiaoPhan>
+      <txtNguoiVo caption="Người nữ">
+        <item>Barnaba B</item>
+        <item>Barnaba B2</item>
+        <item>Barnaba B22</item>
+        <item>Callistô I C</item>
+        <item>Callistô I D</item>
+        <item>Elisabeth Ann Senton E</item>
+        <item>Fiđêlê Sigmaringen F</item>
+      </txtNguoiVo>
+      <txtNguoiChong caption="Người nam">
+        <item>Achillêô A</item>
+        <item>Aa Aa</item>
+        <item>Achillêô B</item>
+        <item>Đamasô D</item>
+      </txtNguoiChong>
+      <txtTenHonPhoi caption="Đôi hôn phối">
+        <item>A - B</item>
+        <item>A - B2</item>
+        <item>A - B22</item>
+        <item>A - C</item>
+        <item>A - E</item>
+        <item>A</item>
+        <item>B</item>
+        <item>Aa</item>
+        <item>D - E</item>
+        <item>D - F</item>
+      </txtTenHonPhoi>
     </frmGiaoDan>
     <frmGiaDinh xmlns="">
       <txtMaGiaDinh caption="Mã gia đình">
@@ -292,5 +328,24 @@
         <item>Agatha Dhsadg</item>
       </txtNguoi1>
     </frmReportGioiThieuHP>
+    <frmHonPhoi xmlns="">
+      <txtTenHonPhoi caption="Đôi hôn phối">
+        <item>A - B22</item>
+        <item>A - C</item>
+      </txtTenHonPhoi>
+      <txtMaHonPhoi caption="Mã hôn phối">
+        <item>1</item>
+        <item>3</item>
+        <item>2</item>
+      </txtMaHonPhoi>
+      <txtNguoiChong caption="Người nam">
+        <item>Achillêô A</item>
+      </txtNguoiChong>
+      <txtNguoiVo caption="Người nữ">
+        <item>Barnaba B22</item>
+        <item>Callistô I C</item>
+        <item>Barnaba B</item>
+      </txtNguoiVo>
+    </frmHonPhoi>
   </forms>
 </application>
