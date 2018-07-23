@@ -80,6 +80,7 @@
         <item>Maria Mađalêna Tống Thị Huyền Trâm</item>
         <item>Anna Hoàng Thị Hòe</item>
         <item>Maria Phạm Thị Hoa</item>
+        <item>Têrêsa Trần Thị Thùy Minh</item>
       </txtTenMe>
       <txtTenCha caption="Tên Cha">
         <item>Gb Nguyễn Văn Niệm</item>
@@ -106,6 +107,7 @@
         <item>Gioan Baotixita Bùi Đình Phương</item>
         <item>Giuse Hoàng Đức Minh</item>
         <item>Gioan Baotixita Đặng Xuân Cầm</item>
+        <item>Phêrô Lê Thanh Minh</item>
       </txtTenCha>
       <txtHoTen caption="Họ tên">
         <item>Nguyễn Phạm Thiên Nhân</item>
@@ -222,6 +224,9 @@
         <item>Nguyễn Thị Hoa</item>
         <item>Dashdgas</item>
         <item>Đặng Thị Hòa</item>
+        <item>Đinh Thị Mỹ</item>
+        <item>Lê Trần Đăng Khoa</item>
+        <item>C-c</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Đăk Nông</item>
@@ -295,6 +300,9 @@
         <item>Maria Nguyễn Thị Hoa</item>
         <item>Têrêxa Phạm Thị Yến Kha</item>
         <item>Anna Đặng Thị Hòa</item>
+        <item>Anna Đinh Thị Mỹ</item>
+        <item>Luxia Nguyễn Thị Hồng Diễm</item>
+        <item>Maria Nguyễn Thị Nga</item>
       </txtNguoiVo>
       <txtNguoiChong caption="Người nam">
         <item>Achillêô A</item>
@@ -327,6 +335,10 @@
         <item>D Dashdgas</item>
         <item>Dsadad Dsadsa</item>
         <item>Dsadsad Dsad</item>
+        <item>Phêrô Nguyễn Minh Điểm</item>
+        <item>Phêrô Lê Trần Đăng Khoa</item>
+        <item>Phêrô Nguyễn Ngọc Quốc</item>
+        <item>C-c C-c</item>
       </txtNguoiChong>
       <txtTenHonPhoi caption="Đôi hôn phối">
         <item>A - B</item>
@@ -370,6 +382,11 @@
         <item>Dashdgas - Hoa</item>
         <item>Dsadsa - Kha</item>
         <item>Dsad - Hòa</item>
+        <item>Điểm - Mỹ</item>
+        <item>Khoa - Diễm</item>
+        <item>Quốc - Nga</item>
+        <item>A - D</item>
+        <item>C-c - B</item>
       </txtTenHonPhoi>
     </frmGiaoDan>
     <frmGiaDinh xmlns="">
@@ -521,5 +538,25 @@
         <item>Callistô I Voa</item>
       </txtNguoiVo>
     </frmHonPhoi>
+    <frmRaoHonPhoi xmlns="">
+      <txtNguoi1 caption="Người thứ nhất:">
+        <item>Giuse Lục Tuấn Vương</item>
+      </txtNguoi1>
+      <txtDoiRao caption="Đôi rao:">
+        <item>Vương - Linh</item>
+      </txtDoiRao>
+      <txtNguoi2 caption="Người thứ 2:">
+        <item>Anna Đinh Thị Linh</item>
+      </txtNguoi2>
+      <txtGiaoXu2 caption="Hiện ở giáo xứ:">
+        <item>Vinh An</item>
+      </txtGiaoXu2>
+      <txtGiaoPhan2 caption="Giáo phận:">
+        <item>Ban Mê Thuột</item>
+      </txtGiaoPhan2>
+      <txtGhiChu caption="Ghi chú:">
+        <item>Thứ 3, 12.06.2018, Tại Vinh An</item>
+      </txtGhiChu>
+    </frmRaoHonPhoi>
   </forms>
 </application>
