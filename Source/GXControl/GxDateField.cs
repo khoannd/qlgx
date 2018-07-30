@@ -93,7 +93,7 @@ namespace GxControl
         protected override void ChangeSize()
         {
             base.ChangeSize();
-            this.Height = 30;
+            if(this.Height < 25) this.Height = 25;
         }
     }
 }
