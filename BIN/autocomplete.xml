@@ -420,6 +420,8 @@
         <item>3351</item>
         <item>2741</item>
         <item>210</item>
+        <item>12</item>
+        <item>11</item>
       </txtMaGiaDinh>
       <txtNguoiChong caption="Người nam">
         <item>Phêrô Nguyễn Văn Hòa</item>
@@ -453,6 +455,8 @@
         <item>Giuse Hoàng Đức Minh</item>
         <item>Phêrô Nguyễn Minh Điểm</item>
         <item>Giuse Nguyễn Ngọc Hiếu</item>
+        <item>Giuse Vũ Đình Hường</item>
+        <item>Gioan Baotixita Vũ Đình Thông</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Hương</item>
@@ -483,6 +487,8 @@
         <item>Anna Hoàng Thị Hòe</item>
         <item>Anna Đinh Thị Mỹ</item>
         <item>Maria Trần Thị Phương</item>
+        <item>Maria Trần Thị Ngọc Sáng</item>
+        <item>Anna Hoàng Thị Long</item>
       </txtNguoiVo>
       <txtDiaChi caption="Địa chỉ">
         <item>123 Đỗ Xuân Hợp</item>

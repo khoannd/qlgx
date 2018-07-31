@@ -109,6 +109,12 @@
     <Compile Include="frmChonGiaoDan.Designer.cs">
       <DependentUpon>frmChonGiaoDan.cs</DependentUpon>
     </Compile>
+    <Compile Include="frmPrintOption.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmPrintOption.Designer.cs">
+      <DependentUpon>frmPrintOption.cs</DependentUpon>
+    </Compile>
     <Compile Include="frmReport.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -517,6 +523,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="frmChonGiaoDan.resx">
       <DependentUpon>frmChonGiaoDan.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmPrintOption.resx">
+      <DependentUpon>frmPrintOption.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="frmReport.resx">
       <DependentUpon>frmReport.cs</DependentUpon>

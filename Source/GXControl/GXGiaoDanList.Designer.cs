@@ -35,6 +35,7 @@ namespace GxControl
             // 
             this.AllowEdit = Janus.Windows.GridEX.InheritableBoolean.False;
             this.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.SelectionMode = Janus.Windows.GridEX.SelectionMode.MultipleSelection;
             this.Controls.SetChildIndex(this.LblLoadData, 0);
             ((System.ComponentModel.ISupportInitialize)(this)).EndInit();
             this.ResumeLayout(false);
