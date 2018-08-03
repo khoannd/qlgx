@@ -38,6 +38,7 @@
       </txtEmail>
       <txtHinh caption="Hình giáo xứ">
         <item>gx.jpg</item>
+        <item>avatar.jpg</item>
       </txtHinh>
     </frmGiaoXu>
     <frmGiaoDan xmlns="">
@@ -250,7 +251,7 @@
         <item>00120123</item>
         <item>King123</item>
       </gxTextCmnd>
-      <cbChuyenMon caption="Trình độ chuyên môn">
+      <cbChuyenMon caption="Trình độ ch.môn">
         <item>Kỹ sư</item>
         <item>dsdsd</item>
         <item>ky su</item>
@@ -564,5 +565,13 @@
         <item>Thứ 3, 12.06.2018, Tại Vinh An</item>
       </txtGhiChu>
     </frmRaoHonPhoi>
+    <frmOption xmlns="">
+      <txtFontSize caption="Cỡ chữ">
+        <item>8.25</item>
+      </txtFontSize>
+      <txtMaxBackup caption="Số lượng tập tin sao lưu tối đa được giữ lại trong thư mục backup">
+        <item>40</item>
+      </txtMaxBackup>
+    </frmOption>
   </forms>
 </application>
