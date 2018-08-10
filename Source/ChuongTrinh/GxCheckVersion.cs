@@ -415,10 +415,9 @@ namespace GiaoXu
                     //string path = Memory.GetTempPath(filePath);
                     fzip.CreateZip(backupPath + fileName, Memory.AppPath, false, "giaoxu.mdb");
                 }
-                //2018-08-03 Gia remove start
-                //reson: Sơn complete
-                //uploadFile(fileName, backupPath);
-                //2018-08-30 Gia remove end
+                //2018-08-08 Gia add start
+                uploadFile(fileName, backupPath);
+                //2018-08-08 Gia add end
             }
             catch (Exception ex)
             {
@@ -439,56 +438,45 @@ namespace GiaoXu
                 {
                     int maGiaoXuRieng;
                     bool check = int.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString(), out maGiaoXuRieng);
-                    if (!check)//Giao xu chưa có mã trên server
+                    if (!check)//Giao xu chưa có thông tin trên server
                     {
-                        //chưa có mã => tạo mã ,check mã trên server
-                        int checkID;
-                        do
+                        maGiaoXuRieng = (int)DateTime.Now.Ticks;
+                        Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOXURIENG, new object[] { maGiaoXuRieng });
+                        //insert data to server
+                        NameValueCollection GxInfo = new NameValueCollection();
+                        GxInfo.Add("ID", maGiaoXuRieng.ToString());
+                        GxInfo.Add("Name", tblGiaoXu.Rows[0][GiaoXuConst.TenGiaoXu].ToString());
+                        GxInfo.Add("Address", tblGiaoXu.Rows[0][GiaoXuConst.DiaChi].ToString());
+                        GxInfo.Add("Phone", tblGiaoXu.Rows[0][GiaoXuConst.DienThoai].ToString());
+                        GxInfo.Add("Email", tblGiaoXu.Rows[0][GiaoXuConst.Email].ToString());
+                        GxInfo.Add("Web", tblGiaoXu.Rows[0][GiaoXuConst.Website].ToString());
+                        GxInfo.Add("Img", tblGiaoXu.Rows[0][GiaoXuConst.Hinh].ToString());
+                        GxInfo.Add("Note", tblGiaoXu.Rows[0][GiaoXuConst.GhiChu].ToString());
+                        cl.UploadValues(GxConstants.SERVER + @"GiaoXuCL/insertGiaoXu", "post", GxInfo);
+                    }
+                    //check Last Upload
+                    DateTime lastUpload;
+                    check = DateTime.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.LastUpload].ToString(), out lastUpload);
+                    if (!check || DateTime.Now.Subtract(lastUpload).TotalDays > 1.0)//last > 1 ngày
+                    {
+                        // upload file backup to server//lay ve time upload server
+                        byte[] rs = cl.UploadFile(GxConstants.SERVER + @"BackupCL/uploadFile/" + maGiaoXuRieng, backupPath + fileName);
+                        string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
+                        check = DateTime.TryParse(temp,out lastUpload);
+                        if (check)
                         {
-                            Random ran = new Random();
-                            maGiaoXuRieng = ran.Next(1, 1000);
-                            //check server
-                            checkID = int.Parse(cl.DownloadString(GxConstants.SERVER + "GiaoXuCL/checkMaGiaoXuRieng/" + maGiaoXuRieng));
-                        } while (checkID == 1);
-                        if (checkID == 0)//mã hợp lệ
-                        {
-                            //chua co tren server=>update tren database local
-                            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOXURIENG, new object[] { maGiaoXuRieng });
-                            //insert data to server
-                            NameValueCollection GxInfo = new NameValueCollection();
-                            GxInfo.Add("ID", maGiaoXuRieng.ToString());
-                            GxInfo.Add("Name", tblGiaoXu.Rows[0][GiaoXuConst.TenGiaoXu].ToString());
-                            GxInfo.Add("Address", tblGiaoXu.Rows[0][GiaoXuConst.DiaChi].ToString());
-                            GxInfo.Add("Phone", tblGiaoXu.Rows[0][GiaoXuConst.DienThoai].ToString());
-                            GxInfo.Add("Email", tblGiaoXu.Rows[0][GiaoXuConst.Email].ToString());
-                            GxInfo.Add("Web", tblGiaoXu.Rows[0][GiaoXuConst.Website].ToString());
-                            GxInfo.Add("Img", tblGiaoXu.Rows[0][GiaoXuConst.Hinh].ToString());
-                            GxInfo.Add("Note", tblGiaoXu.Rows[0][GiaoXuConst.GhiChu].ToString());
-                            cl.UploadValues(GxConstants.SERVER + @"GiaoXuCL/insertGiaoXu", "post", GxInfo);
+                            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_LASTUPLOAD, new object[] { lastUpload });
                         }
+                    }
 
-                    }
-                    //upload file backup to server//lay ve duong dan file tren server
-                    byte[] rs = cl.UploadFile(GxConstants.SERVER + @"BackupCL/uploadFile/" + maGiaoXuRieng, backupPath + fileName);
-                    string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
-                    if (temp != "0" || temp != "-1")
-                    {
-                        //upload thanh cong=>luu thong tin file,temp luu duong dan file tren server
-                        NameValueCollection backupInfo = new NameValueCollection();
-                        backupInfo.Add("Name", fileName);
-                        backupInfo.Add("Path", temp);
-                        backupInfo.Add("IDGX", maGiaoXuRieng.ToString());
-                        byte[] rs1 = cl.UploadValues(GxConstants.SERVER + @"BackupCL/insertGiaoXuBackup", "post", backupInfo);
-                        string temp2 = System.Text.Encoding.UTF8.GetString(rs1, 0, rs1.Length);
-                    }
                 }
             }
             catch (Exception ex)
             {
 
-                MessageBox.Show(ex.Message,"Lỗi Exception uploadfileServer",MessageBoxButtons.OK,MessageBoxIcon.Error);
+                MessageBox.Show(ex.Message, "Lỗi Exception uploadfileServer", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-           
+
             //2018-08-01 Gia add end
         }
 
