@@ -403,8 +403,9 @@ namespace GiaoXu
                     //}
                 }
                 //
-                string fileName = "data" + System.DateTime.Now.ToString("yyyyMMddHH") + ".zip";
-
+                //2018-08-13 Gia modify start
+                string fileName = "data" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".zip";
+                //2018-08-13 Gia modify end
                 if (!Directory.Exists(backupPath))
                 {
                     Directory.CreateDirectory(backupPath);
