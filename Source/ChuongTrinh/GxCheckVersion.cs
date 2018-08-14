@@ -12,6 +12,7 @@ using GxGlobal;
 using GxControl;
 using System.Net;
 using System.Collections.Specialized;
+using Newtonsoft.Json;
 
 namespace GiaoXu
 {
@@ -425,6 +426,61 @@ namespace GiaoXu
                 MessageBox.Show(ex.Message, "Lỗi Exception createBackupData()", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+        //2018-08-14 Gia add start
+        private int insertInfoGXInFirstTime()
+        {
+            WebClient cl = new WebClient();
+            NameValueCollection infoGX = new NameValueCollection();
+            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOXU),GiaoXuConst.TableName, GiaoXuConst.MaGiaoXuRieng));
+            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOHAT),GiaoHatConst.TableName, GiaoHatConst.MaGiaoHatRieng));
+            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOPHAN),GiaoPhanConst.TableName, GiaoPhanConst.MaGiaoPhanRieng));
+            if (infoGX.Count>0)
+            {
+                byte[] rs = cl.UploadValues(GxConstants.SERVER + @"GiaoXuCL/insert", "post", infoGX);
+                string temp= System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
+                Dictionary<string, int> maID = JsonConvert.DeserializeObject<Dictionary<string, int>>(temp);
+                if (maID.Count>0)
+                {
+                    if (maID.ContainsKey("IDGP"))
+                    {
+                        Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOPHANRIENG, new object[] { maID["IDGP"] });
+                    }
+                    if (maID.ContainsKey("IDGH"))
+                    {
+                        Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOHATRIENG, new object[] { maID["IDGH"] });
+                    }
+                    if (maID.ContainsKey("IDGX"))
+                    {
+                        Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOXURIENG, new object[] { maID["IDGX"] });
+                    }
+                    return maID["IDGX"];
+                }
+            }
+            return -1;
+
+        }
+        private NameValueCollection createrInfoTable(DataTable tbl,string nameTable, string nameCotRieng)
+        {
+            if (tbl.Rows.Count > 0)
+            {
+                NameValueCollection temp = new NameValueCollection();
+                int maRieng;
+               
+                bool check = int.TryParse(tbl.Rows[0][nameCotRieng].ToString(), out maRieng);
+                if (!check)
+                {
+                    temp.Add(nameTable, "");
+                    foreach (DataColumn item in tbl.Columns)
+                    {
+                        temp.Add(nameTable + item.ColumnName, tbl.Rows[0][item].ToString());
+                    }
+                }
+                return temp;
+
+            }
+            return null;
+        }
+        //2018-08-14 Gia add end
         private void uploadFile(string fileName, string backupPath)
         {
 
@@ -441,19 +497,7 @@ namespace GiaoXu
                     bool check = int.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString(), out maGiaoXuRieng);
                     if (!check)//Giao xu chưa có thông tin trên server
                     {
-                        maGiaoXuRieng = (int)DateTime.Now.Ticks;
-                        Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOXURIENG, new object[] { maGiaoXuRieng });
-                        //insert data to server
-                        NameValueCollection GxInfo = new NameValueCollection();
-                        GxInfo.Add("ID", maGiaoXuRieng.ToString());
-                        GxInfo.Add("Name", tblGiaoXu.Rows[0][GiaoXuConst.TenGiaoXu].ToString());
-                        GxInfo.Add("Address", tblGiaoXu.Rows[0][GiaoXuConst.DiaChi].ToString());
-                        GxInfo.Add("Phone", tblGiaoXu.Rows[0][GiaoXuConst.DienThoai].ToString());
-                        GxInfo.Add("Email", tblGiaoXu.Rows[0][GiaoXuConst.Email].ToString());
-                        GxInfo.Add("Web", tblGiaoXu.Rows[0][GiaoXuConst.Website].ToString());
-                        GxInfo.Add("Img", tblGiaoXu.Rows[0][GiaoXuConst.Hinh].ToString());
-                        GxInfo.Add("Note", tblGiaoXu.Rows[0][GiaoXuConst.GhiChu].ToString());
-                        cl.UploadValues(GxConstants.SERVER + @"GiaoXuCL/insertGiaoXu", "post", GxInfo);
+                       maGiaoXuRieng= insertInfoGXInFirstTime();
                     }
                     //check Last Upload
                     DateTime lastUpload;
@@ -463,7 +507,7 @@ namespace GiaoXu
                         // upload file backup to server//lay ve time upload server
                         byte[] rs = cl.UploadFile(GxConstants.SERVER + @"BackupCL/uploadFile/" + maGiaoXuRieng, backupPath + fileName);
                         string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
-                        check = DateTime.TryParse(temp,out lastUpload);
+                        check = DateTime.TryParse(temp, out lastUpload);
                         if (check)
                         {
                             Memory.ExecuteSqlCommand(SqlConstants.UPDATE_LASTUPLOAD, new object[] { lastUpload });
