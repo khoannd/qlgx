@@ -13,6 +13,7 @@ using GxControl;
 using System.Net;
 using System.Collections.Specialized;
 using Newtonsoft.Json;
+using System.Configuration;
 
 namespace GiaoXu
 {
@@ -431,15 +432,15 @@ namespace GiaoXu
         {
             WebClient cl = new WebClient();
             NameValueCollection infoGX = new NameValueCollection();
-            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOXU),GiaoXuConst.TableName, GiaoXuConst.MaGiaoXuRieng));
-            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOHAT),GiaoHatConst.TableName, GiaoHatConst.MaGiaoHatRieng));
-            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOPHAN),GiaoPhanConst.TableName, GiaoPhanConst.MaGiaoPhanRieng));
-            if (infoGX.Count>0)
+            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOXU), GiaoXuConst.TableName, GiaoXuConst.MaGiaoXuRieng));
+            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOHAT), GiaoHatConst.TableName, GiaoHatConst.MaGiaoHatRieng));
+            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOPHAN), GiaoPhanConst.TableName, GiaoPhanConst.MaGiaoPhanRieng));
+            if (infoGX.Count > 0)
             {
-                byte[] rs = cl.UploadValues(GxConstants.SERVER + @"GiaoXuCL/insert", "post", infoGX);
-                string temp= System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
+                byte[] rs = cl.UploadValues(ConfigurationManager.AppSettings["SERVER"] + @"GiaoXuCL/insert", "post", infoGX);
+                string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
                 Dictionary<string, int> maID = JsonConvert.DeserializeObject<Dictionary<string, int>>(temp);
-                if (maID.Count>0)
+                if (maID.Count > 0)
                 {
                     if (maID.ContainsKey("IDGP"))
                     {
@@ -459,13 +460,13 @@ namespace GiaoXu
             return -1;
 
         }
-        private NameValueCollection createrInfoTable(DataTable tbl,string nameTable, string nameCotRieng)
+        private NameValueCollection createrInfoTable(DataTable tbl, string nameTable, string nameCotRieng)
         {
-            if (tbl.Rows.Count > 0)
+            if (tbl!=null&&tbl.Rows.Count > 0)
             {
                 NameValueCollection temp = new NameValueCollection();
                 int maRieng;
-               
+
                 bool check = int.TryParse(tbl.Rows[0][nameCotRieng].ToString(), out maRieng);
                 if (!check)
                 {
@@ -491,13 +492,13 @@ namespace GiaoXu
                 //upload to server
                 //get thong tin giaoxu
                 DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
-                if (tblGiaoXu.Rows.Count > 0)
+                if (tblGiaoXu!=null&& tblGiaoXu.Rows.Count > 0)
                 {
                     int maGiaoXuRieng;
                     bool check = int.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString(), out maGiaoXuRieng);
                     if (!check)//Giao xu chưa có thông tin trên server
                     {
-                       maGiaoXuRieng= insertInfoGXInFirstTime();
+                        maGiaoXuRieng = insertInfoGXInFirstTime();
                     }
                     //check Last Upload
                     DateTime lastUpload;
@@ -505,7 +506,7 @@ namespace GiaoXu
                     if (!check || DateTime.Now.Subtract(lastUpload).TotalDays > 1.0)//last > 1 ngày
                     {
                         // upload file backup to server//lay ve time upload server
-                        byte[] rs = cl.UploadFile(GxConstants.SERVER + @"BackupCL/uploadFile/" + maGiaoXuRieng, backupPath + fileName);
+                        byte[] rs = cl.UploadFile(ConfigurationManager.AppSettings["SERVER"]+ @"BackupCL/uploadFile/" + maGiaoXuRieng, backupPath + fileName);
                         string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
                         check = DateTime.TryParse(temp, out lastUpload);
                         if (check)
