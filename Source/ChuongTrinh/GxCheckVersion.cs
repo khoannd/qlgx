@@ -10,10 +10,10 @@ using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 using System.Data;
 using GxGlobal;
 using GxControl;
+using System.Configuration;
 using System.Net;
 using System.Collections.Specialized;
 using Newtonsoft.Json;
-using System.Configuration;
 
 namespace GiaoXu
 {
@@ -61,7 +61,7 @@ namespace GiaoXu
             finally
             {
                 if (OnFinished != null) OnFinished(this, EventArgs.Empty);
-            }
+            }            
         }
 
         #region for check version and update
@@ -196,7 +196,7 @@ namespace GiaoXu
             string version = Memory.GetConfig(GxConstants.CF_CURRENT_DB_VERSION);
             if (version != "")
             {
-
+                
                 if (version == "2.0.0.0")
                 {
                     if (!isDbVersion2())
@@ -404,10 +404,10 @@ namespace GiaoXu
                     //    }
                     //}
                 }
-                //
                 //2018-08-13 Gia modify start
                 string fileName = "data" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".zip";
                 //2018-08-13 Gia modify end
+
                 if (!Directory.Exists(backupPath))
                 {
                     Directory.CreateDirectory(backupPath);
@@ -462,7 +462,7 @@ namespace GiaoXu
         }
         private NameValueCollection createrInfoTable(DataTable tbl, string nameTable, string nameCotRieng)
         {
-            if (tbl!=null&&tbl.Rows.Count > 0)
+            if (tbl != null && tbl.Rows.Count > 0)
             {
                 NameValueCollection temp = new NameValueCollection();
                 int maRieng;
@@ -492,7 +492,7 @@ namespace GiaoXu
                 //upload to server
                 //get thong tin giaoxu
                 DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
-                if (tblGiaoXu!=null&& tblGiaoXu.Rows.Count > 0)
+                if (tblGiaoXu != null && tblGiaoXu.Rows.Count > 0)
                 {
                     int maGiaoXuRieng;
                     bool check = int.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString(), out maGiaoXuRieng);
@@ -506,7 +506,7 @@ namespace GiaoXu
                     if (!check || DateTime.Now.Subtract(lastUpload).TotalDays > 1.0)//last > 1 ngày
                     {
                         // upload file backup to server//lay ve time upload server
-                        byte[] rs = cl.UploadFile(ConfigurationManager.AppSettings["SERVER"]+ @"BackupCL/uploadFile/" + maGiaoXuRieng, backupPath + fileName);
+                        byte[] rs = cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + @"BackupCL/uploadFile/" + maGiaoXuRieng, backupPath + fileName);
                         string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
                         check = DateTime.TryParse(temp, out lastUpload);
                         if (check)
