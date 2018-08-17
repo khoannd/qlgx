@@ -18,6 +18,7 @@
         <item>Gotham</item>
         <item>hcm city</item>
         <item>11E Phạm Thế Hiển, phường 3, Quận 8, Hồ Chí Minh</item>
+        <item>Xã Tân An, Huyện Dakpơ, Tỉnh Gialai</item>
       </txtDiaChi>
       <txtTenGiaoPhan caption="Tên giáo phận">
         <item>VCS</item>
@@ -28,6 +29,7 @@
         <item>Tổng Giáo Phận Sài Gòn</item>
         <item>King</item>
         <item>Hcm</item>
+        <item>Kon Tum</item>
       </txtTenGiaoPhan>
       <txtTenGiaoHat caption="Tên giáo hạt">
         <item>King</item>
@@ -40,6 +42,7 @@
         <item>Gotham</item>
         <item>Thu duc</item>
         <item>Q9</item>
+        <item>Pleiku</item>
       </txtTenGiaoHat>
       <txtTenGiaoXu caption="Tên giáo xứ">
         <item>Heo bech</item>
@@ -53,6 +56,7 @@
         <item>Batcave</item>
         <item>Gotham</item>
         <item>Mông Triệu (Hạt Bình An)</item>
+        <item>An Sơn</item>
       </txtTenGiaoXu>
       <txtDienThoai caption="Điện thoại">
         <item>0913439979</item>
@@ -61,6 +65,7 @@
         <item>090 833 72 64</item>
         <item>83-981-2896 - 83-856-9139</item>
         <item>0838515871</item>
+        <item>(059) 832-404</item>
       </txtDienThoai>
       <txtEmail caption="Email">
         <item>tienngoc7365@gmail.com</item>
@@ -73,6 +78,7 @@
         <item>l_38919d940ce36ef9ed1ba5cf0e7da284.jpg</item>
         <item>l_9b50ca36dfaeabe3c3beb7ab96642dad.jpg</item>
         <item>l_252e5b83d4ba7b62bd67b39a8f4d8a99.jpg</item>
+        <item>l_65f4eb74b78c07680cd952110fa4bfd8.jpg</item>
       </txtHinh>
       <txtWebsite caption="Website">
         <item>http://giaoxuhuuphuoc.org</item>
@@ -80,6 +86,7 @@
         <item>http://giaoxubinhdong.net/</item>
         <item>gotham.com</item>
         <item>https://www.facebook.com/giaoxuMongTrieu.hatBinhAn/</item>
+        <item>http://giaophankontum.com</item>
       </txtWebsite>
     </frmGiaoXu>
     <frmGiaoDan xmlns="">
