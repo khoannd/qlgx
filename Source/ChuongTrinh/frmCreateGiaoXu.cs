@@ -268,18 +268,12 @@ namespace GiaoXu
     }
     public class GiaoPhan
     {
-        private string maGiaoPhan;
-        private string tenGiaoPhan;
-
-        public string MaGiaoPhan { get => maGiaoPhan; set => maGiaoPhan = value; }
-        public string TenGiaoPhan { get => tenGiaoPhan; set => tenGiaoPhan = value; }
+        public string MaGiaoPhan { get; set; }
+        public string TenGiaoPhan { get; set; }
     }
     public class GiaoHat
     {
-        private string maGiaoHat;
-        private string tenGiaoHat;
-
-        public string MaGiaoHat { get => maGiaoHat; set => maGiaoHat = value; }
-        public string TenGiaoHat { get => tenGiaoHat; set => tenGiaoHat = value; }
+        public string MaGiaoHat { get; set; }
+        public string TenGiaoHat { get; set; }
     }
 }

@@ -15,4 +15,9 @@
     <columns>HoTenNguoiDung,TenTaiKhoan,Email,SoDienThoai,TenLoai</columns>
     <widths>246,248,248,187,124</widths>
   </tblColumnWidth>
+  <tblColumnWidth>
+    <key>frmGiaoHo_gxGiaoHoList1</key>
+    <columns>TenGiaoHo</columns>
+    <widths>1085</widths>
+  </tblColumnWidth>
 </NewDataSet>

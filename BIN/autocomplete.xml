@@ -17,6 +17,7 @@
         <item>2299/8 Phạm Thế Hiển, Phường 6, Quận 8, Hồ Chí Minh</item>
         <item>Gotham</item>
         <item>hcm city</item>
+        <item>11E Phạm Thế Hiển, phường 3, Quận 8, Hồ Chí Minh</item>
       </txtDiaChi>
       <txtTenGiaoPhan caption="Tên giáo phận">
         <item>VCS</item>
@@ -51,6 +52,7 @@
         <item>Bình An (Sài Gòn)</item>
         <item>Batcave</item>
         <item>Gotham</item>
+        <item>Mông Triệu (Hạt Bình An)</item>
       </txtTenGiaoXu>
       <txtDienThoai caption="Điện thoại">
         <item>0913439979</item>
@@ -58,6 +60,7 @@
         <item>0838515939</item>
         <item>090 833 72 64</item>
         <item>83-981-2896 - 83-856-9139</item>
+        <item>0838515871</item>
       </txtDienThoai>
       <txtEmail caption="Email">
         <item>tienngoc7365@gmail.com</item>
@@ -69,12 +72,14 @@
         <item>l_768928bc23d18fb7bb1e7794b3ba6f51.jpg</item>
         <item>l_38919d940ce36ef9ed1ba5cf0e7da284.jpg</item>
         <item>l_9b50ca36dfaeabe3c3beb7ab96642dad.jpg</item>
+        <item>l_252e5b83d4ba7b62bd67b39a8f4d8a99.jpg</item>
       </txtHinh>
       <txtWebsite caption="Website">
         <item>http://giaoxuhuuphuoc.org</item>
         <item>http://giaoxudatdo.net</item>
         <item>http://giaoxubinhdong.net/</item>
         <item>gotham.com</item>
+        <item>https://www.facebook.com/giaoxuMongTrieu.hatBinhAn/</item>
       </txtWebsite>
     </frmGiaoXu>
     <frmGiaoDan xmlns="">
