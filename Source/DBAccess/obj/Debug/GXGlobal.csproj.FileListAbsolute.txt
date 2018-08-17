@@ -15,3 +15,12 @@ D:\GoogleDriver\Demo_Git\demov15\qlgx\Source\DBAccess\obj\Debug\GxGlobal.Propert
 D:\GoogleDriver\Demo_Git\demov15\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csproj.GenerateResource.Cache
 D:\GoogleDriver\Demo_Git\demov15\qlgx\Source\DBAccess\obj\Debug\GXGlobal.dll
 D:\GoogleDriver\Demo_Git\demov15\qlgx\Source\DBAccess\obj\Debug\GXGlobal.pdb
+E:\Work\qlgx08162018\qlgx\BIN\GXGlobal.dll
+E:\Work\qlgx08162018\qlgx\BIN\GXGlobal.pdb
+E:\Work\qlgx08162018\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csprojAssemblyReference.cache
+E:\Work\qlgx08162018\qlgx\Source\DBAccess\obj\Debug\GxGlobal.Properties.Resources.resources
+E:\Work\qlgx08162018\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csproj.GenerateResource.cache
+E:\Work\qlgx08162018\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csproj.CoreCompileInputs.cache
+E:\Work\qlgx08162018\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csproj.CopyComplete
+E:\Work\qlgx08162018\qlgx\Source\DBAccess\obj\Debug\GXGlobal.dll
+E:\Work\qlgx08162018\qlgx\Source\DBAccess\obj\Debug\GXGlobal.pdb

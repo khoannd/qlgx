@@ -29,7 +29,6 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>x86</PlatformTarget>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -39,7 +38,6 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>x86</PlatformTarget>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="AutoComplete, Version=1.0.4094.32818, Culture=neutral, processorArchitecture=MSIL">
@@ -94,10 +92,9 @@
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.11.0.2\lib\net20\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Configuration" />
+    <Reference Include="System.configuration" />
     <Reference Include="System.Data" />
     <Reference Include="System.Deployment" />
     <Reference Include="System.Design" />
@@ -125,6 +122,12 @@
     </Compile>
     <Compile Include="frmBieuDo.Designer.cs">
       <DependentUpon>frmBieuDo.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmCreateGiaoXu.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmCreateGiaoXu.Designer.cs">
+      <DependentUpon>frmCreateGiaoXu.cs</DependentUpon>
     </Compile>
     <Compile Include="frmLogin.cs">
       <SubType>Form</SubType>
@@ -311,6 +314,9 @@
     <EmbeddedResource Include="frmAccoutList.resx">
       <DependentUpon>frmAccoutList.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="frmCreateGiaoXu.resx">
+      <DependentUpon>frmCreateGiaoXu.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="frmGopY.resx">
       <SubType>Designer</SubType>
       <DependentUpon>frmGopY.cs</DependentUpon>
@@ -456,7 +462,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="Resources\church_icon.jpg" />
   </ItemGroup>
   <ItemGroup>

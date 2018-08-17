@@ -11,27 +11,53 @@
         <item>Thôn Bình Thuận, xã Đức Minh, huyện Đăk Mil, tỉnh Đăk Nông</item>
         <item>Thủ Đức</item>
         <item>td</item>
+        <item>Đường 23 Vinh Sơn, Nghĩa Thành, Châu Đức, Bà Rịa Vũng Tàu</item>
+        <item>68 Dương Bá Trạc, phường 2, Quận 8, Hồ Chí Minh</item>
+        <item>Giáo Xứ Đất Đỏ, QL55, tt. Đất Đỏ, Đất Đỏ, Bà Rịa - Vũng Tàu</item>
+        <item>2299/8 Phạm Thế Hiển, Phường 6, Quận 8, Hồ Chí Minh</item>
+        <item>Gotham</item>
+        <item>hcm city</item>
       </txtDiaChi>
       <txtTenGiaoPhan caption="Tên giáo phận">
         <item>VCS</item>
         <item>Ban Mê Thuột</item>
         <item>Thủ Đức</item>
         <item>td</item>
+        <item>Bà Rịa</item>
+        <item>Tổng Giáo Phận Sài Gòn</item>
+        <item>King</item>
+        <item>Hcm</item>
       </txtTenGiaoPhan>
       <txtTenGiaoHat caption="Tên giáo hạt">
         <item>King</item>
         <item>Đăk Mil</item>
         <item>td</item>
         <item>t</item>
+        <item>Bình Giả</item>
+        <item>Bà Rịa</item>
+        <item>Bình An</item>
+        <item>Gotham</item>
+        <item>Thu duc</item>
+        <item>Q9</item>
       </txtTenGiaoHat>
       <txtTenGiaoXu caption="Tên giáo xứ">
         <item>Heo bech</item>
         <item>Vinh An</item>
         <item>Thủ Đức</item>
         <item>td</item>
+        <item>HỮU PHƯỚC</item>
+        <item>Bình Xuyên</item>
+        <item>Đất Đỏ</item>
+        <item>Bình An (Sài Gòn)</item>
+        <item>Batcave</item>
+        <item>Gotham</item>
       </txtTenGiaoXu>
       <txtDienThoai caption="Điện thoại">
         <item>0913439979</item>
+        <item>0254 3881 627</item>
+        <item>0838515939</item>
+        <item>090 833 72 64</item>
+        <item>83-981-2896 - 83-856-9139</item>
       </txtDienThoai>
       <txtEmail caption="Email">
         <item>tienngoc7365@gmail.com</item>
@@ -39,7 +65,17 @@
       <txtHinh caption="Hình giáo xứ">
         <item>gx.jpg</item>
         <item>avatar.jpg</item>
+        <item>l_e18a2e54d03e3a4d52ec39be3718718f.jpg</item>
+        <item>l_768928bc23d18fb7bb1e7794b3ba6f51.jpg</item>
+        <item>l_38919d940ce36ef9ed1ba5cf0e7da284.jpg</item>
+        <item>l_9b50ca36dfaeabe3c3beb7ab96642dad.jpg</item>
       </txtHinh>
+      <txtWebsite caption="Website">
+        <item>http://giaoxuhuuphuoc.org</item>
+        <item>http://giaoxudatdo.net</item>
+        <item>http://giaoxubinhdong.net/</item>
+        <item>gotham.com</item>
+      </txtWebsite>
     </frmGiaoXu>
     <frmGiaoDan xmlns="">
       <txtLinhMucRuaToi caption="Người ban bí tích">
@@ -573,5 +609,24 @@
         <item>40</item>
       </txtMaxBackup>
     </frmOption>
+    <frmAccoutList xmlns="">
+      <txtEmail caption="Email">
+        <item>vocaoson7@gmail.com</item>
+      </txtEmail>
+      <txtUserName caption="Tên tài khoản">
+        <item>vocaoson7</item>
+        <item>king123</item>
+      </txtUserName>
+      <txtFullName caption="Họ tên ">
+        <item>Vo Cao Son</item>
+        <item>King</item>
+      </txtFullName>
+      <txtAnswer caption="Câu trả lời">
+        <item>Batman</item>
+      </txtAnswer>
+      <txtQuestion caption="Câu hỏi">
+        <item>Who are you ?</item>
+      </txtQuestion>
+    </frmAccoutList>
   </forms>
 </application>
