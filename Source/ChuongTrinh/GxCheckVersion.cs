@@ -466,7 +466,6 @@ namespace GiaoXu
             {
                 NameValueCollection temp = new NameValueCollection();
                 int maRieng;
-
                 bool check = int.TryParse(tbl.Rows[0][nameCotRieng].ToString(), out maRieng);
                 if (!check)
                 {
@@ -475,6 +474,10 @@ namespace GiaoXu
                     {
                         temp.Add(nameTable + item.ColumnName, tbl.Rows[0][item].ToString());
                     }
+                }
+                else
+                {
+                    temp.Add(nameTable + "Id", maRieng.ToString());
                 }
                 return temp;
 

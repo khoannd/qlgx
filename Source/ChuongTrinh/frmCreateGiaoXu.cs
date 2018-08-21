@@ -17,6 +17,8 @@ namespace GiaoXu
     public partial class frmCreateGiaoXu : Form
     {
         List<GiaoXu> giaoXus = new List<GiaoXu>();
+        public object ListGiaoPhan { get; set; }
+        public object ListGiaoHat { get; set; }
         public frmCreateGiaoXu()
         {
             InitializeComponent();
@@ -38,6 +40,7 @@ namespace GiaoXu
         private void SetGiaoPhan()
         {
             var giaoPhans = GetGiaoPhans();
+            ListGiaoPhan = giaoPhans;
             cbGiaoPhan.DataSource = giaoPhans;
             cbGiaoPhan.DisplayMember = "TenGiaoPhan";
             cbGiaoPhan.ValueMember = "MaGiaoPhan";
@@ -147,7 +150,7 @@ namespace GiaoXu
             var rsGiaoXu = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh,giaoXuInfo.MaGiaoXuRieng,giaoXuInfo.Email);
             if (!Memory.HasError())
             {
-                this.Close();
+                this.Hide();
             }
         }
 
@@ -203,6 +206,7 @@ namespace GiaoXu
                 item = (cbGiaoPhan.SelectedValue as GiaoPhan).MaGiaoPhan;
             }
             var giaoHats = GetGiaoHatsInGiaoPhan(item.ToString());
+            ListGiaoHat = giaoHats;
             cbGiaoHat.DataSource = giaoHats;
             cbGiaoHat.ValueMember = "MaGiaoHat";
             cbGiaoHat.DisplayMember = "TenGiaoHat";
