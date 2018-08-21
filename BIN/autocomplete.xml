@@ -18,8 +18,12 @@
         <item>Gotham</item>
         <item>hcm city</item>
         <item>11E Phạm Thế Hiển, phường 3, Quận 8, Hồ Chí Minh</item>
+        <item>Đông Lao, Đông La, Hoài Đức, Hà Nội, Việt Nam</item>
+        <item>Batman</item>
+        <item>Welcome to gotham</item>
+        <item>277 Chánh Hưng, phường 4, Quận 8, Hồ Chí Minh</item>
       </txtDiaChi>
-      <txtTenGiaoPhan caption="Tên giáo phận">
+      <txtTenGiaoPhan caption="Giáo phận">
         <item>VCS</item>
         <item>Ban Mê Thuột</item>
         <item>Thủ Đức</item>
@@ -28,8 +32,11 @@
         <item>Tổng Giáo Phận Sài Gòn</item>
         <item>King</item>
         <item>Hcm</item>
+        <item>Tổng Giáo Phận Hà Nội</item>
+        <item>ádasdas</item>
+        <item>Bắc Ninh</item>
       </txtTenGiaoPhan>
-      <txtTenGiaoHat caption="Tên giáo hạt">
+      <txtTenGiaoHat caption="Giáo hạt">
         <item>King</item>
         <item>Đăk Mil</item>
         <item>td</item>
@@ -40,6 +47,8 @@
         <item>Gotham</item>
         <item>Thu duc</item>
         <item>Q9</item>
+        <item>Chính Tòa Hà Nội</item>
+        <item>Bắc Giang</item>
       </txtTenGiaoHat>
       <txtTenGiaoXu caption="Tên giáo xứ">
         <item>Heo bech</item>
@@ -53,6 +62,12 @@
         <item>Batcave</item>
         <item>Gotham</item>
         <item>Mông Triệu (Hạt Bình An)</item>
+        <item>Đông Lao</item>
+        <item>King</item>
+        <item>Hello</item>
+        <item>Hello gotham,</item>
+        <item>HẾ LÔ BÂY BÊ</item>
+        <item>Nam Hải (Quận 8)</item>
       </txtTenGiaoXu>
       <txtDienThoai caption="Điện thoại">
         <item>0913439979</item>
@@ -61,6 +76,7 @@
         <item>090 833 72 64</item>
         <item>83-981-2896 - 83-856-9139</item>
         <item>0838515871</item>
+        <item>0838504206</item>
       </txtDienThoai>
       <txtEmail caption="Email">
         <item>tienngoc7365@gmail.com</item>
@@ -73,6 +89,8 @@
         <item>l_38919d940ce36ef9ed1ba5cf0e7da284.jpg</item>
         <item>l_9b50ca36dfaeabe3c3beb7ab96642dad.jpg</item>
         <item>l_252e5b83d4ba7b62bd67b39a8f4d8a99.jpg</item>
+        <item>l_21c38f3acb503142699a23c2e0f00120.jpg</item>
+        <item>l_4e084ee6e200593e85c9bb4ece862cdd.jpg</item>
       </txtHinh>
       <txtWebsite caption="Website">
         <item>http://giaoxuhuuphuoc.org</item>
@@ -80,6 +98,10 @@
         <item>http://giaoxubinhdong.net/</item>
         <item>gotham.com</item>
         <item>https://www.facebook.com/giaoxuMongTrieu.hatBinhAn/</item>
+        <item>https://www.facebook.com/Gi%E1%BB%9Bi-tr%E1%BA%BB-gi%C3%A1o-x%E1%BB%A9-%C4%90%C3%B4ng-Lao-760697724096308/</item>
+        <item>Gotham</item>
+        <item>King.com</item>
+        <item>http://vi.chatamvn.com/</item>
       </txtWebsite>
     </frmGiaoXu>
     <frmGiaoDan xmlns="">
@@ -633,5 +655,10 @@
         <item>Who are you ?</item>
       </txtQuestion>
     </frmAccoutList>
+    <frmLinhMuc xmlns="">
+      <txtMaLinhMuc caption="Mã Linh mục">
+        <item>1</item>
+      </txtMaLinhMuc>
+    </frmLinhMuc>
   </forms>
 </application>
