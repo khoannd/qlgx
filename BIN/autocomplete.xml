@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<application value="GiaoXu" xmlns="urn:autocomplete-schema">
+  <forms>
+    <frmMain>
+      <controls>
+      </controls>
+    </frmMain>
+    <frmGiaoXu xmlns="">
+      <txtDienThoai caption="Điện thoại">
+        <item>(059) 832-404</item>
+        <item>Dsadsa</item>
+        <item>vdbsavd</item>
+      </txtDienThoai>
+      <txtHinh caption="Hình giáo xứ">
+        <item>l_65f4eb74b78c07680cd952110fa4bfd8.jpg</item>
+      </txtHinh>
+      <txtWebsite caption="Website">
+        <item>http://giaophankontum.com</item>
+        <item>đasad</item>
+        <item>XZc</item>
+        <item>hvdshavd</item>
+      </txtWebsite>
+      <txtDiaChi caption="Địa chỉ">
+        <item>Xã Tân An, Huyện Dakpơ, Tỉnh Gialai</item>
+        <item>sđá</item>
+        <item>A</item>
+        <item>vhdsvadb</item>
+      </txtDiaChi>
+      <txtTenGiaoPhan caption="Giáo phận">
+        <item>Kon Tum</item>
+        <item>AVadsad</item>
+      </txtTenGiaoPhan>
+      <txtTenGiaoHat caption="Giáo hạt">
+        <item>Pleiku</item>
+        <item>asdsad</item>
+        <item>dsakdhasj</item>
+      </txtTenGiaoHat>
+      <txtTenGiaoXu caption="Tên giáo xứ">
+        <item>An Sơn</item>
+        <item>A</item>
+        <item>jdhsafdsa</item>
+      </txtTenGiaoXu>
+      <txtEmail caption="Email">
+        <item>dsadsa</item>
+        <item>vhdsads</item>
+      </txtEmail>
+    </frmGiaoXu>
+  </forms>
+</application>

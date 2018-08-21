@@ -523,7 +523,7 @@ namespace GiaoXu
             catch (Exception ex)
             {
 
-                MessageBox.Show(ex.Message, "Lỗi Exception uploadfileServer", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Không kết nối được với server\nKiểm tra kết nối mạng", "Lỗi Exception uploadfileServer", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
             //2018-08-01 Gia add end
