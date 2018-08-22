@@ -516,6 +516,17 @@ namespace GiaoXu
                         {
                             Memory.ExecuteSqlCommand(SqlConstants.UPDATE_LASTUPLOAD, new object[] { lastUpload });
                         }
+                        else
+                        {
+                            if (int.Parse(temp)==0)
+                            {
+                                MessageBox.Show("Giáo xứ chưa được duyệt trên server hệ thống\nkhông thể upload file backup", "Thông báo",MessageBoxButtons.OK,MessageBoxIcon.Error);
+                            }
+                            else
+                            {
+                                MessageBox.Show("Upload file backup bị lổi", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                        }
                     }
 
                 }
