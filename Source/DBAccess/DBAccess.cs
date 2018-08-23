@@ -159,10 +159,10 @@ namespace GxGlobal
             return result;
         }
 
-        public DataTable GetData(string commandText)
+        public DataTable GetData(string commandText,string tableName="Table1")
         {
             m_commText = commandText;
-            return GetData();
+            return GetData(tableName);
         }
 
         public DataTable GetData(string commandText, object[] lstParameters)
@@ -172,7 +172,7 @@ namespace GxGlobal
             return GetData();
         }
 
-        private DataTable GetData()
+        private DataTable GetData(string tableName="Table1")
         {
             DataSet ds = null;
             DataTable tbl = null;
@@ -198,7 +198,7 @@ namespace GxGlobal
                     adapter.SelectCommand = command;
 
                     ds = new DataSet();
-                    adapter.Fill(ds, "Table1");
+                    adapter.Fill(ds, tableName);
                     tbl = ds.Tables[0];
                     ds.Tables.Clear();
                     //trans.Commit();

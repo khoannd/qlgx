@@ -14,6 +14,7 @@ using System.Configuration;
 using System.Net;
 using System.Collections.Specialized;
 using Newtonsoft.Json;
+using System.Text;
 
 namespace GiaoXu
 {
@@ -61,7 +62,7 @@ namespace GiaoXu
             finally
             {
                 if (OnFinished != null) OnFinished(this, EventArgs.Empty);
-            }            
+            }
         }
 
         #region for check version and update
@@ -196,7 +197,7 @@ namespace GiaoXu
             string version = Memory.GetConfig(GxConstants.CF_CURRENT_DB_VERSION);
             if (version != "")
             {
-                
+
                 if (version == "2.0.0.0")
                 {
                     if (!isDbVersion2())
@@ -427,6 +428,80 @@ namespace GiaoXu
                 MessageBox.Show(ex.Message, "Lỗi Exception createBackupData()", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+        private string createrFileSyn()
+        {
+            string giaoxusynPath = Memory.AppPath + "sync\\";
+            if (!Directory.Exists(giaoxusynPath))
+            {
+                Directory.CreateDirectory(giaoxusynPath);
+            }
+            DataSet ds = new DataSet();
+            ds.Tables.AddRange(new DataTable[] {
+                Memory.GetData(SqlConstants.SELECT_ALLBiTichChiTiet,BiTichChiTietConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLCauHinh,CauHinhConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLChiTietLopGiaoLy,ChiTietLopGiaoLyConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLChuyenXu,ChuyenXuConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLDotBiTich,DotBiTichConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLDuLieuChung,DuLieuChungConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLGiaDinh,GiaDinhConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLGiaoDan,GiaoDanConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLGiaoDanHonPhoi,GiaoDanHonPhoiConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLGiaoHat,GiaoHatConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLGiaoHo,GiaoHoConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLGiaoLyVien,GiaoLyVienConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLGiaoPhan,GiaoPhanConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLGiaoXu,GiaoXuConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLHonPhoi,HonPhoiConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLKhoiGiaoLy,KhoiGiaoLyConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLLinhMuc,LinhMucConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLLopGiaoLy,LopGiaoLyConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLRaoHonPhoi,RaoHonPhoiConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLTanHien,TanHienConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLThanhVienGiaDinh,ThanhVienGiaDinhConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLVaiTro,VaiTroConst.TableName),
+            });
+            if (ds.Tables.Count == 22)
+            {
+                foreach (DataTable item in ds.Tables)
+                {
+                    string temp = this.ToCSV(item);
+                    using (StreamWriter sw = new StreamWriter(giaoxusynPath + item.TableName + ".csv"))
+                    {
+                        sw.Write(temp);
+                    }
+
+                }
+                string fileName = "gxsyn" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".zip";
+                FastZip fzip = new FastZip();
+                fzip.CreateZip(giaoxusynPath + fileName, giaoxusynPath, false, @"\.csv$");
+                foreach (string sFile in System.IO.Directory.GetFiles(giaoxusynPath, "*.csv"))
+                {
+                    System.IO.File.Delete(sFile);
+                }
+                return giaoxusynPath + fileName;
+            }
+            return null;
+        }
+        private string ToCSV(DataTable table)
+        {
+            var result = new StringBuilder();
+            for (int i = 0; i < table.Columns.Count; i++)
+            {
+                result.Append(table.Columns[i].ColumnName);
+                result.Append(i == table.Columns.Count - 1 ? "\n" : ",");
+            }
+
+            foreach (DataRow row in table.Rows)
+            {
+                for (int i = 0; i < table.Columns.Count; i++)
+                {
+                    result.Append(row[i].ToString());
+                    result.Append(i == table.Columns.Count - 1 ? "\n" : ",");
+                }
+            }
+
+            return result.ToString();
+        }
         //2018-08-14 Gia add start
         private int insertInfoGXInFirstTime()
         {
@@ -508,23 +583,29 @@ namespace GiaoXu
                     check = DateTime.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.LastUpload].ToString(), out lastUpload);
                     if (!check || DateTime.Now.Subtract(lastUpload).TotalDays > 1.0)//last > 1 ngày
                     {
-                        // upload file backup to server//lay ve time upload server
-                        byte[] rs = cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + @"BackupCL/uploadFile/" + maGiaoXuRieng, backupPath + fileName);
-                        string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
-                        check = DateTime.TryParse(temp, out lastUpload);
+                        //check GX đã được duyệt
+                        string temp= cl.DownloadString(ConfigurationManager.AppSettings["SERVER"] + @"GiaoXuCL/checkStatus/"+ maGiaoXuRieng);
+                        int duyet;
+                        check = int.TryParse(temp, out duyet);
                         if (check)
                         {
-                            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_LASTUPLOAD, new object[] { lastUpload });
-                        }
-                        else
-                        {
-                            if (int.Parse(temp)==0)
+                            if (duyet==1)
                             {
-                                MessageBox.Show("Giáo xứ chưa được duyệt trên server hệ thống\nkhông thể upload file backup", "Thông báo",MessageBoxButtons.OK,MessageBoxIcon.Error);
+                                //upload csv to server
+                                string pathFileSyn = this.createrFileSyn();
+                                cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + @"/BackupCL/uploadFileSyn/" + maGiaoXuRieng, pathFileSyn);
+                                // upload file backup to server//lay ve time upload server
+                                byte[] rs = cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + @"BackupCL/uploadFile/" + maGiaoXuRieng, backupPath + fileName);
+                                temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
+                                check = DateTime.TryParse(temp, out lastUpload);
+                                if (check)
+                                {
+                                    Memory.ExecuteSqlCommand(SqlConstants.UPDATE_LASTUPLOAD, new object[] { lastUpload });
+                                }
                             }
-                            else
+                            else if (duyet==0)
                             {
-                                MessageBox.Show("Upload file backup bị lổi", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                MessageBox.Show("Giáo xứ chưa được xác nhận trên server hệ thống\nKhông thể upload file backup", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             }
                         }
                     }
@@ -539,8 +620,6 @@ namespace GiaoXu
 
             //2018-08-01 Gia add end
         }
-
-
         #endregion
     }
 }

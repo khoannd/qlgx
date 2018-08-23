@@ -10,9 +10,11 @@
         <item>(059) 832-404</item>
         <item>Dsadsa</item>
         <item>vdbsavd</item>
+        <item>0913439979</item>
       </txtDienThoai>
       <txtHinh caption="Hình giáo xứ">
         <item>l_65f4eb74b78c07680cd952110fa4bfd8.jpg</item>
+        <item>gx.jpg</item>
       </txtHinh>
       <txtWebsite caption="Website">
         <item>http://giaophankontum.com</item>
@@ -29,16 +31,23 @@
         <item>dsadsad</item>
         <item>ddsad</item>
         <item>xzc</item>
+        <item>dsasda</item>
+        <item>dasdsadsa</item>
+        <item>czcxczxc</item>
+        <item>sadsd</item>
+        <item>Thôn Bình Thuận, xã Đức Minh, huyện Đăk Mil, tỉnh Đăk Nông</item>
       </txtDiaChi>
       <txtTenGiaoPhan caption="Giáo phận">
         <item>Kon Tum</item>
         <item>AVadsad</item>
+        <item>Ban Mê Thuột</item>
       </txtTenGiaoPhan>
       <txtTenGiaoHat caption="Giáo hạt">
         <item>Pleiku</item>
         <item>asdsad</item>
         <item>dsakdhasj</item>
         <item>ABCD</item>
+        <item>Đăk Mil</item>
       </txtTenGiaoHat>
       <txtTenGiaoXu caption="Tên giáo xứ">
         <item>An Sơn</item>
@@ -48,11 +57,23 @@
         <item>dasd</item>
         <item>Dasdsa</item>
         <item>czczxc</item>
+        <item>cbsahd</item>
+        <item>sadsa</item>
+        <item>czxcz</item>
+        <item>Gx test 2</item>
+        <item>Vinh An</item>
       </txtTenGiaoXu>
       <txtEmail caption="Email">
         <item>dsadsa</item>
         <item>vhdsads</item>
+        <item>tienngoc7365@gmail.com</item>
       </txtEmail>
     </frmGiaoXu>
+    <frmGiaoDan xmlns="">
+      <txtHoTen caption="Họ tên">
+        <item>Dasd</item>
+        <item>Dsad</item>
+      </txtHoTen>
+    </frmGiaoDan>
   </forms>
 </application>
