@@ -36,11 +36,13 @@
         <item>czcxczxc</item>
         <item>sadsd</item>
         <item>Thôn Bình Thuận, xã Đức Minh, huyện Đăk Mil, tỉnh Đăk Nông</item>
+        <item>dsađa</item>
       </txtDiaChi>
       <txtTenGiaoPhan caption="Giáo phận">
         <item>Kon Tum</item>
         <item>AVadsad</item>
         <item>Ban Mê Thuột</item>
+        <item>dsad</item>
       </txtTenGiaoPhan>
       <txtTenGiaoHat caption="Giáo hạt">
         <item>Pleiku</item>
@@ -48,6 +50,7 @@
         <item>dsakdhasj</item>
         <item>ABCD</item>
         <item>Đăk Mil</item>
+        <item>sadsad</item>
       </txtTenGiaoHat>
       <txtTenGiaoXu caption="Tên giáo xứ">
         <item>An Sơn</item>
@@ -62,6 +65,7 @@
         <item>czxcz</item>
         <item>Gx test 2</item>
         <item>Vinh An</item>
+        <item>dsad</item>
       </txtTenGiaoXu>
       <txtEmail caption="Email">
         <item>dsadsa</item>
@@ -73,7 +77,28 @@
       <txtHoTen caption="Họ tên">
         <item>Dasd</item>
         <item>Dsad</item>
+        <item>Czxcx</item>
+        <item>A</item>
       </txtHoTen>
     </frmGiaoDan>
+    <frmGiaDinh xmlns="">
+      <txtMaGiaDinh caption="Mã gia đình">
+        <item>3360</item>
+        <item>3361</item>
+        <item>3362</item>
+        <item>1</item>
+        <item>6</item>
+      </txtMaGiaDinh>
+      <txtNguoiChong caption="Người nam">
+        <item>Phêrô Nguyễn Ngọc Quốc</item>
+        <item>Gioan Baotixita Nguyễn Văn Thức</item>
+        <item>Antôn Trần Mạnh Sx</item>
+        <item>Agatha Czxcx</item>
+      </txtNguoiChong>
+      <txtNguoiVo caption="Người nữ">
+        <item>Anna Trần Bảo Trúc</item>
+        <item>Ađalbertô A</item>
+      </txtNguoiVo>
+    </frmGiaDinh>
   </forms>
 </application>

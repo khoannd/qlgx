@@ -12,6 +12,7 @@ using System.Drawing.Design;
 using System.Drawing;
 using Microsoft.Office.Interop.Word;
 
+
 namespace GxGlobal
 {
     /// <summary>
@@ -31,6 +32,7 @@ namespace GxGlobal
         private Documents WordDocs = null;
         private Document WordDoc = null;
         //private Selection CurrentSelection;
+   
         public Selection CurrentSelection
         {
             get { return WordApp.Application.Selection; }

@@ -428,6 +428,10 @@ namespace GiaoXu
                 MessageBox.Show(ex.Message, "Lỗi Exception createBackupData()", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+        public void test()
+        {
+           
+        }
         private string createrFileSyn()
         {
             string giaoxusynPath = Memory.AppPath + "sync\\";
