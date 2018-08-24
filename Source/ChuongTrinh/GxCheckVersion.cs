@@ -492,7 +492,7 @@ namespace GiaoXu
             for (int i = 0; i < table.Columns.Count; i++)
             {
                 result.Append(table.Columns[i].ColumnName);
-                result.Append(i == table.Columns.Count - 1 ? "\n" : ",");
+                result.Append(i == table.Columns.Count - 1 ? "\n" : ";");
             }
 
             foreach (DataRow row in table.Rows)
@@ -500,7 +500,7 @@ namespace GiaoXu
                 for (int i = 0; i < table.Columns.Count; i++)
                 {
                     result.Append(row[i].ToString());
-                    result.Append(i == table.Columns.Count - 1 ? "\n" : ",");
+                    result.Append(i == table.Columns.Count - 1 ? "\n" : ";");
                 }
             }
 
