@@ -376,6 +376,7 @@ namespace GiaoXu
         {
             try
             {
+                
                 int max = 40;
                 string maxBackup = Memory.GetConfig(GxConstants.CF_MAX_BACKUP);
                 if (Validator.IsNumber(maxBackup))
@@ -430,7 +431,7 @@ namespace GiaoXu
         }
         public void test()
         {
-           
+
         }
         private string createrFileSyn()
         {
@@ -463,8 +464,10 @@ namespace GiaoXu
                 Memory.GetData(SqlConstants.SELECT_ALLTanHien,TanHienConst.TableName),
                 Memory.GetData(SqlConstants.SELECT_ALLThanhVienGiaDinh,ThanhVienGiaDinhConst.TableName),
                 Memory.GetData(SqlConstants.SELECT_ALLVaiTro,VaiTroConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLTaiKhoan,TaiKhoanConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLTenLoaiTaiKhoan,TenLoaiTaiKhoanConst.TableName),
             });
-            if (ds.Tables.Count == 22)
+            if (ds.Tables.Count>0)
             {
                 foreach (DataTable item in ds.Tables)
                 {
@@ -588,12 +591,12 @@ namespace GiaoXu
                     if (!check || DateTime.Now.Subtract(lastUpload).TotalDays > 1.0)//last > 1 ngày
                     {
                         //check GX đã được duyệt
-                        string temp= cl.DownloadString(ConfigurationManager.AppSettings["SERVER"] + @"GiaoXuCL/checkStatus/"+ maGiaoXuRieng);
+                        string temp = cl.DownloadString(ConfigurationManager.AppSettings["SERVER"] + @"GiaoXuCL/checkStatus/" + maGiaoXuRieng);
                         int duyet;
                         check = int.TryParse(temp, out duyet);
                         if (check)
                         {
-                            if (duyet==1)
+                            if (duyet == 1)
                             {
                                 //upload csv to server
                                 string pathFileSyn = this.createrFileSyn();
@@ -607,7 +610,7 @@ namespace GiaoXu
                                     Memory.ExecuteSqlCommand(SqlConstants.UPDATE_LASTUPLOAD, new object[] { lastUpload });
                                 }
                             }
-                            else if (duyet==0)
+                            else if (duyet == 0)
                             {
                                 MessageBox.Show("Giáo xứ chưa được xác nhận trên server hệ thống\nKhông thể upload file backup", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             }

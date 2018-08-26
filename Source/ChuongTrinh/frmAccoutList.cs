@@ -208,6 +208,7 @@ namespace GiaoXu
         }
         private void AssignData(DataRow row)
         {
+            row[GxSyn.UpdateDate] = Memory.Instance.GetServerDateTime();
             row[AccountConst.HoTenNguoiDung] = txtFullName.Text;
             row[AccountConst.TenTaiKhoan] = txtUserName.Text;
             row[AccountConst.MatKhau] = Memory.EnCodePassword(txtPassword.Text);

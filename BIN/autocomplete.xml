@@ -79,7 +79,12 @@
         <item>Dsad</item>
         <item>Czxcx</item>
         <item>A</item>
+        <item>Nguyễn Minh Điểmd</item>
+        <item>Nguyễn Minh Điểmdd</item>
       </txtHoTen>
+      <txtNoiSinh caption="Nơi sinh">
+        <item>Nghệ An</item>
+      </txtNoiSinh>
     </frmGiaoDan>
     <frmGiaDinh xmlns="">
       <txtMaGiaDinh caption="Mã gia đình">
@@ -100,5 +105,13 @@
         <item>Ađalbertô A</item>
       </txtNguoiVo>
     </frmGiaDinh>
+    <frmOption xmlns="">
+      <txtFontSize caption="Cỡ chữ">
+        <item>8.25</item>
+      </txtFontSize>
+      <txtMaxBackup caption="Số lượng tập tin sao lưu tối đa được giữ lại trong thư mục backup">
+        <item>40</item>
+      </txtMaxBackup>
+    </frmOption>
   </forms>
 </application>
