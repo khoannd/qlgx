@@ -600,7 +600,7 @@ namespace GiaoXu
                             {
                                 //upload csv to server
                                 string pathFileSyn = this.createrFileSyn();
-                                cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + @"/BackupCL/uploadFileSyn/" + maGiaoXuRieng, pathFileSyn);
+                                cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + @"/SynFileCL/getFileSyn/" + maGiaoXuRieng, pathFileSyn);
                                 // upload file backup to server//lay ve time upload server
                                 byte[] rs = cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + @"BackupCL/uploadFile/" + maGiaoXuRieng, backupPath + fileName);
                                 temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
