@@ -141,7 +141,12 @@ namespace GiaoXu
             Thread thread = new Thread(() =>
             {
                 var image = GetImage(giaoXuInfo.MaGiaoXuRieng);
-                image.Save(giaoXuInfo.Hinh);
+                //2018-08-28 Gia modifi start
+                if (image!=null)
+                {
+                    image.Save(giaoXuInfo.Hinh);
+                }
+                //2018-08-28 Gia modifi end
             });
             thread.IsBackground = true;
             thread.Start();

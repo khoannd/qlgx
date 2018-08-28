@@ -3,3 +3,8 @@ D:\GoogleDriver\Demo_Git\demov17\qlgx\BIN\ExcelReport.pdb
 D:\GoogleDriver\Demo_Git\demov17\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.csprojResolveAssemblyReference.cache
 D:\GoogleDriver\Demo_Git\demov17\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.dll
 D:\GoogleDriver\Demo_Git\demov17\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.pdb
+D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\ExcelReport.dll
+D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\ExcelReport.pdb
+D:\GoogleDriver\Demo_Git\demov19\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.csprojResolveAssemblyReference.cache
+D:\GoogleDriver\Demo_Git\demov19\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.dll
+D:\GoogleDriver\Demo_Git\demov19\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.pdb

@@ -11,16 +11,21 @@
         <item>Dsadsa</item>
         <item>vdbsavd</item>
         <item>0913439979</item>
+        <item>0838504206</item>
+        <item>064 3848 361</item>
       </txtDienThoai>
       <txtHinh caption="Hình giáo xứ">
         <item>l_65f4eb74b78c07680cd952110fa4bfd8.jpg</item>
         <item>gx.jpg</item>
+        <item>l_4e084ee6e200593e85c9bb4ece862cdd.jpg</item>
       </txtHinh>
       <txtWebsite caption="Website">
         <item>http://giaophankontum.com</item>
         <item>đasad</item>
         <item>XZc</item>
         <item>hvdshavd</item>
+        <item>http://vi.chatamvn.com/</item>
+        <item>https://www.facebook.com/pg/GiaoxuThuyGiang/about/?ref=page_internal</item>
       </txtWebsite>
       <txtDiaChi caption="Địa chỉ">
         <item>Xã Tân An, Huyện Dakpơ, Tỉnh Gialai</item>
@@ -37,12 +42,16 @@
         <item>sadsd</item>
         <item>Thôn Bình Thuận, xã Đức Minh, huyện Đăk Mil, tỉnh Đăk Nông</item>
         <item>dsađa</item>
+        <item>277 Chánh Hưng, phường 4, Quận 8, Hồ Chí Minh</item>
+        <item>Cao Bá Quát, Rạch Dừa, Tp. Vũng Tàu, Bà Rịa - Vũng Tàu, Việt Nam</item>
       </txtDiaChi>
       <txtTenGiaoPhan caption="Giáo phận">
         <item>Kon Tum</item>
         <item>AVadsad</item>
         <item>Ban Mê Thuột</item>
         <item>dsad</item>
+        <item>Tổng Giáo Phận Sài Gòn</item>
+        <item>Bà Rịa</item>
       </txtTenGiaoPhan>
       <txtTenGiaoHat caption="Giáo hạt">
         <item>Pleiku</item>
@@ -51,6 +60,8 @@
         <item>ABCD</item>
         <item>Đăk Mil</item>
         <item>sadsad</item>
+        <item>Bình An</item>
+        <item>Bà Rịa</item>
       </txtTenGiaoHat>
       <txtTenGiaoXu caption="Tên giáo xứ">
         <item>An Sơn</item>
@@ -66,6 +77,8 @@
         <item>Gx test 2</item>
         <item>Vinh An</item>
         <item>dsad</item>
+        <item>Nam Hải (Quận 8)</item>
+        <item>THỦY GIANG</item>
       </txtTenGiaoXu>
       <txtEmail caption="Email">
         <item>dsadsa</item>
