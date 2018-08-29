@@ -171,7 +171,42 @@ namespace GxGlobal
             m_Parameters = lstParameters;
             return GetData();
         }
+        //2018-08-26 Gia add start
+        public DataTable GetTable()
+        {
+            DataTable tbl = null;
+            try
+            {
+                if (Conn == null)
+                {
+                    Conn = new OleDbConnection(m_connString);
+                }
+               
 
+                try
+                {
+                    Conn.Open();
+                    string[] restrictions = new string[4];
+                    restrictions[3] = "Table";
+                    tbl = Conn.GetSchema("Tables",restrictions);
+                }
+                catch (OleDbException ex)
+                {
+                    Memory.Instance.Error = ex;
+                }
+                finally
+                {
+                    Conn.Close();
+                }
+            }
+            catch (Exception e)
+            {
+                Memory.Instance.Error = e;
+            }
+
+            return tbl;
+        }
+        //2018-08-26 Gia add end
         private DataTable GetData(string tableName="Table1")
         {
             DataSet ds = null;
@@ -259,7 +294,21 @@ namespace GxGlobal
                     da = new OleDbDataAdapter();
                     foreach (DataTable tbl in ds.Tables)
                     {
-                        da.SelectCommand = new OleDbCommand(string.Format("SELECT * FROM {0}", tbl.TableName), Conn, transaction);
+                        //2018-08-28 Gia add start
+                        foreach (DataRow item in tbl.Rows)
+                        {
+                            item[GxSyn.UpdateDate] = DateTime.Now;
+                        }
+                        //2018-08-28 Gia add end
+                        if (tbl.TableName==CauHinhConst.TableName)
+                        {
+                            da.SelectCommand = new OleDbCommand(string.Format("SELECT MaCauHinh,GiaTri,Mota,UpdateDate FROM {0}", tbl.TableName), Conn, transaction);
+                        }
+                        else
+                        {
+                            da.SelectCommand = new OleDbCommand(string.Format("SELECT * FROM {0}", tbl.TableName), Conn, transaction);
+
+                        }
                         OleDbCommandBuilder cmdBd = new OleDbCommandBuilder(da);
                         cmdBd.ConflictOption = ConflictOption.OverwriteChanges;
                         cmdBd.QuotePrefix = "[";

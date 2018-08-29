@@ -534,7 +534,7 @@ namespace GiaoXu
                     }
                     if (maID.ContainsKey("IDGX"))
                     {
-                        Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOXURIENG, new object[] { maID["IDGX"] });
+                        Memory.SetMaGiaoXuRiengAllTable(maID["IDGX"]);
                     }
                     return maID["IDGX"];
                 }

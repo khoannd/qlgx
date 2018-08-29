@@ -13,11 +13,17 @@
         <item>0913439979</item>
         <item>0838504206</item>
         <item>064 3848 361</item>
+        <item>0838515939</item>
+        <item>0838515871</item>
       </txtDienThoai>
       <txtHinh caption="Hình giáo xứ">
         <item>l_65f4eb74b78c07680cd952110fa4bfd8.jpg</item>
         <item>gx.jpg</item>
         <item>l_4e084ee6e200593e85c9bb4ece862cdd.jpg</item>
+        <item>l_4c24ee4031fa4eab8866506bf9cc5d39.jpg</item>
+        <item>l_768928bc23d18fb7bb1e7794b3ba6f51.jpg</item>
+        <item>l_252e5b83d4ba7b62bd67b39a8f4d8a99.jpg</item>
+        <item>l_4efdbfbbf55fb6c62c0197c99e6ffca9.jpg</item>
       </txtHinh>
       <txtWebsite caption="Website">
         <item>http://giaophankontum.com</item>
@@ -26,6 +32,8 @@
         <item>hvdshavd</item>
         <item>http://vi.chatamvn.com/</item>
         <item>https://www.facebook.com/pg/GiaoxuThuyGiang/about/?ref=page_internal</item>
+        <item>http://www.dongnuvuonghoabinh.com/</item>
+        <item>https://www.facebook.com/giaoxuMongTrieu.hatBinhAn/</item>
       </txtWebsite>
       <txtDiaChi caption="Địa chỉ">
         <item>Xã Tân An, Huyện Dakpơ, Tỉnh Gialai</item>
@@ -44,6 +52,14 @@
         <item>dsađa</item>
         <item>277 Chánh Hưng, phường 4, Quận 8, Hồ Chí Minh</item>
         <item>Cao Bá Quát, Rạch Dừa, Tp. Vũng Tàu, Bà Rịa - Vũng Tàu, Việt Nam</item>
+        <item>Ea H'Đing, Cư M'gar, Đắk Lắk, Việt Nam</item>
+        <item>68 Dương Bá Trạc, phường 2, Quận 8, Hồ Chí Minh</item>
+        <item>đasad</item>
+        <item>cxzcz</item>
+        <item>dsadsadsad</item>
+        <item>dsadasd</item>
+        <item>11E Phạm Thế Hiển, phường 3, Quận 8, Hồ Chí Minh</item>
+        <item>Buôn Tu; Xã Ea Tul; Huyện Cư M’Gar; Tỉnh Đăk Lăk</item>
       </txtDiaChi>
       <txtTenGiaoPhan caption="Giáo phận">
         <item>Kon Tum</item>
@@ -52,6 +68,7 @@
         <item>dsad</item>
         <item>Tổng Giáo Phận Sài Gòn</item>
         <item>Bà Rịa</item>
+        <item>Bắc Ninh</item>
       </txtTenGiaoPhan>
       <txtTenGiaoHat caption="Giáo hạt">
         <item>Pleiku</item>
@@ -62,6 +79,8 @@
         <item>sadsad</item>
         <item>Bình An</item>
         <item>Bà Rịa</item>
+        <item>Buôn Hô</item>
+        <item>Bắc Giang</item>
       </txtTenGiaoHat>
       <txtTenGiaoXu caption="Tên giáo xứ">
         <item>An Sơn</item>
@@ -79,6 +98,12 @@
         <item>dsad</item>
         <item>Nam Hải (Quận 8)</item>
         <item>THỦY GIANG</item>
+        <item>Kon H’ring</item>
+        <item>Bình Xuyên</item>
+        <item>ABCD</item>
+        <item>ABCDE</item>
+        <item>Mông Triệu (Hạt Bình An)</item>
+        <item>EATUL</item>
       </txtTenGiaoXu>
       <txtEmail caption="Email">
         <item>dsadsa</item>
@@ -94,10 +119,26 @@
         <item>A</item>
         <item>Nguyễn Minh Điểmd</item>
         <item>Nguyễn Minh Điểmdd</item>
+        <item>Nguyễn Văn Niệm</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Nghệ An</item>
       </txtNoiSinh>
+      <txtTenMe caption="Tên Mẹ">
+        <item>Anna Nguyễn Thị Hạnh</item>
+      </txtTenMe>
+      <txtTenCha caption="Tên Cha">
+        <item>Gb Nguyễn Hồng Danh</item>
+      </txtTenCha>
+      <txtNguoiVo caption="Người nữ">
+        <item>Maria Nguyễn Thị Hòa</item>
+      </txtNguoiVo>
+      <txtNguoiChong caption="Người nam">
+        <item>Gb Nguyễn Văn Niệm</item>
+      </txtNguoiChong>
+      <txtTenHonPhoi caption="Đôi hôn phối">
+        <item>Niệm - Hòa</item>
+      </txtTenHonPhoi>
     </frmGiaoDan>
     <frmGiaDinh xmlns="">
       <txtMaGiaDinh caption="Mã gia đình">
