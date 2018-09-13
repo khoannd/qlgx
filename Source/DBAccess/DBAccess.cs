@@ -297,7 +297,11 @@ namespace GxGlobal
                         //2018-08-28 Gia add start
                         foreach (DataRow item in tbl.Rows)
                         {
-                            item[GxSyn.UpdateDate] = DateTime.Now;
+                            if (item.RowState!=DataRowState.Deleted)
+                            {
+                                item[GxSyn.UpdateDate] = DateTime.Now;
+                            }
+                          
                         }
                         //2018-08-28 Gia add end
                         if (tbl.TableName==CauHinhConst.TableName)

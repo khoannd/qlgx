@@ -502,7 +502,12 @@ namespace GiaoXu
             {
                 for (int i = 0; i < table.Columns.Count; i++)
                 {
-                    result.Append(row[i].ToString());
+                    var value = row[i];
+                    if (value.GetType().Name=="DateTime")
+                    {
+                        value = string.Format("{0:yyyy/MM/dd hh:mm:ss}", value);
+                    }
+                    result.Append(value);
                     result.Append(i == table.Columns.Count - 1 ? "\n" : ";");
                 }
             }

@@ -60,6 +60,8 @@
         <item>dsadasd</item>
         <item>11E Phạm Thế Hiển, phường 3, Quận 8, Hồ Chí Minh</item>
         <item>Buôn Tu; Xã Ea Tul; Huyện Cư M’Gar; Tỉnh Đăk Lăk</item>
+        <item>dasd</item>
+        <item>dsad</item>
       </txtDiaChi>
       <txtTenGiaoPhan caption="Giáo phận">
         <item>Kon Tum</item>
@@ -69,6 +71,9 @@
         <item>Tổng Giáo Phận Sài Gòn</item>
         <item>Bà Rịa</item>
         <item>Bắc Ninh</item>
+        <item>dasd</item>
+        <item>dsaddasd</item>
+        <item>ads</item>
       </txtTenGiaoPhan>
       <txtTenGiaoHat caption="Giáo hạt">
         <item>Pleiku</item>
@@ -81,6 +86,8 @@
         <item>Bà Rịa</item>
         <item>Buôn Hô</item>
         <item>Bắc Giang</item>
+        <item>dsads</item>
+        <item>dsadad</item>
       </txtTenGiaoHat>
       <txtTenGiaoXu caption="Tên giáo xứ">
         <item>An Sơn</item>
@@ -104,6 +111,7 @@
         <item>ABCDE</item>
         <item>Mông Triệu (Hạt Bình An)</item>
         <item>EATUL</item>
+        <item>sada</item>
       </txtTenGiaoXu>
       <txtEmail caption="Email">
         <item>dsadsa</item>
@@ -120,15 +128,21 @@
         <item>Nguyễn Minh Điểmd</item>
         <item>Nguyễn Minh Điểmdd</item>
         <item>Nguyễn Văn Niệm</item>
+        <item>B</item>
+        <item>C</item>
+        <item>D</item>
+        <item>Nguyễn Minh Điểm</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Nghệ An</item>
+        <item>Abcd</item>
       </txtNoiSinh>
       <txtTenMe caption="Tên Mẹ">
         <item>Anna Nguyễn Thị Hạnh</item>
       </txtTenMe>
       <txtTenCha caption="Tên Cha">
         <item>Gb Nguyễn Hồng Danh</item>
+        <item>Achillêô A</item>
       </txtTenCha>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Hòa</item>
@@ -153,11 +167,17 @@
         <item>Gioan Baotixita Nguyễn Văn Thức</item>
         <item>Antôn Trần Mạnh Sx</item>
         <item>Agatha Czxcx</item>
+        <item>Achillêô A</item>
+        <item>Phêrô Nguyễn Minh Điểm</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Anna Trần Bảo Trúc</item>
         <item>Ađalbertô A</item>
+        <item>Anna Đinh Thị Mỹ</item>
       </txtNguoiVo>
+      <txtDiaChi caption="Địa chỉ">
+        <item>Xuân Sơn</item>
+      </txtDiaChi>
     </frmGiaDinh>
     <frmOption xmlns="">
       <txtFontSize caption="Cỡ chữ">
@@ -167,5 +187,36 @@
         <item>40</item>
       </txtMaxBackup>
     </frmOption>
+    <frmMergeData xmlns="">
+      <txtDB caption="Chọn tập tin">
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\data20180830151734.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\GiaDinh1N.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\GiaDinh4N.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\backup6M.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\bkOLD.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\OLD.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\data2A.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\data1A.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\dataClient.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\dataServer.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\dataClient3.zip</item>
+      </txtDB>
+    </frmMergeData>
+    <frmBiTichChiTiet xmlns="">
+      <txtNoiBiTich caption="Nơi nhận bí tích">
+        <item>Vinh An</item>
+      </txtNoiBiTich>
+      <txtMoTa caption="Mô tả">
+        <item>Đợt bí tích ngày 02 tháng 06 năm 2018</item>
+      </txtMoTa>
+    </frmBiTichChiTiet>
+    <frmKhoiGiaoLy xmlns="">
+      <txtTenKhoi caption="Tên khối">
+        <item>adsadsa</item>
+      </txtTenKhoi>
+      <txtNguoiQuanLy caption="Người quản lý">
+        <item>Gioan Baotixita Bùi Hoàng Minh Nghĩa</item>
+      </txtNguoiQuanLy>
+    </frmKhoiGiaoLy>
   </forms>
 </application>
