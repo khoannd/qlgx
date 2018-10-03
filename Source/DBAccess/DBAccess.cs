@@ -261,15 +261,14 @@ namespace GxGlobal
             m_commText = commandText;
             return Execute();
         }
-
         public Int32 Execute(string commandText, params object[] lstParameters)
         {
             m_commText = commandText;
             m_Parameters = lstParameters;
             return Execute();
         }
-
-        public Int32 Execute(DataSet ds)
+        
+        public Int32 Execute(DataSet ds,int maGiaoXuRieng=0)
         {
             int rs = 0;
             if (ds == null)
@@ -299,6 +298,10 @@ namespace GxGlobal
                         {
                             if (item.RowState!=DataRowState.Deleted)
                             {
+                                if (maGiaoXuRieng!=0&&tbl.TableName!=CauHinhConst.TableName)
+                                {
+                                    item[GxSyn.MaGiaoXuRieng] = maGiaoXuRieng;
+                                }
                                 item[GxSyn.UpdateDate] = DateTime.Now;
                             }
                           

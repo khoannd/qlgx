@@ -406,9 +406,13 @@ namespace GiaoXu
                     //    }
                     //}
                 }
-                //2018-08-13 Gia modify start
+                //2018/09/30 gnguyen start delete
+                //string fileName = "data" + System.DateTime.Now.ToString("yyyyMMddHH") + ".zip";
+                //2018/09/30 gnguyen end delete 
+                //2018/09/30 gnguyen start add
                 string fileName = "data" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".zip";
-                //2018-08-13 Gia modify end
+                //2018/09/30 gnguyen end add 
+             
 
                 if (!Directory.Exists(backupPath))
                 {
@@ -421,7 +425,8 @@ namespace GiaoXu
                     fzip.CreateZip(backupPath + fileName, Memory.AppPath, false, "giaoxu.mdb");
                 }
                 //2018-08-08 Gia add start
-                uploadFile(fileName, backupPath);
+                //uploadFile(fileName, backupPath);
+                this.createrFileSyn();
                 //2018-08-08 Gia add end
             }
             catch (Exception ex)
@@ -429,10 +434,9 @@ namespace GiaoXu
                 MessageBox.Show(ex.Message, "Lỗi Exception createBackupData()", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-        public void test()
-        {
-
-        }
+        //2018/09/30 gnguyen start add
+        
+     
         private string createrFileSyn()
         {
             string giaoxusynPath = Memory.AppPath + "sync\\";
@@ -514,7 +518,7 @@ namespace GiaoXu
 
             return result.ToString();
         }
-        //2018-08-14 Gia add start
+       
         private int insertInfoGXInFirstTime()
         {
             WebClient cl = new WebClient();
@@ -571,7 +575,7 @@ namespace GiaoXu
             }
             return null;
         }
-        //2018-08-14 Gia add end
+        
         private void uploadFile(string fileName, string backupPath)
         {
 
@@ -632,6 +636,7 @@ namespace GiaoXu
 
             //2018-08-01 Gia add end
         }
+        //2018/09/30 gnguyen end add
         #endregion
     }
 }
