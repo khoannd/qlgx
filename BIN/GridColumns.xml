@@ -48,7 +48,7 @@
   <tblColumnWidth>
     <key>frmRaoHonPhoiList_gxRaoHonPhoiList1</key>
     <columns>MaRaoHonPhoi,TenRaoHonPhoi,Nguoi1,Nguoi2,NgayRaoLan1,NgayRaoLan2,NgayRaoLan3,GhiChu</columns>
-    <widths>50,100,150,150,80,80,80,150</widths>
+    <widths>50,100,150,150,80,80,80,208</widths>
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmGiaoDan_gxHonPhoiList1</key>

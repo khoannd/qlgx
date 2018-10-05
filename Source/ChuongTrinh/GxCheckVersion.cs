@@ -15,6 +15,7 @@ using System.Net;
 using System.Collections.Specialized;
 using Newtonsoft.Json;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace GiaoXu
 {
@@ -506,7 +507,13 @@ namespace GiaoXu
             {
                 for (int i = 0; i < table.Columns.Count; i++)
                 {
+                   
                     var value = row[i];
+                    if (value.GetType().Name=="String")
+                    {
+                        value = Regex.Replace(value.ToString(), @"(\s{2,})|\n", " ");
+                        
+                    }
                     if (value.GetType().Name=="DateTime")
                     {
                         value = string.Format("{0:yyyy/MM/dd hh:mm:ss}", value);
@@ -587,6 +594,7 @@ namespace GiaoXu
                 //get thong tin giaoxu
                 DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
                 if (tblGiaoXu != null && tblGiaoXu.Rows.Count > 0)
+
                 {
                     int maGiaoXuRieng;
                     bool check = int.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString(), out maGiaoXuRieng);
@@ -597,7 +605,7 @@ namespace GiaoXu
                     //check Last Upload
                     DateTime lastUpload;
                     check = DateTime.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.LastUpload].ToString(), out lastUpload);
-                    if (!check || DateTime.Now.Subtract(lastUpload).TotalDays > 1.0)//last > 1 ngày
+                    if (/*!check || DateTime.Now.Subtract(lastUpload).TotalDays > 1.0*/true)//last > 1 ngày
                     {
                         //check GX đã được duyệt
                         string temp = cl.DownloadString(ConfigurationManager.AppSettings["SERVER"] + @"GiaoXuCL/checkStatus/" + maGiaoXuRieng);

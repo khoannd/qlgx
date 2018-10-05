@@ -132,10 +132,14 @@
         <item>C</item>
         <item>D</item>
         <item>Nguyễn Minh Điểm</item>
+        <item>Dsadsad</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Nghệ An</item>
         <item>Abcd</item>
+        <item>Dfsahdgsa</item>
+        <item>Cxzczxcz</item>
+        <item>Thu Duc</item>
       </txtNoiSinh>
       <txtTenMe caption="Tên Mẹ">
         <item>Anna Nguyễn Thị Hạnh</item>
@@ -143,16 +147,41 @@
       <txtTenCha caption="Tên Cha">
         <item>Gb Nguyễn Hồng Danh</item>
         <item>Achillêô A</item>
+        <item>Callistô I C</item>
       </txtTenCha>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Hòa</item>
+        <item>Callistô I C</item>
+        <item>Barnaba B</item>
       </txtNguoiVo>
       <txtNguoiChong caption="Người nam">
         <item>Gb Nguyễn Văn Niệm</item>
+        <item>Ađalbertô A</item>
+        <item>Barnaba B</item>
+        <item>Achillêô A</item>
       </txtNguoiChong>
       <txtTenHonPhoi caption="Đôi hôn phối">
         <item>Niệm - Hòa</item>
+        <item>A</item>
+        <item>B</item>
+        <item>A - C</item>
+        <item>A - B</item>
       </txtTenHonPhoi>
+      <txtGiaoPhan caption="Giáo phận">
+        <item>Gp!</item>
+      </txtGiaoPhan>
+      <txtGiaoXu caption="Giáo xứ">
+        <item>Gx1</item>
+      </txtGiaoXu>
+      <txtLinhMucRuaToi caption="Người ban bí tích">
+        <item>A</item>
+      </txtLinhMucRuaToi>
+      <txtNoiRuaToi caption="Nơi rửa tội">
+        <item>Dasd</item>
+      </txtNoiRuaToi>
+      <txtNguoiDoDauRuaToi caption="Người đỡ đầu">
+        <item>A</item>
+      </txtNguoiDoDauRuaToi>
     </frmGiaoDan>
     <frmGiaDinh xmlns="">
       <txtMaGiaDinh caption="Mã gia đình">
@@ -161,6 +190,7 @@
         <item>3362</item>
         <item>1</item>
         <item>6</item>
+        <item>2</item>
       </txtMaGiaDinh>
       <txtNguoiChong caption="Người nam">
         <item>Phêrô Nguyễn Ngọc Quốc</item>
@@ -169,11 +199,15 @@
         <item>Agatha Czxcx</item>
         <item>Achillêô A</item>
         <item>Phêrô Nguyễn Minh Điểm</item>
+        <item>Agatha A</item>
+        <item>Barnaba B</item>
+        <item>Callistô I C</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Anna Trần Bảo Trúc</item>
         <item>Ađalbertô A</item>
         <item>Anna Đinh Thị Mỹ</item>
+        <item>Barnaba B</item>
       </txtNguoiVo>
       <txtDiaChi caption="Địa chỉ">
         <item>Xuân Sơn</item>
@@ -200,23 +234,67 @@
         <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\dataClient.zip</item>
         <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\dataServer.zip</item>
         <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\dataClient3.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\1.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\2.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\7.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\A3.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\A1.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\delete.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\Full.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\A2.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\A.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\NEW.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\OLD2.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\CuA_B.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\NEWA.zip</item>
+        <item>D:\GoogleDriver\Demo_Git\demov19\qlgx\BIN\backup\BK2.zip</item>
       </txtDB>
     </frmMergeData>
     <frmBiTichChiTiet xmlns="">
       <txtNoiBiTich caption="Nơi nhận bí tích">
         <item>Vinh An</item>
+        <item>ThuDuc</item>
       </txtNoiBiTich>
       <txtMoTa caption="Mô tả">
         <item>Đợt bí tích ngày 02 tháng 06 năm 2018</item>
+        <item>Đợt bí tích Rửa tội ngày 01 tháng 01 năm 2001</item>
       </txtMoTa>
     </frmBiTichChiTiet>
     <frmKhoiGiaoLy xmlns="">
       <txtTenKhoi caption="Tên khối">
         <item>adsadsa</item>
+        <item>ABCD</item>
+        <item>A1</item>
       </txtTenKhoi>
       <txtNguoiQuanLy caption="Người quản lý">
         <item>Gioan Baotixita Bùi Hoàng Minh Nghĩa</item>
+        <item>Achillêô A</item>
+        <item>Barnaba B</item>
+        <item>Maria Nguyễn Thị Hòa</item>
       </txtNguoiQuanLy>
     </frmKhoiGiaoLy>
+    <frmRaoHonPhoi xmlns="">
+      <txtNguoi1 caption="Người thứ nhất:">
+        <item>Giuse Nguyễn Hoàng Thược</item>
+      </txtNguoi1>
+      <txtDoiRao caption="Đôi rao:">
+        <item>Thược - Hòa</item>
+      </txtDoiRao>
+      <txtGiaoXu1 caption="Hiện ở giáo xứ:">
+        <item>Vinh An</item>
+      </txtGiaoXu1>
+      <txtGiaoPhan1 caption="Giáo phận:">
+        <item>Ban Mê Thuột</item>
+      </txtGiaoPhan1>
+      <txtNguoi2 caption="Người thứ 2:">
+        <item>Maria Nguyễn Thị Hòa</item>
+      </txtNguoi2>
+      <txtGiaoXu2 caption="Hiện ở giáo xứ:">
+        <item>Vinh An</item>
+      </txtGiaoXu2>
+      <txtGiaoPhan2 caption="Giáo phận:">
+        <item>Ban Mê Thuột</item>
+      </txtGiaoPhan2>
+    </frmRaoHonPhoi>
   </forms>
 </application>
