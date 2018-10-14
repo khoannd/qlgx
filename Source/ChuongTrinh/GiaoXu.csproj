@@ -448,6 +448,10 @@
       <Project>{9712914B-5500-4833-887B-2733F2B3FE97}</Project>
       <Name>GXGlobal</Name>
     </ProjectReference>
+    <ProjectReference Include="..\DongBoDuLieu\DongBoDuLieu.csproj">
+      <Project>{2ea639a3-1101-46f5-90a5-93a0e6f933a0}</Project>
+      <Name>DongBoDuLieu</Name>
+    </ProjectReference>
     <ProjectReference Include="..\ExcelReport\ExcelReport.csproj">
       <Project>{410FD24C-6FB4-4277-9D48-2415BF92D612}</Project>
       <Name>ExcelReport</Name>

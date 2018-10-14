@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.30723.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GXControl", "GXControl\GXControl.csproj", "{019A8FA6-9FB3-4D3E-9C62-FDB7F0FD4D0B}"
 EndProject
@@ -16,6 +16,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GiaoLy", "Giaoly\GiaoLy.csproj", "{3273866C-AF44-4ABA-8BFF-1465571BC5BB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vnConvert", "ConvertFont\vnConvert.csproj", "{F8A51DD4-C87E-467C-9974-4229BA9BCCBA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DongBoDuLieu", "DongBoDuLieu\DongBoDuLieu.csproj", "{2EA639A3-1101-46F5-90A5-93A0E6F933A0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -50,6 +52,10 @@ Global
 		{F8A51DD4-C87E-467C-9974-4229BA9BCCBA}.Debug|Any CPU.ActiveCfg = Release|Any CPU
 		{F8A51DD4-C87E-467C-9974-4229BA9BCCBA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F8A51DD4-C87E-467C-9974-4229BA9BCCBA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2EA639A3-1101-46F5-90A5-93A0E6F933A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2EA639A3-1101-46F5-90A5-93A0E6F933A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2EA639A3-1101-46F5-90A5-93A0E6F933A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2EA639A3-1101-46F5-90A5-93A0E6F933A0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

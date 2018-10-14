@@ -12,3 +12,10 @@ D:\GoogleDriver\Demo_Git\demov19\qlgx\Source\DBAccess\obj\Debug\GxGlobal.Propert
 D:\GoogleDriver\Demo_Git\demov19\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csproj.GenerateResource.Cache
 D:\GoogleDriver\Demo_Git\demov19\qlgx\Source\DBAccess\obj\Debug\GXGlobal.dll
 D:\GoogleDriver\Demo_Git\demov19\qlgx\Source\DBAccess\obj\Debug\GXGlobal.pdb
+D:\GoogleDriver\Demo_Git\demov20\qlgx\BIN\GXGlobal.dll
+D:\GoogleDriver\Demo_Git\demov20\qlgx\BIN\GXGlobal.pdb
+D:\GoogleDriver\Demo_Git\demov20\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csprojResolveAssemblyReference.cache
+D:\GoogleDriver\Demo_Git\demov20\qlgx\Source\DBAccess\obj\Debug\GxGlobal.Properties.Resources.resources
+D:\GoogleDriver\Demo_Git\demov20\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csproj.GenerateResource.Cache
+D:\GoogleDriver\Demo_Git\demov20\qlgx\Source\DBAccess\obj\Debug\GXGlobal.dll
+D:\GoogleDriver\Demo_Git\demov20\qlgx\Source\DBAccess\obj\Debug\GXGlobal.pdb

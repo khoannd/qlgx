@@ -427,7 +427,7 @@ namespace GiaoXu
                 }
                 //2018-08-08 Gia add start
                 //uploadFile(fileName, backupPath);
-                this.createrFileSyn();
+                //this.createrFileSyn();
                 //2018-08-08 Gia add end
             }
             catch (Exception ex)
