@@ -11,29 +11,91 @@ namespace DongBoDuLieu
         public GiaoDanCompare(string dir, string nameCSV) : base(dir, nameCSV)
         {
         }
+        private List<Dictionary<string, string>> ListGiaoHoTracks;
 
         public override void deleteObjectMaster()
         {
-            throw new NotImplementedException();
-        }
+            DataTable rsDB = getAll(GiaoDanConst.TableName);
+            if (rsDB != null && rsDB.Rows.Count > 0)
+            {
+                foreach (DataRow rowGiaoDan in rsDB.Rows)
+                {
+                    int idCSV = findIdObjectCSV(ListTracks, rowGiaoDan[GiaDinhConst.MaGiaDinh].ToString());
+                    if (idCSV == 0)
+                    {
+                        //Xoa GiaoDan
+                        delete(@"MaGiaoDan=?", GiaoDanConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan]);
+                        //Xoa ThanhVienGiaDinh co GiaoDan
+                        delete(@"MaGiaoDan=?", ThanhVienGiaDinhConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan]);
+                        //Xoa BiTichChiTiet
+                        delete(@"MaGiaoDan=?", BiTichChiTietConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan]);
+                        //Xoa GiaoDanHonPhoi
+                        delete(@"MaGiaoDan=?", GiaoDanHonPhoiConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan]);
+                        //Xoa ChuyenXu
+                        delete(@"MaGiaoDan=?", ChuyenXuConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan]);
+                        //Xoa TanHien
+                        delete(@"MaGiaoDan=?", TanHienConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan]);
+                        //Xoa RaoHonPhoi
+                        delete(@"MaGiaoDan1=? OR MaGiaoDan2=?", RaoHonPhoiConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan], rowGiaoDan[GiaoDanConst.MaGiaoDan]);
+                        //Xoa ChiTietLopGiaoLy
+                        delete(@"MaGiaoDan=?", ChiTietLopGiaoLyConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan]);
+                        //Xoa GiaoLyVien
+                        delete(@"MaGiaoDan=?", GiaoLyVienConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan]);
+                    }
 
+                }
+
+            }
+        }
+        public void getListGiaoHoTracks(List<Dictionary<string, string>> giaoHoTracks)
+        {
+            ListGiaoHoTracks = giaoHoTracks;
+        }
         public override void importCacObject()
         {
             if (this.Data.Count>0)
             {
                 foreach (var item in Data)
                 {
-                    DataTable giaoDan = findGiaoDan();
-                    //Xu ly ma giao ho
+                    DataTable giaoDan = findGiaoDan(item);
+                    item["MaGiaoHo"] = findIdObjectClient(ListGiaoHoTracks, item["MaGiaoHo"]).ToString();
                     importObjectMaster(item,giaoDan,"MaGiaoDan",GiaoDanConst.TableName);
                    
                 }
             }
         }
-        private DataTable findGiaoDan()
+        private DataTable findGiaoDan(Dictionary<string, string> objectCSV)
         {
-            DataTable tbl = new DataTable();
-            return tbl;
+            //Tim Ma Nhan dang
+            DataTable tbl = null;
+            try
+            {
+                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE MaNhanDang=?", GiaoDanConst.TableName);
+                tbl = Memory.GetData(query, objectCSV["MaNhanDang"]);
+            }
+            catch (System.Exception ex)
+            {
+                return null;
+            }
+            if (tbl!=null&&tbl.Rows.Count>0)
+            {
+                return tbl;
+            }
+
+            try
+            {
+                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE HoTen=?,TenThanh=?,NgaySinh=?", GiaoDanConst.TableName);
+                tbl = Memory.GetData(query, objectCSV["HoTen"], objectCSV["TenThanh"], objectCSV["NgaySinh"]);
+            }
+            catch (System.Exception ex)
+            {
+                return null;
+            }
+            if (tbl!=null&&tbl.Rows.Count>0)
+            {
+                return tbl;
+            }
+            return null;
         }
     }
 }
