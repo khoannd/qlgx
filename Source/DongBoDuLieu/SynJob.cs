@@ -34,14 +34,14 @@ namespace DongBoDuLieu
             int.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString(), out maGiaoXuRieng);
             byte[] rs = cl.DownloadData(ConfigurationManager.AppSettings["SERVER"] + @"SynToClientCL/createrFileSyn/" + maGiaoXuRieng);
             string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
-            if (string.Compare(temp, "-1") != 0)
+            if (string.Compare(temp, "1") == 0)
             {
                 string pathDB = Memory.AppPath + "DBSV\\";
                 if (!Directory.Exists(pathDB))
                 {
                     Directory.CreateDirectory(pathDB);
                 }
-                cl.DownloadFile(temp, pathDB + maGiaoXuRieng + ".zip");
+                cl.DownloadFile(ConfigurationManager.AppSettings["SERVER_File"]+maGiaoXuRieng+"/"+maGiaoXuRieng+".zip", pathDB + maGiaoXuRieng + ".zip");
                 FastZip zip = new FastZip();
                 zip.ExtractZip(pathDB + maGiaoXuRieng + ".zip", pathDB, null);
                 compareGiaoXu(pathDB);
@@ -54,54 +54,54 @@ namespace DongBoDuLieu
             giaoho.importCacObject();
             giaoho.deleteObjectMaster();
 
-            GiaoDanCompare giaodan = new GiaoDanCompare(dir, "GiaoDan.csv");
-            giaodan.importCacObject();//Chua Lam
+            //GiaoDanCompare giaodan = new GiaoDanCompare(dir, "GiaoDan.csv");
+            //giaodan.importCacObject();//Chua Lam
 
 
 
-            GiaDinhCompare giadinh = new GiaDinhCompare(dir, "GiaDinh.csv");
-            ThanhVienGiaDinhCompare thanhviengiadinh = new ThanhVienGiaDinhCompare(dir, "ThanhVienGiaDinh.csv");
-            giadinh.getListGiaoHoTracks(giaoho.ListTracks);
-            giadinh.getListGiaoDanTracks(giaodan.ListTracks);
-            giadinh.getListThanhVienGiaDinhCSV(thanhviengiadinh.Data);
-            giadinh.importCacObject();
-            giadinh.deleteObjectMaster();
+            //GiaDinhCompare giadinh = new GiaDinhCompare(dir, "GiaDinh.csv");
+            //ThanhVienGiaDinhCompare thanhviengiadinh = new ThanhVienGiaDinhCompare(dir, "ThanhVienGiaDinh.csv");
+            //giadinh.getListGiaoHoTracks(giaoho.ListTracks);
+            //giadinh.getListGiaoDanTracks(giaodan.ListTracks);
+            //giadinh.getListThanhVienGiaDinhCSV(thanhviengiadinh.Data);
+            //giadinh.importCacObject();
+            //giadinh.deleteObjectMaster();
 
 
-            thanhviengiadinh.getListTracksGiaDinh(giadinh.ListTracks);
-            thanhviengiadinh.getListTracksGiaoDan(giaodan.ListTracks);
-            thanhviengiadinh.importCacObject();
-            thanhviengiadinh.deleteObjectRelation();
+            //thanhviengiadinh.getListTracksGiaDinh(giadinh.ListTracks);
+            //thanhviengiadinh.getListTracksGiaoDan(giaodan.ListTracks);
+            //thanhviengiadinh.importCacObject();
+            //thanhviengiadinh.deleteObjectRelation();
 
-            HonPhoiCompare honphoi = new HonPhoiCompare(dir, "HonPhoi.csv");
-            honphoi.importCacObject();
-            honphoi.deleteObjectMaster();
+            //HonPhoiCompare honphoi = new HonPhoiCompare(dir, "HonPhoi.csv");
+            //honphoi.importCacObject();
+            //honphoi.deleteObjectMaster();
 
-            GiaoDanHonPhoiCompare giaodanhonphoi = new GiaoDanHonPhoiCompare(dir, "GiaoDanHonPhoi.csv");
-            giaodanhonphoi.getListTracksGiaoDan(giaodan.ListTracks);
-            giaodanhonphoi.getListTracksHonPhoi(honphoi.ListTracks);
-            giaodanhonphoi.importCacObject();
-            giaodanhonphoi.deleteObjectRelation();
+            //GiaoDanHonPhoiCompare giaodanhonphoi = new GiaoDanHonPhoiCompare(dir, "GiaoDanHonPhoi.csv");
+            //giaodanhonphoi.getListTracksGiaoDan(giaodan.ListTracks);
+            //giaodanhonphoi.getListTracksHonPhoi(honphoi.ListTracks);
+            //giaodanhonphoi.importCacObject();
+            //giaodanhonphoi.deleteObjectRelation();
 
-            KhoiGiaoLyCompare khoigiaoly = new KhoiGiaoLyCompare(dir, "KhoiGiaoLy.csv");
-            LopGiaoLyCompare lopgiaoly = new LopGiaoLyCompare(dir, "LopGiaoLy.csv");
-            ChiTietLopGiaoLyCompare chitietlopgiaoly = new ChiTietLopGiaoLyCompare(dir,"ChiTietLopGiaoLy.csv");
-            lopgiaoly.getListChiTietLopGiaoLyCSV(chitietlopgiaoly.Data);
-            lopgiaoly.getListGiaoDanTracks(giaodan.ListTracks);
-            khoigiaoly.getListGiaoDanTracks(giaodan.ListTracks);
-            khoigiaoly.getLopGiaoLyCompare(lopgiaoly);
-            khoigiaoly.importCacObject();
-            khoigiaoly.deleteObjectMaster();
+            //KhoiGiaoLyCompare khoigiaoly = new KhoiGiaoLyCompare(dir, "KhoiGiaoLy.csv");
+            //LopGiaoLyCompare lopgiaoly = new LopGiaoLyCompare(dir, "LopGiaoLy.csv");
+            //ChiTietLopGiaoLyCompare chitietlopgiaoly = new ChiTietLopGiaoLyCompare(dir,"ChiTietLopGiaoLy.csv");
+            //lopgiaoly.getListChiTietLopGiaoLyCSV(chitietlopgiaoly.Data);
+            //lopgiaoly.getListGiaoDanTracks(giaodan.ListTracks);
+            //khoigiaoly.getListGiaoDanTracks(giaodan.ListTracks);
+            //khoigiaoly.getLopGiaoLyCompare(lopgiaoly);
+            //khoigiaoly.importCacObject();
+            //khoigiaoly.deleteObjectMaster();
 
            
-            lopgiaoly.getListKhoiGiaoLy(khoigiaoly.ListTracks);
-            lopgiaoly.importCacObject();
-            lopgiaoly.deleteObjectMaster();
+            //lopgiaoly.getListKhoiGiaoLy(khoigiaoly.ListTracks);
+            //lopgiaoly.importCacObject();
+            //lopgiaoly.deleteObjectMaster();
 
-            chitietlopgiaoly.getListTracksGiaoDan(giaodan.ListTracks);
-            chitietlopgiaoly.getListTracksLopGiaoLy(lopgiaoly.ListTracks);
-            chitietlopgiaoly.importCacObject();
-            chitietlopgiaoly.deleteObjectRelation();
+            //chitietlopgiaoly.getListTracksGiaoDan(giaodan.ListTracks);
+            //chitietlopgiaoly.getListTracksLopGiaoLy(lopgiaoly.ListTracks);
+            //chitietlopgiaoly.importCacObject();
+            //chitietlopgiaoly.deleteObjectRelation();
 
 
 

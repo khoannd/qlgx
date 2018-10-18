@@ -39,7 +39,7 @@ namespace DongBoDuLieu
                         {
                             continue;
                         }
-                        DataTable result = findWithID(fieldID1, objectTrackMaster["nowId"], fieldID2, idObjectFK2, ThanhVienGiaDinhConst.TableName);
+                        DataTable result = findWithID(fieldID1, objectTrackMaster["nowId"], fieldID2, idObjectFK2, nameTable);
                         Dictionary<string, string> objectTrackNew = new Dictionary<string, string>();
                         objectTrackNew[fieldID1] = objectTrackMaster["nowId"];
                         objectTrackNew[fieldID2] = idObjectFK2.ToString();
@@ -50,13 +50,16 @@ namespace DongBoDuLieu
                             {
                                 data.Remove(fieldID1);
                                 data.Remove(fieldID2);
-                                update(data, ThanhVienGiaDinhConst.TableName, fieldID1, objectTrackMaster["nowId"], fieldID2, idObjectFK2.ToString());
+                                DataTable rsUp = assignData(data, result,nameTable);
+                                rsUp.TableName = nameTable;
+                                update(rsUp);
                             }
                             continue;
                         }
                         data[fieldID1] = objectTrackMaster["nowId"];
                         data[fieldID2] = idObjectFK2.ToString();
-                        insert(data, ThanhVienGiaDinhConst.TableName);
+                        DataTable rsAdd = assignDataAdd(data, nameTable);
+                        update(rsAdd);
                     }
                    catch (System.Exception ex)
                    {

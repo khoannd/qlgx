@@ -16,22 +16,51 @@ namespace DongBoDuLieu
             ReadFileCSV readFile = new ReadFileCSV(dir + nameCSV);
             this.Data = readFile.Data;
         }
+        public DataTable assignData(Dictionary<string, string> objectCSV, DataTable objectClient, string nameTable)
+        {
+            foreach (var item in objectCSV)
+            {
+                objectClient.Rows[0][item.Key] = processTypeValue(item.Value,objectClient.Columns[item.Key].DataType);
+
+            }
+            objectClient.TableName = nameTable;
+            return objectClient;
+        }
+        public DataTable assignDataAdd(Dictionary<string, string> objectCSV, string nameTable)
+        {
+            string query = string.Format(@"Select Top 1 * from {0} Where DaXoa=2", nameTable);
+            DataTable tbl = Memory.GetData(query);
+            if (tbl != null)
+            {
+                tbl.TableName = nameTable;
+                DataRow row = tbl.NewRow();
+                foreach (var item in objectCSV)
+                {
+                    row[item.Key] = processTypeValue(item.Value,tbl.Columns[item.Key].DataType);
+                }
+                tbl.Rows.Add(row);
+                return tbl;
+            }
+            return null;
+
+
+        }
         public int findIdObjectCSV(List<Dictionary<string, string>> listTracks, string idDB)
         {
             if (listTracks != null && listTracks.Count > 0)
             {
                 foreach (var item in ListTracks)
                 {
-                    if (compareString(item["oldIdIsCsv"],"true"))
+                    if (compareString(item["oldIdIsCsv"], "true"))
                     {
-                        if (compareString(item["newId"],idDB))
+                        if (compareString(item["newId"], idDB))
                         {
                             return int.Parse(item["oldId"]);
                         }
                     }
                     else
                     {
-                        if (compareString(item["oldId"],idDB))
+                        if (compareString(item["oldId"], idDB))
                         {
                             return int.Parse(item["newId"]);
                         }
@@ -52,9 +81,9 @@ namespace DongBoDuLieu
             }
             return temp;
         }
-        public  bool compareString(string a,string b)
+        public bool compareString(string a, string b)
         {
-            if (string.Compare(a,b)==0)
+            if (string.Compare(a, b) == 0)
             {
                 return true;
             }
@@ -67,9 +96,9 @@ namespace DongBoDuLieu
             {
                 foreach (var item in ListTracks)
                 {
-                    if (compareString(item["oldIdIsCsv"],"true"))
+                    if (compareString(item["oldIdIsCsv"], "true"))
                     {
-                        if (compareString(item["oldId"],idCSV))
+                        if (compareString(item["oldId"], idCSV))
                         {
                             return int.Parse(item["newId"]);
                         }
@@ -115,79 +144,85 @@ namespace DongBoDuLieu
             }
             return tbl;
         }
-        public void update(Dictionary<string, string> objectCSV, string nameTable, string fieldID1, string ID1, string fieldID2 = "", string ID2 = "")
+        public void update(DataTable tblObject)
         {
-            string field = "";
-            object[] value = new object[objectCSV.Count];
-            objectCSV["UpdateDate"] = DateTime.Now.ToString();
-            int i = 0;
-            foreach (var item in objectCSV)
+            if (tblObject != null && tblObject.Rows.Count > 0)
             {
-                field += item.Key + "=?,";
-                value[i++]= item.Value;
-               
+                DataSet ds = new DataSet();
+                ds.Tables.Add(tblObject);
+                Memory.UpdateDataSet(ds);
             }
-            field = field.Remove(field.Length - 1, 1);
-            string query = "";
-            if (!string.IsNullOrEmpty(fieldID2) && !string.IsNullOrEmpty(ID2))
-            {
-                query = string.Format(@"UPDATE {0} SET {1} WHERE {2}=? AND {3}=?", nameTable, field, fieldID1, fieldID2);
-                Memory.ExecuteSqlCommand(query,value,ID1,ID2);
-                Memory.ClearError();
-
-            }
-            else
-            {
-                query = string.Format(@"UPDATE {0} SET {1} WHERE {2}=?", nameTable, field, fieldID1);
-                Memory.ExecuteSqlCommand(query,value,ID1);
-                Memory.ClearError();
-            }
-            
-
-
         }
+        //public void update(Dictionary<string, string> objectCSV, string nameTable, string fieldID1, string ID1, string fieldID2 = "", string ID2 = "")
+        //{
+        //    string field = "";
+        //    object[] value = new object[objectCSV.Count];
+        //    objectCSV["UpdateDate"] = DateTime.Now.ToString();
+        //    int i = 0;
+        //    foreach (var item in objectCSV)
+        //    {
+        //        field += item.Key + "=?,";
+        //        value[i++] = item.Value;
 
-        private string processTypeValue(string value)
+        //    }
+        //    field = field.Remove(field.Length - 1, 1);
+        //    string query = "";
+        //    if (!string.IsNullOrEmpty(fieldID2) && !string.IsNullOrEmpty(ID2))
+        //    {
+        //        query = string.Format(@"UPDATE {0} SET {1} WHERE {2}=? AND {3}=?", nameTable, field, fieldID1, fieldID2);
+        //        Memory.ExecuteSqlCommand(query, value, ID1, ID2);
+        //        Memory.ClearError();
+
+        //    }
+        //    else
+        //    {
+        //        query = string.Format(@"UPDATE {0} SET {1} WHERE {2}=?", nameTable, field, fieldID1);
+        //        Memory.ExecuteSqlCommand(query, value, ID1);
+        //        Memory.ClearError();
+        //    }
+
+
+
+        //}
+
+        private object processTypeValue(string value, Type typeValue)
         {
-            int rs;
-            DateTime rs2;
-            bool check = int.TryParse(value, out rs);
-            if (check)
+            if (value != "")
             {
-                return value;
+                if (typeValue.Name == "Boolean")
+                {
+                    return (value == "0") ? false : true;
+                }
+                return Convert.ChangeType(value, typeValue);
+
             }
-            check = DateTime.TryParse(value, out rs2);
-            if (check)
-            {
-                return "#" + value + "#";
-            }
-            return "'" + value + "'";
+            return DBNull.Value;
         }
-        public void delete(string condition,string nameTable,params object[]paramater)
+        public void delete(string condition, string nameTable, params object[] paramater)
         {
             string query = string.Format(@"DELETE FROM {0} WHERE {1}", nameTable, condition);
-            Memory.ExecuteSqlCommand(query,paramater);
+            Memory.ExecuteSqlCommand(query, paramater);
             Memory.ClearError();
         }
-        public void insert(Dictionary<string, string> data, string nameTable)
-        {
-            string field = "";
-            string mask = "";
-            object[] value = new object[data.Count];
-            int i = 0;
-            data["UpdateDate"] = DateTime.Now.ToString();
-            foreach (var item in data)
-            {
-                field += item.Key + ",";
-                mask += "?,";
-                value[i++] = item.Value;
+        //public void insert(Dictionary<string, string> data, string nameTable)
+        //{
+        //    string field = "";
+        //    string mask = "";
+        //    object[] value = new object[data.Count];
+        //    int i = 0;
+        //    data["UpdateDate"] = DateTime.Now.ToString();
+        //    foreach (var item in data)
+        //    {
+        //        field += item.Key + ",";
+        //        mask += "?,";
+        //        value[i++] = item.Value;
 
-            }
-            mask = mask.Remove(mask.Length - 1, 1);
-            string query = string.Format(@"INSERT INTO {0} ({1}) VALUES ({2})", nameTable, field, mask);
-            Memory.ExecuteSqlCommand(query,value);
-            Memory.ClearError();
-        }
+        //    }
+        //    mask = mask.Remove(mask.Length - 1, 1);
+        //    string query = string.Format(@"INSERT INTO {0} ({1}) VALUES ({2})", nameTable, field, mask);
+        //    Memory.ExecuteSqlCommand(query,value);
+        //    Memory.ClearError();
+        //}
 
         public List<Dictionary<string, string>> Data
         {

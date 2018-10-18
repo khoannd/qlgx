@@ -29,10 +29,11 @@ namespace DongBoDuLieu
                {
                     //insert new
                     objectTrack["oldId"] = objectCSV[fieldID];
-                    objectTrack["newId"] = Memory.Instance.GetNextId(GiaoDanConst.TableName, GiaoDanConst.MaGiaoDan, true).ToString();
+                    objectTrack["newId"] = Memory.Instance.GetNextId(nameTable, fieldID, true).ToString();
                     objectTrack["nowId"] = objectTrack["newId"];
                     objectCSV[fieldID] = objectTrack["newId"];
-                    insert(objectCSV, nameTable);
+                    DataTable resultAdd=assignDataAdd(objectCSV,nameTable);
+                    update(resultAdd);
                 }
                catch (System.Exception ex)
                {
@@ -54,7 +55,8 @@ namespace DongBoDuLieu
                         objectTrack["nowId"] = objectClient.Rows[0][fieldID].ToString();
                         objectTrack["oldIdIsCsv"] = "false";
                         objectCSV.Remove(fieldID);
-                        update(objectCSV, nameTable, fieldID, objectTrack["nowId"]);
+                        DataTable result=assignData(objectCSV,objectClient,nameTable);
+                        update(result);
                     }
                     else
                     {
@@ -71,5 +73,7 @@ namespace DongBoDuLieu
             }
             ListTracks.Add(objectTrack);
         }
+
+       
     }
 }
