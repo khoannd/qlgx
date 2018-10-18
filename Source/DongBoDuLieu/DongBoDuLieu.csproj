@@ -49,12 +49,20 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BiTichChiTietCompare.cs" />
+    <Compile Include="ChiTietLopGiaoLyCompare.cs" />
     <Compile Include="Compare.cs" />
     <Compile Include="CompareMasterTable.cs" />
     <Compile Include="CompareRelationTable.cs" />
+    <Compile Include="DotBiTichCompare.cs" />
     <Compile Include="GiaDinhCompare.cs" />
     <Compile Include="GiaoDanCompare.cs" />
+    <Compile Include="GiaoDanHonPhoiCompare.cs" />
     <Compile Include="GiaoHoCompare.cs" />
+    <Compile Include="GiaoLyVienCompare.cs" />
+    <Compile Include="HonPhoiCompare.cs" />
+    <Compile Include="KhoiGiaoLyCompare.cs" />
+    <Compile Include="LopGiaoLyCompare.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ReadFileCSV.cs" />
     <Compile Include="SynJob.cs" />

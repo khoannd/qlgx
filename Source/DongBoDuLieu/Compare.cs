@@ -40,6 +40,18 @@ namespace DongBoDuLieu
             }
             return 0;
         }
+        public List<Dictionary<string, string>> getListByID(List<Dictionary<string, string>> data, string fieldID1, string id)
+        {
+            List<Dictionary<string, string>> temp = new List<Dictionary<string, string>>();
+            foreach (var item in data)
+            {
+                if (compareString(item[fieldID1], id))
+                {
+                    temp.Add(item);
+                }
+            }
+            return temp;
+        }
         public  bool compareString(string a,string b)
         {
             if (string.Compare(a,b)==0)
@@ -105,26 +117,34 @@ namespace DongBoDuLieu
         }
         public void update(Dictionary<string, string> objectCSV, string nameTable, string fieldID1, string ID1, string fieldID2 = "", string ID2 = "")
         {
-            string temp = "";
+            string field = "";
+            object[] value = new object[objectCSV.Count];
             objectCSV["UpdateDate"] = DateTime.Now.ToString();
+            int i = 0;
             foreach (var item in objectCSV)
             {
-                string value = processTypeValue(item.Value);
-                temp += item.Key + "=" + value + ",";
+                field += item.Key + "=?,";
+                value[i++]= item.Value;
+               
             }
-            temp = temp.Remove(temp.Length - 1, 1);
+            field = field.Remove(field.Length - 1, 1);
             string query = "";
             if (!string.IsNullOrEmpty(fieldID2) && !string.IsNullOrEmpty(ID2))
             {
-                query = string.Format(@"UPDATE {0} SET {1} WHERE {2}={3} AND {4}={5}", nameTable, temp, fieldID1, ID1, fieldID2, ID2);
+                query = string.Format(@"UPDATE {0} SET {1} WHERE {2}=? AND {3}=?", nameTable, field, fieldID1, fieldID2);
+                Memory.ExecuteSqlCommand(query,value,ID1,ID2);
+                Memory.ClearError();
+
             }
             else
             {
-                query = string.Format(@"UPDATE {0} SET {1} WHERE {2}={3}", nameTable, temp, fieldID1, ID1);
+                query = string.Format(@"UPDATE {0} SET {1} WHERE {2}=?", nameTable, field, fieldID1);
+                Memory.ExecuteSqlCommand(query,value,ID1);
+                Memory.ClearError();
             }
+            
 
-            Memory.ExecuteSqlCommand(query);
-            Memory.ClearError();
+
         }
 
         private string processTypeValue(string value)
@@ -143,24 +163,29 @@ namespace DongBoDuLieu
             }
             return "'" + value + "'";
         }
-        public void delete(string condition,string nameTable)
+        public void delete(string condition,string nameTable,params object[]paramater)
         {
             string query = string.Format(@"DELETE FROM {0} WHERE {1}", nameTable, condition);
-            Memory.ExecuteSqlCommand(query);
+            Memory.ExecuteSqlCommand(query,paramater);
             Memory.ClearError();
         }
         public void insert(Dictionary<string, string> data, string nameTable)
         {
             string field = "";
-            string value = "";
+            string mask = "";
+            object[] value = new object[data.Count];
+            int i = 0;
             data["UpdateDate"] = DateTime.Now.ToString();
             foreach (var item in data)
             {
                 field += item.Key + ",";
-                value += processTypeValue(item.Value) + ",";
+                mask += "?,";
+                value[i++] = item.Value;
+
             }
-            string query = string.Format(@"INSERT INTO {0} ({1}) VALUES ({2})", nameTable, field, value);
-            Memory.ExecuteSqlCommand(query);
+            mask = mask.Remove(mask.Length - 1, 1);
+            string query = string.Format(@"INSERT INTO {0} ({1}) VALUES ({2})", nameTable, field, mask);
+            Memory.ExecuteSqlCommand(query,value);
             Memory.ClearError();
         }
 

@@ -154,7 +154,7 @@ namespace GiaoXu
             var rsGiaoHat = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_HAT, giaoXuInfo.TenGiaoHat, giaoXuInfo.MaGiaoHatRieng);
             var rsGiaoXu = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh,giaoXuInfo.MaGiaoXuRieng,giaoXuInfo.Email);
             //2018-08-29 Gia add start
-            //Memory.SetMaGiaoXuRiengAllTable(int.Parse(giaoXuInfo.MaGiaoXuRieng));
+            Memory.SetMaGiaoXuRiengAllTable(int.Parse(giaoXuInfo.MaGiaoXuRieng));
             //2018-08-29 Gia add end
             if (!Memory.HasError())
             {

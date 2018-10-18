@@ -25,35 +25,49 @@ namespace DongBoDuLieu
             objectTrack.Add("oldId", "");
             if (objectClient == null)
             {
-                //insert new
-                objectTrack["oldId"] = objectCSV[fieldID];
-                objectTrack["newId"] = Memory.Instance.GetNextId(GiaoDanConst.TableName, GiaoDanConst.MaGiaoDan, true).ToString();
-                objectTrack["nowId"] = objectTrack["newId"];
-                objectCSV[fieldID] = objectTrack["newId"];
-                insert(objectCSV, nameTable);
+               try
+               {
+                    //insert new
+                    objectTrack["oldId"] = objectCSV[fieldID];
+                    objectTrack["newId"] = Memory.Instance.GetNextId(GiaoDanConst.TableName, GiaoDanConst.MaGiaoDan, true).ToString();
+                    objectTrack["nowId"] = objectTrack["newId"];
+                    objectCSV[fieldID] = objectTrack["newId"];
+                    insert(objectCSV, nameTable);
+                }
+               catch (System.Exception ex)
+               {
+                    return;
+               }
 
             }
             else
             {
-                //update
-                processDataNull(objectCSV, objectClient);
-                objectTrack["updated"] = "true";
-                if (compareDate(objectCSV["UpdateDate"], objectClient.Rows[0]["UpdateDate"].ToString()))
-                {
-                    objectTrack["newId"] = objectCSV[fieldID];
-                    objectTrack["oldId"] = objectClient.Rows[0][fieldID].ToString();
-                    objectTrack["nowId"] = objectClient.Rows[0][fieldID].ToString();
-                    objectTrack["oldIdIsCsv"] = "false";
-                    objectCSV.Remove(fieldID);
-                    update(objectCSV, nameTable, fieldID, objectTrack["nowId"]);
+               try
+               {
+                    //update
+                    processDataNull(objectCSV, objectClient);
+                    objectTrack["updated"] = "true";
+                    if (compareDate(objectCSV["UpdateDate"], objectClient.Rows[0]["UpdateDate"].ToString()))
+                    {
+                        objectTrack["newId"] = objectCSV[fieldID];
+                        objectTrack["oldId"] = objectClient.Rows[0][fieldID].ToString();
+                        objectTrack["nowId"] = objectClient.Rows[0][fieldID].ToString();
+                        objectTrack["oldIdIsCsv"] = "false";
+                        objectCSV.Remove(fieldID);
+                        update(objectCSV, nameTable, fieldID, objectTrack["nowId"]);
+                    }
+                    else
+                    {
+                        objectTrack["oldIdIsCsv"] = "true";
+                        objectTrack["newId"] = objectClient.Rows[0][fieldID].ToString();
+                        objectTrack["oldId"] = objectCSV[fieldID];
+                        objectTrack["nowId"] = objectClient.Rows[0][fieldID].ToString();
+                    }
                 }
-                else
-                {
-                    objectTrack["oldIdIsCsv"] = "true";
-                    objectTrack["newId"] = objectClient.Rows[0][fieldID].ToString();
-                    objectTrack["oldId"] = objectCSV[fieldID];
-                    objectTrack["nowId"] = objectClient.Rows[0][fieldID].ToString();
-                }
+               catch (System.Exception ex)
+               {
+                    return;
+               }
             }
             ListTracks.Add(objectTrack);
         }
