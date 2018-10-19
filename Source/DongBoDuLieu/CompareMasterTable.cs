@@ -15,9 +15,9 @@ namespace DongBoDuLieu
         public abstract void importCacObject();
         public abstract void deleteObjectMaster();
 
-        public void importObjectMaster(Dictionary<string, string> objectCSV, DataTable objectClient, string fieldID, string nameTable)
+        public void importObjectMaster(Dictionary<string, object> objectCSV, DataTable objectClient, string fieldID, string nameTable)
         {
-            Dictionary<string, string> objectTrack = new Dictionary<string, string>();
+            Dictionary<string, object> objectTrack = new Dictionary<string, object>();
             objectTrack.Add("updated", "false");
             objectTrack.Add("oldIdIsCsv", "true");
             objectTrack.Add("newId", "");

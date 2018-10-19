@@ -9,24 +9,24 @@ namespace DongBoDuLieu
 {
     public class Compare
     {
-        private List<Dictionary<string, string>> data = new List<Dictionary<string, string>>();
-        private List<Dictionary<string, string>> listTracks = new List<Dictionary<string, string>>();
+        private List<Dictionary<string, object>> data = new List<Dictionary<string, object>>();
+        private List<Dictionary<string, object>> listTracks = new List<Dictionary<string, object>>();
         public Compare(string dir, string nameCSV)
         {
             ReadFileCSV readFile = new ReadFileCSV(dir + nameCSV);
             this.Data = readFile.Data;
         }
-        public DataTable assignData(Dictionary<string, string> objectCSV, DataTable objectClient, string nameTable)
+        public DataTable assignData(Dictionary<string, object> objectCSV, DataTable objectClient, string nameTable)
         {
             foreach (var item in objectCSV)
             {
-                objectClient.Rows[0][item.Key] = processTypeValue(item.Value,objectClient.Columns[item.Key].DataType);
-
+                //objectClient.Rows[0][item.Key] = processTypeValue(item.Value,objectClient.Columns[item.Key].DataType);
+                objectClient.Rows[0][item.Key] = item.Value;
             }
             objectClient.TableName = nameTable;
             return objectClient;
         }
-        public DataTable assignDataAdd(Dictionary<string, string> objectCSV, string nameTable)
+        public DataTable assignDataAdd(Dictionary<string, object> objectCSV, string nameTable)
         {
             string query = string.Format(@"Select Top 1 * from {0} Where DaXoa=2", nameTable);
             DataTable tbl = Memory.GetData(query);
@@ -36,7 +36,8 @@ namespace DongBoDuLieu
                 DataRow row = tbl.NewRow();
                 foreach (var item in objectCSV)
                 {
-                    row[item.Key] = processTypeValue(item.Value,tbl.Columns[item.Key].DataType);
+                    //row[item.Key] = processTypeValue(item.Value,tbl.Columns[item.Key].DataType);
+                    row[item.Key] = item.Value;
                 }
                 tbl.Rows.Add(row);
                 return tbl;
@@ -45,7 +46,7 @@ namespace DongBoDuLieu
 
 
         }
-        public int findIdObjectCSV(List<Dictionary<string, string>> listTracks, string idDB)
+        public int findIdObjectCSV(List<Dictionary<string, object>> listTracks, string idDB)
         {
             if (listTracks != null && listTracks.Count > 0)
             {
@@ -55,23 +56,23 @@ namespace DongBoDuLieu
                     {
                         if (compareString(item["newId"], idDB))
                         {
-                            return int.Parse(item["oldId"]);
+                            return int.Parse(item["oldId"].ToString());
                         }
                     }
                     else
                     {
                         if (compareString(item["oldId"], idDB))
                         {
-                            return int.Parse(item["newId"]);
+                            return int.Parse(item["newId"].ToString());
                         }
                     }
                 }
             }
             return 0;
         }
-        public List<Dictionary<string, string>> getListByID(List<Dictionary<string, string>> data, string fieldID1, string id)
+        public List<Dictionary<string, object>> getListByID(List<Dictionary<string, object>> data, string fieldID1, object id)
         {
-            List<Dictionary<string, string>> temp = new List<Dictionary<string, string>>();
+            List<Dictionary<string, object>> temp = new List<Dictionary<string, object>>();
             foreach (var item in data)
             {
                 if (compareString(item[fieldID1], id))
@@ -81,15 +82,15 @@ namespace DongBoDuLieu
             }
             return temp;
         }
-        public bool compareString(string a, string b)
+        public bool compareString(object a, object b)
         {
-            if (string.Compare(a, b) == 0)
+            if (string.Compare(a.ToString(), b.ToString()) == 0)
             {
                 return true;
             }
             return false;
         }
-        public int findIdObjectClient(List<Dictionary<string, string>> listTracks, string idCSV)
+        public int findIdObjectClient(List<Dictionary<string, object>> listTracks, object idCSV)
         {
 
             if (listTracks != null && listTracks.Count > 0)
@@ -100,14 +101,14 @@ namespace DongBoDuLieu
                     {
                         if (compareString(item["oldId"], idCSV))
                         {
-                            return int.Parse(item["newId"]);
+                            return int.Parse(item["newId"].ToString());
                         }
                     }
                     else
                     {
                         if (compareString(item["newId"], idCSV))
                         {
-                            return int.Parse(item["oldId"]);
+                            return int.Parse(item["oldId"].ToString());
                         }
                     }
                 }
@@ -115,13 +116,13 @@ namespace DongBoDuLieu
             return 0;
         }
 
-        public bool compareDate(string dateCSV, string dateClient)
+        public bool compareDate(object dateCSV, string dateClient)
         {
-            DateTime dt1 = DateTime.Parse(dateCSV);
+            DateTime dt1 = DateTime.Parse(dateCSV.ToString());
             DateTime dt2 = DateTime.Parse(dateClient);
             return (DateTime.Compare(dt1, dt2) > 0) ? true : false;
         }
-        public void processDataNull(Dictionary<string, string> objectCSV, DataTable objectClient)
+        public void processDataNull(Dictionary<string, object> objectCSV, DataTable objectClient)
         {
             foreach (var item in objectCSV)
             {
@@ -153,7 +154,7 @@ namespace DongBoDuLieu
                 Memory.UpdateDataSet(ds);
             }
         }
-        //public void update(Dictionary<string, string> objectCSV, string nameTable, string fieldID1, string ID1, string fieldID2 = "", string ID2 = "")
+        //public void update(Dictionary<string, object> objectCSV, string nameTable, string fieldID1, string ID1, string fieldID2 = "", string ID2 = "")
         //{
         //    string field = "";
         //    object[] value = new object[objectCSV.Count];
@@ -204,7 +205,7 @@ namespace DongBoDuLieu
             Memory.ExecuteSqlCommand(query, paramater);
             Memory.ClearError();
         }
-        //public void insert(Dictionary<string, string> data, string nameTable)
+        //public void insert(Dictionary<string, object> data, string nameTable)
         //{
         //    string field = "";
         //    string mask = "";
@@ -224,7 +225,7 @@ namespace DongBoDuLieu
         //    Memory.ClearError();
         //}
 
-        public List<Dictionary<string, string>> Data
+        public List<Dictionary<string, object>> Data
         {
             get
             {
@@ -237,7 +238,7 @@ namespace DongBoDuLieu
             }
         }
 
-        public List<Dictionary<string, string>> ListTracks
+        public List<Dictionary<string, object>> ListTracks
         {
             get
             {

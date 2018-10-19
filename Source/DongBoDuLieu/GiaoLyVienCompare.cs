@@ -11,8 +11,8 @@ namespace DongBoDuLieu
         {
         }
 
-        private List<Dictionary<string, string>> listTracksLopGiaoLy;
-        private List<Dictionary<string, string>> listTracksGiaoDan;
+        private List<Dictionary<string, object>> listTracksLopGiaoLy;
+        private List<Dictionary<string, object>> listTracksGiaoDan;
 
         public override void importCacObject()
         {
@@ -21,11 +21,11 @@ namespace DongBoDuLieu
                 importObjectRelation(objectTrack, LopGiaoLyConst.MaLop, GiaoDanConst.MaGiaoDan, listTracksGiaoDan, GiaoLyVienConst.TableName);
             }
         }
-        public void getListTracksLopGiaoLy(List<Dictionary<string, string>> lopGiaoLyTracks)
+        public void getListTracksLopGiaoLy(List<Dictionary<string, object>> lopGiaoLyTracks)
         {
             listTracksLopGiaoLy = lopGiaoLyTracks;
         }
-        public void getListTracksGiaoDan(List<Dictionary<string, string>> giaoDanTracks)
+        public void getListTracksGiaoDan(List<Dictionary<string, object>> giaoDanTracks)
         {
             listTracksGiaoDan = giaoDanTracks;
         }

@@ -11,9 +11,9 @@ namespace DongBoDuLieu
         public GiaDinhCompare(string dir, string nameCSV) : base(dir, nameCSV)
         {
         }
-        private List<Dictionary<string, string>> ListGiaoHoTracks;
-        private List<Dictionary<string, string>> ListGiaoDanTracks;
-        private List<Dictionary<string, string>> ListThanhVienGiaDinhCSV;
+        private List<Dictionary<string, object>> ListGiaoHoTracks;
+        private List<Dictionary<string, object>> ListGiaoDanTracks;
+        private List<Dictionary<string, object>> ListThanhVienGiaDinhCSV;
         public override void importCacObject()
         {
             if (this.Data.Count > 0)
@@ -26,19 +26,19 @@ namespace DongBoDuLieu
                 }
             }
         }
-        public void getListThanhVienGiaDinhCSV(List<Dictionary<string, string>> thanhVienGiaDinhCSV)
+        public void getListThanhVienGiaDinhCSV(List<Dictionary<string, object>> thanhVienGiaDinhCSV)
         {
             ListThanhVienGiaDinhCSV = thanhVienGiaDinhCSV;
         }
-        public void getListGiaoHoTracks(List<Dictionary<string, string>> giaoHoTracks)
+        public void getListGiaoHoTracks(List<Dictionary<string, object>> giaoHoTracks)
         {
             ListGiaoHoTracks = giaoHoTracks;
         }
-        public void getListGiaoDanTracks(List<Dictionary<string, string>> giaoDanTracks)
+        public void getListGiaoDanTracks(List<Dictionary<string, object>> giaoDanTracks)
         {
             ListGiaoDanTracks = giaoDanTracks;
         }
-        private DataTable findGiaDinh(Dictionary<string, string> objectCSV)
+        private DataTable findGiaDinh(Dictionary<string, object> objectCSV)
         {
             //Tim Ma Nhan dang
             DataTable tbl = null;
@@ -66,7 +66,7 @@ namespace DongBoDuLieu
                     foreach (DataRow giaDinhDB in tbl.Rows)
                     {
                         //Check ton tai 1 thanh vien gia dinh
-                        List<Dictionary<string, string>> thanhVienGiaDinhCSV = getListByID(ListThanhVienGiaDinhCSV, "MaGiaDinh", objectCSV["MaGiaDinh"]);
+                        List<Dictionary<string, object>> thanhVienGiaDinhCSV = getListByID(ListThanhVienGiaDinhCSV, "MaGiaDinh", objectCSV["MaGiaDinh"]);
                         DataTable thanhVienGiaDinhDB = Memory.GetData("Select * from ThanhVienGiaDinh where MaGiaDinh=?", giaDinhDB["MaGiaDinh"]);
                         //Xu ly ma giao dan thanh vien gia dinh
 
@@ -79,6 +79,7 @@ namespace DongBoDuLieu
                                 {
                                     DataTable rs=new DataTable();
                                     rs.Rows.Add(giaDinhDB);
+                                    return rs;
                                 }
                             }
                         }

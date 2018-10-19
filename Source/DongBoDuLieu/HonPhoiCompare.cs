@@ -45,7 +45,7 @@ namespace DongBoDuLieu
             }
         }
 
-        private DataTable findHonPhoi(Dictionary<string, string> objectCSV)
+        private DataTable findHonPhoi(Dictionary<string, object> objectCSV)
         {
             //check Ma nhan dang
             DataTable tbl = null;

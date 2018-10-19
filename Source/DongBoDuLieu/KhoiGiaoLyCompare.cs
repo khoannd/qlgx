@@ -13,7 +13,7 @@ namespace DongBoDuLieu
         }
         LopGiaoLyCompare lopgiaoly;
 
-        private List<Dictionary<string, string>> ListGiaoDanTracks;
+        private List<Dictionary<string, object>> ListGiaoDanTracks;
 
         public override void deleteObjectMaster()
         {
@@ -66,7 +66,7 @@ namespace DongBoDuLieu
                 }
             }
         }
-        public void getListGiaoDanTracks(List<Dictionary<string, string>> giaoDanTracks)
+        public void getListGiaoDanTracks(List<Dictionary<string, object>> giaoDanTracks)
         {
             ListGiaoDanTracks = giaoDanTracks;
         }
@@ -76,7 +76,7 @@ namespace DongBoDuLieu
         }
 
 
-        private DataTable findKhoiGiaoLy(Dictionary<string, string> objectCSV)
+        private DataTable findKhoiGiaoLy(Dictionary<string, object> objectCSV)
         {
             DataTable tbl = null;
             try
@@ -97,10 +97,10 @@ namespace DongBoDuLieu
             }
             return null;
         }
-        private bool compareLopGiaoLy(Dictionary<string, string> khoiGiaoLyCSV, DataTable khoiGiaoLyDB)
+        private bool compareLopGiaoLy(Dictionary<string, object> khoiGiaoLyCSV, DataTable khoiGiaoLyDB)
         {
             DataTable lopGiaoLyDB = Memory.GetData(@"Select * from LopGiaoLy Where MaKhoi=?", khoiGiaoLyDB.Rows[0]["MaKhoi"]);
-            List<Dictionary<string, string>> lopGiaoLyCSV = getListByID(lopgiaoly.Data, "MaKhoi", khoiGiaoLyCSV["MaKhoi"]);
+            List<Dictionary<string, object>> lopGiaoLyCSV = getListByID(lopgiaoly.Data, "MaKhoi", khoiGiaoLyCSV["MaKhoi"]);
             if (lopGiaoLyDB != null && lopGiaoLyDB.Rows.Count == 0 && lopGiaoLyCSV != null && lopGiaoLyCSV.Count == 0)
             {
                 return true;

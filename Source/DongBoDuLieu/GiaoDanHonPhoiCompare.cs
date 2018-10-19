@@ -10,8 +10,8 @@ namespace DongBoDuLieu
         public GiaoDanHonPhoiCompare(string dir, string nameCSV) : base(dir, nameCSV)
         {
         }
-        private List<Dictionary<string, string>> listTracksHonPhoi;
-        private List<Dictionary<string, string>> listTracksGiaoDan;
+        private List<Dictionary<string, object>> listTracksHonPhoi;
+        private List<Dictionary<string, object>> listTracksGiaoDan;
         public override void deleteObjectRelation()
         {
             deleteObjecChild(ListTracks, GiaoDanHonPhoiConst.MaHonPhoi, GiaoDanHonPhoiConst.MaGiaoDan, GiaoDanHonPhoiConst.TableName);
@@ -25,11 +25,11 @@ namespace DongBoDuLieu
                 importObjectRelation(objectTrack, HonPhoiConst.MaHonPhoi, GiaoDanConst.MaGiaoDan, listTracksGiaoDan, GiaoDanHonPhoiConst.TableName);
             }
         }
-        public void getListTracksHonPhoi(List<Dictionary<string, string>> honPhoiTracks)
+        public void getListTracksHonPhoi(List<Dictionary<string, object>> honPhoiTracks)
         {
             listTracksHonPhoi = honPhoiTracks;
         }
-        public void getListTracksGiaoDan(List<Dictionary<string, string>> giaoDanTracks)
+        public void getListTracksGiaoDan(List<Dictionary<string, object>> giaoDanTracks)
         {
             listTracksGiaoDan = giaoDanTracks;
         }

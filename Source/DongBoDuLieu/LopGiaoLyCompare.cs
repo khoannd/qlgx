@@ -11,10 +11,10 @@ namespace DongBoDuLieu
         public LopGiaoLyCompare(string dir, string nameCSV) : base(dir, nameCSV)
         {
         }
-        private List<Dictionary<string, string>> ListGiaoDanTracks;
-        private List<Dictionary<string, string>> ListKhoiGiaoLyTracks;
-        List<Dictionary<string, string>> chiTietLopGiaoLy;
-        public void getListChiTietLopGiaoLyCSV(List<Dictionary<string, string>> ChiTietLopGiaoLyCSV)
+        private List<Dictionary<string, object>> ListGiaoDanTracks;
+        private List<Dictionary<string, object>> ListKhoiGiaoLyTracks;
+        List<Dictionary<string, object>> chiTietLopGiaoLy;
+        public void getListChiTietLopGiaoLyCSV(List<Dictionary<string, object>> ChiTietLopGiaoLyCSV)
         {
             chiTietLopGiaoLy = ChiTietLopGiaoLyCSV;
         }
@@ -40,11 +40,11 @@ namespace DongBoDuLieu
 
             }
         }
-        public void getListGiaoDanTracks(List<Dictionary<string, string>> giaoDanTracks)
+        public void getListGiaoDanTracks(List<Dictionary<string, object>> giaoDanTracks)
         {
             ListGiaoDanTracks = giaoDanTracks;
         }
-        public void getListKhoiGiaoLy(List<Dictionary<string, string>> khoiGiaoLyTracks)
+        public void getListKhoiGiaoLy(List<Dictionary<string, object>> khoiGiaoLyTracks)
         {
             ListKhoiGiaoLyTracks = khoiGiaoLyTracks;
         }
@@ -70,7 +70,7 @@ namespace DongBoDuLieu
             }
         }
 
-        private DataTable findLopGiaoLy(Dictionary<string, string> objectCSV)
+        private DataTable findLopGiaoLy(Dictionary<string, object> objectCSV)
         {
             DataTable tbl = null;
             try
@@ -92,10 +92,10 @@ namespace DongBoDuLieu
             return null;
         }
 
-        public bool compareHocVien(Dictionary<string, string> lopCSV, DataRow lopDB)
+        public bool compareHocVien(Dictionary<string, object> lopCSV, DataRow lopDB)
         {
             DataTable hocVienDB = Memory.GetData(@"Select * from LopGiaoLy Where MaLop=?",lopDB["MaLop"]);
-            List<Dictionary<string, string>> hocvienCSV = getListByID(chiTietLopGiaoLy, "MaLop", lopCSV["MaLop"]);
+            List<Dictionary<string, object>> hocvienCSV = getListByID(chiTietLopGiaoLy, "MaLop", lopCSV["MaLop"]);
             if (hocVienDB != null && hocVienDB.Rows.Count == 0 && hocvienCSV != null && hocvienCSV.Count == 0)
             {
                 return true;
@@ -109,7 +109,7 @@ namespace DongBoDuLieu
                 int idHocVieDB = findIdObjectClient(ListGiaoDanTracks, hocvienInCSV["MaGiaoDan"]);
                 foreach (DataRow hocvienInDB in hocVienDB.Rows)
                 {
-                    if (int.Parse(hocvienInDB["MaGiaoDan"].ToString())==idHocVieDB&&int.Parse(hocvienInDB["SoThuTu"].ToString())==int.Parse(hocvienInCSV["SoThuTu"]))
+                    if (int.Parse(hocvienInDB["MaGiaoDan"].ToString())==idHocVieDB&&int.Parse(hocvienInDB["SoThuTu"].ToString())==int.Parse(hocvienInCSV["SoThuTu"].ToString()))
                     {
                         return true;
                     }

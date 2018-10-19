@@ -11,8 +11,8 @@ namespace DongBoDuLieu
         {
         }
 
-        private List<Dictionary<string, string>> listTracksDotBiTich;
-        private List<Dictionary<string, string>> listTracksGiaoDan;
+        private List<Dictionary<string, object>> listTracksDotBiTich;
+        private List<Dictionary<string, object>> listTracksGiaoDan;
 
         public override void importCacObject()
         {
@@ -21,11 +21,11 @@ namespace DongBoDuLieu
                 importObjectRelation(objectTrack, DotBiTichConst.MaDotBiTich, GiaoDanConst.MaGiaoDan, listTracksGiaoDan, BiTichChiTietConst.TableName);
             }
         }
-        public void getlistTracksDotBiTich(List<Dictionary<string, string>> dotBiTichTracks)
+        public void getlistTracksDotBiTich(List<Dictionary<string, object>> dotBiTichTracks)
         {
             listTracksDotBiTich = dotBiTichTracks;
         }
-        public void getListTracksGiaoDan(List<Dictionary<string, string>> giaoDanTracks)
+        public void getListTracksGiaoDan(List<Dictionary<string, object>> giaoDanTracks)
         {
             listTracksGiaoDan = giaoDanTracks;
         }

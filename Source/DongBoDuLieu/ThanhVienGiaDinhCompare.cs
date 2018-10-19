@@ -10,8 +10,8 @@ namespace DongBoDuLieu
         public ThanhVienGiaDinhCompare(string dir, string nameCSV) : base(dir, nameCSV)
         {
         }
-        private List<Dictionary<string, string>> listTracksGiaDinh;
-        private List<Dictionary<string, string>> listTracksGiaoDan;
+        private List<Dictionary<string, object>> listTracksGiaDinh;
+        private List<Dictionary<string, object>> listTracksGiaoDan;
 
         public override void importCacObject()
         {
@@ -20,11 +20,11 @@ namespace DongBoDuLieu
                 importObjectRelation(objectTrack, GiaDinhConst.MaGiaDinh, GiaoDanConst.MaGiaoDan,listTracksGiaoDan ,ThanhVienGiaDinhConst.TableName);
             }
         }
-        public void getListTracksGiaDinh(List<Dictionary<string, string>> giaDinhTracks)
+        public void getListTracksGiaDinh(List<Dictionary<string, object>> giaDinhTracks)
         {
             listTracksGiaDinh = giaDinhTracks;
         }
-        public void getListTracksGiaoDan(List<Dictionary<string, string>> giaoDanTracks)
+        public void getListTracksGiaoDan(List<Dictionary<string, object>> giaoDanTracks)
         {
             listTracksGiaoDan = giaoDanTracks;
         }

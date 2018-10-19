@@ -13,9 +13,9 @@ namespace DongBoDuLieu
         }
         public abstract void importCacObject();
         public abstract void deleteObjectRelation();
-        public void importObjectRelation(Dictionary<string,string>objectTrackMaster,string fieldID1,string fieldID2,List<Dictionary<string,string>>listObjectChange,string nameTable)
+        public void importObjectRelation(Dictionary<string, object>objectTrackMaster,string fieldID1,string fieldID2,List<Dictionary<string, object>>listObjectChange,string nameTable)
         {
-            List<Dictionary<string, string>> listObjectCSV=null;
+            List<Dictionary<string, object>> listObjectCSV=null;
             if (compareString(objectTrackMaster["updated"],"true"))
             {
                 if (compareString(objectTrackMaster["oldIdIsCsv"],"false"))
@@ -40,7 +40,7 @@ namespace DongBoDuLieu
                             continue;
                         }
                         DataTable result = findWithID(fieldID1, objectTrackMaster["nowId"], fieldID2, idObjectFK2, nameTable);
-                        Dictionary<string, string> objectTrackNew = new Dictionary<string, string>();
+                        Dictionary<string, object> objectTrackNew = new Dictionary<string, object>();
                         objectTrackNew[fieldID1] = objectTrackMaster["nowId"];
                         objectTrackNew[fieldID2] = idObjectFK2.ToString();
                         ListTracks.Add(objectTrackNew);
@@ -68,7 +68,7 @@ namespace DongBoDuLieu
                 }
             }
         }
-        public void deleteObjecChild(List<Dictionary<string,string>>listTracksObject,string fieldID1,string fieldID2,string nameTable)
+        public void deleteObjecChild(List<Dictionary<string, object>>listTracksObject,string fieldID1,string fieldID2,string nameTable)
         {
             DataTable tblObject = getAll(nameTable);
             if (tblObject!=null&&tblObject.Rows.Count>0)
@@ -84,7 +84,7 @@ namespace DongBoDuLieu
             }
         }
 
-        private bool findObject(DataRow objectDB, List<Dictionary<string, string>> listTracksObject, string fieldID1, string fieldID2)
+        private bool findObject(DataRow objectDB, List<Dictionary<string, object>> listTracksObject, string fieldID1, string fieldID2)
         {
             if (listTracksObject!=null&& listTracksObject.Count>0)
             {
@@ -99,7 +99,7 @@ namespace DongBoDuLieu
             return false;
         }
 
-        private DataTable findWithID(string fieldID1,string idObjectFK1,string fieldID2, int idObjectFK2,string nameTable)
+        private DataTable findWithID(string fieldID1,object idObjectFK1,string fieldID2, int idObjectFK2,string nameTable)
         {
             string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE {1}=? AND {2}=?", nameTable, fieldID1, fieldID2);
             DataTable tbl = null;

@@ -77,13 +77,13 @@ namespace DongBoDuLieu
             }
         }
 
-        private DataTable findGiaoHo(string maNhanDang)
+        private DataTable findGiaoHo(object maNhanDang)
         {
             DataTable tbl = null;
             try
             {
-                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE MaNhanDang='{1}'", GiaoHoConst.TableName, maNhanDang);
-                tbl = Memory.GetData(query);
+                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE MaNhanDang=?", GiaoHoConst.TableName);
+                tbl = Memory.GetData(query, maNhanDang);
             }
             catch (System.Exception ex)
             {

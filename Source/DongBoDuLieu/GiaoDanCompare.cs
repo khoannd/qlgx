@@ -11,7 +11,7 @@ namespace DongBoDuLieu
         public GiaoDanCompare(string dir, string nameCSV) : base(dir, nameCSV)
         {
         }
-        private List<Dictionary<string, string>> ListGiaoHoTracks;
+        private List<Dictionary<string, object>> ListGiaoHoTracks;
 
         public override void deleteObjectMaster()
         {
@@ -47,7 +47,7 @@ namespace DongBoDuLieu
 
             }
         }
-        public void getListGiaoHoTracks(List<Dictionary<string, string>> giaoHoTracks)
+        public void getListGiaoHoTracks(List<Dictionary<string, object>> giaoHoTracks)
         {
             ListGiaoHoTracks = giaoHoTracks;
         }
@@ -64,7 +64,7 @@ namespace DongBoDuLieu
                 }
             }
         }
-        private DataTable findGiaoDan(Dictionary<string, string> objectCSV)
+        private DataTable findGiaoDan(Dictionary<string, object> objectCSV)
         {
             //Tim Ma Nhan dang
             DataTable tbl = null;

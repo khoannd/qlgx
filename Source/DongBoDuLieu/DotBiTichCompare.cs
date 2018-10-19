@@ -44,7 +44,7 @@ namespace DongBoDuLieu
             }
         }
 
-        private DataTable findDotBiTich(Dictionary<string, string> objectCSV)
+        private DataTable findDotBiTich(Dictionary<string, object> objectCSV)
         {
             DataTable tbl = null;
             try
