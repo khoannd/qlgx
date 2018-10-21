@@ -16,12 +16,9 @@ namespace DongBoDuLieu
         public void importObjectRelation(Dictionary<string, object>objectTrackMaster,string fieldID1,string fieldID2,List<Dictionary<string, object>>listObjectChange,string nameTable)
         {
             List<Dictionary<string, object>> listObjectCSV=null;
-            if (compareString(objectTrackMaster["updated"],"true"))
+            if (compareString(objectTrackMaster["oldIdIsCsv"], "false"))
             {
-                if (compareString(objectTrackMaster["oldIdIsCsv"],"false"))
-                {
-                    listObjectCSV = getListByID(Data,fieldID1, objectTrackMaster["newId"]);
-                }
+                listObjectCSV = getListByID(Data, fieldID1, objectTrackMaster["newId"]);
             }
             else
             {
@@ -48,17 +45,17 @@ namespace DongBoDuLieu
                         {
                             if (compareDate(data["UpdateDate"], result.Rows[0]["UpdateDate"].ToString()))
                             {
-                                data.Remove(fieldID1);
-                                data.Remove(fieldID2);
-                                DataTable rsUp = assignData(data, result,nameTable);
+                                //data.Remove(fieldID1);
+                                //data.Remove(fieldID2);
+                                DataTable rsUp = assignData(data, result,nameTable,fieldID1,fieldID2);
                                 rsUp.TableName = nameTable;
                                 update(rsUp);
                             }
                             continue;
                         }
-                        data[fieldID1] = objectTrackMaster["nowId"];
-                        data[fieldID2] = idObjectFK2.ToString();
-                        DataTable rsAdd = assignDataAdd(data, nameTable);
+                        //data[fieldID1] = objectTrackMaster["nowId"];
+                        //data[fieldID2] = idObjectFK2.ToString();
+                        DataTable rsAdd = assignDataAdd(data,fieldID1, objectTrackMaster["nowId"], nameTable,fieldID2,idObjectFK2);
                         update(rsAdd);
                     }
                    catch (System.Exception ex)
@@ -78,7 +75,7 @@ namespace DongBoDuLieu
                     bool result = findObject(item,listTracksObject,fieldID1,fieldID2);
                     if (!result)
                     {
-                        delete(string.Format(@"{0}=? AND {1}=?", fieldID1, fieldID2), nameTable, fieldID1, fieldID2);
+                        delete(string.Format(@"{0}=? AND {1}=?", fieldID1, fieldID2), nameTable, item[fieldID1],item[fieldID2]);
                     }
                 }
             }

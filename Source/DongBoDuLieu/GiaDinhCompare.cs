@@ -42,11 +42,14 @@ namespace DongBoDuLieu
         {
             //Tim Ma Nhan dang
             DataTable tbl = null;
-           
+
             try
             {
-                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE MaNhanDang=?", GiaDinhConst.TableName);
-                tbl = Memory.GetData(query, objectCSV["MaNhanDang"]);
+                if (!string.IsNullOrEmpty(objectCSV["MaNhanDang"].ToString()))
+                {
+                    string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE MaNhanDang=?", GiaDinhConst.TableName);
+                    tbl = Memory.GetData(query, objectCSV["MaNhanDang"]);
+                }
             }
             catch (System.Exception ex)
             {
@@ -77,7 +80,7 @@ namespace DongBoDuLieu
                             {
                                 if (int.Parse(thanhVienDB["MaGiaoDan"].ToString()) == idThanhVienDB && compareString(thanhVienDB["VaiTro"].ToString(), thanhVienCSV["VaiTro"]))
                                 {
-                                    DataTable rs=new DataTable();
+                                    DataTable rs = new DataTable();
                                     rs.Rows.Add(giaDinhDB);
                                     return rs;
                                 }

@@ -81,13 +81,18 @@ namespace DongBoDuLieu
             DataTable tbl = null;
             try
             {
-                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE TenKhoi=?", KhoiGiaoLyConst.TableName);
+                string query = string.Format(@"SELECT * FROM {0} WHERE TenKhoi=?", KhoiGiaoLyConst.TableName);
                 tbl = Memory.GetData(query, objectCSV["TenKhoi"]);
                 if (tbl != null && tbl.Rows.Count > 0)
                 {
-                    if (compareLopGiaoLy(objectCSV, tbl))
+                    foreach (DataRow motKhoi in tbl.Rows)
                     {
-                        return tbl;
+                        if (compareLopGiaoLy(objectCSV, motKhoi))
+                        {
+                            DataTable temp = new DataTable();
+                            temp.Rows.Add(motKhoi);
+                            return temp;
+                        }
                     }
                 }
             }
@@ -97,9 +102,9 @@ namespace DongBoDuLieu
             }
             return null;
         }
-        private bool compareLopGiaoLy(Dictionary<string, object> khoiGiaoLyCSV, DataTable khoiGiaoLyDB)
+        private bool compareLopGiaoLy(Dictionary<string, object> khoiGiaoLyCSV, DataRow khoiGiaoLyDB)
         {
-            DataTable lopGiaoLyDB = Memory.GetData(@"Select * from LopGiaoLy Where MaKhoi=?", khoiGiaoLyDB.Rows[0]["MaKhoi"]);
+            DataTable lopGiaoLyDB = Memory.GetData(@"Select * from LopGiaoLy Where MaKhoi=?", khoiGiaoLyDB["MaKhoi"]);
             List<Dictionary<string, object>> lopGiaoLyCSV = getListByID(lopgiaoly.Data, "MaKhoi", khoiGiaoLyCSV["MaKhoi"]);
             if (lopGiaoLyDB != null && lopGiaoLyDB.Rows.Count == 0 && lopGiaoLyCSV != null && lopGiaoLyCSV.Count == 0)
             {

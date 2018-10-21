@@ -70,21 +70,47 @@ namespace DongBoDuLieu
 
         public override void importCacObject()
         {
-            foreach (var item in Data)
+           if (Data.Count>0)
+           {
+                foreach (var item in Data)
+                {
+                    DataTable giaoHo = findGiaoHo(item);
+                    importObjectMaster(item, giaoHo, GiaoHoConst.MaGiaoHo, GiaoHoConst.TableName);
+                }
+            }
+            processMaGiaoHoCha();
+        }
+        private void processMaGiaoHoCha()
+        {
+            if (Data.Count > 0)
             {
-                DataTable giaoHo = findGiaoHo(item["MaNhanDang"]);
-                importObjectMaster(item, giaoHo, GiaoHoConst.MaGiaoHo, GiaoHoConst.TableName);
+                foreach (var item in Data)
+                {
+                    if (!string.IsNullOrEmpty(item["MaGiaoHoCha"].ToString()))
+                    {
+                        int idGiaoHoCha = findIdObjectClient(ListTracks, item["MaGiaoHoCha"]);
+                        if (idGiaoHoCha!=0)
+                        {
+                            int idGiaoHo = findIdObjectClient(ListTracks, item["MaGiaoHo"]);
+                            Memory.ExecuteSqlCommand(@"Update GiaoHo Set MaGiaoHoCha=? Where MaGiaoHo=?", idGiaoHoCha, idGiaoHo);
+                            Memory.ClearError();
+                        }
+                    }
+                }
             }
         }
-
-        private DataTable findGiaoHo(object maNhanDang)
+        private DataTable findGiaoHo(Dictionary<string, object> objectCSV)
         {
             DataTable tbl = null;
             try
             {
-                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE MaNhanDang=?", GiaoHoConst.TableName);
-                tbl = Memory.GetData(query, maNhanDang);
-            }
+                if (!string.IsNullOrEmpty(objectCSV["MaNhanDang"].ToString()))
+                {
+                    string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE MaNhanDang=?", GiaoHoConst.TableName);
+                    tbl = Memory.GetData(query, objectCSV["MaNhanDang"]);
+                }
+               
+            } 
             catch (System.Exception ex)
             {
                 tbl = null;
@@ -93,6 +119,21 @@ namespace DongBoDuLieu
             {
                 return tbl;
             }
+            try
+            {
+                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE TenGiaoHo=?", GiaoHoConst.TableName);
+                tbl = Memory.GetData(query, objectCSV["TenGiaoHo"]);
+            }
+            catch (Exception)
+            {
+
+                return null;
+            }
+            if (tbl!=null&&tbl.Rows.Count>0)
+            {
+                return tbl;
+            }
+
             return null;
         }
     }

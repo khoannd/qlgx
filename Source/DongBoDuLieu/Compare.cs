@@ -16,19 +16,20 @@ namespace DongBoDuLieu
             ReadFileCSV readFile = new ReadFileCSV(dir + nameCSV);
             this.Data = readFile.Data;
         }
-        public DataTable assignData(Dictionary<string, object> objectCSV, DataTable objectClient, string nameTable)
+        public DataTable assignData(Dictionary<string, object> objectCSV, DataTable objectClient, string nameTable,string fieldID1=null,string fieldID2=null)
         {
             foreach (var item in objectCSV)
             {
-                //objectClient.Rows[0][item.Key] = processTypeValue(item.Value,objectClient.Columns[item.Key].DataType);
+                if (item.Key == fieldID1||item.Key==fieldID2)
+                    continue;
                 objectClient.Rows[0][item.Key] = item.Value;
             }
             objectClient.TableName = nameTable;
             return objectClient;
         }
-        public DataTable assignDataAdd(Dictionary<string, object> objectCSV, string nameTable)
+        public DataTable assignDataAdd(Dictionary<string, object> objectCSV,string fieldID1,object ID1 ,string nameTable,string fieldID2=null,object ID2=null)
         {
-            string query = string.Format(@"Select Top 1 * from {0} Where DaXoa=2", nameTable);
+            string query = string.Format(@"Select * from {0} Where UpdateDate=#01/01/0001#", nameTable);
             DataTable tbl = Memory.GetData(query);
             if (tbl != null)
             {
@@ -36,7 +37,16 @@ namespace DongBoDuLieu
                 DataRow row = tbl.NewRow();
                 foreach (var item in objectCSV)
                 {
-                    //row[item.Key] = processTypeValue(item.Value,tbl.Columns[item.Key].DataType);
+                    if (item.Key==fieldID1)
+                    {
+                        row[fieldID1] = ID1;
+                        continue;
+                    }
+                    if (item.Key==fieldID2)
+                    {
+                        row[fieldID2] = ID2;
+                        continue;
+                    }
                     row[item.Key] = item.Value;
                 }
                 tbl.Rows.Add(row);
@@ -46,11 +56,11 @@ namespace DongBoDuLieu
 
 
         }
-        public int findIdObjectCSV(List<Dictionary<string, object>> listTracks, string idDB)
+        public int findIdObjectCSV(List<Dictionary<string, object>> listTracksTemp, string idDB)
         {
-            if (listTracks != null && listTracks.Count > 0)
+            if (listTracks != null && listTracksTemp.Count > 0)
             {
-                foreach (var item in ListTracks)
+                foreach (var item in listTracksTemp)
                 {
                     if (compareString(item["oldIdIsCsv"], "true"))
                     {
@@ -90,12 +100,12 @@ namespace DongBoDuLieu
             }
             return false;
         }
-        public int findIdObjectClient(List<Dictionary<string, object>> listTracks, object idCSV)
+        public int findIdObjectClient(List<Dictionary<string, object>> ListTracksTemp, object idCSV)
         {
 
-            if (listTracks != null && listTracks.Count > 0)
+            if (listTracks != null && ListTracksTemp.Count > 0)
             {
-                foreach (var item in ListTracks)
+                foreach (var item in ListTracksTemp)
                 {
                     if (compareString(item["oldIdIsCsv"], "true"))
                     {
@@ -152,6 +162,7 @@ namespace DongBoDuLieu
                 DataSet ds = new DataSet();
                 ds.Tables.Add(tblObject);
                 Memory.UpdateDataSet(ds);
+                Memory.ClearError();
             }
         }
         //public void update(Dictionary<string, object> objectCSV, string nameTable, string fieldID1, string ID1, string fieldID2 = "", string ID2 = "")

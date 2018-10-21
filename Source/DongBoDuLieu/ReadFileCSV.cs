@@ -23,7 +23,7 @@ namespace DongBoDuLieu
                     string[] header = sr.ReadLine().Split(';');
                     string[] path = fileName.Split('\\');
                     string nameTable = path[path.Length - 1].Split('.')[0];
-                    DataTable tbl = Memory.GetData(string.Format("Select * from {0} Where DaXoa=2", nameTable));
+                    DataTable tbl = Memory.GetData(string.Format("Select * from {0} Where UpdateDate=#01/01/0001#", nameTable));
                     if (tbl != null)
                     {
                         while ((line = sr.ReadLine()) != null)

@@ -11,7 +11,7 @@ namespace DongBoDuLieu
         public CompareMasterTable(string dir, string nameCSV) : base(dir, nameCSV)
         {
         }
-
+        
         public abstract void importCacObject();
         public abstract void deleteObjectMaster();
 
@@ -31,8 +31,8 @@ namespace DongBoDuLieu
                     objectTrack["oldId"] = objectCSV[fieldID];
                     objectTrack["newId"] = Memory.Instance.GetNextId(nameTable, fieldID, true).ToString();
                     objectTrack["nowId"] = objectTrack["newId"];
-                    objectCSV[fieldID] = objectTrack["newId"];
-                    DataTable resultAdd=assignDataAdd(objectCSV,nameTable);
+                    //objectCSV[fieldID] = objectTrack["newId"];
+                    DataTable resultAdd=assignDataAdd(objectCSV,fieldID,objectTrack["nowId"], nameTable);
                     update(resultAdd);
                 }
                catch (System.Exception ex)
@@ -54,8 +54,8 @@ namespace DongBoDuLieu
                         objectTrack["oldId"] = objectClient.Rows[0][fieldID].ToString();
                         objectTrack["nowId"] = objectClient.Rows[0][fieldID].ToString();
                         objectTrack["oldIdIsCsv"] = "false";
-                        objectCSV.Remove(fieldID);
-                        DataTable result=assignData(objectCSV,objectClient,nameTable);
+                        //objectCSV[fieldID] = objectTrack["nowId"];
+                        DataTable result=assignData(objectCSV,objectClient,nameTable,fieldID);
                         update(result);
                     }
                     else

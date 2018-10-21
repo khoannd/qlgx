@@ -20,7 +20,7 @@ namespace DongBoDuLieu
             {
                 foreach (DataRow rowGiaoDan in rsDB.Rows)
                 {
-                    int idCSV = findIdObjectCSV(ListTracks, rowGiaoDan[GiaDinhConst.MaGiaDinh].ToString());
+                    int idCSV = findIdObjectCSV(ListTracks, rowGiaoDan[GiaoDanConst.MaGiaoDan].ToString());
                     if (idCSV == 0)
                     {
                         //Xoa GiaoDan

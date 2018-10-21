@@ -51,8 +51,12 @@ namespace DongBoDuLieu
             DataTable tbl = null;
             try
             {
-                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE MaNhanDang=?", HonPhoiConst.TableName);
-                tbl = Memory.GetData(query, objectCSV["MaNhanDang"]);
+                if (!string.IsNullOrEmpty(objectCSV["MaNhanDang"].ToString()))
+                {
+                    string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE MaNhanDang=?", HonPhoiConst.TableName);
+                    tbl = Memory.GetData(query, objectCSV["MaNhanDang"]);
+                }
+                
             }
             catch (System.Exception ex)
             {
