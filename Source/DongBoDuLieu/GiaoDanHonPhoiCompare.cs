@@ -12,11 +12,11 @@ namespace DongBoDuLieu
         }
         private List<Dictionary<string, object>> listTracksHonPhoi;
         private List<Dictionary<string, object>> listTracksGiaoDan;
-        public override void deleteObjectRelation()
-        {
-            deleteObjecChild(ListTracks, GiaoDanHonPhoiConst.MaHonPhoi, GiaoDanHonPhoiConst.MaGiaoDan, GiaoDanHonPhoiConst.TableName);
+        //public override void deleteObjectRelation()
+        //{
+        //    deleteObjecChild(ListTracks, GiaoDanHonPhoiConst.MaHonPhoi, GiaoDanHonPhoiConst.MaGiaoDan, GiaoDanHonPhoiConst.TableName);
 
-        }
+        //}
 
         public override void importCacObject()
         {

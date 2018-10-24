@@ -15,36 +15,6 @@ namespace DongBoDuLieu
 
         private List<Dictionary<string, object>> ListGiaoDanTracks;
 
-        public override void deleteObjectMaster()
-        {
-            DataTable rsDB = getAll(KhoiGiaoLyConst.TableName);
-            if (rsDB != null && rsDB.Rows.Count > 0)
-            {
-                foreach (DataRow item in rsDB.Rows)
-                {
-                    int idCSV = findIdObjectCSV(ListTracks, item[KhoiGiaoLyConst.MaKhoi].ToString());
-                    if (idCSV == 0)
-                    {
-                        //xoa khoi
-                        delete(@"MaKhoi=?", KhoiGiaoLyConst.TableName, item[KhoiGiaoLyConst.MaKhoi]);
-                        DataTable tblLopGiaoLy = Memory.GetData("Select * from LopGiaoLy Where MaKhoi=?", item[KhoiGiaoLyConst.MaKhoi]);
-                        if (tblLopGiaoLy!=null&&tblLopGiaoLy.Rows.Count>0)
-                        {
-                            //xoa lop
-                            delete(@"MaLop=?", LopGiaoLyConst.TableName, item[LopGiaoLyConst.MaLop]);
-                            //xoa giao ly vien
-                            delete(@"MaLop=?", GiaoLyVienConst.TableName, item[GiaoLyVienConst.MaLop]);
-                            //Xoa chi tiet lop giao ly
-                            delete(@"MaLop=?", ChiTietLopGiaoLyConst.TableName, item[ChiTietLopGiaoLyConst.MaLop]);
-
-                        }
-                       
-                    }
-
-                }
-
-            }
-        }
 
         public override void importCacObject()
         {
@@ -53,7 +23,12 @@ namespace DongBoDuLieu
                 foreach (var item in Data)
                 {
                     DataTable khoiGiaoLy = findKhoiGiaoLy(item);
+                    if (deleteObjectMaster(item["DeleteSV"], khoiGiaoLy))
+                    {
+                        continue;
+                    }
                     int idGiaoDan = findIdObjectClient(ListGiaoDanTracks, item["NguoiQuanLy"]);
+                   
                     if (idGiaoDan == 0)
                     {
                         continue;
@@ -125,6 +100,31 @@ namespace DongBoDuLieu
                     }
                 }
             }
+            return false;
+        }
+
+        public override bool deleteObjectMaster(object CSVDelete, DataTable item)
+        {
+            if (int.Parse(CSVDelete.ToString()) == 1 && item != null && item.Rows.Count > 0)
+            {
+                //xoa khoi
+                delete(@"MaKhoi=?", KhoiGiaoLyConst.TableName, item.Rows[0][KhoiGiaoLyConst.MaKhoi]);
+                DataTable tblLopGiaoLy = Memory.GetData("Select * from LopGiaoLy Where MaKhoi=?", item.Rows[0][KhoiGiaoLyConst.MaKhoi]);
+                if (tblLopGiaoLy!=null&&tblLopGiaoLy.Rows.Count>0)
+                {
+                    foreach (DataRow rowLopGiaoLy in tblLopGiaoLy.Rows)
+                    {
+                        //xoa lop
+                        delete(@"MaLop=?", LopGiaoLyConst.TableName, rowLopGiaoLy[LopGiaoLyConst.MaLop]);
+                        //xoa giao ly vien
+                        delete(@"MaLop=?", GiaoLyVienConst.TableName, rowLopGiaoLy[GiaoLyVienConst.MaLop]);
+                        //Xoa chi tiet lop giao ly
+                        delete(@"MaLop=?", ChiTietLopGiaoLyConst.TableName, rowLopGiaoLy[ChiTietLopGiaoLyConst.MaLop]);
+                    }
+                }
+                return true;
+            }
+
             return false;
         }
     }

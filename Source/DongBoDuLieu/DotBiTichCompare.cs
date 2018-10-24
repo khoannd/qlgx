@@ -12,24 +12,18 @@ namespace DongBoDuLieu
         {
         }
 
-        public override void deleteObjectMaster()
+    
+
+        public override bool deleteObjectMaster(object CSVDelete, DataTable item)
         {
-            DataTable rsDB = getAll(DotBiTichConst.TableName);
-            if (rsDB != null && rsDB.Rows.Count > 0)
+            if (int.Parse(CSVDelete.ToString()) == 1 && item != null && item.Rows.Count > 0)
             {
-                foreach (DataRow item in rsDB.Rows)
-                {
-                    int idCSV = findIdObjectCSV(ListTracks, item[DotBiTichConst.MaDotBiTich].ToString());
-                    if (idCSV == 0)
-                    {
-                        delete(@"MaDotBiTich=?", DotBiTichConst.TableName, item[DotBiTichConst.MaDotBiTich]);
+                delete(@"MaDotBiTich=?", DotBiTichConst.TableName, item.Rows[0][DotBiTichConst.MaDotBiTich]);
 
-                        delete(@"MaDotBiTich=?", DotBiTichConst.TableName, item[DotBiTichConst.MaDotBiTich]);
-                    }
-
-                }
-
+                delete(@"MaDotBiTich=?", BiTichChiTietConst.TableName, item.Rows[0][BiTichChiTietConst.MaDotBiTich]);
+                return true;
             }
+            return false;
         }
 
         public override void importCacObject()
@@ -39,6 +33,10 @@ namespace DongBoDuLieu
                 foreach (var item in Data)
                 {
                     DataTable dotbitich = findDotBiTich(item);
+                    if (deleteObjectMaster(item["DeleteSV"],dotbitich))
+                    {
+                        continue;
+                    }
                     importObjectMaster(item, dotbitich, DotBiTichConst.MaDotBiTich, DotBiTichConst.TableName);
                 }
             }
@@ -51,7 +49,7 @@ namespace DongBoDuLieu
             {
                 //MoTa,NgayBiTich,LoaiBiTich,LinhMuc
                 string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE MoTa=? AND NgayBiTich=? AND LoaiBiTich=? AND LinhMuc=?", GiaDinhConst.TableName);
-                tbl = Memory.GetData(query,new object[] { objectCSV["MoTa"], objectCSV["NgayBiTich"], objectCSV["LoaiBiTich"], objectCSV["LinhMuc"] });
+                tbl = Memory.GetData(query, new object[] { objectCSV["MoTa"], objectCSV["NgayBiTich"], objectCSV["LoaiBiTich"], objectCSV["LinhMuc"] });
             }
             catch (System.Exception ex)
             {

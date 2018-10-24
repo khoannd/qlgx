@@ -15,12 +15,13 @@ namespace DongBoDuLieu
         {
             ReadFileCSV readFile = new ReadFileCSV(dir + nameCSV);
             this.Data = readFile.Data;
+
         }
         public DataTable assignData(Dictionary<string, object> objectCSV, DataTable objectClient, string nameTable,string fieldID1=null,string fieldID2=null)
         {
             foreach (var item in objectCSV)
             {
-                if (item.Key == fieldID1||item.Key==fieldID2)
+                if (item.Key == fieldID1||item.Key==fieldID2||item.Key=="DeleteSV")
                     continue;
                 objectClient.Rows[0][item.Key] = item.Value;
             }
@@ -45,6 +46,10 @@ namespace DongBoDuLieu
                     if (item.Key==fieldID2)
                     {
                         row[fieldID2] = ID2;
+                        continue;
+                    }
+                    if (item.Key == "DeleteSV")
+                    {
                         continue;
                     }
                     row[item.Key] = item.Value;
@@ -134,11 +139,16 @@ namespace DongBoDuLieu
         }
         public void processDataNull(Dictionary<string, object> objectCSV, DataTable objectClient)
         {
+          
             foreach (var item in objectCSV)
             {
-                if (objectClient.Rows[0][item.Key].ToString() == "" && item.Value != "")
+                if (item.Key=="DeleteSV")
                 {
-                    objectClient.Rows[0][item.Key] = item.Value;
+                    continue;
+                }
+                if (objectClient.Rows[0][item.Key].ToString() != "" && item.Value.ToString() == "")
+                {
+                    objectCSV[item.Key] = objectClient.Rows[0][item.Key];
                 }
             }
         }
@@ -216,6 +226,7 @@ namespace DongBoDuLieu
             Memory.ExecuteSqlCommand(query, paramater);
             Memory.ClearError();
         }
+
         //public void insert(Dictionary<string, object> data, string nameTable)
         //{
         //    string field = "";
@@ -261,6 +272,5 @@ namespace DongBoDuLieu
                 listTracks = value;
             }
         }
-
     }
 }

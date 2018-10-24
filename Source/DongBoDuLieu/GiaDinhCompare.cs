@@ -21,6 +21,8 @@ namespace DongBoDuLieu
                 foreach (var item in Data)
                 {
                     DataTable giaDinh = findGiaDinh(item);
+                    if (deleteObjectMaster(item["DeleteSV"], giaDinh))
+                        continue;
                     item["MaGiaoHo"] = findIdObjectClient(ListGiaoHoTracks, item["MaGiaoHo"]).ToString();
                     importObjectMaster(item, giaDinh, "MaGiaDinh", GiaDinhConst.TableName);
                 }
@@ -100,26 +102,18 @@ namespace DongBoDuLieu
             return null;
         }
 
-        public override void deleteObjectMaster()
+        public override bool deleteObjectMaster(object CSVDelete, DataTable item)
         {
-            DataTable rsDB = getAll(GiaDinhConst.TableName);
-            if (rsDB != null && rsDB.Rows.Count > 0)
+            if (int.Parse(CSVDelete.ToString()) == 1 && item != null && item.Rows.Count > 0)
             {
-                foreach (DataRow item in rsDB.Rows)
-                {
-                    int idCSV = findIdObjectCSV(ListTracks, item[GiaDinhConst.MaGiaDinh].ToString());
-                    if (idCSV == 0)
-                    {
-                        //Xoa gia dinh
-                        //Xoa Gia Dinh
-                        delete(@"MaGiaDinh=?", GiaDinhConst.TableName, item[GiaDinhConst.MaGiaDinh]);
-                        //Xoa Thanh Vien Gia Dinh
-                        delete(@"MaGiaDinh=?", ThanhVienGiaDinhConst.TableName, item[GiaDinhConst.MaGiaDinh]);
-                    }
-
-                }
-
+                //Xoa Gia Dinh
+                delete(@"MaGiaDinh=?", GiaDinhConst.TableName, item.Rows[0][GiaDinhConst.MaGiaDinh]);
+                //Xoa Thanh Vien Gia Dinh
+                delete(@"MaGiaDinh=?", ThanhVienGiaDinhConst.TableName, item.Rows[0][GiaDinhConst.MaGiaDinh]);
+                return true;
             }
+            return false;
+
         }
     }
 }

@@ -438,6 +438,7 @@ namespace GxGlobal
                 {
                     for (int i = 0; i < lstData.Length; i++)
                     {
+                        
                         OleDbParameter param = new OleDbParameter();
                         param.Value = lstData[i];
                         param.ParameterName = string.Format("Param{0}", i + 1);

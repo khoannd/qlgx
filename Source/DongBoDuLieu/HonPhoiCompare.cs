@@ -12,25 +12,18 @@ namespace DongBoDuLieu
         {
         }
 
-        public override void deleteObjectMaster()
+
+        public override bool deleteObjectMaster(object CSVDelete, DataTable item)
         {
-            DataTable rsDB = getAll(HonPhoiConst.TableName);
-            if (rsDB != null && rsDB.Rows.Count > 0)
+            if (int.Parse(CSVDelete.ToString()) == 1 && item != null && item.Rows.Count > 0)
             {
-                foreach (DataRow item in rsDB.Rows)
-                {
-                    int idCSV = findIdObjectCSV(ListTracks, item[HonPhoiConst.MaHonPhoi].ToString());
-                    if (idCSV == 0)
-                    {
-                        //Xoa Hon Phoi
-                        delete(@"MaHonPhoi=?", HonPhoiConst.TableName, item[HonPhoiConst.MaHonPhoi]);
-                        //Xoa Thanh Vien Gia Dinh
-                        delete(@"MaHonPhoi=?", GiaoDanHonPhoiConst.TableName, item[GiaoDanHonPhoiConst.MaHonPhoi]);
-                    }
-
-                }
-
+                //Xoa Hon Phoi
+                delete(@"MaHonPhoi=?", HonPhoiConst.TableName, item.Rows[0][HonPhoiConst.MaHonPhoi]);
+                //Xoa giao dan hon phoi
+                delete(@"MaHonPhoi=?", GiaoDanHonPhoiConst.TableName, item.Rows[0][GiaoDanHonPhoiConst.MaHonPhoi]);
+                return true;
             }
+            return false;
         }
 
         public override void importCacObject()
@@ -40,6 +33,8 @@ namespace DongBoDuLieu
                 foreach (var item in Data)
                 {
                     DataTable honPhoi = findHonPhoi(item);
+                    if (deleteObjectMaster(item["DeleteSV"],honPhoi))
+                        continue;
                     importObjectMaster(item, honPhoi, "MaHonPhoi", HonPhoiConst.TableName);
                 }
             }
@@ -56,7 +51,7 @@ namespace DongBoDuLieu
                     string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE MaNhanDang=?", HonPhoiConst.TableName);
                     tbl = Memory.GetData(query, objectCSV["MaNhanDang"]);
                 }
-                
+
             }
             catch (System.Exception ex)
             {

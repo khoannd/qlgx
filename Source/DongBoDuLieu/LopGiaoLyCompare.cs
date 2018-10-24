@@ -18,28 +18,7 @@ namespace DongBoDuLieu
         {
             chiTietLopGiaoLy = ChiTietLopGiaoLyCSV;
         }
-        public override void deleteObjectMaster()
-        {
-            DataTable rsDB = getAll(LopGiaoLyConst.TableName);
-            if (rsDB != null && rsDB.Rows.Count > 0)
-            {
-                foreach (DataRow item in rsDB.Rows)
-                {
-                    int idCSV = findIdObjectCSV(ListTracks, item[LopGiaoLyConst.MaLop].ToString());
-                    if (idCSV == 0)
-                    {
-                        //xoa lop
-                        delete(@"MaLop=?", LopGiaoLyConst.TableName, item[LopGiaoLyConst.MaLop]);
-                        //xoa giao ly vien
-                        delete(@"MaLop=?", GiaoLyVienConst.TableName, item[GiaoLyVienConst.MaLop]);
-                        //Xoa chi tiet lop giao ly
-                        delete(@"MaLop=?", ChiTietLopGiaoLyConst.TableName, item[ChiTietLopGiaoLyConst.MaLop]);
-                    }
-
-                }
-
-            }
-        }
+      
         public void getListGiaoDanTracks(List<Dictionary<string, object>> giaoDanTracks)
         {
             ListGiaoDanTracks = giaoDanTracks;
@@ -56,6 +35,10 @@ namespace DongBoDuLieu
                 foreach (var item in Data)
                 {
                     DataTable lopGiaoLy = findLopGiaoLy(item);
+                    if (deleteObjectMaster(item["DeleteSV"], lopGiaoLy)) ;
+                    {
+                        continue;
+                    }
                     int idMaKhoi = findIdObjectClient(ListKhoiGiaoLyTracks, item["MaKhoi"]);
                     if (idMaKhoi == 0)
                     {
@@ -117,6 +100,22 @@ namespace DongBoDuLieu
 
             }
             return false;
+        }
+
+        public override bool deleteObjectMaster(object CSVDelete, DataTable item)
+        {
+            if (int.Parse(CSVDelete.ToString()) == 1 && item != null && item.Rows.Count > 0)
+            {
+                //xoa lop
+                delete(@"MaLop=?", LopGiaoLyConst.TableName, item.Rows[0][LopGiaoLyConst.MaLop]);
+                //xoa giao ly vien
+                delete(@"MaLop=?", GiaoLyVienConst.TableName, item.Rows[0][GiaoLyVienConst.MaLop]);
+                //Xoa chi tiet lop giao ly
+                delete(@"MaLop=?", ChiTietLopGiaoLyConst.TableName, item.Rows[0][ChiTietLopGiaoLyConst.MaLop]);
+                return true;
+            }
+            return false;
+              
         }
     }
 }

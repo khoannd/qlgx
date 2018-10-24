@@ -5,20 +5,30 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
+using System.Data.SqlTypes;
 using System.IO;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 
 namespace DongBoDuLieu
 {
     public class SynJob
     {
+        public void Synchronize()
+        {
+            //Pull();
+            //Push();
+        }
         public void Push()
         {
-           
-           try
-           {
+
+            try
+            {
+
+
+
                 WebClient cl = new WebClient();
                 string pathFileSyn = this.createrFileSyn();
                 DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
@@ -28,17 +38,18 @@ namespace DongBoDuLieu
                 cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + @"/SynFileCL/getFileSyn/" + maGiaoXuRieng, pathFileSyn);
                 cl.DownloadString(ConfigurationManager.AppSettings["SERVER"] + @"/SynJobCL/excuteByMaGiaoXu/" + maGiaoXuRieng);
             }
-           catch (System.Exception ex)
-           {
+            catch (System.Exception ex)
+            {
+                MessageBox.Show("Quá trình đưa dữ liệu lên server bị lổi", "Lổi đồng bộ", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
-           }
+            }
 
         }
         public void Pull()
         {
-            
+
             try
-            { 
+            {
                 WebClient cl = new WebClient();
                 DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
                 int maGiaoXuRieng;
@@ -61,19 +72,18 @@ namespace DongBoDuLieu
             }
             catch (System.Exception ex)
             {
-                return;	
+                MessageBox.Show("Quá trình đưa lấy dữ liệu từ server bị lổi", "Lổi đồng bộ", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
             }
         }
         public void compareGiaoXu(string dir)
         {
             GiaoHoCompare giaoho = new GiaoHoCompare(dir, "GiaoHo.csv");
             giaoho.importCacObject();
-            giaoho.deleteObjectMaster();
 
             GiaoDanCompare giaodan = new GiaoDanCompare(dir, "GiaoDan.csv");
             giaodan.getListGiaoHoTracks(giaoho.ListTracks);
             giaodan.importCacObject();//Chua Lam
-            giaodan.deleteObjectMaster();
 
 
 
@@ -83,34 +93,29 @@ namespace DongBoDuLieu
             giadinh.getListGiaoDanTracks(giaodan.ListTracks);
             giadinh.getListThanhVienGiaDinhCSV(thanhviengiadinh.Data);
             giadinh.importCacObject();
-            giadinh.deleteObjectMaster();
 
             thanhviengiadinh.getListTracksGiaDinh(giadinh.ListTracks);
             thanhviengiadinh.getListTracksGiaoDan(giaodan.ListTracks);
             thanhviengiadinh.importCacObject();
-            thanhviengiadinh.deleteObjectRelation();
 
-            DotBiTichCompare dotbitich = new DotBiTichCompare(dir,"DotBiTich.csv");
+
+            DotBiTichCompare dotbitich = new DotBiTichCompare(dir, "DotBiTich.csv");
             dotbitich.importCacObject();
-            dotbitich.deleteObjectMaster();
 
-            BiTichChiTietCompare bitichchitiet = new BiTichChiTietCompare(dir,"BiTichChiTiet.csv");
+            BiTichChiTietCompare bitichchitiet = new BiTichChiTietCompare(dir, "BiTichChiTiet.csv");
             bitichchitiet.getlistTracksDotBiTich(dotbitich.ListTracks);
             bitichchitiet.getListTracksGiaoDan(giaodan.ListTracks);
             bitichchitiet.importCacObject();
-            bitichchitiet.deleteObjectRelation();
-
-
 
             HonPhoiCompare honphoi = new HonPhoiCompare(dir, "HonPhoi.csv");
             honphoi.importCacObject();
-            honphoi.deleteObjectMaster();
+
 
             GiaoDanHonPhoiCompare giaodanhonphoi = new GiaoDanHonPhoiCompare(dir, "GiaoDanHonPhoi.csv");
             giaodanhonphoi.getListTracksGiaoDan(giaodan.ListTracks);
             giaodanhonphoi.getListTracksHonPhoi(honphoi.ListTracks);
             giaodanhonphoi.importCacObject();
-            giaodanhonphoi.deleteObjectRelation();
+
 
             KhoiGiaoLyCompare khoigiaoly = new KhoiGiaoLyCompare(dir, "KhoiGiaoLy.csv");
             LopGiaoLyCompare lopgiaoly = new LopGiaoLyCompare(dir, "LopGiaoLy.csv");
@@ -120,17 +125,16 @@ namespace DongBoDuLieu
             khoigiaoly.getListGiaoDanTracks(giaodan.ListTracks);
             khoigiaoly.getLopGiaoLyCompare(lopgiaoly);
             khoigiaoly.importCacObject();
-            khoigiaoly.deleteObjectMaster();
+
 
 
             lopgiaoly.getListKhoiGiaoLy(khoigiaoly.ListTracks);
             lopgiaoly.importCacObject();
-            lopgiaoly.deleteObjectMaster();
+
 
             chitietlopgiaoly.getListTracksGiaoDan(giaodan.ListTracks);
             chitietlopgiaoly.getListTracksLopGiaoLy(lopgiaoly.ListTracks);
             chitietlopgiaoly.importCacObject();
-            chitietlopgiaoly.deleteObjectRelation();
 
 
 

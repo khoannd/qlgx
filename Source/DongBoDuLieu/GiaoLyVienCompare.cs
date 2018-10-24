@@ -30,9 +30,9 @@ namespace DongBoDuLieu
             listTracksGiaoDan = giaoDanTracks;
         }
 
-        public override void deleteObjectRelation()
-        {
-            deleteObjecChild(ListTracks, GiaoLyVienConst.MaLop, GiaoLyVienConst.MaGiaoDan, GiaoLyVienConst.TableName);
-        }
+        //public override void deleteObjectRelation()
+        //{
+        //    deleteObjecChild(ListTracks, GiaoLyVienConst.MaLop, GiaoLyVienConst.MaGiaoDan, GiaoLyVienConst.TableName);
+        //}
     }
 }

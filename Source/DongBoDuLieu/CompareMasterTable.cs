@@ -13,7 +13,7 @@ namespace DongBoDuLieu
         }
         
         public abstract void importCacObject();
-        public abstract void deleteObjectMaster();
+        public abstract bool deleteObjectMaster(object CSVDelete,DataTable item);
 
         public void importObjectMaster(Dictionary<string, object> objectCSV, DataTable objectClient, string fieldID, string nameTable)
         {

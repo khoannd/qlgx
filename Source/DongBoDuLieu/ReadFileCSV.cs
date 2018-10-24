@@ -12,7 +12,6 @@ namespace DongBoDuLieu
     class ReadFileCSV
     {
         private List<Dictionary<string, object>> data = new List<Dictionary<string, object>>();
-
         public ReadFileCSV(string fileName)
         {
             if (File.Exists(fileName))
@@ -30,8 +29,13 @@ namespace DongBoDuLieu
                         {
                             string[] data = line.Split(';');
                             Dictionary<string, object> dic = new Dictionary<string, object>();
-                            for (int i = 0; i < header.Length - 1; i++)
+                            for (int i = 0; i < header.Length-1; i++)
                             {
+                                if (header[i]=="DeleteSV")
+                                {
+                                    dic.Add(header[i], data[i]);
+                                    continue;
+                                }
                                 dic.Add(header[i], processTypeValue(data[i], tbl.Columns[header[i]].DataType));
                             }
                             this.Data.Add(dic);
@@ -51,9 +55,8 @@ namespace DongBoDuLieu
                 return Convert.ChangeType(value, typeValue);
 
             }
-            return DBNull.Value;
+            return string.Empty;
         }
-
         public List<Dictionary<string, object>> Data
         {
             get
