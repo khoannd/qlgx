@@ -1,0 +1,14 @@
+MaGiaoDan;HoTen;MaGiaoHo;Phai;TenThanh;NgaySinh;NoiSinh;SoRuaToi;NgayRuaToi;NoiRuaToi;ChaRuaToi;NguoiDoDauRuaToi;NgayRuocLe;NoiRuocLe;ChaRuocLe;SoThemSuc;NgayThemSuc;NoiThemSuc;ChaThemSuc;NguoiDoDauThemSuc;TrinhDoVanHoa;NgheNghiep;ConHoc;QuaDoi;NgayQuaDoi;DienThoai;Email;DaXoa;GhiChu;UpdateDate;SoRuocLe;HoTenCha;HoTenMe;DaCoGiaDinh;GiaoDanAo;TanTong;MaNhanDang;ThuocGiaoXu;ThuocGiaoPhan;DiaChi;DanToc;NoiQuaDoi;SoAnTang;NoiAnTang;AnhDaiDien;CMND;TrinhDoChuyenMon;BietNgoaiNgu;MaGiaoXuRieng;DeleteClient
+2;B;0;Nam;Barnaba;;;;;;;;;;;;;;;;;;False;False;;;;False;;2018/10/24 21:04:10;;;;False;False;False;55A79C844783487B836GIAODAN2636760118508658787;;;;;;;;;;;;1221;0
+4;D;0;Nam;D;;;;;;;;;;;;;;;;;;False;False;;;;False;;2018/10/24 21:08:30;;;;False;False;False;25EBC88CB6AE4238A70GIAODAN4636760121106861475;;;;;;;;;;;;1221;0
+5;E;0;Nam;Elisabeth Ann Senton;;;;;;;;;;;;;;;;;;False;False;;;;False;;2018/10/24 21:16:12;;D D;;True;False;False;25EBC88CB6AE4238A70GIAODAN5636760121256448294;;;;;;;;;;;;1221;0
+7;Cxmzcx;0;Nam;Cbzxc;;;;;;;;;;;;;;;;;;False;False;;;;False;;2018/10/25 19:24:31;;;;False;False;False;64A1148552C14CC2925GIAODAN7636760922714540721;;;;;;;;;;;;1221;0
+8;Cxzcn;0;Nam;Cxzcx;;;;;;;;;;;;;;;;;;False;False;;;;False;;2018/10/25 19:24:50;;;;False;False;False;64A1148552C14CC2925GIAODAN8636760922903373948;;;;;;;;;;;;1221;0
+9;Cxmzx;0;Nam;Cnzbxc;;;;;;;;;;;;;;;;;;False;False;;;;False;;2018/10/25 19:25:49;;;;True;False;False;64A1148552C14CC2925GIAODAN9636760923214558329;;;;;;;;;;;;1221;0
+10;Cnzxmc;0;Nam;Cxznbcb;;;;;;;;;;;;;;;;;;False;False;;;;False;;2018/10/25 19:25:48;;Cnzbxc Cxmzx;;False;False;False;64A1148552C14CC2925GIAODAN10636760923449824139;;;;;;;;;;;;1221;0
+11;Cxzcxz;0;Nam;Xzcxzc;;;;;;;;;;;;;;;;;;False;False;;;;False;;2018/10/25 19:26:22;;;;True;True;False;64A1148552C14CC2925GIAODAN11636760923603108581;;;;;;;;;;;;1221;0
+14;Cxzc;0;Nam;Cxzc;;;;;;;;;;;;;;;;;;False;False;;;;False;;2018/10/25 19:33:30;;Gd2 Xcxzc;;False;False;False;CD1DD89ED1B543FBB89GIAODAN14636760928007951141;;;;;;;;;;;;1221;0
+16;Cxzccxzc;0;Nam;Vcxvxc;;;;;;;;;;;;;;;;;;False;False;;;;False;;2018/10/25 19:34:19;;;;True;True;False;CD1DD89ED1B543FBB89GIAODAN16636760928245295210;;;;;;;;;;;;1221;0
+17;Xzcxzc;0;Nam;Cxzcxz;;;;;;;;;;;;;;;;;;False;False;;;;False;;2018/10/25 19:34:19;;Vcxvxc Cxzccxzc;;False;True;False;CD1DD89ED1B543FBB89GIAODAN17636760928439020547;;;;;;;;;;;;1221;0
+21;Cxzcxz;0;Nam;Czxcxzc;;;;;;;;;;;;;;;;;;False;False;;;;False;;2018/10/25 19:37:58;;Xzcxzc Cczdsad;;False;False;False;70A2CBD5AB9D45E98F7GIAODAN21636760930702897302;;;;;;;;;;;;1221;0
+23;Cxzcccccxzc;0;Nam;Cxzcxz;;;;;;;;;;;;;;;;;;False;False;;;;False;;2018/10/25 19:38:58;;;;True;True;False;70A2CBD5AB9D45E98F7GIAODAN23636760930952037275;;;;;;;;;;;;1221;0

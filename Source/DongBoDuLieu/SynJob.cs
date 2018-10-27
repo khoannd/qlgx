@@ -18,9 +18,23 @@ namespace DongBoDuLieu
     {
         public void Synchronize()
         {
-            //Pull();
-            //Push();
+        
+
+            Push();
+            Pull();
+            DeleteCSV();
+
         }
+
+        private void DeleteCSV()
+        {
+            string giaoxusynPath = Memory.AppPath + "sync\\";
+            foreach (string sFile in System.IO.Directory.GetFiles(giaoxusynPath, "*.csv"))
+            {
+                System.IO.File.Delete(sFile);
+            }
+        }
+
         public void Push()
         {
 
@@ -177,11 +191,12 @@ namespace DongBoDuLieu
             {
                 foreach (DataTable item in ds.Tables)
                 {
-                    string temp = this.ToCSV(item);
-                    using (StreamWriter sw = new StreamWriter(giaoxusynPath + item.TableName + ".csv"))
-                    {
-                        sw.Write(temp);
-                    }
+                    WriteFileCSV(item, 0);
+                    //string temp = this.ToCSV(item);
+                    //using (StreamWriter sw = new StreamWriter(giaoxusynPath + item.TableName + ".csv"))
+                    //{
+                    //    sw.Write(temp);
+                    //}
 
                 }
                 string fileName = "gxsyn" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".zip";
@@ -195,13 +210,76 @@ namespace DongBoDuLieu
             }
             return null;
         }
-        private string ToCSV(DataTable table)
+        public static void WriteFileCSV(DataTable tblRow, int isDelete)
+        {
+            if (tblRow != null)
+            {
+                string pathFile = Memory.AppPath + "sync\\";
+                if (!Directory.Exists(pathFile))
+                {
+                    Directory.CreateDirectory(pathFile);
+                }
+                bool check = File.Exists(pathFile + tblRow.TableName + ".csv");
+                using (StreamWriter sw = new StreamWriter(pathFile + tblRow.TableName + ".csv", true))
+                {
+                    if (!check)
+                    {
+                        sw.Write(createHeader(tblRow));
+                    }
+                    sw.Write(createRowValue(tblRow, isDelete));
+
+
+                }
+
+
+            }
+        }
+        public static string createRowValue(DataTable tblRow, int isDelete)
         {
             var result = new StringBuilder();
-            for (int i = 0; i < table.Columns.Count; i++)
+            foreach (DataRow row in tblRow.Rows)
             {
-                result.Append(table.Columns[i].ColumnName);
-                result.Append(i == table.Columns.Count - 1 ? "\n" : ";");
+                for (int i = 0; i < tblRow.Columns.Count; i++)
+                {
+
+                    var value = row[i];
+                    if (value.GetType().Name == "String")
+                    {
+                        value = Regex.Replace(value.ToString(), @"(\s{2,})|\n", " ");
+
+                    }
+                    if (value.GetType().Name == "DateTime")
+                    {
+                        value = string.Format("{0:yyyy/MM/dd HH:mm:ss}", value);
+                    }
+                    result.Append(value);
+                    result.Append(";");
+                }
+                result.Append(isDelete + "\n");
+            }
+            return result.ToString();
+        }
+        public static string createHeader(DataTable tblRow)
+        {
+            var result = new StringBuilder();
+            for (int i = 0; i < tblRow.Columns.Count; i++)
+            {
+                result.Append(tblRow.Columns[i].ColumnName);
+                result.Append(";");
+            }
+            result.Append("DeleteClient\n");
+            return result.ToString();
+        }
+        private string ToCSV(DataTable table, bool fileExist)
+        {
+            var result = new StringBuilder();
+            if (!fileExist)
+            {
+                for (int i = 0; i < table.Columns.Count; i++)
+                {
+                    result.Append(table.Columns[i].ColumnName);
+                    result.Append(i == table.Columns.Count - 1 ? "\n" : ";");
+                }
             }
 
             foreach (DataRow row in table.Rows)

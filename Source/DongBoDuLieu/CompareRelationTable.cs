@@ -36,14 +36,15 @@ namespace DongBoDuLieu
                         {
                             continue;
                         }
-                        //check delete
-                        if (deleteObjecChild(data["DeleteSV"], fieldID1, objectTrackMaster["nowId"], fieldID2, idObjectFK2, nameTable))
-                            continue;
+                       
                         DataTable result = findWithID(fieldID1, objectTrackMaster["nowId"], fieldID2, idObjectFK2, nameTable);
                         Dictionary<string, object> objectTrackNew = new Dictionary<string, object>();
                         objectTrackNew[fieldID1] = objectTrackMaster["nowId"];
                         objectTrackNew[fieldID2] = idObjectFK2.ToString();
                         ListTracks.Add(objectTrackNew);
+                        //check delete
+                        if (deleteObjecChild(data,fieldID1,fieldID1,result, nameTable))
+                            continue;
                         if (result != null && result.Rows.Count > 0)
                         {
                             if (compareDate(data["UpdateDate"], result.Rows[0]["UpdateDate"].ToString()))
@@ -69,17 +70,33 @@ namespace DongBoDuLieu
             }
         }
 
-        private bool deleteObjecChild(object CSVDelete, string fieldID1, object idObjectFK1, string fieldID2, int idObjectFK2, string nameTable)
+        private bool deleteObjecChild(Dictionary<string, object> objectCSV, string fieldID1, string fieldID2, DataTable objectClient, string nameTable)
         {
-            if (string.IsNullOrEmpty(CSVDelete.ToString()))
+            if (string.IsNullOrEmpty(objectCSV["DeleteSV"].ToString()))
                 return false;
-            if (int.Parse(CSVDelete.ToString()) == 1)
+            if (int.Parse(objectCSV["DeleteSV"].ToString()) == 1 && compareDate(objectCSV[GxSyn.UpdateDate],objectClient.Rows[0][GxSyn.UpdateDate].ToString()))
             {
-                delete(string.Format(@"{0}=? AND {1}=?", fieldID1, fieldID2), nameTable, idObjectFK1, idObjectFK2);
+                delete(string.Format(@"{0}=? AND {1}=?", fieldID1, fieldID2), nameTable, objectClient.Rows[0][fieldID1], objectClient.Rows[0][fieldID2]);
+                return true;
+            }
+            if (int.Parse(objectCSV["DeleteSV"].ToString()) == 1)
+            {
                 return true;
             }
             return false;
         }
+
+        //private bool deleteObjecChild(Dictionary<string,object> objectCSV, string fieldID1, object idObjectFK1, string fieldID2, int idObjectFK2, string nameTable)
+        //{
+        //    if (string.IsNullOrEmpty(objectCSV["DeleteSV"].ToString()))
+        //        return false;
+        //    if (int.Parse(objectCSV["DeleteSV"].ToString()) == 1&&compareDate(objectCSV[GxSyn.UpdateDate],))
+        //    {
+        //        delete(string.Format(@"{0}=? AND {1}=?", fieldID1, fieldID2), nameTable, idObjectFK1, idObjectFK2);
+        //        return true;
+        //    }
+        //    return false;
+        //}
 
         //public void deleteObjecChild(List<Dictionary<string, object>>listTracksObject,string fieldID1,string fieldID2,string nameTable)
         //{

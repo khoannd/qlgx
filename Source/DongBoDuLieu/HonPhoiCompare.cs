@@ -12,10 +12,10 @@ namespace DongBoDuLieu
         {
         }
 
-
-        public override bool deleteObjectMaster(object CSVDelete, DataTable item)
+        public override bool deleteObjectMaster(Dictionary<string, object> objectCSV, DataTable item)
         {
-            if (int.Parse(CSVDelete.ToString()) == 1 && item != null && item.Rows.Count > 0)
+            if (int.Parse(objectCSV["DeleteSV"].ToString()) == 1 && item != null && item.Rows.Count > 0
+                                                           && compareDate(objectCSV[GxSyn.UpdateDate], item.Rows[0][GxSyn.UpdateDate].ToString()))
             {
                 //Xoa Hon Phoi
                 delete(@"MaHonPhoi=?", HonPhoiConst.TableName, item.Rows[0][HonPhoiConst.MaHonPhoi]);
@@ -23,9 +23,13 @@ namespace DongBoDuLieu
                 delete(@"MaHonPhoi=?", GiaoDanHonPhoiConst.TableName, item.Rows[0][GiaoDanHonPhoiConst.MaHonPhoi]);
                 return true;
             }
+            if (int.Parse(objectCSV["DeleteSV"].ToString()) == 1)
+            {
+                return true;
+            }
             return false;
-        }
 
+        }
         public override void importCacObject()
         {
             if (this.Data.Count > 0)
@@ -33,7 +37,7 @@ namespace DongBoDuLieu
                 foreach (var item in Data)
                 {
                     DataTable honPhoi = findHonPhoi(item);
-                    if (deleteObjectMaster(item["DeleteSV"],honPhoi))
+                    if (deleteObjectMaster(item,honPhoi))
                         continue;
                     importObjectMaster(item, honPhoi, "MaHonPhoi", HonPhoiConst.TableName);
                 }

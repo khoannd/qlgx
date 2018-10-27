@@ -98,7 +98,8 @@ namespace DongBoDuLieu
             return null;
         }
 
-        public override bool deleteObjectMaster(object CSVDelete, DataTable item)
+  
+        public override bool deleteObjectMaster(Dictionary<string, object> objectCSV, DataTable item)
         {
             throw new NotImplementedException();
         }

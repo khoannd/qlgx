@@ -23,7 +23,7 @@ namespace DongBoDuLieu
                 foreach (var item in Data)
                 {
                     DataTable khoiGiaoLy = findKhoiGiaoLy(item);
-                    if (deleteObjectMaster(item["DeleteSV"], khoiGiaoLy))
+                    if (deleteObjectMaster(item, khoiGiaoLy))
                     {
                         continue;
                     }
@@ -103,14 +103,17 @@ namespace DongBoDuLieu
             return false;
         }
 
-        public override bool deleteObjectMaster(object CSVDelete, DataTable item)
+        
+
+        public override bool deleteObjectMaster(Dictionary<string, object> objectCSV, DataTable item)
         {
-            if (int.Parse(CSVDelete.ToString()) == 1 && item != null && item.Rows.Count > 0)
+            if (int.Parse(objectCSV["DeleteSV"].ToString()) == 1 && item != null && item.Rows.Count > 0
+                                                            && compareDate(objectCSV[GxSyn.UpdateDate], item.Rows[0][GxSyn.UpdateDate].ToString()))
             {
                 //xoa khoi
                 delete(@"MaKhoi=?", KhoiGiaoLyConst.TableName, item.Rows[0][KhoiGiaoLyConst.MaKhoi]);
                 DataTable tblLopGiaoLy = Memory.GetData("Select * from LopGiaoLy Where MaKhoi=?", item.Rows[0][KhoiGiaoLyConst.MaKhoi]);
-                if (tblLopGiaoLy!=null&&tblLopGiaoLy.Rows.Count>0)
+                if (tblLopGiaoLy != null && tblLopGiaoLy.Rows.Count > 0)
                 {
                     foreach (DataRow rowLopGiaoLy in tblLopGiaoLy.Rows)
                     {
@@ -124,7 +127,10 @@ namespace DongBoDuLieu
                 }
                 return true;
             }
-
+            if (int.Parse(objectCSV["DeleteSV"].ToString()) == 1)
+            {
+                return true;
+            }
             return false;
         }
     }

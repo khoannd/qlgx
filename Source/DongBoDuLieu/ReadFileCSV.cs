@@ -55,6 +55,10 @@ namespace DongBoDuLieu
                 return Convert.ChangeType(value, typeValue);
 
             }
+            if (typeValue.Name=="Int32")
+            {
+                return DBNull.Value;
+            }
             return string.Empty;
         }
         public List<Dictionary<string, object>> Data

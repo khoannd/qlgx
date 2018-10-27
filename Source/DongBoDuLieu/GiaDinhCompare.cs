@@ -21,7 +21,7 @@ namespace DongBoDuLieu
                 foreach (var item in Data)
                 {
                     DataTable giaDinh = findGiaDinh(item);
-                    if (deleteObjectMaster(item["DeleteSV"], giaDinh))
+                    if (deleteObjectMaster(item, giaDinh))
                         continue;
                     item["MaGiaoHo"] = findIdObjectClient(ListGiaoHoTracks, item["MaGiaoHo"]).ToString();
                     importObjectMaster(item, giaDinh, "MaGiaDinh", GiaDinhConst.TableName);
@@ -102,14 +102,19 @@ namespace DongBoDuLieu
             return null;
         }
 
-        public override bool deleteObjectMaster(object CSVDelete, DataTable item)
+        public override bool deleteObjectMaster(Dictionary<string,object> objectCSV, DataTable item)
         {
-            if (int.Parse(CSVDelete.ToString()) == 1 && item != null && item.Rows.Count > 0)
+            if (int.Parse(objectCSV["DeleteSV"].ToString()) == 1 && item != null && item.Rows.Count > 0 
+                                                            &&compareDate(objectCSV[GxSyn.UpdateDate],item.Rows[0][GxSyn.UpdateDate].ToString()))
             {
                 //Xoa Gia Dinh
                 delete(@"MaGiaDinh=?", GiaDinhConst.TableName, item.Rows[0][GiaDinhConst.MaGiaDinh]);
                 //Xoa Thanh Vien Gia Dinh
                 delete(@"MaGiaDinh=?", ThanhVienGiaDinhConst.TableName, item.Rows[0][GiaDinhConst.MaGiaDinh]);
+                return true;
+            }
+            if (int.Parse(objectCSV["DeleteSV"].ToString()) == 1)
+            {
                 return true;
             }
             return false;

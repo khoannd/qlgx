@@ -18,7 +18,7 @@ namespace DongBoDuLieu
                 foreach (var item in Data)
                 {
                     DataTable giaoHo = findGiaoHo(item);
-                    if (deleteObjectMaster(item["DeleteSV"], giaoHo))
+                    if (deleteObjectMaster(item, giaoHo))
                         continue;
                     importObjectMaster(item, giaoHo, GiaoHoConst.MaGiaoHo, GiaoHoConst.TableName);
                 }
@@ -85,10 +85,13 @@ namespace DongBoDuLieu
 
             return null;
         }
+        
+       
 
-        public override bool deleteObjectMaster(object CSVDelete, DataTable item)
+        public override bool deleteObjectMaster(Dictionary<string, object> objectCSV, DataTable item)
         {
-            if (int.Parse(CSVDelete.ToString()) == 1 && item != null && item.Rows.Count > 0)
+            if (int.Parse(objectCSV["DeleteSV"].ToString()) == 1 && item != null && item.Rows.Count > 0
+                                                           && compareDate(objectCSV[GxSyn.UpdateDate], item.Rows[0][GxSyn.UpdateDate].ToString()))
             {
                 //Xoa Giao Ho
                 delete(@"MaGiaoHo=?", GiaoHoConst.TableName, item.Rows[0][GiaoHoConst.MaGiaoHo]);
@@ -130,6 +133,10 @@ namespace DongBoDuLieu
                         delete(@"MaGiaoDan=?", GiaoLyVienConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan]);
                     }
                 }
+                return true;
+            }
+            if (int.Parse(objectCSV["DeleteSV"].ToString()) == 1)
+            {
                 return true;
             }
             return false;
