@@ -40,9 +40,6 @@ namespace DongBoDuLieu
 
             try
             {
-
-
-
                 WebClient cl = new WebClient();
                 string pathFileSyn = this.createrFileSyn();
                 DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
@@ -151,7 +148,16 @@ namespace DongBoDuLieu
             chitietlopgiaoly.importCacObject();
 
 
+            ChuyenXuCompare chuyenxu = new ChuyenXuCompare(dir, "ChuyenXu.csv");
+            chuyenxu.getListGiaoDanTracks(giaodan.ListTracks);
+            chuyenxu.importCacObject();
 
+            TanHienCompare tanhien = new TanHienCompare(dir, "TanHien.csv");
+            tanhien.getListGiaoDanTracks(giaodan.ListTracks);
+            tanhien.importCacObject();
+
+            LinhMucCompare linhmuc = new LinhMucCompare(dir, "LinhMuc.csv");
+            linhmuc.importCacObject();
         }
         private string createrFileSyn()
         {

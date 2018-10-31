@@ -12,57 +12,23 @@ namespace DongBoDuLieu
         {
         }
         private List<Dictionary<string, object>> ListGiaoHoTracks;
-
-        //public override void deleteObjectMaster()
-        //{
-        //    DataTable rsDB = getAll(GiaoDanConst.TableName);
-        //    if (rsDB != null && rsDB.Rows.Count > 0)
-        //    {
-        //        foreach (DataRow rowGiaoDan in rsDB.Rows)
-        //        {
-        //            int idCSV = findIdObjectCSV(ListTracks, rowGiaoDan[GiaoDanConst.MaGiaoDan].ToString());
-        //            if (idCSV == 0)
-        //            {
-        //                //Xoa GiaoDan
-        //                delete(@"MaGiaoDan=?", GiaoDanConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan]);
-        //                //Xoa ThanhVienGiaDinh co GiaoDan
-        //                delete(@"MaGiaoDan=?", ThanhVienGiaDinhConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan]);
-        //                //Xoa BiTichChiTiet
-        //                delete(@"MaGiaoDan=?", BiTichChiTietConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan]);
-        //                //Xoa GiaoDanHonPhoi
-        //                delete(@"MaGiaoDan=?", GiaoDanHonPhoiConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan]);
-        //                //Xoa ChuyenXu
-        //                delete(@"MaGiaoDan=?", ChuyenXuConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan]);
-        //                //Xoa TanHien
-        //                delete(@"MaGiaoDan=?", TanHienConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan]);
-        //                //Xoa RaoHonPhoi
-        //                delete(@"MaGiaoDan1=? OR MaGiaoDan2=?", RaoHonPhoiConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan], rowGiaoDan[GiaoDanConst.MaGiaoDan]);
-        //                //Xoa ChiTietLopGiaoLy
-        //                delete(@"MaGiaoDan=?", ChiTietLopGiaoLyConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan]);
-        //                //Xoa GiaoLyVien
-        //                delete(@"MaGiaoDan=?", GiaoLyVienConst.TableName, rowGiaoDan[GiaoDanConst.MaGiaoDan]);
-        //            }
-
-        //        }
-
-        //    }
-        //}
         public void getListGiaoHoTracks(List<Dictionary<string, object>> giaoHoTracks)
         {
             ListGiaoHoTracks = giaoHoTracks;
         }
         public override void importCacObject()
         {
-            if (this.Data.Count>0)
-            {
                 foreach (var item in Data)
                 {
                     DataTable giaoDan = findGiaoDan(item);
+                    //delete giaoDan
+                    if (deleteObjectMaster(item, giaoDan))
+                    {
+                        continue;
+                    }
                     item["MaGiaoHo"] = findIdObjectClient(ListGiaoHoTracks, item["MaGiaoHo"]).ToString();
-                    importObjectMaster(item,giaoDan,"MaGiaoDan",GiaoDanConst.TableName);
-                   
+                    importObjectMaster(item,giaoDan,"MaGiaoDan",GiaoDanConst.TableName);           
                 }
-            }
         }
         private DataTable findGiaoDan(Dictionary<string, object> objectCSV)
         {
@@ -101,7 +67,32 @@ namespace DongBoDuLieu
   
         public override bool deleteObjectMaster(Dictionary<string, object> objectCSV, DataTable item)
         {
-            throw new NotImplementedException();
+            if (objectCSV["DeleteSV"].ToString() == "1" && item != null && item.Rows.Count > 0)
+            {
+                if (compareDate(objectCSV["UpdateDate"], item.Rows[0][GiaoDanConst.UpdateDate].ToString()))
+                {
+                    //delete giaodan
+                    delete(@"MaGiaoDan = ?",GiaoDanConst.TableName,item.Rows[0][GiaoDanConst.MaGiaoDan]);
+                    //delete ThanhVienGiaDinh
+                    delete(@"MaGiaoDan = ?", ThanhVienGiaDinhConst.TableName, item.Rows[0][GiaoDanConst.MaGiaoDan]);
+                    //delete BiTichChiTiet
+                    delete(@"MaGiaoDan = ?", BiTichChiTietConst.TableName, item.Rows[0][GiaoDanConst.MaGiaoDan]);
+                    //delete ChuyenXu
+                    delete(@"MaGiaoDan = ?", ChuyenXuConst.TableName, item.Rows[0][GiaoDanConst.MaGiaoDan]);
+                    //delete RaoHonPhoi
+                    delete(@"MaGiaoDan = ?", RaoHonPhoiConst.TableName, item.Rows[0][GiaoDanConst.MaGiaoDan]);
+                    //delete ChiTietLopGiaoLy
+                    delete(@"MaGiaoDan = ?", ChiTietLopGiaoLyConst.TableName, item.Rows[0][GiaoDanConst.MaGiaoDan]);
+                }
+
+                return true;
+            }
+
+            if (objectCSV["DeleteSV"].ToString() == "1")
+            {
+                return true;
+            }
+            return false;
         }
     }
 }

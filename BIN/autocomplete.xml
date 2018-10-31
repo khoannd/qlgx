@@ -167,6 +167,17 @@
         <item>Cczdsad</item>
         <item>Cxzcccccxzc</item>
         <item>Cxzcxzccxzc</item>
+        <item>Võ Cao Sơn</item>
+        <item>King Batman</item>
+        <item>King</item>
+        <item>Asdasdasd</item>
+        <item>King123</item>
+        <item>Hello World</item>
+        <item>Bao Dao Do Long</item>
+        <item>Mỹ Nữ</item>
+        <item>Son Vo Cao</item>
+        <item>Son Vo Cao1</item>
+        <item>Son Vo Cao123</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Nghệ An</item>
@@ -174,9 +185,14 @@
         <item>Dfsahdgsa</item>
         <item>Cxzczxcz</item>
         <item>Thu Duc</item>
+        <item>Ha Noi</item>
+        <item>Ho Chi Minh</item>
       </txtNoiSinh>
       <txtTenMe caption="Tên Mẹ">
         <item>Anna Nguyễn Thị Hạnh</item>
+        <item>Bui King</item>
+        <item>King Vo</item>
+        <item>Hahahaha</item>
       </txtTenMe>
       <txtTenCha caption="Tên Cha">
         <item>Gb Nguyễn Hồng Danh</item>
@@ -185,6 +201,8 @@
         <item>Barnaba B</item>
         <item>Xzcxzc Cxzcxz</item>
         <item>Cnzbxc Cxmzx</item>
+        <item>Vo King</item>
+        <item>Noithing</item>
       </txtTenCha>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Hòa</item>
@@ -212,13 +230,23 @@
       </txtGiaoXu>
       <txtLinhMucRuaToi caption="Người ban bí tích">
         <item>A</item>
+        <item>Tao</item>
       </txtLinhMucRuaToi>
       <txtNoiRuaToi caption="Nơi rửa tội">
         <item>Dasd</item>
+        <item>ABCDE</item>
       </txtNoiRuaToi>
       <txtNguoiDoDauRuaToi caption="Người đỡ đầu">
         <item>A</item>
       </txtNguoiDoDauRuaToi>
+      <gxTextCmnd caption="CMND">
+        <item>1231231243424</item>
+        <item>46555451</item>
+        <item>556123231321</item>
+      </gxTextCmnd>
+      <txtGiaoXuChuyen caption="Giáo xứ">
+        <item>Hcm</item>
+      </txtGiaoXuChuyen>
     </frmGiaoDan>
     <frmGiaDinh xmlns="">
       <txtMaGiaDinh caption="Mã gia đình">
@@ -265,12 +293,16 @@
         <item>Vcxvxc Cxzccxzc</item>
         <item>Xzcxzc Cczdsad</item>
         <item>Cxzcxz Cxzcccccxzc</item>
+        <item>Ađalbertô Võ Cao Sơn</item>
+        <item>Anê Võ Cao Sơn</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Anna Trần Bảo Trúc</item>
         <item>Ađalbertô A</item>
         <item>Anna Đinh Thị Mỹ</item>
         <item>Barnaba B</item>
+        <item>Achillêô King Batman</item>
+        <item>Anrê Kim Têgon Mỹ Nữ</item>
       </txtNguoiVo>
       <txtDiaChi caption="Địa chỉ">
         <item>Xuân Sơn</item>
@@ -325,6 +357,7 @@
         <item>Đợt bí tích Rửa tội ngày 01 tháng 01 năm 2001</item>
         <item>Đợt bí tích Rửa tội ngày 01 năm 2200</item>
         <item>Đợt bí tích Rửa tội ngày 01 năm 2800</item>
+        <item>Đợt bí tích Rửa tội ngày 01 tháng 10 năm 2018</item>
       </txtMoTa>
     </frmBiTichChiTiet>
     <frmKhoiGiaoLy xmlns="">
@@ -363,5 +396,17 @@
         <item>Ban Mê Thuột</item>
       </txtGiaoPhan2>
     </frmRaoHonPhoi>
+    <frmLinhMuc xmlns="">
+      <txtMaLinhMuc caption="Mã Linh mục">
+        <item>1</item>
+      </txtMaLinhMuc>
+      <txtHoTen caption="Họ tên">
+        <item>Ho Te</item>
+        <item>Ho Te Chi Ton Vo Lam</item>
+      </txtHoTen>
+      <txtTenThanh caption="Tên thánh">
+        <item>Don Ky</item>
+      </txtTenThanh>
+    </frmLinhMuc>
   </forms>
 </application>

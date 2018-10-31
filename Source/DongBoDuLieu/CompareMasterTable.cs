@@ -6,7 +6,7 @@ using System.Text;
 
 namespace DongBoDuLieu
 {
-    abstract class CompareMasterTable : Compare
+    public abstract class CompareMasterTable : Compare
     {
         public CompareMasterTable(string dir, string nameCSV) : base(dir, nameCSV)
         {

@@ -33,3 +33,10 @@ D:\GoogleDriver\Demo_Git\demov22\qlgx\Source\DBAccess\obj\Debug\GxGlobal.Propert
 D:\GoogleDriver\Demo_Git\demov22\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csproj.GenerateResource.Cache
 D:\GoogleDriver\Demo_Git\demov22\qlgx\Source\DBAccess\obj\Debug\GXGlobal.dll
 D:\GoogleDriver\Demo_Git\demov22\qlgx\Source\DBAccess\obj\Debug\GXGlobal.pdb
+E:\Work\qlgx_final\qlgx\BIN\GXGlobal.dll
+E:\Work\qlgx_final\qlgx\BIN\GXGlobal.pdb
+E:\Work\qlgx_final\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csprojResolveAssemblyReference.cache
+E:\Work\qlgx_final\qlgx\Source\DBAccess\obj\Debug\GxGlobal.Properties.Resources.resources
+E:\Work\qlgx_final\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csproj.GenerateResource.Cache
+E:\Work\qlgx_final\qlgx\Source\DBAccess\obj\Debug\GXGlobal.dll
+E:\Work\qlgx_final\qlgx\Source\DBAccess\obj\Debug\GXGlobal.pdb

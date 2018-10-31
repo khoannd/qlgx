@@ -376,8 +376,7 @@ namespace GiaoXu
         private void createBackupData()
         {
             try
-            {
-                
+            {         
                 int max = 40;
                 string maxBackup = Memory.GetConfig(GxConstants.CF_MAX_BACKUP);
                 if (Validator.IsNumber(maxBackup))

@@ -51,7 +51,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BiTichChiTietCompare.cs" />
+    <Compile Include="CauHinhCompare.cs" />
     <Compile Include="ChiTietLopGiaoLyCompare.cs" />
+    <Compile Include="ChuyenXuCompare.cs" />
     <Compile Include="Compare.cs" />
     <Compile Include="CompareMasterTable.cs" />
     <Compile Include="CompareRelationTable.cs" />
@@ -63,10 +65,13 @@
     <Compile Include="GiaoLyVienCompare.cs" />
     <Compile Include="HonPhoiCompare.cs" />
     <Compile Include="KhoiGiaoLyCompare.cs" />
+    <Compile Include="LinhMucCompare.cs" />
     <Compile Include="LopGiaoLyCompare.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RaoHonPhoiCompare.cs" />
     <Compile Include="ReadFileCSV.cs" />
     <Compile Include="SynJob.cs" />
+    <Compile Include="TanHien.cs" />
     <Compile Include="ThanhVienGiaDinhCompare.cs" />
   </ItemGroup>
   <ItemGroup>
