@@ -28,3 +28,8 @@ E:\Work\qlgx_final\qlgx\BIN\ExcelReport.pdb
 E:\Work\qlgx_final\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.csprojResolveAssemblyReference.cache
 E:\Work\qlgx_final\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.dll
 E:\Work\qlgx_final\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.pdb
+D:\GoogleDriver\Demo_Git\demov23\qlgx\BIN\ExcelReport.dll
+D:\GoogleDriver\Demo_Git\demov23\qlgx\BIN\ExcelReport.pdb
+D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.csprojResolveAssemblyReference.cache
+D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.dll
+D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.pdb

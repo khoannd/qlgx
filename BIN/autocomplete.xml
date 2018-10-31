@@ -178,6 +178,10 @@
         <item>Son Vo Cao</item>
         <item>Son Vo Cao1</item>
         <item>Son Vo Cao123</item>
+        <item>A1</item>
+        <item>A2</item>
+        <item>A3</item>
+        <item>A4</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Nghệ An</item>
@@ -295,6 +299,7 @@
         <item>Cxzcxz Cxzcccccxzc</item>
         <item>Ađalbertô Võ Cao Sơn</item>
         <item>Anê Võ Cao Sơn</item>
+        <item>Achillêô A1</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Anna Trần Bảo Trúc</item>
@@ -303,6 +308,7 @@
         <item>Barnaba B</item>
         <item>Achillêô King Batman</item>
         <item>Anrê Kim Têgon Mỹ Nữ</item>
+        <item>Achillêô A4</item>
       </txtNguoiVo>
       <txtDiaChi caption="Địa chỉ">
         <item>Xuân Sơn</item>

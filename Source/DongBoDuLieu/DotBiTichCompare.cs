@@ -54,7 +54,7 @@ namespace DongBoDuLieu
             try
             {
                 //MoTa,NgayBiTich,LoaiBiTich,LinhMuc
-                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE MoTa=? AND NgayBiTich=? AND LoaiBiTich=? AND LinhMuc=?", GiaDinhConst.TableName);
+                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE MoTa=? AND NgayBiTich=? AND LoaiBiTich=? AND LinhMuc=?", DotBiTichConst.TableName);
                 tbl = Memory.GetData(query, new object[] { objectCSV["MoTa"], objectCSV["NgayBiTich"], objectCSV["LoaiBiTich"], objectCSV["LinhMuc"] });
             }
             catch (System.Exception ex)

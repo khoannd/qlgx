@@ -21,7 +21,7 @@ namespace DongBoDuLieu
         
 
             Push();
-            Pull();
+           //Pull();
             DeleteCSV();
 
         }
@@ -198,12 +198,9 @@ namespace DongBoDuLieu
                 foreach (DataTable item in ds.Tables)
                 {
                     WriteFileCSV(item, 0);
-                    //string temp = this.ToCSV(item);
-                    //using (StreamWriter sw = new StreamWriter(giaoxusynPath + item.TableName + ".csv"))
-                    //{
-                    //    sw.Write(temp);
-                    //}
-
+                    //ghi xong 1 table;
+                   
+                    
                 }
                 string fileName = "gxsyn" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".zip";
                 FastZip fzip = new FastZip();
@@ -216,8 +213,29 @@ namespace DongBoDuLieu
             }
             return null;
         }
+        private static void CatFileCSV(string pathFile,string nameTable)
+        {
+           
+            using (StreamWriter sw = new StreamWriter(pathFile + nameTable + ".csv", true))
+            {
+                bool check = File.Exists(pathFile + nameTable + "Deleted" + ".csv");
+                if (check)
+                {
+                    using (StreamReader sr = new StreamReader(pathFile + nameTable + "Deleted.csv"))
+                    {
+                        string line = sr.ReadLine();//bỏ line đầu
+                        while ((line = sr.ReadLine()) != null)
+                        {
+                            sw.Write(line);
+                        }
+                    }
+                    System.IO.File.Delete(pathFile + nameTable + "Deleted.csv");
+                }
+            }
+        }
         public static void WriteFileCSV(DataTable tblRow, int isDelete)
         {
+            
             if (tblRow != null)
             {
                 string pathFile = Memory.AppPath + "sync\\";
@@ -236,7 +254,7 @@ namespace DongBoDuLieu
 
 
                 }
-
+                CatFileCSV(pathFile,tblRow.TableName);
 
             }
         }

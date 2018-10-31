@@ -50,3 +50,16 @@ E:\Work\qlgx_final\qlgx\Source\DongBoDuLieu\bin\Debug\Newtonsoft.Json.xml
 E:\Work\qlgx_final\qlgx\Source\DongBoDuLieu\obj\Debug\DongBoDuLieu.csprojResolveAssemblyReference.cache
 E:\Work\qlgx_final\qlgx\Source\DongBoDuLieu\obj\Debug\DongBoDuLieu.dll
 E:\Work\qlgx_final\qlgx\Source\DongBoDuLieu\obj\Debug\DongBoDuLieu.pdb
+D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\DongBoDuLieu\bin\Debug\DongBoDuLieu.dll
+D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\DongBoDuLieu\bin\Debug\DongBoDuLieu.pdb
+D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\DongBoDuLieu\bin\Debug\GXGlobal.dll
+D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\DongBoDuLieu\bin\Debug\ICSharpCode.SharpZipLib.dll
+D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\DongBoDuLieu\bin\Debug\Newtonsoft.Json.dll
+D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\DongBoDuLieu\bin\Debug\vnConvert.dll
+D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\DongBoDuLieu\bin\Debug\Microsoft.Office.Interop.Excel.dll
+D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\DongBoDuLieu\bin\Debug\Microsoft.Office.Interop.Word.dll
+D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\DongBoDuLieu\bin\Debug\GXGlobal.pdb
+D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\DongBoDuLieu\bin\Debug\Newtonsoft.Json.xml
+D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\DongBoDuLieu\obj\Debug\DongBoDuLieu.csprojResolveAssemblyReference.cache
+D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\DongBoDuLieu\obj\Debug\DongBoDuLieu.dll
+D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\DongBoDuLieu\obj\Debug\DongBoDuLieu.pdb

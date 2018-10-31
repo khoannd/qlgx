@@ -43,7 +43,7 @@
   <tblColumnWidth>
     <key>frmDotBiTichList_gxDotBiTichList1</key>
     <columns>NgayBiTich,MoTa,LinhMuc,NoiBiTich,SoLuong</columns>
-    <widths>120,241,241,241,242</widths>
+    <widths>119,237,237,237,238</widths>
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmRaoHonPhoiList_gxRaoHonPhoiList1</key>
