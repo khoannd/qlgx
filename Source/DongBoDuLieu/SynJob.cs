@@ -18,10 +18,10 @@ namespace DongBoDuLieu
     {
         public void Synchronize()
         {
-        
+
 
             Push();
-           //Pull();
+            Pull();
             DeleteCSV();
 
         }
@@ -199,8 +199,8 @@ namespace DongBoDuLieu
                 {
                     WriteFileCSV(item, 0);
                     //ghi xong 1 table;
-                   
-                    
+
+
                 }
                 string fileName = "gxsyn" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".zip";
                 FastZip fzip = new FastZip();
@@ -213,9 +213,9 @@ namespace DongBoDuLieu
             }
             return null;
         }
-        private static void CatFileCSV(string pathFile,string nameTable)
+        private static void CatFileCSV(string pathFile, string nameTable)
         {
-           
+
             using (StreamWriter sw = new StreamWriter(pathFile + nameTable + ".csv", true))
             {
                 bool check = File.Exists(pathFile + nameTable + "Deleted" + ".csv");
@@ -235,7 +235,7 @@ namespace DongBoDuLieu
         }
         public static void WriteFileCSV(DataTable tblRow, int isDelete)
         {
-            
+
             if (tblRow != null)
             {
                 string pathFile = Memory.AppPath + "sync\\";
@@ -254,7 +254,7 @@ namespace DongBoDuLieu
 
 
                 }
-                CatFileCSV(pathFile,tblRow.TableName);
+                CatFileCSV(pathFile, tblRow.TableName);
 
             }
         }
