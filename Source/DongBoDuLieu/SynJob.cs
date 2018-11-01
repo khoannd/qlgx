@@ -10,20 +10,25 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace DongBoDuLieu
 {
     public class SynJob
     {
-        public void Synchronize()
+        public void Synchronize(Form frm)
         {
 
-
-            Push();
-            Pull();
-            DeleteCSV();
-
+            Thread thread = new Thread(() =>
+            {
+                Push();
+                Pull();
+                DeleteCSV();
+                frm.Close();
+                MessageBox.Show("Đồng bộ thành công", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            });
+            thread.Start();
         }
 
         private void DeleteCSV()
@@ -158,6 +163,9 @@ namespace DongBoDuLieu
 
             LinhMucCompare linhmuc = new LinhMucCompare(dir, "LinhMuc.csv");
             linhmuc.importCacObject();
+
+            CauHinhCompare cauhinh = new CauHinhCompare(dir,"CauHinh.csv");
+            cauhinh.importCacObject();
         }
         private string createrFileSyn()
         {

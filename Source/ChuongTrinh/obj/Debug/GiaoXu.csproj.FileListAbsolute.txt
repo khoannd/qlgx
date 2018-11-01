@@ -320,3 +320,4 @@ D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.frmSho
 D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.frmTaoDotBiTich.resources
 D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.csproj.GenerateResource.Cache
 D:\GoogleDriver\Demo_Git\demov23\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.exe.licenses
+E:\Work\qlgx_final\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.frmProcessSyn.resources

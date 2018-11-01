@@ -135,6 +135,12 @@
     <Compile Include="frmLogin.Designer.cs">
       <DependentUpon>frmLogin.cs</DependentUpon>
     </Compile>
+    <Compile Include="frmProcessSyn.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmProcessSyn.Designer.cs">
+      <DependentUpon>frmProcessSyn.cs</DependentUpon>
+    </Compile>
     <Compile Include="frmResetPWord.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -331,6 +337,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="frmLogin.resx">
       <DependentUpon>frmLogin.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmProcessSyn.resx">
+      <DependentUpon>frmProcessSyn.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="frmResetPWord.resx">
       <DependentUpon>frmResetPWord.cs</DependentUpon>

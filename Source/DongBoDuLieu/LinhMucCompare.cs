@@ -21,11 +21,11 @@ namespace DongBoDuLieu
             foreach (var item in Data)
             {
                 DataTable linhMuc = findLinhMuc(item);
-                //delete linhmuc
-                if (deleteObjectMaster(item, linhMuc))
-                {
-                    continue;
-                }
+                ////delete linhmuc
+                //if (deleteObjectMaster(item, linhMuc))
+                //{
+                //    continue;
+                //}
                 importObjectMaster(item, linhMuc, LinhMucConst.MaLinhMuc, LinhMucConst.TableName);
             }
         }
@@ -34,8 +34,8 @@ namespace DongBoDuLieu
             DataTable tbl = null;
             try
             {
-                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE HoTen=?,TenThanh=?,ChucVu=?", LinhMucConst.TableName);
-                tbl = Memory.GetData(query, objectCSV["HoTen"], objectCSV["TenThanh"], objectCSV["NgaySinh"]);
+                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE HoTen=? AND TenThanh=? AND ChucVu=?", LinhMucConst.TableName);
+                tbl = Memory.GetData(query, objectCSV["HoTen"], objectCSV["TenThanh"], objectCSV["ChucVu"]);
             }
             catch (System.Exception ex)
             {
@@ -47,8 +47,6 @@ namespace DongBoDuLieu
             }
             return null;
         }
-
-
         public override bool deleteObjectMaster(Dictionary<string, object> objectCSV, DataTable item)
         {
             if (objectCSV["DeleteSV"].ToString() == "1" && item != null && item.Rows.Count > 0)
