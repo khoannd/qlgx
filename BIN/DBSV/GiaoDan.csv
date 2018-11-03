@@ -1,7 +1,8 @@
 MaGiaoDan;HoTen;MaGiaoHo;Phai;TenThanh;NgaySinh;NoiSinh;SoRuaToi;NgayRuaToi;NoiRuaToi;ChaRuaToi;NguoiDoDauRuaToi;NgayRuocLe;NoiRuocLe;ChaRuocLe;SoThemSuc;NgayThemSuc;NoiThemSuc;ChaThemSuc;NguoiDoDauThemSuc;TrinhDoVanHoa;NgheNghiep;ConHoc;QuaDoi;NgayQuaDoi;DienThoai;Email;DaXoa;GhiChu;UpdateDate;SoRuocLe;HoTenCha;HoTenMe;DaCoGiaDinh;GiaoDanAo;TanTong;MaNhanDang;ThuocGiaoXu;ThuocGiaoPhan;DiaChi;DanToc;NoiQuaDoi;SoAnTang;NoiAnTang;AnhDaiDien;CMND;TrinhDoChuyenMon;BietNgoaiNgu;MaGiaoXuRieng;DeleteSV;
-27384;Võ Cao Sơn;274;Nam;Anê;03/10/2018;Ha Noi;;01/10/2018;ABCDE;Tao;;;;;;;;;;;;0;0;;;;0;;2018-10-31 22:48:38;;Vo King;King Vo;-1;0;0;C8F3E6D3E305406EB44GIAODAN1636764110693506971;;;;;;;;;46555451;;;1221;0;
-27385;Son Vo Cao123;276;Nam;Ađalbertô;05/04/2009;;;05/04/2009;;;;05/04/2009;;;;05/04/2009;;;;;;0;0;17/04/2009;;;0;;2018-10-31 22:48:38;;;;0;0;0;554DC3CBC51843D699DGIAODAN1636764186383825598;;;;;;;;;;;;1221;0;
-27386;King;275;Nam;Batman;21/10/2018;;;;;;;0;;;0;0;;;;;;0;0;0;;;0;;2018-10-31 22:48:38;;;;0;0;0;;;;;;;;;;;;;1221;0;
-27387;A1;0;Nam;Achillêô;;;;;;;;;;;;;;;;;;0;0;;;;0;;2018-10-31 22:48:38;;;;-1;-1;0;FCBA5D928D7B488EB43GIAODAN1636765938415450177;;;;;;;;;;;;1221;0;
-27388;A4;0;Nữ;Achillêô;;;;;;;;;;;;;;;;;;0;0;;;;0;;2018-10-31 22:48:38;;;;-1;0;0;960DAC3CBFB04C8BA03GIAODAN3636765983974860852;;;;;;;;;;;;1221;0;
-27389;A;0;Nam;Achillêô;;;;;;;;;;;;;;;;;;0;0;;;;0;;2018-10-31 22:48:38;;;;-1;-1;0;A0BA6C81513A45AA91EGIAODAN4636766060569640292;;;;;;;;;;;;1221;0;
+27392;Batman;283;Nam;Ambrôsiô;31/10/2018;;;;;;;;;;;;;;;;;0;0;;;;0;;2018-11-03 09:39:02;;;;0;0;0;ABFCC9909AC2442595EGIAODAN1636768345851737451;;;;;;;;;;;;1221;1;
+27393;King;283;Nam;Agatha;05/11/2018;;;;;;;;;;;;;;;;;0;0;;;;0;;2018-11-03 09:39:02;;;;0;0;0;ABFCC9909AC2442595EGIAODAN1636768346902971497;;;;;;;;;;;;1221;1;
+27394;Nhg;284;Nam;Achillêô;;;;;;;;;;;;;;;;;;0;0;;;;0;;2018-11-03 10:45:57;;;;-1;0;0;51A63D39D6C64EEB902GIAODAN1636768348312627780;;;;;;;;;;;;1221;0;
+27395;Nguyen Van Acb;0;Nam;Ađalbertô;29/10/2018;;;;;;;;;;;;;;;;;0;0;;;;0;;2018-11-03 10:45:57;;;;-1;-1;0;ABFCC9909AC2442595EGIAODAN1636768349365724549;;;;;;;;;;;;1221;0;
+27396;Bui Thi Dcf;0;Nữ;Albertô;19/11/2018;;;;;;;;;;;;;;;;;0;0;;;;0;;2018-11-03 10:45:57;;;;-1;-1;0;ABFCC9909AC2442595EGIAODAN2636768349545388299;;;;;;;;;;;;1221;0;
+27397;Chau;0;Nam;Achillêô;;;;;;;;;;;;;;;;;;0;0;;;;0;;2018-11-03 10:45:57;;Ađalbertô Nguyen Van Acb;Albertô Bui Thi Dcf;0;0;0;51A63D39D6C64EEB902GIAODAN4636768352048039554;;;;;;;;;;;;1221;0;
+27398;King Heo Bech;0;Nam;Alphongsô;19/11/2018;;;;;;;;;;;;;;;;;0;0;;;;0;;2018-11-03 10:45:57;;Ađalbertô Nguyen Van Acb;Albertô Bui Thi Dcf;0;0;0;ABFCC9909AC2442595EGIAODAN4636768352670873008;;;;;;;;;;;;1221;0;

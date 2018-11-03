@@ -17,6 +17,7 @@ namespace DongBoDuLieu
 {
     public class SynJob
     {
+        private static bool errorState = false;
         public void Synchronize(Form frm)
         {
 
@@ -26,7 +27,11 @@ namespace DongBoDuLieu
                 Pull();
                 DeleteCSV();
                 frm.Close();
-                MessageBox.Show("Đồng bộ thành công", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (errorState == false)
+                {
+                    MessageBox.Show("Đồng bộ thành công", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                errorState = false;
             });
             thread.Start();
         }
@@ -57,6 +62,7 @@ namespace DongBoDuLieu
             catch (System.Exception ex)
             {
                 MessageBox.Show("Quá trình đưa dữ liệu lên server bị lổi", "Lổi đồng bộ", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                errorState = true;
                 return;
             }
 
@@ -89,6 +95,7 @@ namespace DongBoDuLieu
             catch (System.Exception ex)
             {
                 MessageBox.Show("Quá trình đưa lấy dữ liệu từ server bị lổi", "Lổi đồng bộ", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                errorState = true;
                 return;
             }
         }
@@ -164,7 +171,7 @@ namespace DongBoDuLieu
             LinhMucCompare linhmuc = new LinhMucCompare(dir, "LinhMuc.csv");
             linhmuc.importCacObject();
 
-            CauHinhCompare cauhinh = new CauHinhCompare(dir,"CauHinh.csv");
+            CauHinhCompare cauhinh = new CauHinhCompare(dir, "CauHinh.csv");
             cauhinh.importCacObject();
         }
         private string createrFileSyn()
@@ -231,10 +238,10 @@ namespace DongBoDuLieu
                 {
                     using (StreamReader sr = new StreamReader(pathFile + nameTable + "Deleted.csv"))
                     {
-                        string line = sr.ReadLine();//bỏ line đầu
+                        string line = "";
                         while ((line = sr.ReadLine()) != null)
                         {
-                            sw.Write(line);
+                            sw.Write(line + "\n");
                         }
                     }
                     System.IO.File.Delete(pathFile + nameTable + "Deleted.csv");
@@ -256,6 +263,7 @@ namespace DongBoDuLieu
                 {
                     if (!check)
                     {
+
                         sw.Write(createHeader(tblRow));
                     }
                     sw.Write(createRowValue(tblRow, isDelete));

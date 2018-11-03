@@ -15,6 +15,7 @@
         <item>064 3848 361</item>
         <item>0838515939</item>
         <item>0838515871</item>
+        <item>0919121212</item>
       </txtDienThoai>
       <txtHinh caption="Hình giáo xứ">
         <item>l_65f4eb74b78c07680cd952110fa4bfd8.jpg</item>
@@ -62,6 +63,7 @@
         <item>Buôn Tu; Xã Ea Tul; Huyện Cư M’Gar; Tỉnh Đăk Lăk</item>
         <item>dasd</item>
         <item>dsad</item>
+        <item>Võ Văn Ngân,Q. Thủ Đức, HCM</item>
       </txtDiaChi>
       <txtTenGiaoPhan caption="Giáo phận">
         <item>Kon Tum</item>
@@ -112,6 +114,7 @@
         <item>Mông Triệu (Hạt Bình An)</item>
         <item>EATUL</item>
         <item>sada</item>
+        <item>Thủ Đức - HCM</item>
       </txtTenGiaoXu>
       <txtEmail caption="Email">
         <item>dsadsa</item>
@@ -182,6 +185,10 @@
         <item>A2</item>
         <item>A3</item>
         <item>A4</item>
+        <item>Batman</item>
+        <item>Nhg</item>
+        <item>Chau</item>
+        <item>King Heo Bech</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Nghệ An</item>
@@ -197,6 +204,7 @@
         <item>Bui King</item>
         <item>King Vo</item>
         <item>Hahahaha</item>
+        <item>Albertô Bui Thi Dcf</item>
       </txtTenMe>
       <txtTenCha caption="Tên Cha">
         <item>Gb Nguyễn Hồng Danh</item>
@@ -207,6 +215,7 @@
         <item>Cnzbxc Cxmzx</item>
         <item>Vo King</item>
         <item>Noithing</item>
+        <item>Ađalbertô Nguyen Van Acb</item>
       </txtTenCha>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Hòa</item>
@@ -300,6 +309,8 @@
         <item>Ađalbertô Võ Cao Sơn</item>
         <item>Anê Võ Cao Sơn</item>
         <item>Achillêô A1</item>
+        <item>Achillêô Nhg</item>
+        <item>Ađalbertô Nguyen Van Acb</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Anna Trần Bảo Trúc</item>
@@ -309,6 +320,7 @@
         <item>Achillêô King Batman</item>
         <item>Anrê Kim Têgon Mỹ Nữ</item>
         <item>Achillêô A4</item>
+        <item>Albertô Bui Thi Dcf</item>
       </txtNguoiVo>
       <txtDiaChi caption="Địa chỉ">
         <item>Xuân Sơn</item>
