@@ -13,7 +13,7 @@
   <tblColumnWidth>
     <key>frmAccoutList_gxListAccout1</key>
     <columns>HoTenNguoiDung,TenTaiKhoan,Email,SoDienThoai,TenLoai</columns>
-    <widths>246,248,248,187,124</widths>
+    <widths>247,248,248,186,124</widths>
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmGiaoHo_gxGiaoHoList1</key>
@@ -43,7 +43,7 @@
   <tblColumnWidth>
     <key>frmDotBiTichList_gxDotBiTichList1</key>
     <columns>NgayBiTich,MoTa,LinhMuc,NoiBiTich,SoLuong</columns>
-    <widths>119,237,237,237,238</widths>
+    <widths>120,241,241,241,242</widths>
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmRaoHonPhoiList_gxRaoHonPhoiList1</key>

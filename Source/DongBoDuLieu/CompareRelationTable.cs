@@ -43,10 +43,11 @@ namespace DongBoDuLieu
                         objectTrackNew[fieldID2] = idObjectFK2.ToString();
                         ListTracks.Add(objectTrackNew);
                         //check delete
-                        if (deleteObjecChild(data,fieldID1,fieldID1,result, nameTable))
+                        if (deleteObjecChild(data, fieldID1, fieldID1, result, nameTable))
                             continue;
                         if (result != null && result.Rows.Count > 0)
                         {
+                            
                             if (compareDate(data["UpdateDate"], result.Rows[0]["UpdateDate"].ToString()))
                             {
                                 //data.Remove(fieldID1);
@@ -72,13 +73,33 @@ namespace DongBoDuLieu
 
         private bool deleteObjecChild(Dictionary<string, object> objectCSV, string fieldID1, string fieldID2, DataTable objectClient, string nameTable)
         {
-            if (string.IsNullOrEmpty(objectCSV["DeleteSV"].ToString()))
-                return false;
-            if (int.Parse(objectCSV["DeleteSV"].ToString()) == 1 && compareDate(objectCSV[GxSyn.UpdateDate],objectClient.Rows[0][GxSyn.UpdateDate].ToString()))
+            if (objectClient==null&& objectCSV["DeleteSV"] == "0")
             {
-                delete(string.Format(@"{0}=? AND {1}=?", fieldID1, fieldID2), nameTable, objectClient.Rows[0][fieldID1], objectClient.Rows[0][fieldID2]);
+                return false;
+            }
+            if (objectClient.Rows.Count == 0 && objectCSV["DeleteSV"] == "0")
+            {
+                return false;
+            }
+            if (objectClient==null&& objectCSV["DeleteSV"]=="1")
+            {
                 return true;
             }
+            if (objectClient.Rows.Count ==0 && objectCSV["DeleteSV"] == "1")
+            {
+                return true;
+            }
+            if (objectClient.Rows.Count>0)
+            {
+                if (int.Parse(objectCSV["DeleteSV"].ToString()) == 1 && compareDate(objectCSV[GxSyn.UpdateDate], objectClient.Rows[0][GxSyn.UpdateDate].ToString()))
+                {
+                    delete(string.Format(@"{0}=? AND {1}=?", fieldID1, fieldID2), nameTable, objectClient.Rows[0][fieldID1], objectClient.Rows[0][fieldID2]);
+                    return true;
+                }
+            }
+            if (string.IsNullOrEmpty(objectCSV["DeleteSV"].ToString()))
+                return false;
+   
             if (int.Parse(objectCSV["DeleteSV"].ToString()) == 1)
             {
                 return true;

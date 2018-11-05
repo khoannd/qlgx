@@ -64,8 +64,8 @@ namespace DongBoDuLieu
                     {
                         if (compareLopGiaoLy(objectCSV, motKhoi))
                         {
-                            DataTable temp = new DataTable();
-                            temp.Rows.Add(motKhoi);
+                            DataTable temp = tbl.Clone();
+                            temp.ImportRow(motKhoi);
                             return temp;
                         }
                     }
@@ -94,7 +94,7 @@ namespace DongBoDuLieu
                 for (int j = 0; j < lopGiaoLyDB.Rows.Count; j++)
                 {
 
-                    if (lopgiaoly.compareHocVien(lopGiaoLyCSV[i], lopGiaoLyDB.Rows[i]))
+                    if (lopgiaoly.compareHocVien(lopGiaoLyCSV[i], lopGiaoLyDB.Rows[j]))
                     {
                         return true;
                     }

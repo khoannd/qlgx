@@ -61,7 +61,7 @@ namespace DongBoDuLieu
             }
             catch (System.Exception ex)
             {
-                MessageBox.Show("Quá trình đưa dữ liệu lên server bị lổi", "Lổi đồng bộ", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Quá trình đưa dữ liệu lên server bị lỗi", "Lỗi đồng bộ", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 errorState = true;
                 return;
             }
@@ -94,7 +94,7 @@ namespace DongBoDuLieu
             }
             catch (System.Exception ex)
             {
-                MessageBox.Show("Quá trình đưa lấy dữ liệu từ server bị lổi", "Lổi đồng bộ", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Quá trình đưa lấy dữ liệu từ server bị lỗi", "Lỗi đồng bộ", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 errorState = true;
                 return;
             }
@@ -153,6 +153,11 @@ namespace DongBoDuLieu
 
             lopgiaoly.getListKhoiGiaoLy(khoigiaoly.ListTracks);
             lopgiaoly.importCacObject();
+
+            GiaoLyVienCompare giaolyvien = new GiaoLyVienCompare(dir,"GiaoLyVien.csv");
+            giaolyvien.getListTracksGiaoDan(giaodan.ListTracks);
+            giaolyvien.getListTracksLopGiaoLy(lopgiaoly.ListTracks);
+            giaolyvien.importCacObject();
 
 
             chitietlopgiaoly.getListTracksGiaoDan(giaodan.ListTracks);

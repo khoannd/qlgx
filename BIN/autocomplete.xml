@@ -189,6 +189,25 @@
         <item>Nhg</item>
         <item>Chau</item>
         <item>King Heo Bech</item>
+        <item>Nguyen Van Acb</item>
+        <item>Bui Thi Dcf</item>
+        <item>Võ Lâm Chí Tôn</item>
+        <item>Acon</item>
+        <item>Adele</item>
+        <item>F</item>
+        <item>Son Vos</item>
+        <item>Maya</item>
+        <item>King 312</item>
+        <item>Tn1</item>
+        <item>Adsa</item>
+        <item>Csad</item>
+        <item>Abc</item>
+        <item>Nnam</item>
+        <item>Nnu</item>
+        <item>A5</item>
+        <item>A9</item>
+        <item>Glv1</item>
+        <item>Glv2</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Nghệ An</item>
@@ -198,6 +217,7 @@
         <item>Thu Duc</item>
         <item>Ha Noi</item>
         <item>Ho Chi Minh</item>
+        <item>Td</item>
       </txtNoiSinh>
       <txtTenMe caption="Tên Mẹ">
         <item>Anna Nguyễn Thị Hạnh</item>
@@ -205,6 +225,7 @@
         <item>King Vo</item>
         <item>Hahahaha</item>
         <item>Albertô Bui Thi Dcf</item>
+        <item>Achillêô Nnu</item>
       </txtTenMe>
       <txtTenCha caption="Tên Cha">
         <item>Gb Nguyễn Hồng Danh</item>
@@ -216,17 +237,20 @@
         <item>Vo King</item>
         <item>Noithing</item>
         <item>Ađalbertô Nguyen Van Acb</item>
+        <item>Achillêô Nnam</item>
       </txtTenCha>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Hòa</item>
         <item>Callistô I C</item>
         <item>Barnaba B</item>
+        <item>Achillêô A2</item>
       </txtNguoiVo>
       <txtNguoiChong caption="Người nam">
         <item>Gb Nguyễn Văn Niệm</item>
         <item>Ađalbertô A</item>
         <item>Barnaba B</item>
         <item>Achillêô A</item>
+        <item>Achillêô A1</item>
       </txtNguoiChong>
       <txtTenHonPhoi caption="Đôi hôn phối">
         <item>Niệm - Hòa</item>
@@ -234,6 +258,7 @@
         <item>B</item>
         <item>A - C</item>
         <item>A - B</item>
+        <item>A1 - A2</item>
       </txtTenHonPhoi>
       <txtGiaoPhan caption="Giáo phận">
         <item>Gp!</item>
@@ -256,6 +281,7 @@
         <item>1231231243424</item>
         <item>46555451</item>
         <item>556123231321</item>
+        <item>0123</item>
       </gxTextCmnd>
       <txtGiaoXuChuyen caption="Giáo xứ">
         <item>Hcm</item>
@@ -311,6 +337,11 @@
         <item>Achillêô A1</item>
         <item>Achillêô Nhg</item>
         <item>Ađalbertô Nguyen Van Acb</item>
+        <item>Albertô Hoang Kieu</item>
+        <item>Xzc Cxzc</item>
+        <item>Achillêô Nnam</item>
+        <item>Agatha Abc</item>
+        <item>Ađalbertô A2</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Anna Trần Bảo Trúc</item>
@@ -321,6 +352,9 @@
         <item>Anrê Kim Têgon Mỹ Nữ</item>
         <item>Achillêô A4</item>
         <item>Albertô Bui Thi Dcf</item>
+        <item>Albertô Ngoc Trinh</item>
+        <item>Achillêô Nnu</item>
+        <item>Albertô Cdf</item>
       </txtNguoiVo>
       <txtDiaChi caption="Địa chỉ">
         <item>Xuân Sơn</item>
@@ -376,6 +410,7 @@
         <item>Đợt bí tích Rửa tội ngày 01 năm 2200</item>
         <item>Đợt bí tích Rửa tội ngày 01 năm 2800</item>
         <item>Đợt bí tích Rửa tội ngày 01 tháng 10 năm 2018</item>
+        <item>Đợt bí tích Rửa tội ngày 01 tháng 01 năm 2003</item>
       </txtMoTa>
     </frmBiTichChiTiet>
     <frmKhoiGiaoLy xmlns="">
@@ -389,6 +424,8 @@
         <item>Achillêô A</item>
         <item>Barnaba B</item>
         <item>Maria Nguyễn Thị Hòa</item>
+        <item>Achillêô A2</item>
+        <item>Achillêô A1</item>
       </txtNguoiQuanLy>
     </frmKhoiGiaoLy>
     <frmRaoHonPhoi xmlns="">

@@ -34,11 +34,7 @@ namespace DongBoDuLieu
             {
                 foreach (var item in Data)
                 {
-                    DataTable lopGiaoLy = findLopGiaoLy(item);
-                    if (deleteObjectMaster(item, lopGiaoLy)) 
-                    {
-                        continue;
-                    }
+                   
                     int idMaKhoi = findIdObjectClient(ListKhoiGiaoLyTracks, item["MaKhoi"]);
                     if (idMaKhoi == 0)
                     {
@@ -47,6 +43,11 @@ namespace DongBoDuLieu
                     else
                     {
                         item["MaKhoi"] = idMaKhoi.ToString();
+                    }
+                    DataTable lopGiaoLy = findLopGiaoLy(item);
+                    if (deleteObjectMaster(item, lopGiaoLy))
+                    {
+                        continue;
                     }
                     importObjectMaster(item, lopGiaoLy, "MaLop", LopGiaoLyConst.TableName);
                 }
@@ -77,7 +78,7 @@ namespace DongBoDuLieu
 
         public bool compareHocVien(Dictionary<string, object> lopCSV, DataRow lopDB)
         {
-            DataTable hocVienDB = Memory.GetData(@"Select * from LopGiaoLy Where MaLop=?",lopDB["MaLop"]);
+            DataTable hocVienDB = Memory.GetData(@"Select * from ChiTietLopGiaoLy Where MaLop=?",lopDB["MaLop"]);
             List<Dictionary<string, object>> hocvienCSV = getListByID(chiTietLopGiaoLy, "MaLop", lopCSV["MaLop"]);
             if (hocVienDB != null && hocVienDB.Rows.Count == 0 && hocvienCSV != null && hocvienCSV.Count == 0)
             {
@@ -92,7 +93,7 @@ namespace DongBoDuLieu
                 int idHocVieDB = findIdObjectClient(ListGiaoDanTracks, hocvienInCSV["MaGiaoDan"]);
                 foreach (DataRow hocvienInDB in hocVienDB.Rows)
                 {
-                    if (int.Parse(hocvienInDB["MaGiaoDan"].ToString())==idHocVieDB&&int.Parse(hocvienInDB["SoThuTu"].ToString())==int.Parse(hocvienInCSV["SoThuTu"].ToString()))
+                    if (int.Parse(hocvienInDB["MaGiaoDan"].ToString())==idHocVieDB)
                     {
                         return true;
                     }

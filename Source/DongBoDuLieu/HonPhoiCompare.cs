@@ -76,7 +76,10 @@ namespace DongBoDuLieu
             {
                 return null;
             }
-
+            if (tbl != null && tbl.Rows.Count > 0)
+            {
+                return tbl;
+            }
             return null;
 
         }
