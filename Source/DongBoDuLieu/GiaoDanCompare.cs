@@ -36,8 +36,11 @@ namespace DongBoDuLieu
             DataTable tbl = null;
             try
             {
-                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE MaNhanDang=?", GiaoDanConst.TableName);
-                tbl = Memory.GetData(query, objectCSV["MaNhanDang"]);
+                if (objectCSV["MaNhanDang"].ToString() != "")
+                {
+                    string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE MaNhanDang=?", GiaoDanConst.TableName);
+                    tbl = Memory.GetData(query, objectCSV["MaNhanDang"]);
+                }
             }
             catch (System.Exception ex)
             {
@@ -50,8 +53,12 @@ namespace DongBoDuLieu
 
             try
             {
-                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE HoTen=? AND TenThanh=? AND NgaySinh=?", GiaoDanConst.TableName);
-                tbl = Memory.GetData(query, objectCSV["HoTen"], objectCSV["TenThanh"], objectCSV["NgaySinh"]);
+                if (objectCSV["HoTen"].ToString() != "" && objectCSV["TenThanh"].ToString() != "" &&
+                    objectCSV["NgaySinh"].ToString() != "")
+                {
+                    string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE HoTen=? AND TenThanh=? AND NgaySinh=?", GiaoDanConst.TableName);
+                    tbl = Memory.GetData(query, objectCSV["HoTen"], objectCSV["TenThanh"], objectCSV["NgaySinh"]);
+                }
             }
             catch (System.Exception ex)
             {

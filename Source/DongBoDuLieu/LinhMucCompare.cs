@@ -34,8 +34,12 @@ namespace DongBoDuLieu
             DataTable tbl = null;
             try
             {
-                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE HoTen=? AND TenThanh=? AND ChucVu=?", LinhMucConst.TableName);
-                tbl = Memory.GetData(query, objectCSV["HoTen"], objectCSV["TenThanh"], objectCSV["ChucVu"]);
+                if (objectCSV["HoTen"].ToString() != "" && objectCSV["TenThanh"].ToString() != "" &&
+                    objectCSV["ChucVu"].ToString() != "")
+                {
+                    string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE HoTen=? AND TenThanh=? AND ChucVu=?", LinhMucConst.TableName);
+                    tbl = Memory.GetData(query, objectCSV["HoTen"], objectCSV["TenThanh"], objectCSV["ChucVu"]);
+                }
             }
             catch (System.Exception ex)
             {

@@ -208,6 +208,7 @@
         <item>A9</item>
         <item>Glv1</item>
         <item>Glv2</item>
+        <item>My Nu</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Nghệ An</item>
@@ -342,6 +343,7 @@
         <item>Achillêô Nnam</item>
         <item>Agatha Abc</item>
         <item>Ađalbertô A2</item>
+        <item>Achillêô Abc</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Anna Trần Bảo Trúc</item>
@@ -355,6 +357,7 @@
         <item>Albertô Ngoc Trinh</item>
         <item>Achillêô Nnu</item>
         <item>Albertô Cdf</item>
+        <item>Ađalbertô My Nu</item>
       </txtNguoiVo>
       <txtDiaChi caption="Địa chỉ">
         <item>Xuân Sơn</item>
