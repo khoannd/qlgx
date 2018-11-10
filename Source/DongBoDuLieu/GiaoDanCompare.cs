@@ -50,7 +50,7 @@ namespace DongBoDuLieu
 
             try
             {
-                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE HoTen=?,TenThanh=?,NgaySinh=?", GiaoDanConst.TableName);
+                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE HoTen=? AND TenThanh=? AND NgaySinh=?", GiaoDanConst.TableName);
                 tbl = Memory.GetData(query, objectCSV["HoTen"], objectCSV["TenThanh"], objectCSV["NgaySinh"]);
             }
             catch (System.Exception ex)
