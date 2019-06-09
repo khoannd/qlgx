@@ -195,7 +195,7 @@ namespace GxControl
                 GetGridControlsCollection(child, ref AllControls);
             }
         }
-
+        
         private void frmBase_FormClosing(object sender, FormClosingEventArgs e)
         {
             List<Control> gridControls = new List<Control>();

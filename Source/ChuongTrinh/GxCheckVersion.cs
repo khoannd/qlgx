@@ -10,6 +10,10 @@ using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 using System.Data;
 using GxGlobal;
 using GxControl;
+using System.Configuration;
+using System.Net;
+using System.Collections.Specialized;
+using Newtonsoft.Json;
 
 namespace GiaoXu
 {
@@ -400,8 +404,9 @@ namespace GiaoXu
                     //    }
                     //}
                 }
-                //
-                string fileName = "data" + System.DateTime.Now.ToString("yyyyMMddHH") + ".zip";
+                //2018-08-13 Gia modify start
+                string fileName = "data" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".zip";
+                //2018-08-13 Gia modify end
 
                 if (!Directory.Exists(backupPath))
                 {
@@ -413,12 +418,114 @@ namespace GiaoXu
                     //string path = Memory.GetTempPath(filePath);
                     fzip.CreateZip(backupPath + fileName, Memory.AppPath, false, "giaoxu.mdb");
                 }
+                //2018-08-08 Gia add start
+               // uploadFile(fileName, backupPath);
+                //2018-08-08 Gia add end
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Lỗi Exception createBackupData()", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+        //2018-08-14 Gia add start
+        private int insertInfoGXInFirstTime()
+        {
+            WebClient cl = new WebClient();
+            NameValueCollection infoGX = new NameValueCollection();
+            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOXU), GiaoXuConst.TableName, GiaoXuConst.MaGiaoXuRieng));
+            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOHAT), GiaoHatConst.TableName, GiaoHatConst.MaGiaoHatRieng));
+            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOPHAN), GiaoPhanConst.TableName, GiaoPhanConst.MaGiaoPhanRieng));
+            if (infoGX.Count > 0)
+            {
+                byte[] rs = cl.UploadValues(ConfigurationManager.AppSettings["SERVER"] + @"GiaoXuCL/insert", "post", infoGX);
+                string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
+                Dictionary<string, int> maID = JsonConvert.DeserializeObject<Dictionary<string, int>>(temp);
+                if (maID.Count > 0)
+                {
+                    if (maID.ContainsKey("IDGP"))
+                    {
+                        Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOPHANRIENG, new object[] { maID["IDGP"] });
+                    }
+                    if (maID.ContainsKey("IDGH"))
+                    {
+                        Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOHATRIENG, new object[] { maID["IDGH"] });
+                    }
+                    if (maID.ContainsKey("IDGX"))
+                    {
+                        Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOXURIENG, new object[] { maID["IDGX"] });
+                    }
+                    return maID["IDGX"];
+                }
+            }
+            return -1;
+
+        }
+        private NameValueCollection createrInfoTable(DataTable tbl, string nameTable, string nameCotRieng)
+        {
+            if (tbl != null && tbl.Rows.Count > 0)
+            {
+                NameValueCollection temp = new NameValueCollection();
+                int maRieng;
+
+                bool check = int.TryParse(tbl.Rows[0][nameCotRieng].ToString(), out maRieng);
+                if (!check)
+                {
+                    temp.Add(nameTable, "");
+                    foreach (DataColumn item in tbl.Columns)
+                    {
+                        temp.Add(nameTable + item.ColumnName, tbl.Rows[0][item].ToString());
+                    }
+                }
+                return temp;
+
+            }
+            return null;
+        }
+        //2018-08-14 Gia add end
+        private void uploadFile(string fileName, string backupPath)
+        {
+
+            //2018-08-01 Gia add start
+            WebClient cl = new WebClient();
+            try
+            {
+                //upload to server
+                //get thong tin giaoxu
+                DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
+                if (tblGiaoXu != null && tblGiaoXu.Rows.Count > 0)
+                {
+                    int maGiaoXuRieng;
+                    bool check = int.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString(), out maGiaoXuRieng);
+                    if (!check)//Giao xu chưa có thông tin trên server
+                    {
+                        maGiaoXuRieng = insertInfoGXInFirstTime();
+                    }
+                    //check Last Upload
+                    DateTime lastUpload;
+                    check = DateTime.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.LastUpload].ToString(), out lastUpload);
+                    if (!check || DateTime.Now.Subtract(lastUpload).TotalDays > 1.0)//last > 1 ngày
+                    {
+                        // upload file backup to server//lay ve time upload server
+                        byte[] rs = cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + @"BackupCL/uploadFile/" + maGiaoXuRieng, backupPath + fileName);
+                        string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
+                        check = DateTime.TryParse(temp, out lastUpload);
+                        if (check)
+                        {
+                            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_LASTUPLOAD, new object[] { lastUpload });
+                        }
+                    }
+
+                }
+            }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show(ex.Message, "Lỗi Exception uploadfileServer", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+            //2018-08-01 Gia add end
+        }
+
 
         #endregion
     }

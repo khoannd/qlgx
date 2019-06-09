@@ -132,14 +132,17 @@ namespace GxControl
         public void SelectByVaiTro(bool sex)
         {
             SetWhere();
+            // 2018-11-24 Khoan mod start
+            // Changed VaiTro=0 if sex = true, VaiTro=1 if sex = false
             if (sex == true)
             {
-                where = string.Concat(where, " AND ThanhVienGiaDinh.VaiTro = 1 ");
+                where = string.Concat(where, " AND ThanhVienGiaDinh.VaiTro = 0 ");
             }
             else
             {
-                where = string.Concat(where, "AND ThanhVienGiaDinh.VaiTro = 0 ");
+                where = string.Concat(where, "AND ThanhVienGiaDinh.VaiTro = 1 ");
             }
+            // 2018-11-24 Khoan mod end
             listGrid.LoadData(string.Concat(SqlConstants.SELECT_LISTGIAODAN_BYGIADINH, where,condition), null);
         }
         public void SelectByTuoi(TypeByAge type)

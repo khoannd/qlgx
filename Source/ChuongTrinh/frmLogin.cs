@@ -13,7 +13,7 @@ namespace GiaoXu
     public partial class frmLogin : frmBase
     {
        
-        frmMain frm;
+        //frmMain frm;
         public frmLogin()
         {
             InitializeComponent();
@@ -21,10 +21,14 @@ namespace GiaoXu
             if (!IsCanLogin())
             {
                 this.Hide();
-                frm = new frmMain();
-                frm.IsAdmin = true;
-                frm.ShowDialog();
-                
+                //frm = new frmMain();
+                //frm.IsAdmin = true;
+                //frm.ShowDialog();
+
+                Program.frmMain = new frmMain();
+                Program.frmMain.IsAdmin = true;
+                Program.frmMain.ShowDialog();
+
                 //this.Close();
             }
         }
@@ -58,13 +62,13 @@ namespace GiaoXu
             if(tbl != null && tbl.Rows.Count > 0)
             {
                 this.Hide();
-                frm = new frmMain();
-                frm.UserName = tbl.Rows[0][AccountConst.TenTaiKhoan].ToString();
+                Program.frmMain = new frmMain();
+                Program.frmMain.UserName = tbl.Rows[0][AccountConst.TenTaiKhoan].ToString();
                 if (tbl.Rows[0][AccountConst.LoaiTaiKhoan].Equals((int)LoaiTaiKhoan.QUANTRI))
                 {
-                    frm.IsAdmin = true;
+                    Program.frmMain.IsAdmin = true;
                 }
-                frm.ShowDialog();
+                Program.frmMain.ShowDialog();
             }
             else
             {

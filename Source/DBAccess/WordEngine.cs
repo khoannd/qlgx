@@ -756,6 +756,12 @@ namespace GxGlobal
             table.Cell(row, col).Range.Text = text;
         }
 
+        public void WriteTextInTable(int tableIndex, int row, int col, string text)
+        {
+            var table = GetTable(tableIndex);
+            table.Cell(row, col).Range.Text = text;
+        }
+
         /// <summary>
         /// write text in table with single line paragraph
         /// </summary>
@@ -770,6 +776,84 @@ namespace GxGlobal
             CurrentSelection.ParagraphFormat.LineSpacing = 10;
             CurrentSelection.ParagraphFormat.SpaceAfter = 0;
             CurrentSelection.ParagraphFormat.SpaceBefore = 0;
+        }
+
+        public void StrikeThroughRow(int tableIndex, int rowIndex)
+        {
+            var table = GetTable(tableIndex);
+
+            table.Rows[rowIndex].Range.Font.StrikeThrough = 1;
+        }
+        public void ItalicRow(int tableIndex, int rowIndex)
+        {
+            var table = GetTable(tableIndex);
+
+            table.Rows[rowIndex].Range.Font.Italic = 1;
+        }
+        public Table GetTable(int index)
+        {
+            if(WordDoc.Tables.Count <= index)
+            {
+                return WordDoc.Tables[index];
+            }
+            return null;
+        }
+        public Row GetTableRow(int index, int rowIndex)
+        {
+            if (WordDoc.Tables.Count <= index)
+            {
+                var table = WordDoc.Tables[index];
+                if(rowIndex <= table.Rows.Count)
+                {
+                    return table.Rows[rowIndex];
+                }
+            }
+            return null;
+        }
+        public void CopyTableRows(int tableIndex, int fromRow, int count)
+        {
+            var table = GetTable(tableIndex);
+            CopyTableRows(table, fromRow, count);
+        }
+        private void CopyTableRows(Table table, int fromRow, int count)
+        {
+            Row templateRow = table.Rows[fromRow];
+            templateRow.Range.Copy();
+
+            for (int i = 0; i < count; i++)
+            {
+                templateRow.Range.Paste();
+            }
+        }
+        public void DeleteRow(int tableIndex, int rowIndex)
+        {
+            var table = GetTable(tableIndex);
+            if(table != null && rowIndex <= table.Rows.Count)
+            {
+                table.Rows[rowIndex].Delete();
+            }
+        }
+        public void AddRow(int tableIndex)
+        {
+            var table = GetTable(tableIndex);
+            table.Rows.Add();
+        }
+        public void PasteRow(int tableIndex)
+        {
+            var table = GetTable(tableIndex);
+            //table.Rows[table.Rows.Count].Range.Characters.Last.Select();
+            table.Rows[table.Rows.Count].Range.Paste();
+        }
+        public void CopyTableRowToClipboard(int tableIndex, int rowIndex)
+        {
+            var table = GetTable(tableIndex);
+            if(table != null && table.Rows.Count <= rowIndex)
+            {
+                if (rowIndex <= table.Rows.Count)
+                {
+                    table.Rows[rowIndex].Range.Copy();
+                }
+            }
         }
 
         public void WriteTableAtSelection(int row, int col, int rowInsertText, int colInsertText, string text)
@@ -1161,6 +1245,67 @@ namespace GxGlobal
                     ref missing, ref missing, ref missing, ref replaceAll,
                     ref missing, ref missing, ref missing, ref missing);
             }
+        }
+        public void ReplaceOne(object findWhat, object replaceWith)
+        {
+            if (replaceWith == null || replaceWith.ToString().Trim() == "")
+            {
+                replaceWith = "";
+            }
+            object missing = System.Type.Missing;
+            // Loop through the StoryRanges (sections of the Word doc)
+            foreach (Word.Range tmpRange in WordDoc.StoryRanges)
+            {
+                // Set the text to find and replace
+                tmpRange.Find.MatchCase = false;
+                tmpRange.Find.Text = string.Concat("[", findWhat, "]");
+                tmpRange.Find.Replacement.Text = replaceWith.ToString();
+
+                // Set the Find.Wrap property to continue (so it doesn't
+                // prompt the user or stop when it hits the end of
+                // the section)
+                tmpRange.Find.Wrap = Word.WdFindWrap.wdFindStop;
+
+                // Declare an object to pass as a parameter that sets
+                // the Replace parameter to the "wdReplaceAll" enum
+                object replaceAll = Word.WdReplace.wdReplaceOne;
+
+                // Execute the Find and Replace -- notice that the
+                // 11th parameter is the "replaceAll" enum object
+                tmpRange.Find.Execute(ref missing, ref missing, ref missing,
+                    ref missing, ref missing, ref missing, ref missing,
+                    ref missing, ref missing, ref missing, ref replaceAll,
+                    ref missing, ref missing, ref missing, ref missing);
+            }
+        }
+
+        public void ReplaceOne(Range range, object findWhat, object replaceWith)
+        {
+            if (replaceWith == null || replaceWith.ToString().Trim() == "")
+            {
+                replaceWith = "";
+            }
+            object missing = System.Type.Missing;
+            // Loop through the StoryRanges (sections of the Word doc)
+            range.Find.MatchCase = false;
+            range.Find.Text = string.Concat("[", findWhat, "]");
+            range.Find.Replacement.Text = replaceWith.ToString();
+
+            // Set the Find.Wrap property to continue (so it doesn't
+            // prompt the user or stop when it hits the end of
+            // the section)
+            range.Find.Wrap = Word.WdFindWrap.wdFindStop;
+
+            // Declare an object to pass as a parameter that sets
+            // the Replace parameter to the "wdReplaceAll" enum
+            object replaceAll = Word.WdReplace.wdReplaceOne;
+
+            // Execute the Find and Replace -- notice that the
+            // 11th parameter is the "replaceAll" enum object
+            range.Find.Execute(ref missing, ref missing, ref missing,
+                ref missing, ref missing, ref missing, ref missing,
+                ref missing, ref missing, ref missing, ref replaceAll,
+                ref missing, ref missing, ref missing, ref missing);
         }
     }
 

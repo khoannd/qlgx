@@ -65,12 +65,14 @@ namespace GxControl
         {
             if (!isSearching)
             {
-                if (txtHoTen.Text.Trim().Length >= 2)
+                //2018-07-19 Gia mod start
+                if (txtHoTen.Text.Trim().Length >= 1)
                 {
                     isSearching = true;
                     lastSearch = txtHoTen.Text;
                     gxGiaoDanList1.LoadData(SqlConstants.SELECT_GIAODAN_LIST_CO_GIAOHO + whereSQL + " AND HoTen LIKE ?", new object[] { "%" + txtHoTen.Text.Trim() });
                 }
+                //2018-07-19 Gia mod end
             }
         }
 

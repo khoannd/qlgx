@@ -541,6 +541,34 @@ namespace GxGlobal
             }
         }
 
+        public void SetStrikeout(string cell1, string cell2, System.Drawing.Font font)
+        {
+            Range range = get_Range(cell1, cell2);
+            if (range != null && UsedRange.Font != null)
+            {
+                range.Font.Strikethrough = font.Strikeout;
+                range.Font.Underline = font.Underline;
+            }
+        }
+
+        public void SetUnderline(string cell1, string cell2, System.Drawing.Font font)
+        {
+            Range range = get_Range(cell1, cell2);
+            if (range != null && UsedRange.Font != null)
+            {
+                range.Font.Underline = font.Underline;
+            }
+        }
+
+        public void SetItalic(string cell1, string cell2, System.Drawing.Font font)
+        {
+            Range range = get_Range(cell1, cell2);
+            if (range != null && UsedRange.Font != null)
+            {
+                range.Font.Italic = font.Italic;
+            }
+        }
+
         public void SetWrapText(string cell1, string cell2, bool wr)
         {
             Range range = get_Range(cell1, cell2);
@@ -556,6 +584,15 @@ namespace GxGlobal
             if (range != null)
             {
                 range.HorizontalAlignment = align;
+            }
+        }
+
+        public void SetVerticalAlignment(string cell1, string cell2, XlVAlign align)
+        {
+            Range range = get_Range(cell1, cell2);
+            if (range != null)
+            {
+                range.VerticalAlignment = align;
             }
         }
 
