@@ -193,8 +193,10 @@ namespace GxGlobal
                     {
                         command.Connection.Open();
                     }
+
                     //trans = command.Connection.BeginTransaction();
                     //command.Transaction = trans;
+
                     adapter.SelectCommand = command;
 
                     ds = new DataSet();
@@ -226,6 +228,7 @@ namespace GxGlobal
             m_commText = commandText;
             return Execute();
         }
+        
 
         public Int32 Execute(string commandText, params object[] lstParameters)
         {

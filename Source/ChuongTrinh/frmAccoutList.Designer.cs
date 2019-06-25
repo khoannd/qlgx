@@ -305,7 +305,6 @@
             this.gxListAccout1.TabIndex = 0;
             this.gxListAccout1.VisualStyle = Janus.Windows.GridEX.VisualStyle.Office2003;
             this.gxListAccout1.WhereSQL = "";
-           
             // 
             // gxGroupBox3
             // 
@@ -324,7 +323,7 @@
             this.gxAddEdit.CaptionDisplayMode = GxGlobal.CaptionDisplayMode.Full;
             this.gxAddEdit.DisplayMode = GxGlobal.DisplayMode.Mode2;
             this.gxAddEdit.GridData = null;
-            this.gxAddEdit.Location = new System.Drawing.Point(9, 6);
+            this.gxAddEdit.Location = new System.Drawing.Point(3, 6);
             this.gxAddEdit.Name = "gxAddEdit";
             this.gxAddEdit.Size = new System.Drawing.Size(391, 28);
             this.gxAddEdit.TabIndex = 1;

@@ -110,7 +110,8 @@ namespace GiaoXu
         {
 
             //DELETE ở đây
-            if (MessageBox.Show("Bạn có chắc chắn muốn xóa ?", "Nhắc nhở", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+            if (MessageBox.Show("Bạn có chắc chắn muốn xóa ?", "Nhắc nhở",
+                MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
             if (gxListAccout1.CurrentRow != null && (gxListAccout1.CurrentRow.DataRow as DataRowView) != null)
             {    
                 Memory.ExecuteSqlCommand(SqlConstants.DELETE_ACCOUNT, txtUserName.Text);
@@ -221,7 +222,10 @@ namespace GiaoXu
         public bool UpdateData()
         {
 
-            DataTable tbl = Memory.GetData(string.Concat(SqlConstants.SELECT_LIST_ACCOUNT, string.Format(" AND TenTaiKhoan = ? ")), txtUserName.Text);
+            DataTable tbl = Memory.GetData(string.Concat(SqlConstants.SELECT_LIST_ACCOUNT, 
+                string.Format(" AND TenTaiKhoan = ? ")), txtUserName.Text);
+        
+
             if (tbl != null)
             {
                 if (Operation == GxOperation.ADD)
@@ -237,7 +241,7 @@ namespace GiaoXu
                     {
                         MessageBox.Show("Thêm tài khoản thành công", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                        row.AcceptChanges();
+                       row.AcceptChanges();
 
                         DataTable tbl1 = (DataTable)gxListAccout1.DataSource;
                         DataRow row1 = tbl1.NewRow();
@@ -426,7 +430,6 @@ namespace GiaoXu
             }
         }
 
-      
     }
     public enum LoaiTaiKhoan
     {

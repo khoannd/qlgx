@@ -66,7 +66,5 @@ namespace GxControl
         //protected System.Windows.Forms.Label label1;
         private GxDateInput gxDateInput1;
 
-
-
     }
 }

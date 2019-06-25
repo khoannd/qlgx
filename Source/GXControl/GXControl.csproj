@@ -109,6 +109,12 @@
     <Compile Include="frmChonGiaoDan.Designer.cs">
       <DependentUpon>frmChonGiaoDan.cs</DependentUpon>
     </Compile>
+    <Compile Include="frmHoiDoan.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmHoiDoan.Designer.cs">
+      <DependentUpon>frmHoiDoan.cs</DependentUpon>
+    </Compile>
     <Compile Include="frmPrintOption.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -176,6 +182,12 @@
     </Compile>
     <Compile Include="GxListAccout.Designer.cs">
       <DependentUpon>GxListAccout.cs</DependentUpon>
+    </Compile>
+    <Compile Include="GxListHoiDoan.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="GxListHoiDoan.Designer.cs">
+      <DependentUpon>GxListHoiDoan.cs</DependentUpon>
     </Compile>
     <Compile Include="GxNgoaiNgu.cs">
       <SubType>UserControl</SubType>
@@ -524,6 +536,9 @@
     <EmbeddedResource Include="frmChonGiaoDan.resx">
       <DependentUpon>frmChonGiaoDan.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="frmHoiDoan.resx">
+      <DependentUpon>frmHoiDoan.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="frmPrintOption.resx">
       <DependentUpon>frmPrintOption.cs</DependentUpon>
     </EmbeddedResource>
@@ -556,6 +571,12 @@
     </EmbeddedResource>
     <EmbeddedResource Include="GxHonPhoiList.resx">
       <DependentUpon>GxHonPhoiList.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="GxListAccout.resx">
+      <DependentUpon>GxListAccout.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="GxListHoiDoan.resx">
+      <DependentUpon>GxListHoiDoan.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="GxPictureField.resx">
       <DependentUpon>GxPictureField.cs</DependentUpon>

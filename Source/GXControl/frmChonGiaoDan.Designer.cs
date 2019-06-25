@@ -51,7 +51,7 @@
             this.gxGroupBox1.Dock = System.Windows.Forms.DockStyle.Top;
             this.gxGroupBox1.Location = new System.Drawing.Point(0, 0);
             this.gxGroupBox1.Name = "gxGroupBox1";
-            this.gxGroupBox1.Size = new System.Drawing.Size(728, 53);
+            this.gxGroupBox1.Size = new System.Drawing.Size(728, 77);
             this.gxGroupBox1.TabIndex = 0;
             this.gxGroupBox1.Text = "Tìm giáo dân";
             // 
@@ -116,9 +116,9 @@
             // 
             this.gxGroupBox2.Controls.Add(this.gxGiaoDanList1);
             this.gxGroupBox2.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gxGroupBox2.Location = new System.Drawing.Point(0, 53);
+            this.gxGroupBox2.Location = new System.Drawing.Point(0, 77);
             this.gxGroupBox2.Name = "gxGroupBox2";
-            this.gxGroupBox2.Size = new System.Drawing.Size(728, 378);
+            this.gxGroupBox2.Size = new System.Drawing.Size(728, 354);
             this.gxGroupBox2.TabIndex = 0;
             this.gxGroupBox2.Text = "Danh sách tìm kiếm";
             // 
@@ -144,7 +144,8 @@
             this.gxGiaoDanList1.QueryString = "";
             this.gxGiaoDanList1.RowHeaderContent = Janus.Windows.GridEX.RowHeaderContent.RowPosition;
             this.gxGiaoDanList1.RowHeaders = Janus.Windows.GridEX.InheritableBoolean.Default;
-            this.gxGiaoDanList1.Size = new System.Drawing.Size(722, 359);
+            this.gxGiaoDanList1.SelectionMode = Janus.Windows.GridEX.SelectionMode.MultipleSelection;
+            this.gxGiaoDanList1.Size = new System.Drawing.Size(722, 335);
             this.gxGiaoDanList1.TabIndex = 0;
             this.gxGiaoDanList1.VisualStyle = Janus.Windows.GridEX.VisualStyle.Office2003;
             this.gxGiaoDanList1.WhereSQL = "";
@@ -178,7 +179,6 @@
             this.Name = "frmChonGiaoDan";
             this.Text = "Chọn giáo dân";
             this.Load += new System.EventHandler(this.frmChonGiaoDan_Load);
-            this.VisibleChanged += new System.EventHandler(this.frmChonGiaoDan_VisibleChanged);
             ((System.ComponentModel.ISupportInitialize)(this.gxGroupBox1)).EndInit();
             this.gxGroupBox1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.gxGroupBox2)).EndInit();

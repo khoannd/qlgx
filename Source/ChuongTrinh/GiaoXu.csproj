@@ -126,6 +126,18 @@
     <Compile Include="frmBieuDo.Designer.cs">
       <DependentUpon>frmBieuDo.cs</DependentUpon>
     </Compile>
+    <Compile Include="frmHoiDoanList.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmHoiDoanList.Designer.cs">
+      <DependentUpon>frmHoiDoanList.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmLichSuHoiDoan.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmLichSuHoiDoan.Designer.cs">
+      <DependentUpon>frmLichSuHoiDoan.cs</DependentUpon>
+    </Compile>
     <Compile Include="frmLogin.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -315,6 +327,9 @@
       <SubType>Designer</SubType>
       <DependentUpon>frmGopY.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="frmHoiDoanList.resx">
+      <DependentUpon>frmHoiDoanList.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="frmKiemTraGiaDinhList.resx">
       <DependentUpon>frmKiemTraGiaDinhList.cs</DependentUpon>
       <SubType>Designer</SubType>
@@ -322,6 +337,9 @@
     <EmbeddedResource Include="frmKiemTraGiaoDanList.resx">
       <DependentUpon>frmKiemTraGiaoDanList.cs</DependentUpon>
       <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmLichSuHoiDoan.resx">
+      <DependentUpon>frmLichSuHoiDoan.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="frmLogin.resx">
       <DependentUpon>frmLogin.cs</DependentUpon>

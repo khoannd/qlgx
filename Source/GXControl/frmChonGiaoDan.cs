@@ -20,7 +20,7 @@ namespace GxControl
             get { return whereSQL; }
             set { whereSQL = value; }
         }
-
+      
         public frmChonGiaoDan()
         {
             InitializeComponent();
@@ -32,6 +32,7 @@ namespace GxControl
             gxGiaoDanList1.AllowEditGiaoDan = false;
             gxGiaoDanList1.AllowShowForm = false;
             gxGiaoDanList1.LoadDataFinished += new EventHandler(gxGiaoDanList1_LoadDataFinished);
+
         }
 
         private void gxGiaoDanList1_LoadDataFinished(object sender, EventArgs e)
@@ -79,6 +80,7 @@ namespace GxControl
         private void gxGiaoDanList1_RowDoubleClick(object sender, Janus.Windows.GridEX.RowActionEventArgs e)
         {
             this.DialogResult = DialogResult.OK;
+           
         }
 
         private void gxGiaoDanList1_SelectionChanged(object sender, EventArgs e)
@@ -126,9 +128,5 @@ namespace GxControl
             search();
         }
 
-        private void frmChonGiaoDan_VisibleChanged(object sender, EventArgs e)
-        {
-            
-        }
     }
 }
