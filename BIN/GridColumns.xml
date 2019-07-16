@@ -18,7 +18,7 @@
   <tblColumnWidth>
     <key>frmGiaoDanLuuTruList_gxGiaoDanList1</key>
     <columns>MaGiaoDan,TenThanh,HoTen,Phai,NgaySinh,NgayRuaToi,NgayRuocLe,NgayThemSuc,DaCoGiaDinh,HoTenCha,HoTenMe,TanTong,ConHoc,NgheNghiep,GhiChu,QuaDoi,DienThoai,DiaChi,TenGiaoHo,DaChuyenXu,TrinhDoVanHoa,TrinhDoChuyenMon,BietNgoaiNgu,NoiSinh,NoiRuaToi,NoiRuocLe,NoiThemSuc</columns>
-    <widths>50,80,150,50,80,80,80,80,50,100,100,50,50,100,200,50,80,200,80,50,100,80,50,60,60,60,60</widths>
+    <widths>50,80,150,50,80,80,80,80,50,100,100,50,50,100,200,50,80,200,80,83,100,80,50,60,60,60,60</widths>
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmMergeData_gxGiaoDanList1</key>
@@ -37,7 +37,7 @@
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmGiaDinhList_gxGiaDinhList1</key>
-    <columns>MaGiaDinhRieng,TenGiaDinh,TenChong,TenVo,SoLuong,DienThoai,DiaChi,TenGiaoHo,DienGiaDinh,GhiChu</columns>
+    <columns>MaGiaDinh,TenGiaDinh,TenChong,TenVo,SoLuong,DienThoai,DiaChi,TenGiaoHo,DienGiaDinh,GhiChu</columns>
     <widths>70,100,200,200,80,80,100,80,100,200</widths>
   </tblColumnWidth>
   <tblColumnWidth>
@@ -63,17 +63,17 @@
   <tblColumnWidth>
     <key>frmGiaDinh_gxGiaoDanList1</key>
     <columns>VaiTro,MaGiaoDan,TenThanh,HoTen,Phai,NgaySinh,NgayRuaToi,NgayRuocLe,NgayThemSuc,DaCoGiaDinh,HoTenCha,HoTenMe,TanTong,ConHoc,NgheNghiep,GhiChu,QuaDoi,DienThoai,DiaChi,TenGiaoHo,DaChuyenXu,TrinhDoVanHoa,TrinhDoChuyenMon,BietNgoaiNgu,NoiSinh,NoiRuaToi,NoiRuocLe,NoiThemSuc</columns>
-    <widths>80,50,80,150,50,80,80,80,80,50,100,100,50,50,100,200,50,80,200,80,50,100,80,50,60,60,60,60</widths>
+    <widths>80,50,80,150,50,80,80,80,80,50,100,100,50,50,100,200,50,80,200,80,50,100,80,9,56,77,60,60</widths>
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmChonGiaoDan_gxGiaoDanList1</key>
     <columns>MaGiaoDan,TenThanh,HoTen,Phai,NgaySinh,NgayRuaToi,NgayRuocLe,NgayThemSuc,DaCoGiaDinh,HoTenCha,HoTenMe,TanTong,ConHoc,NgheNghiep,GhiChu,QuaDoi,DienThoai,DiaChi,TenGiaoHo,DaChuyenXu,TrinhDoVanHoa,TrinhDoChuyenMon,BietNgoaiNgu,NoiSinh,NoiRuaToi,NoiRuocLe,NoiThemSuc</columns>
-    <widths>50,80,150,50,66,80,80,80,50,100,100,50,50,100,200,50,80,200,80,50,100,80,50,60,60,60,60</widths>
+    <widths>50,80,150,50,74,80,80,80,50,100,100,50,50,100,200,50,80,200,80,50,100,80,50,60,60,60,60</widths>
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmGiaoDan_gxHonPhoiList1</key>
     <columns>SoThuTu,VoChong,SoHonPhoi,NoiHonPhoi,NgayHonPhoi,CachThucHonPhoi,LinhMucChung,NguoiChung1,NguoiChung2,GhiChu,QuaDoi</columns>
-    <widths>60,100,80,100,80,100,100,100,100,200,50</widths>
+    <widths>60,154,80,100,80,100,100,100,100,200,50</widths>
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmKhoiGiaoLyList_gxKhoiGiaoLyList1</key>
@@ -168,7 +168,7 @@
   <tblColumnWidth>
     <key>frmHoiDoanList_gxListHoiDoan1</key>
     <columns>MaHoiDoan,TenHoiDoan,ThanhBonMang,NgayBonMang,NgayThanhLap,GhiChu</columns>
-    <widths>99,197,197,178,178,197</widths>
+    <widths>99,198,198,177,177,197</widths>
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmHoiDoan_gxListThanhVienHoiDoan1</key>
@@ -179,5 +179,15 @@
     <key>frmHoiDoan_gxGiaoDanList1</key>
     <columns>NgayVaoHoiDoan,NgayRaHoiDoan,VaiTro,MaGiaoDan,TenThanh,HoTen,Phai,NgaySinh,NgayRuaToi,NgayRuocLe,NgayThemSuc,DaCoGiaDinh,HoTenCha,HoTenMe,TanTong,ConHoc,NgheNghiep,GhiChu,QuaDoi,DienThoai,DiaChi,TenGiaoHo,DaChuyenXu,TrinhDoVanHoa,TrinhDoChuyenMon,BietNgoaiNgu,NoiSinh,NoiRuaToi,NoiRuocLe,NoiThemSuc</columns>
     <widths>150,150,150,50,80,150,50,80,80,80,80,50,100,100,50,50,100,200,50,80,200,80,50,100,80,50,60,60,60,60</widths>
+  </tblColumnWidth>
+  <tblColumnWidth>
+    <key>frmGiaoDan_gxListHoiDoan1</key>
+    <columns>MaHoiDoan,TenHoiDoan,NgayVaoHoiDoan,NgayRaHoiDoan,VaiTro,ThanhBonMang,NgayBonMang,NgayThanhLap,GhiChu</columns>
+    <widths>100,204,215,215,232,200,180,180,200</widths>
+  </tblColumnWidth>
+  <tblColumnWidth>
+    <key>frmGiaoDan_gxListHistoryHoiDoan1</key>
+    <columns>TenHoiDoan,NgayVaoHoiDoan,NgayRaHoiDoan,VaiTro</columns>
+    <widths>200,210,210,226</widths>
   </tblColumnWidth>
 </NewDataSet>

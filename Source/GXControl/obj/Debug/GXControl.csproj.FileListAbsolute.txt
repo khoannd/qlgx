@@ -3,6 +3,7 @@ E:\Primas\qlgx\BIN\GXControl.pdb
 E:\Primas\qlgx\Source\GXControl\obj\Debug\GXControl.csprojAssemblyReference.cache
 E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.frmAvatar.resources
 E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.frmChonGiaoDan.resources
+E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.frmHoiDoan.resources
 E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.frmPrint.resources
 E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.frmReport.resources
 E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.frmOptionBieuDo.resources
@@ -12,7 +13,10 @@ E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.GxExtract.resources
 E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.GxGiaDinhImportList.resources
 E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.GxDanToc.resources
 E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.GxGiaoDanList.resources
+E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.GxHistoryHoiDoan.resources
 E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.GxHonPhoiList.resources
+E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.GxListAccout.resources
+E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.GxListHoiDoan.resources
 E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.GxPictureField.resources
 E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.GxThongKeOnGoi.resources
 E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.frmGiaDinh.resources
@@ -54,6 +58,3 @@ E:\Primas\qlgx\Source\GXControl\obj\Debug\GXControl.csproj.CoreCompileInputs.cac
 E:\Primas\qlgx\Source\GXControl\obj\Debug\GXControl.csproj.CopyComplete
 E:\Primas\qlgx\Source\GXControl\obj\Debug\GXControl.dll
 E:\Primas\qlgx\Source\GXControl\obj\Debug\GXControl.pdb
-E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.GxListAccout.resources
-E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.frmHoiDoan.resources
-E:\Primas\qlgx\Source\GXControl\obj\Debug\GxControl.gxListHoiDoan.resources

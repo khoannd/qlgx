@@ -176,12 +176,24 @@
     <Compile Include="GxDanToc.Designer.cs">
       <DependentUpon>GxDanToc.cs</DependentUpon>
     </Compile>
+    <Compile Include="GxHistoryHoiDoan.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GxHistoryHoiDoan.Designer.cs">
+      <DependentUpon>GxHistoryHoiDoan.cs</DependentUpon>
+    </Compile>
     <Compile Include="GxKiemTraThongBao.cs" />
     <Compile Include="GxListAccout.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="GxListAccout.Designer.cs">
       <DependentUpon>GxListAccout.cs</DependentUpon>
+    </Compile>
+    <Compile Include="GxListHistoryHoiDoan.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="GxListHistoryHoiDoan.Designer.cs">
+      <DependentUpon>GxListHistoryHoiDoan.cs</DependentUpon>
     </Compile>
     <Compile Include="GxListHoiDoan.cs">
       <SubType>Component</SubType>
@@ -568,6 +580,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="GxGiaoDanList.resx">
       <DependentUpon>GxGiaoDanList.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="GxHistoryHoiDoan.resx">
+      <DependentUpon>GxHistoryHoiDoan.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="GxHonPhoiList.resx">
       <DependentUpon>GxHonPhoiList.cs</DependentUpon>

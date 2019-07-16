@@ -81,6 +81,17 @@
         <item>Giuse Nguyễn Văn Uy</item>
         <item>Vinhson Nguyễn Văn Tuyền</item>
         <item>Đaminh Vũ Hùng Cường</item>
+        <item>Lm. Đaminh Nguyễn Kim Nhuận</item>
+        <item>Lm Phêrô Trần Đình Tứ</item>
+        <item>Đam. Phạm Hữu Tư</item>
+        <item>Lm. Đaminh Đặng Duy Hòa</item>
+        <item>Fx. Đinh Quốc Thụy</item>
+        <item>Lm. Giuse Đinh Nam Hưng</item>
+        <item>Phanxico Assisi Nguyễn Tiến Tám</item>
+        <item>Giuse Đệ Nguyễn Văn Thanh</item>
+        <item>Nguyễn Quang Hiến</item>
+        <item>Giuse Nguyễn Đức Lục</item>
+        <item>Tuyền</item>
       </txtLinhMucRuaToi>
       <txtNoiRuaToi caption="Nơi rửa tội">
         <item>Vinh An</item>
@@ -91,6 +102,14 @@
         <item>Chân Phúc Khang</item>
         <item>Gò Vấp</item>
         <item>Ngọc Đồng</item>
+        <item>Tân Mai</item>
+        <item>Bùi Chu</item>
+        <item>Gx Đông Vinh</item>
+        <item>Gx Bùi Chu</item>
+        <item>Họ Truyền Tin, Gx Đồng Quan</item>
+        <item>Quảng Biên, Gp Xuân Lộc</item>
+        <item>Sài Quất</item>
+        <item>Thôn Trung</item>
       </txtNoiRuaToi>
       <txtNguoiDoDauRuaToi caption="Người đỡ đầu">
         <item>Anna Nguyễn Thị Kim Dung</item>
@@ -116,6 +135,38 @@
         <item>Teresa Trần Đình Thiên Nga</item>
         <item>Đaminh Bùi Văn Chánh</item>
         <item>Maria Nguyễn Thị Hồng Quế</item>
+        <item>Teresa Hoàng Thị Châu Pha</item>
+        <item>Maria Phan Thị Thơm</item>
+        <item>Vinhsơn Trần Ban</item>
+        <item>Maria Madalena Nguyễn Dạ Nguyệt An</item>
+        <item>Anna Vũ Thị Vẹn</item>
+        <item>Giuse Lê Thanh Tùng</item>
+        <item>Gioan Lê Thanh Quân</item>
+        <item>Maria Riệm</item>
+        <item>Vinh-sơn Nguyễn Văn Hòa</item>
+        <item>Đaminh Trần Thi</item>
+        <item>Lê Quang Trọng</item>
+        <item>Maria Phạm Minh Hương</item>
+        <item>Đaminh Nguyễn Quang Tuấn</item>
+        <item>F.x Đoàn Văn Cường</item>
+        <item>Giuse Nguyễn Văn Sỹ</item>
+        <item>Đaminh Trịnh Ngọc Hòa</item>
+        <item>Giuse Đỗ Minh Viện</item>
+        <item>F.x. Phan Quốc Toản</item>
+        <item>Đaminh Trương Đức Thái</item>
+        <item>Tôma Nguyễn Hoàng Anh</item>
+        <item>Đaminh Trương Công Trụ</item>
+        <item>Maria Trần Thị Thanh Nga</item>
+        <item>Phê-rô Lê Hồng Hà</item>
+        <item>Nguyễn Thị Nghiên</item>
+        <item>Đaminh Nguyễn Ngọc Thuần</item>
+        <item>Giuse Vũ Văn Năm</item>
+        <item>Giuse Trần Đình Yêng</item>
+        <item>Maria Nguyễn Thị Trang</item>
+        <item>Maria Phạm Quỳnh Quế Anh</item>
+        <item>Giuse Nguyễn Văn Tuyển</item>
+        <item>Antôn Nguyễn Văn Huy</item>
+        <item>Nguyễn Văn Ngọc</item>
       </txtNguoiDoDauRuaToi>
       <txtTenMe caption="Tên Mẹ">
         <item>Maria Phạm Thị Đình</item>
@@ -165,6 +216,46 @@
         <item>Maria Bùi Thị Tuyền</item>
         <item>Maria Nguyễn Thị Hoàng Yến</item>
         <item>Anna Đào Thị Nhuần</item>
+        <item>Maria Hoàng Thị Tuyết Trang</item>
+        <item>Maria Nguyễn Thị Kim Tuyết</item>
+        <item>Maria Chu Thị Nhiệm</item>
+        <item>Mã Huỳnh Mai</item>
+        <item>Maria Phạm Thị Hường</item>
+        <item>Maria Nguyễn Thị Vân</item>
+        <item>Maria Nguyễn Thị Hồng</item>
+        <item>Teresa Nguyễn Thị Tươi</item>
+        <item>Maria Đặng Thị Hòa</item>
+        <item>Maria Vũ Thị Kim Anh</item>
+        <item>Maria Cao Thị Một</item>
+        <item>Maria Hoàng Thị Lý</item>
+        <item>Teresa Hà Thị Lan</item>
+        <item>Maria Lê Thị Thanh Thảo</item>
+        <item>Albertô Nguyễn Thị B</item>
+        <item>Maria Lê Thị Thanh Trà</item>
+        <item>Lucia Nguyễn Thị Kim Anh</item>
+        <item>Teresa Nhường</item>
+        <item>Maria Mai Thị Bưởi</item>
+        <item>Maria Nguyễn Thị Khoa</item>
+        <item>Maria Đỗ Thị Tuyến</item>
+        <item>Maria Trần Thị Mai Anh</item>
+        <item>Maria Nguyễn Thị Hoa</item>
+        <item>Phan Thị Kim Loan</item>
+        <item>Maria Lương Thị Yêu</item>
+        <item>Maria Đinh Thị Diễm</item>
+        <item>Maria Phạm Thị Hải</item>
+        <item>Nguyễn Thị Nhạn</item>
+        <item>Nguyễn Thị Mai</item>
+        <item>Phạm Thị Xuân</item>
+        <item>Lê Mộng Duyên</item>
+        <item>Maria Phạm Thị Dứa</item>
+        <item>Maria Lê Thị Ngọc Vân</item>
+        <item>Maria Đỗ Thị Kim Anh</item>
+        <item>Maria Nguyễn Thị Phương</item>
+        <item>Maria Nguyễn Thị Yến</item>
+        <item>Teresa Vũ Thị Khuyên</item>
+        <item>Maria Nguyễn Thị Thinh</item>
+        <item>Anna Vũ Thị Ninh</item>
+        <item>Agatha Nguyễn Thị B</item>
       </txtTenMe>
       <txtTenCha caption="Tên Cha">
         <item>Gb Nguyễn Văn Niệm</item>
@@ -214,6 +305,50 @@
         <item>Giuse Bùi Xuân Hào</item>
         <item>Phanxico Xavie Đoàn Xuân Hoàng ( Vinh)</item>
         <item>Đaminh Võ Thành Long</item>
+        <item>Phanxico Xavie Lý Toàn Ngọc Long</item>
+        <item>Phanxico Xavie Phan Văn Ân</item>
+        <item>Đaminh Nguyễn Công Qúy</item>
+        <item>Bùi Minh Đức</item>
+        <item>Giuse Nguyễn Văn Loan</item>
+        <item>Vinh-sơn Nguyễn Giáo Song</item>
+        <item>Giuse Mai Đăng</item>
+        <item>Đam Nguyễn Văn Bằng</item>
+        <item>F.x. Phan Văn Nhã</item>
+        <item>Agatha Abb</item>
+        <item>Vinh-sơn Lê Tiến Dũng</item>
+        <item>Phanxico Xavie Nguyễn Văn Liệu</item>
+        <item>Vinh-sơn Mai Trường Chinh</item>
+        <item>Giuse Mai Đình Cơ</item>
+        <item>Vinhson Phạm Văn Đôn</item>
+        <item>Giuse Hà Phước Hùng</item>
+        <item>Albertô Nguyễn Văn A</item>
+        <item>Phanxico Xavie Đoàn Hiền Đệ</item>
+        <item>F.x Đoàn Văn Tân</item>
+        <item>Giuse Trần Văn Ấn</item>
+        <item>An-tôn Trần Văn Chuẩn</item>
+        <item>F.x. Phan Văn Quynh</item>
+        <item>Phêro Hoàng Văn Thức</item>
+        <item>Phanxico Xavie Phan Quốc Anh</item>
+        <item>F.x. Đoàn Văn Oanh</item>
+        <item>Trần Văn Hưng</item>
+        <item>Vinh-sơn Trần Quốc Bảo</item>
+        <item>Gioan Trương Công Chức</item>
+        <item>Vinh-sơn Lê Công Bá</item>
+        <item>Trần Tuấn Vinh</item>
+        <item>Nguyễn Hữu Nghĩa</item>
+        <item>Vũ Khắc Chi</item>
+        <item>Augustino Nguyễn Đình Thắng</item>
+        <item>Giuse Phạm Hữu Huyên</item>
+        <item>Fx. Phan Văn Nhã</item>
+        <item>Giuse Trần Thanh Cang</item>
+        <item>Vinh Sơn Trần Ban</item>
+        <item>Phêrô Phạm Xuân Anh</item>
+        <item>Phanxicô Xavie Phan Văn Ái</item>
+        <item>Gioan Baotixita Nguyễn Văn Bá ( Ba)</item>
+        <item>Giuse Trần Văn Giang</item>
+        <item>Phaolo Nguyễn Văn Toản</item>
+        <item>Phêro Nguyễn Văn Toán</item>
+        <item>Luca Vũ Văn Tài</item>
       </txtTenCha>
       <txtHoTen caption="Họ tên">
         <item>Nguyễn Phạm Thiên Nhân</item>
@@ -331,6 +466,81 @@
         <item>Đoàn Nguyễn Thiên Vy</item>
         <item>Võ Đào Bích Nga</item>
         <item>Peponis</item>
+        <item>Lý Toàn Nguyên</item>
+        <item>Phan Thị Tuyết Ngân</item>
+        <item>Nguyễn Quang Nhật An</item>
+        <item>Bùi Bích Phượng</item>
+        <item>Nguyễn Tường Vân</item>
+        <item>Aba</item>
+        <item>Abb</item>
+        <item>Abc</item>
+        <item>Abd</item>
+        <item>Nguyễn Văn Báo</item>
+        <item>Nguyễn Thị Nhài</item>
+        <item>Mai Văn Túy</item>
+        <item>Nguyễn Thị Ngọc Ánh</item>
+        <item>Phan Văn Ân</item>
+        <item>Lê Triệu Duy</item>
+        <item>Lê Duy Nhật</item>
+        <item>Nguyễn Thị Hoa</item>
+        <item>Mai Thanh Quân</item>
+        <item>Mai Quốc Bảo</item>
+        <item>Phạm Quang Hy</item>
+        <item>Nguyễn Văn Nhung</item>
+        <item>Nguyễn Phạm Thiên Nhân A</item>
+        <item>Nguyễn Phạm Thiên Nhân B</item>
+        <item>Nguyễn Phạm Thiên Nhân C</item>
+        <item>Hà Nhã Quyên</item>
+        <item>Nguyễn Văn A</item>
+        <item>Nguyễn Thị B</item>
+        <item>Nguyễn Văn C</item>
+        <item>Nguyễn Thị D</item>
+        <item>Nguyễn Văn E</item>
+        <item>Nguyễn Thị F</item>
+        <item>Nguyễn Thị G</item>
+        <item>Đoàn Gia Bảo</item>
+        <item>Đoàn Hiền Đệ</item>
+        <item>Trần Văn Chuẩn</item>
+        <item>Trần Văn Tuân</item>
+        <item>Phan Quốc Anh</item>
+        <item>Lý Toàn Tâm</item>
+        <item>Hoàng Tuấn Duẫn ( Sơn)</item>
+        <item>Phan Phát Vương</item>
+        <item>Trần Văn A</item>
+        <item>Đoàn Văn Ái</item>
+        <item>Trần Thanh Cang</item>
+        <item>Trần Lương Hoàng Phúc</item>
+        <item>Trương Thiên Dũng</item>
+        <item>Phan Thị Thùy Liên</item>
+        <item>Lê Minh Tuấn</item>
+        <item>Trần Thị Hồng Nhung</item>
+        <item>Nguyễn Thị K</item>
+        <item>Nguyễn Thị Ánh Hoa</item>
+        <item>Vũ Khắc Bảy</item>
+        <item>Nguyễn Minh Tâm</item>
+        <item>Phạm Hữu Chung</item>
+        <item>Phan Văn Ái</item>
+        <item>Trần Lê Gia Vũ</item>
+        <item>Trần Công Bình</item>
+        <item>Đoàn Nguyễn Như Ngọc</item>
+        <item>Trần Dịnh</item>
+        <item>Nguyễn Thị Kim Nhị</item>
+        <item>Nguyễn Văn Ánh</item>
+        <item>Nguyễn Thị Thiên</item>
+        <item>Nguyễn Thị Nở</item>
+        <item>Nguyễn Chí Phèo</item>
+        <item>Phạm Ngọc Diệp</item>
+        <item>Phan Quốc Thái</item>
+        <item>Nguyễn Văn G</item>
+        <item>Nguyễn Thị Minh Phương</item>
+        <item>Nguyễn Thị H</item>
+        <item>Trần Thanh Tùng</item>
+        <item>Nguyễn Đức Toàn</item>
+        <item>Nguyễn Văn Toản</item>
+        <item>Vũ Thị Khuyên</item>
+        <item>Nguyễn Thị C</item>
+        <item>Nguyễn Văn D</item>
+        <item>Nguyễn Văn K</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Đăk Nông</item>
@@ -357,6 +567,25 @@
         <item>Bv Thống Nhất</item>
         <item>Bv Từ Dũ , Tp H C M</item>
         <item>Hố Nai 3</item>
+        <item>Tân Mai</item>
+        <item>Cà Mau</item>
+        <item>Đồng Quan</item>
+        <item>Bình Hải</item>
+        <item>Hiền Đức</item>
+        <item>Thống Nhất</item>
+        <item>Ngũ Phúc, Hố Nai</item>
+        <item>Bùi Chu, Bắc Sơn</item>
+        <item>Hô Nai</item>
+        <item>Truyền Tin</item>
+        <item>Lương Hội</item>
+        <item>Bến Tre</item>
+        <item>Tân Biên</item>
+        <item>Ngọc Đồng</item>
+        <item>Tp Hố Chí Minh</item>
+        <item>2122112121212</item>
+        <item>Chuyên Mỹ</item>
+        <item>Phú Lý</item>
+        <item>Chuyên Trung</item>
       </txtNoiSinh>
       <txtDiaChi caption="Địa chỉ">
         <item>123 Đỗ Xuân Hợp</item>
@@ -374,6 +603,7 @@
         <item>R</item>
         <item>12</item>
         <item>St Martha</item>
+        <item>Gotajo</item>
       </txtGiaoXu>
       <txtGhiChu caption="Ghi chú chung">
         <item>240/MC</item>
@@ -397,40 +627,155 @@
         <item>002/MT</item>
         <item>056/MC</item>
         <item>072/MC</item>
+        <item>065/MT</item>
+        <item>005/MT</item>
+        <item>002/MT - thư ký BTS giới Gia trưởng 2009-2013</item>
+        <item>006/MT - chết 18g30 29.11.2015 - an táng T4 02.12.2015</item>
+        <item>122/MT</item>
+        <item>123123123123</item>
+        <item>004/MT</item>
+        <item>069/MT</item>
+        <item>144/MT</item>
+        <item>089/MT</item>
+        <item>Test</item>
+        <item>028/MT</item>
+        <item>021/MT</item>
+        <item>001/G - trưởng BĐH Họ Giuse 2005-2009 ; 2009-2013 ; phó 2 BĐH Họ 2 2013-2017</item>
+        <item>030/MC</item>
+        <item>193/G</item>
+        <item>009/G</item>
+        <item>020/G</item>
+        <item>034/G</item>
+        <item>152/G</item>
+        <item>150/TT</item>
+        <item>003/MT</item>
+        <item>005/G - chết 17g30 02-01-2017, an táng T5 05-01-2017</item>
+        <item>017/G</item>
+        <item>001/MT</item>
+        <item>006/G</item>
+        <item>005/MC</item>
+        <item>337/MC</item>
+        <item>350/MC</item>
       </txtGhiChu>
       <txtNoiThemSuc caption="Nơi thêm sức">
         <item>Gx Tân Hòa, Tgp Sài Gòn</item>
         <item>Ngũ Phúc</item>
         <item>Gx Trà Cổ 2 ( Xuân Trà)</item>
         <item>Gx Ngũ Phúc</item>
+        <item>Bùi Chu</item>
+        <item>Gx Lai Ổn</item>
+        <item>Quảng Biên, Gp Xuân Lộc</item>
       </txtNoiThemSuc>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Thanh Nga</item>
         <item>Têrêsa Phạm Thị Phương Lan</item>
+        <item>Têrêsa Phan Thị Tuyết Ngân</item>
+        <item>Achillêô Aba</item>
+        <item>Têrêsa Nguyễn Thị Ngọc Ánh</item>
+        <item>Agatha Nguyễn Hồng Thiên</item>
+        <item>Albertô Nguyễn Hồng Thiên</item>
+        <item>Albertô Nguyễn Thị B</item>
+        <item>Maria Trần Ngọc Xuân Quyên</item>
+        <item>Maria Trần Thị Mai Anh</item>
+        <item>Ađalbertô Nguyễn Thị Kim Nhị</item>
+        <item>Albertô Nguyễn Thị Thiên</item>
+        <item>Têrêsa Phan Thị Thùy Liên</item>
+        <item>Têrêsa Phan Thị Huỳnh Trang</item>
+        <item>Anê Nguyễn Thị Nở</item>
+        <item>Maria Nguyễn Thị Phương</item>
+        <item>Agatha Nguyễn Thị C</item>
+        <item>Alphongsô Nguyễn Thị H</item>
+        <item>Agatha Nguyễn Thị B</item>
       </txtNguoiVo>
       <txtNguoiChong caption="Người nam">
         <item>Vinh-sơn Trần Đức Đạt</item>
         <item>Martinô Nguyễn Hữu Anh</item>
+        <item>Anna Nguyễn Tường Vân</item>
+        <item>Agatha Abb</item>
+        <item>Giuse Mai Văn Túy</item>
+        <item>Vinh-sơn Lê Triệu Duy</item>
+        <item>Albertô Nguyễn Văn A</item>
+        <item>Giuse Vũ Quốc Hòa</item>
+        <item>Phanxicô Xavie Phan Quốc Anh</item>
+        <item>Agatha Trần Dịnh</item>
+        <item>Phanxicô Xavie Phan Văn Ái</item>
+        <item>Phanxicô Xavie Đoàn Thanh An</item>
+        <item>Phanxicô Xavie Trần Văn Chính</item>
+        <item>Ađalbertô Nguyễn Văn D</item>
+        <item>Nêrêô Nguyễn Văn G</item>
       </txtNguoiChong>
       <txtLinhMuc caption="Linh mục chứng">
         <item>Gioan Phạm Quang Tự</item>
         <item>Gioan Baotixita Nguyễn Văn Bình</item>
+        <item>1231</item>
+        <item>Anton Phạm Khắc Liêm</item>
+        <item>Phê-rô Vũ Hoàng Ánh</item>
+        <item>Đaminh Phạm Hữu Tư</item>
+        <item>Đaminh Vũ Hùng Cường</item>
+        <item>Đaminh Nguyễn Văn Tòng</item>
       </txtLinhMuc>
       <txtNguoiChung2 caption="Người chứng 2">
         <item>Maria Vũ Thị Thúy</item>
         <item>Maria Võ Thị Thu Thủy</item>
+        <item>123123123123</item>
+        <item>Maria Phan Thị Huyền</item>
+        <item>Maria Trần Thị Bích</item>
+        <item>123</item>
+        <item>Maria Trần Thị Huệ</item>
+        <item>Maria Đỗ Thị Thay</item>
+        <item>Cécilia Trần Thị Thanh Nga</item>
       </txtNguoiChung2>
       <txtNguoiChung1 caption="Người chứng 1">
         <item>Trần Văn Phùng</item>
         <item>Tôma Nguyễn Hữu Lai</item>
+        <item>123123</item>
+        <item>Giuse Phạm Văn Thịnh</item>
+        <item>Giuse Trần Đình Yêng</item>
+        <item>Giuse Tạ Văn Chẩm</item>
+        <item>Giuse Vũ Đình Phương</item>
+        <item>F.x. Đoàn Văn Oanh</item>
+        <item>Giuse Nguyễn Minh Đoàn</item>
       </txtNguoiChung1>
       <txtNoiHonPhoi caption="Nơi hôn phối">
         <item>Ngũ Phúc</item>
         <item>Suối Nho</item>
+        <item>1223123</item>
+        <item>13123</item>
+        <item>Nơi Hôn Phối</item>
+        <item>123</item>
+        <item>Sài Gòn</item>
+        <item>Gx Ngũ Phúc</item>
+        <item>Gx. Ngũ Phúc</item>
+        <item>12311</item>
       </txtNoiHonPhoi>
       <txtTenHonPhoi caption="Đôi hôn phối">
         <item>Đạt - Nga</item>
         <item>Anh - Lan</item>
+        <item>Vân - Ngân</item>
+        <item>Vân - Aba</item>
+        <item>Ngân</item>
+        <item>Abb - Aba</item>
+        <item>Túy - Ánh</item>
+        <item>Túy - Ngân</item>
+        <item>Duy - Thiên</item>
+        <item>A - B</item>
+        <item>Hòa - Quyên</item>
+        <item>Anh - Anh</item>
+        <item>Dịnh - Nhị</item>
+        <item>Dịnh - Anh</item>
+        <item>Anh - Thiên</item>
+        <item>Anh - Liên</item>
+        <item>Anh - Trang</item>
+        <item>Ái - Nở</item>
+        <item>Quyên</item>
+        <item>An - Nở</item>
+        <item>Ái</item>
+        <item>Ái - Anh</item>
+        <item>Ái - Liên</item>
+        <item>Ái - Phương</item>
+        <item>Chính - Liên</item>
+        <item>D - C</item>
+        <item>G - H</item>
       </txtTenHonPhoi>
       <txtLinhMucThemSuc caption="Người ban bí tích">
         <item>Đaminh Nguyễn Chu Trinh</item>
@@ -440,6 +785,11 @@
         <item>Gm Phaolo Maria Nguyễn Minh Nhật</item>
         <item>Gm. Đaminh Nguyễn Chu Trinh</item>
         <item>Gm. Đaminh Nguyễn Văn Lãng</item>
+        <item>Gm. Tôma Vũ Đình Hiệu</item>
+        <item>Tôma Vũ Đình Hiệu</item>
+        <item>Gm Toma Nguyễn Văn Trâm</item>
+        <item>Tôma Nguyễn Văn Trâm</item>
+        <item>Lm.giuse Đệ Nguyễn Văn Thanh</item>
       </txtLinhMucThemSuc>
       <txtNguoiDoDauThemSuc caption="Người đỡ đầu">
         <item>Giuse Nguyễn Hữu Tài</item>
@@ -457,6 +807,28 @@
         <item>Maria Đặng Thị Tốt</item>
         <item>Teresa Trần Đình Thiên Hằng</item>
         <item>Maria Nguyễn Thị Hồng Quế</item>
+        <item>Maria Phan Thị Thơm</item>
+        <item>Vinhsơn Trần Ban</item>
+        <item>Vinhsơn Phan Thế Hùng</item>
+        <item>Anna Nguyễn Thị Môn</item>
+        <item>Giuse Lê Thanh Tùng</item>
+        <item>Gioan Lê Thanh Quân</item>
+        <item>Maria Phan Thị Tuyết</item>
+        <item>Vinh-sơn Nguyễn Văn Hòa</item>
+        <item>Đaminh Trần Thi</item>
+        <item>Maria Phạm Minh Hương</item>
+        <item>Fx Đoàn Văn Cường</item>
+        <item>Giuse Nguyễn Văn Sỹ</item>
+        <item>Giuse Đỗ Minh Viện</item>
+        <item>F.x. Phan Quốc Toản</item>
+        <item>Đaminh Trương Đức Thái</item>
+        <item>Đaminh Trương Công Trụ</item>
+        <item>Maria Trần Thị Thanh Nga</item>
+        <item>Vinh-sơn Lê Đức Thắng</item>
+        <item>Giuse Trần Đình Yêng</item>
+        <item>Maria Nguyễn Thị Trang</item>
+        <item>Giuse Nguyễn Văn Tuyển</item>
+        <item>Antôn Nguyễn Văn Huy</item>
       </txtNguoiDoDauThemSuc>
       <txtLinhMucRuocLe caption="Người ban bí tích">
         <item>Đamih Đặng Duy Hòa</item>
@@ -464,16 +836,37 @@
         <item>Lm. Đaminh Vũ Hùng Cường</item>
         <item>Đaminh Nguyễn Văn Tòng</item>
         <item>Đaminh Vũ Hùng Cường</item>
+        <item>Đaminh Phạm Hữu Tư</item>
+        <item>Lm. Đaminh Nguyễn Văn Tòng</item>
       </txtLinhMucRuocLe>
       <txtNoiRuocLe caption="Nơi rước lễ">
         <item>Ngũ Phúci</item>
         <item>Ngũ Phúc</item>
         <item>Gx Ngũ Phúc</item>
         <item>Gx. Ngũ Phúc</item>
+        <item>Bùi Chu</item>
+        <item>Gx Đông Vinh</item>
       </txtNoiRuocLe>
       <txtGiaoXuChuyen caption="Giáo xứ">
         <item>Hoa Kỳ</item>
+        <item>Truyền Tin, Gp Thái Bình</item>
+        <item>Quan Lãng, Gp Vinh</item>
+        <item>Bình Dương</item>
       </txtGiaoXuChuyen>
+      <txtNoiAnTang caption="Nơi an táng">
+        <item>Ngũ Phúc</item>
+        <item>Gx Ngũ Phúc</item>
+      </txtNoiAnTang>
+      <txtSoAnTang caption="Số sổ">
+        <item>03/16</item>
+        <item>5/17</item>
+      </txtSoAnTang>
+      <txtNoiQuaDoi caption="Nơi qua đời">
+        <item>Ngũ Phúc</item>
+      </txtNoiQuaDoi>
+      <txtGiaoPhan caption="Giáo phận">
+        <item>Nhật Bản</item>
+      </txtGiaoPhan>
     </frmGiaoDan>
     <frmGiaDinh xmlns="">
       <txtMaGiaDinh caption="Mã gia đình">
@@ -521,6 +914,92 @@
         <item>76</item>
         <item>32</item>
         <item>988</item>
+        <item>1039</item>
+        <item>358</item>
+        <item>1018</item>
+        <item>1084</item>
+        <item>1026</item>
+        <item>361</item>
+        <item>11</item>
+        <item>471</item>
+        <item>419</item>
+        <item>482</item>
+        <item>474</item>
+        <item>487</item>
+        <item>1197</item>
+        <item>88</item>
+        <item>1198</item>
+        <item>52</item>
+        <item>878</item>
+        <item>68</item>
+        <item>64</item>
+        <item>128</item>
+        <item>80</item>
+        <item>108</item>
+        <item>72</item>
+        <item>216</item>
+        <item>240</item>
+        <item>236</item>
+        <item>200</item>
+        <item>839</item>
+        <item>377</item>
+        <item>132</item>
+        <item>188</item>
+        <item>359</item>
+        <item>408</item>
+        <item>212</item>
+        <item>351</item>
+        <item>1199</item>
+        <item>1200</item>
+        <item>400</item>
+        <item>393</item>
+        <item>427</item>
+        <item>319</item>
+        <item>914</item>
+        <item>252</item>
+        <item>1201</item>
+        <item>1202</item>
+        <item>156</item>
+        <item>160</item>
+        <item>112</item>
+        <item>830</item>
+        <item>46</item>
+        <item>82</item>
+        <item>1143</item>
+        <item>385</item>
+        <item>140</item>
+        <item>260</item>
+        <item>99</item>
+        <item>208</item>
+        <item>1</item>
+        <item>26</item>
+        <item>2</item>
+        <item>34</item>
+        <item>23</item>
+        <item>30</item>
+        <item>38</item>
+        <item>97</item>
+        <item>58</item>
+        <item>66</item>
+        <item>114</item>
+        <item>106</item>
+        <item>1185</item>
+        <item>42</item>
+        <item>118</item>
+        <item>126</item>
+        <item>78</item>
+        <item>134</item>
+        <item>17</item>
+        <item>21</item>
+        <item>343</item>
+        <item>170</item>
+        <item>162</item>
+        <item>178</item>
+        <item>1125</item>
+        <item>657</item>
+        <item>964</item>
+        <item>696</item>
+        <item>127</item>
       </txtMaGiaDinh>
       <txtNguoiChong caption="Người nam">
         <item>Phêrô Nguyễn Văn Hòa</item>
@@ -566,6 +1045,123 @@
         <item>Phanxicô Xavie Phan Văn Ân</item>
         <item>Phanxicô Xavie Đoàn Văn Cừ</item>
         <item>Vinh-sơn Lê Thanh Bình</item>
+        <item>Gioan Phạm Văn Hùng</item>
+        <item>Antôn Nguyễn Văn Huy</item>
+        <item>Agatha Sssssssssss</item>
+        <item>Albertô Dsssssss</item>
+        <item>Gioan Lê Thanh Dân</item>
+        <item>Anna Nguyễn Tường Vân</item>
+        <item>Ambrôsiô Nguyễn Thanh Bình</item>
+        <item>Agatha Abb</item>
+        <item>Phanxico Xavie Martino Đoàn Vinh Quang</item>
+        <item>Gioan Baotixita Nguyễn Công Tâm</item>
+        <item>Phanxicô Xavie Đặng Văn Hứa</item>
+        <item>Giuse Mai Văn Úy</item>
+        <item>Phanxicô Xavie Đoàn Đình Thân</item>
+        <item>Giuse Mai Văn Túy</item>
+        <item>Giuse Nguyễn Thanh Tùng</item>
+        <item>Vinh-sơn Nguyễn Giáo Việt</item>
+        <item>Achillêô Ssss</item>
+        <item>Vinh-sơn Lê Triệu Duy</item>
+        <item>Ambrôsiô Nguyễn Hồng Thiên</item>
+        <item>Martinô Nguyễn Hoàng Tuấn</item>
+        <item>Phanxicô Xavie Lê Minh Tuấn</item>
+        <item>Phanxicô Xavie Đoàn Như Đại Dương</item>
+        <item>Giuse Nguyễn Văn Định</item>
+        <item>Anê Nguyễn Thị Hảo</item>
+        <item>Đaminh Đặng Văn Chuyên</item>
+        <item>Achillêô Saaasasa</item>
+        <item>Gioakim Phạm Ngọc Vân</item>
+        <item>Albertô Sssssss</item>
+        <item>Alphongsô Abd</item>
+        <item>Albertô Abc</item>
+        <item>Phêrô Nguyễn Văn Vân</item>
+        <item>Giuse Hoàng Việt Tân</item>
+        <item>Phanxicô Xavie Đoàn Văn Chỉ</item>
+        <item>Giuse Mai Đình Cơ ( Tuệ)</item>
+        <item>Alphongsô Nguyễn Thanh Bình</item>
+        <item>Tôma Phạm Đức Hữu</item>
+        <item>Vinh-sơn Nguyễn Xuân Như</item>
+        <item>Vinh-sơn Nguyễn Đức Lâm</item>
+        <item>Đaminh Nguyễn Hùng Dũng</item>
+        <item>Phanxicô Xavie Đoàn Ngọc Đính</item>
+        <item>Phaolô Lê Thanh Trung Hiếu</item>
+        <item>Ađalbertô Nguyễn Hồng Thiên</item>
+        <item>Phêrô Nguyễn Bảo Huân</item>
+        <item>Đaminh Nguyễn Đức Quỳnh</item>
+        <item>Phanxicô Xavie Đoàn Nguyễn Tuấn Vỹ</item>
+        <item>Đaminh Nguyễn Thanh Hùng</item>
+        <item>Phêrô Nguyễn Đức Thuận</item>
+        <item>Đaminh Trương Quốc Thắng</item>
+        <item>Alphongsô Nguyễn Hồng Thiên</item>
+        <item>Ambrôsiô Nguyễn Phạm Thiên Nhân</item>
+        <item>Ađalbertô Nguyễn Phạm Thiên Nhân A</item>
+        <item>Đaminh Trương Đức Thái</item>
+        <item>Phanxicô Xavie Đoàn Văn Tân ( Căn)</item>
+        <item>Phanxicô Xavie Phan Văn Thiệu</item>
+        <item>Vinh-sơn Nguyễn Đức Phương</item>
+        <item>Giuse Hà Phước Hùng</item>
+        <item>Martinô Phan Nhật Minh</item>
+        <item>Albertô Nguyễn Văn A</item>
+        <item>Albertô Nguyễn Văn E</item>
+        <item>Phanxicô Xavie Đặng Hòa Hiệp</item>
+        <item>Albertô Trần Nữ Hồng Khương</item>
+        <item>Phanxicô Xavie Đoàn Hiền Đệ</item>
+        <item>Antôn Trần Văn Chuẩn</item>
+        <item>Phêrô Lê Minh Châu</item>
+        <item>Giuse Nguyễn Văn Chương</item>
+        <item>Phêrô Phan Khắc Quận Công</item>
+        <item>Antôn Trần Văn Tuân</item>
+        <item>Phanxicô Xavie Đặng Viết Tá</item>
+        <item>Phanxicô Xavie Đặng Sơn Hà</item>
+        <item>Vinh-sơn Lý Toàn Tâm</item>
+        <item>Phanxicô Xavie Đặng Nguyễn Minh Hiếu</item>
+        <item>Đamasô Đoàn Thiện Thanh</item>
+        <item>Đaminh Trần Quang Bình</item>
+        <item>Agatha Trần Văn A</item>
+        <item>Giuse Trần Lương Hoàng Phúc</item>
+        <item>Giuse Trần Lê Hoàng Lâm</item>
+        <item>Vinh-sơn Lê Công Bá</item>
+        <item>Giuse Trần Lê Tuấn Anh</item>
+        <item>Phanxicô Xavie Đoàn Văn Ái</item>
+        <item>Vinh-sơn Trần Công Bình</item>
+        <item>Đaminh Trần Tấn Sang</item>
+        <item>Vinh-sơn Trần Bằng</item>
+        <item>Giuse Trần Thanh Cang</item>
+        <item>Giuse Cao Văn Bình</item>
+        <item>Giuse Vũ Văn Cảnh</item>
+        <item>Phêrô Phạm Anh Dũng</item>
+        <item>Vinh-sơn Trần Ban</item>
+        <item>Emmanuel Vũ Bình An</item>
+        <item>Vinh-sơn Phạm Văn Chính</item>
+        <item>Giuse Phạm Hữu Chung</item>
+        <item>Giuse Phạm Hữu Phương</item>
+        <item>Albertô Nguyễn Văn C</item>
+        <item>Agatha Nguyễn Văn A</item>
+        <item>Vinh-sơn Trần Quốc Bảo</item>
+        <item>Martinô Trần Gia Kiệt</item>
+        <item>Giuse Nguyễn Huy Công</item>
+        <item>Martinô Phạm Hữu Phúc</item>
+        <item>Giuse Trần Lê Gia Vũ</item>
+        <item>Giuse Nguyễn Văn Cấp</item>
+        <item>Giuse Nguyễn Thành Đạt</item>
+        <item>Phêrô Hà Duy Điền</item>
+        <item>Gioan Trương Công Chức</item>
+        <item>Đaminh Trần Khôi</item>
+        <item>Đaminh Phạm Công Bình</item>
+        <item>Đaminh Nguyễn Lê Bảo</item>
+        <item>Đaminh Nguyễn Công Qũy</item>
+        <item>Phanxicô Xavie Phan Quốc Anh</item>
+        <item>Augustinô Nguyễn Đình Thắng</item>
+        <item>Phêrô Nguyễn Thế Vỹ</item>
+        <item>Vinh-sơn Mai Thanh Quân</item>
+        <item>Vinh-sơn Lê Thanh Gia Bảo</item>
+        <item>Achillêô Nguyễn Văn A</item>
+        <item>Giuse Trần Thanh Tùng</item>
+        <item>Antôn Nguyễn Đình Châu</item>
+        <item>Phaolô Nguyễn Văn Toản</item>
+        <item>Ađalbertô Nguyễn Văn K</item>
+        <item>Giuse Nguyễn Anh Dũng</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Hương</item>
@@ -613,6 +1209,103 @@
         <item>Têrêsa Nguyễn Thị Yến</item>
         <item>Anna Võ Đào Bích Nga</item>
         <item>Maria Nguyễn Thị Dâng</item>
+        <item>Maria Vũ Thị Kim Khuê</item>
+        <item>Catarina Teresa Nguyễn Nhật Hồng Bảo Hạ</item>
+        <item>Anna Lê Thị Phấn</item>
+        <item>Catarina Nguyễn Tường Vi</item>
+        <item>Catarina Nguyễn Tường Linh</item>
+        <item>Maria Mai Thị Thảo</item>
+        <item>Maria Bùi Thị Kim Cúc</item>
+        <item>Maria Trần Thị Bắc</item>
+        <item>Maria Nguyễn Thị Nhài</item>
+        <item>Anna Nguyễn Thị Kim Loan</item>
+        <item>Têrêsa Nguyễn Thị Ngọc Ánh</item>
+        <item>Maria Nguyễn Thị Kim Chi</item>
+        <item>Maria Đỗ Thị Thay</item>
+        <item>Têrêsa Phan Thị Tuyết Ngân</item>
+        <item>Achillêô Aba</item>
+        <item>Anê Nguyễn Thị Hảo</item>
+        <item>Albertô Nguyễn Hồng Thiên</item>
+        <item>Agatha Nguyễn Hồng Thiên</item>
+        <item>Maria Đào Vũ Ánh Linh</item>
+        <item>Anna Vũ Thị Mến</item>
+        <item>Maria Đào Thị Hải</item>
+        <item>Maria Bùi Thị Kim Phụng</item>
+        <item>Maria Nguyễn Thị Ngọc Hiền</item>
+        <item>Maria Trần Thanh (Bông) Vân</item>
+        <item>Maria Nguyễn Thị Hoa</item>
+        <item>Rosa Đào Thị Thảy</item>
+        <item>Maria Têrêsa Phan Thị Thu Liễu</item>
+        <item>Têrêsa Hà Thị Lan</item>
+        <item>Maria Phạm Thị Thanh Đơn</item>
+        <item>Maria Nguyễn Thị Len</item>
+        <item>Maria Nguyễn Thị Ngọc Ngà</item>
+        <item>Maria Nguyễn Thị Thanh Thủy</item>
+        <item>Anna Cao Thị Thùy Trâm</item>
+        <item>Maria Đỗ Quỳnh Anh</item>
+        <item>Maria Nguyễn Thị Rỹ</item>
+        <item>Maria Hoàng Tú Quyên</item>
+        <item>Lucia Nguyễn Thị Thanh Hằng</item>
+        <item>Ambrôsiô Nguyễn Thị Hảo</item>
+        <item>Maria Phạm Thị Nhu</item>
+        <item>Lucia Nguyễn Thị Kim Anh</item>
+        <item>Maria Trần Thị Lẻ</item>
+        <item>Têrêsa Trần Thị Hoàng Oanh</item>
+        <item>Maria Lê Thị Thanh Thảo</item>
+        <item>Maria Trần Thị Huyền</item>
+        <item>Albertô Nguyễn Thị B</item>
+        <item>Albertô Nguyễn Thị G</item>
+        <item>Maria Nguyễn Thị Tuyết</item>
+        <item>Maria Mai Vũ Phương Thảo</item>
+        <item>Albertô Nguyễn Thị F</item>
+        <item>Maria Lê Thị Thanh Trà</item>
+        <item>Maria Mai Thị Bưởi</item>
+        <item>Anna Nguyễn Thị Nhiễm</item>
+        <item>Anna Trương Lệ Tuyết</item>
+        <item>Agatha Vũ Ngọc Lan Anh</item>
+        <item>Maria Nguyễn Thị Thu Hà</item>
+        <item>Maria Đoàn Thị Tuyến</item>
+        <item>Maria Hoàng Thị Tuyết Trang</item>
+        <item>Maria Nguyễn Thị Lệ Thủy</item>
+        <item>Maria Nguyễn Thị Thùy Trang</item>
+        <item>Maria Phạm Thị Hải</item>
+        <item>Maria Nguyễn Thị Điểm</item>
+        <item>Maria Trần Thị Lan Phương</item>
+        <item>Maria Lê Thị Ngọc Vân</item>
+        <item>Maria Đinh Thị Ngọc Dung</item>
+        <item>Maria Ngô Thị Sang</item>
+        <item>Maria Bùi Thị Ngọc Diệp</item>
+        <item>Maria Nguyễn Thị Dung</item>
+        <item>Maria Nguyễn Thị Thùy Linh</item>
+        <item>Cécilia Phạm Trần Quỳnh Anh</item>
+        <item>Maria Trần Thị Hoa</item>
+        <item>Maria Phạm Ngọc Cẩm</item>
+        <item>Maria Têrêsa Lê Thị Hồng Trâm</item>
+        <item>Maria Lương Thị Yêu</item>
+        <item>Maria Trần Lương Hoàng Lan</item>
+        <item>Maria Lê Thị Hoài Thương</item>
+        <item>Maria Vũ Thị Huệ</item>
+        <item>Maria Cao Thị Kim Ngọc</item>
+        <item>Maria Nguyễn Thị Tiến</item>
+        <item>Maria Hà Thị Ngọc Lan</item>
+        <item>Maria Đinh Thị Diễm</item>
+        <item>Anna Trần Thị Gần</item>
+        <item>Albertô Nguyễn Thị D</item>
+        <item>Ađalbertô Nguyễn Thị B</item>
+        <item>Têrêsa Nguyễn Thị Phương Uyên</item>
+        <item>Têrêsa Lê Thị Tố Nga</item>
+        <item>Maria Chu Thị Nhiệm</item>
+        <item>Maria Trần Thị Mai Anh</item>
+        <item>Maria Têrêsa Trần Thị Kim Khoa</item>
+        <item>Maria Vũ Thị Hường</item>
+        <item>Têrêsa Phạm Hà My</item>
+        <item>Têrêsa Phan Thị Thùy Liên</item>
+        <item>Albertô Nguyễn Thị H</item>
+        <item>Têrêsa Nguyễn Thị Ngọc Bích</item>
+        <item>Maria Nguyễn Thị Thái Châu</item>
+        <item>Têrêsa Vũ Thị Khuyên</item>
+        <item>Agatha Nguyễn Thị B</item>
+        <item>Maria Đặng Thị Ánh Tuyết</item>
       </txtNguoiVo>
       <txtDiaChi caption="Địa chỉ">
         <item>123 Đỗ Xuân Hợp</item>
@@ -664,6 +1357,114 @@
         <item>019/MT</item>
         <item>008/MT</item>
         <item>012/MT</item>
+        <item>2-098/MC</item>
+        <item>2-090/MC</item>
+        <item>090/MC</item>
+        <item>024/MT</item>
+        <item>075/MT</item>
+        <item>tạm trú</item>
+        <item>123123</item>
+        <item>1-091/MC</item>
+        <item>091/MC</item>
+        <item>002/TT</item>
+        <item>119/TT</item>
+        <item>106/MT</item>
+        <item>122/MT</item>
+        <item>120/MT</item>
+        <item>123/TT</item>
+        <item>123123123123</item>
+        <item>022/MT</item>
+        <item>013/MT</item>
+        <item>014/MT - nhập xứ tháng 09.2011</item>
+        <item>017/MT</item>
+        <item>016/MT</item>
+        <item>032/MT</item>
+        <item>020/MT</item>
+        <item>153/G</item>
+        <item>027/MT</item>
+        <item>018/MT</item>
+        <item>054/MT</item>
+        <item>060/MT</item>
+        <item>059/MT</item>
+        <item>050/MT</item>
+        <item>062/MT</item>
+        <item>095/MT</item>
+        <item>033/MT</item>
+        <item>047/MT</item>
+        <item>090/MT</item>
+        <item>103/MT</item>
+        <item>053/MT</item>
+        <item>088/MT</item>
+        <item>101/MT</item>
+        <item>099/MT</item>
+        <item>108/MT</item>
+        <item>080/MT</item>
+        <item>089/MT</item>
+        <item>063/MT</item>
+        <item>Test</item>
+        <item>039/MT</item>
+        <item>040/MT</item>
+        <item>028/MT</item>
+        <item>021/MT</item>
+        <item>1-012/G</item>
+        <item>012/G</item>
+        <item>4-021/G</item>
+        <item>021/G</item>
+        <item>023/G - 19-7-2017, gx bắc hải</item>
+        <item>097/MT</item>
+        <item>035/MT</item>
+        <item>065/MT</item>
+        <item>025/MT</item>
+        <item>052/MT</item>
+        <item>2-001/G</item>
+        <item>1-007/G</item>
+        <item>007/G</item>
+        <item>1-002/G</item>
+        <item>1-003/G</item>
+        <item>4-004/G</item>
+        <item>4-009/G</item>
+        <item>002/G</item>
+        <item>1-006/G</item>
+        <item>006/G</item>
+        <item>009/G</item>
+        <item>4-008/G</item>
+        <item>008/G</item>
+        <item>2-010/G</item>
+        <item>010/G</item>
+        <item>1-025/G</item>
+        <item>025/G</item>
+        <item>003/G</item>
+        <item>2-015/G</item>
+        <item>015/g</item>
+        <item>4-017/G</item>
+        <item>017/G</item>
+        <item>1-029/G</item>
+        <item>004/G</item>
+        <item>3-027/G</item>
+        <item>016/G</item>
+        <item>4-011/G</item>
+        <item>011/G</item>
+        <item>4-030/G</item>
+        <item>030/G</item>
+        <item>2-032/G</item>
+        <item>032/G</item>
+        <item>3-020/G</item>
+        <item>020/G</item>
+        <item>034/G</item>
+        <item>004/TT</item>
+        <item>005/TT</item>
+        <item>086/MT</item>
+        <item>001/G</item>
+        <item>4-043/G</item>
+        <item>2-041/G</item>
+        <item>1-045/G</item>
+        <item>005/G</item>
+        <item>3-337/MC - nhập xứ tháng 03.2013</item>
+        <item>2-338/MC - nhập xứ tháng 3.2013</item>
+        <item>1-350/MC</item>
+        <item>205/MC</item>
+        <item>2-032/MC</item>
+        <item>032/MC</item>
       </txtGhiChu>
       <txtLinhMuc caption="Linh mục chứng">
         <item>Giuse Nguyễn Văn Uy</item>
@@ -684,6 +1485,49 @@
         <item>Raphael Nguyễn Văn Chúa</item>
         <item>Giuse Đinh Nam Hưng</item>
         <item>F.x. Nguyễn Đức Đạt</item>
+        <item>Fx Nguyễn Đức Đạt, O P</item>
+        <item>Giuse Nguyễn Trường Hải</item>
+        <item>Đam Phạm Hữu Tư</item>
+        <item>Giuse Nguyễn Văn Thanh</item>
+        <item>Phê-rô Vũ Hoàng Ánh</item>
+        <item>G B M Trần Văn Bình</item>
+        <item>Đam Phạm Hữu Phan</item>
+        <item>1231</item>
+        <item>123123123123</item>
+        <item>Ádasd</item>
+        <item>Ggggggggg</item>
+        <item>Đaminh Nguyễn Trung Thành</item>
+        <item>Đinh An Khang</item>
+        <item>Nguyễn Công Nghị</item>
+        <item>Vinh-sơn Nguyễn Văn Tuyền</item>
+        <item>Giuse Đoàn Xuân Linh</item>
+        <item>Đaminh Phạm Minh Quang</item>
+        <item>Trần Lê Vinh</item>
+        <item>Giuse Nguyễn Ý Định</item>
+        <item>Giuse Nguyễn Đức Lục</item>
+        <item>Giuse Đệ Nguyễn Văn Thanh</item>
+        <item>Giuse Đỗ Văn Tự</item>
+        <item>Giuse Nguyễn Đức Luc</item>
+        <item>Giuse Nguyễn Thành Hiếu</item>
+        <item>Phero Vương Văn Tuyên</item>
+        <item>Giuse Đỗ Đức Hân</item>
+        <item>Phero Lê Văn Thượng</item>
+        <item>Giuse Phạm Sơn Lâm</item>
+        <item>Đaminh Nguyễn Viết Tiên</item>
+        <item>Vinh Sơn Phạm Liên Hùng</item>
+        <item>Đaminh Đặng Duy Hòa</item>
+        <item>Đaminh Hoàng Văn Tiên</item>
+        <item>Đaminh Trần Xuân Thảo</item>
+        <item>Đaminh Phạm Hữu Phan</item>
+        <item>Amz Phan Tự Cường</item>
+        <item>Gioan Baotixita Đinh Tiến Hướng</item>
+        <item>Phero Hà Hương Giang</item>
+        <item>Phêro Cao Thọ Lành</item>
+        <item>Anton Nguyễn Trọng Quý</item>
+        <item>Phê-rô Trần Đình Tứ</item>
+        <item>Âsas</item>
+        <item>Gisue Nguyễn Văn Uy</item>
+        <item>Giuse Đích Nguyễn Ngọc Oánh</item>
       </txtLinhMuc>
       <txtNguoiChung2 caption="Người chứng 2">
         <item>Maria Trần Thị Ngọc Mai</item>
@@ -709,6 +1553,60 @@
         <item>Maria Trần Thị Hà</item>
         <item>Maria Đinh Thị Riêng</item>
         <item>Rosa Trần Thị Lệ Tuyền</item>
+        <item>Maria Nguyễn Thị Hải</item>
+        <item>Maria Đinh Thị Lệ Thu</item>
+        <item>Maria Vũ Thị Cúc</item>
+        <item>Maria Bùi Thị Trầm</item>
+        <item>Maria Trần Thị Tiên</item>
+        <item>Maria Nguyễn Thị Bích Hạnh</item>
+        <item>Maria Trần Thị Bích</item>
+        <item>Maria Đỗ Thị Ngọc Chinh</item>
+        <item>Maria Tống Thị Quê</item>
+        <item>123123123123</item>
+        <item>12312312312312</item>
+        <item>123</item>
+        <item>Ádasd</item>
+        <item>Ádas</item>
+        <item>Maria Phạm Thị Mộng Kiều</item>
+        <item>F.x. Đoàn Văn Bảy</item>
+        <item>Teresa Thạch Lạng</item>
+        <item>Nguyễn Văn Tấn</item>
+        <item>Maria Mai Thị Ngọc Lan</item>
+        <item>Maria Trương Thị Đào</item>
+        <item>Nguyễn Thị Nhường</item>
+        <item>Nguyễn Thị Ri</item>
+        <item>Maria Nguyễn Thị Đức</item>
+        <item>Maria Trần Thị Bắc</item>
+        <item>Maria Nguyễn Thị Hoa</item>
+        <item>Maria Nguyễn Thị Lan Phương</item>
+        <item>Maria Đỗ Thị Ánh Tuyết</item>
+        <item>Nguyễn Thị Kim Phượng</item>
+        <item>Maria Nhường</item>
+        <item>Maria Nguyễn Thị Tố Anh</item>
+        <item>Lăng Thị Tin</item>
+        <item>Agatha Vũ Ngọc Loan Châu</item>
+        <item>Maria Phạm Thị Thưa</item>
+        <item>Maria Trần Thị Lan</item>
+        <item>Maria Nguyễn Thị Trạch</item>
+        <item>Maria Nguyễn Thị Ly</item>
+        <item>Teresa Nguyễn Thị Kím Ánh</item>
+        <item>Maria Trương Thị Thanh</item>
+        <item>Teresa Trần Thị Kim</item>
+        <item>Maria Cao Thị Phán</item>
+        <item>Nguyễn Thị Sen</item>
+        <item>Maria Nguyễn Thị Cón</item>
+        <item>Lucia Nguyễn Thị Kim Anh</item>
+        <item>Maria Nguyễn Thị Yến</item>
+        <item>Maria Nguyễn Thị Kim Oanh</item>
+        <item>Maria Nguyễn Thị Liên</item>
+        <item>Bà Trùm Đạt</item>
+        <item>Maria Cao Thị Nhu</item>
+        <item>Maria Phạm Thị Yến</item>
+        <item>Maria Nguyễn Thị Kim Liên</item>
+        <item>Maria Đỗ Thị Thay</item>
+        <item>Maria Nguyễn Thị Nhường</item>
+        <item>Maria Trịnh Thị Yến</item>
+        <item>Maria Vâng</item>
       </txtNguoiChung2>
       <txtNoiHonPhoi caption="Nơi hôn phối">
         <item>Tiên Chu</item>
@@ -727,6 +1625,41 @@
         <item>Tân Mai</item>
         <item>Lương Hội</item>
         <item>Thánh Tâm</item>
+        <item>Gx Ngũ Phúc</item>
+        <item>Gx Lộ Đức</item>
+        <item>Bùi Vĩnh</item>
+        <item>Bùi Chu</item>
+        <item>Phúc Lâm</item>
+        <item>Chân Phúc Khang</item>
+        <item>1223123</item>
+        <item>13123</item>
+        <item>12312</item>
+        <item>Nơi Hôn Phối</item>
+        <item>123</item>
+        <item>Ád</item>
+        <item>Ádasd</item>
+        <item>Thái Hòa</item>
+        <item>Thái Bình</item>
+        <item>Vạn Giá</item>
+        <item>Hòa Hiệp</item>
+        <item>Thanh Hải</item>
+        <item>Tân Định</item>
+        <item>Đại An</item>
+        <item>Gx Bùi Chu</item>
+        <item>Sài Gòn</item>
+        <item>Gx Nam Hà</item>
+        <item>Sài Quất</item>
+        <item>Gx Cao Mại</item>
+        <item>Nam Hải</item>
+        <item>Phúc Yên</item>
+        <item>Nhà Thờ Họ Hội Am, Gx Bắc Hải</item>
+        <item>Hà Nội, Hạt Hố Nai, Gp Xuân Lộc</item>
+        <item>Bùi Đức</item>
+        <item>Ngô Xá</item>
+        <item>Gx Quảng Biên</item>
+        <item>Lai Ổn</item>
+        <item>Gx Tiên Chu</item>
+        <item>Hà Thao</item>
       </txtNoiHonPhoi>
       <txtNguoiChung1 caption="Người chứng 1">
         <item>Giuse Trương Đức Tân</item>
@@ -753,6 +1686,54 @@
         <item>Giuse Vũ Văn Viện</item>
         <item>Giuse Trần Văn Bình</item>
         <item>Phaolo Lê Công Lý</item>
+        <item>Giuse Vũ Minh Sinh</item>
+        <item>Đaminh Lê Đức Sáng</item>
+        <item>Fx Đoàn Văn Cừ</item>
+        <item>Giuse Mai Văn Tứ</item>
+        <item>Giuse Trần Đình Yêng</item>
+        <item>Đam Mai Anh Kiệt</item>
+        <item>123123</item>
+        <item>123</item>
+        <item>Đâsdasd</item>
+        <item>Giuse Vũ Hoàng</item>
+        <item>F.x. Đoàn Văn Cừ</item>
+        <item>Đaminh Lâm</item>
+        <item>Nguyễn Vũ Phát</item>
+        <item>Vinh-sơn Nguyễn Giáo Hải</item>
+        <item>F.x Đoàn Văn Trường</item>
+        <item>Đaminh Nguyễn Ngọc Chương</item>
+        <item>Nguyễn Thành</item>
+        <item>Vinh Sơn Mai Trường Chinh</item>
+        <item>Giuse Lê Văn Kháng</item>
+        <item>Giuse Đặng Thế Huynh</item>
+        <item>G.b. Nguyễn Văn Bá</item>
+        <item>F.x. Đoàn Văn Chỉ</item>
+        <item>Giuse Kiệm</item>
+        <item>Đaminh Nguyễn Xuân Giao</item>
+        <item>Giuse Bùi Xuân Uyển</item>
+        <item>Giuse Ngô Phan Anh Duy</item>
+        <item>Fx Đặng Hữu Ích</item>
+        <item>Gioan B. Hoàng Cao Khải</item>
+        <item>Gioakim Phạm Văn Tiếp</item>
+        <item>F.x, Đoàn Văn Quỳnh</item>
+        <item>Phê-rô Lê Trọng Hợp</item>
+        <item>Đaminh Trương Đức Thái</item>
+        <item>Giuse Nguyễn Đức Định</item>
+        <item>Giuse Bùi Văn Gòng</item>
+        <item>Đaminh Phạm Đức Phong</item>
+        <item>Giuse Trương Phòng</item>
+        <item>Vinh Sơn Lê Đức Thắng</item>
+        <item>Giuse Nguyễn Văn Vinh</item>
+        <item>Giuse Nguyễn Văn Nghinh</item>
+        <item>Giuse Phạm Hùng Anh</item>
+        <item>Anton Vũ Thiềng</item>
+        <item>Giuse Cao Văn Thanh</item>
+        <item>Tôma Trần Đình Toán</item>
+        <item>Giuse Mai Quang Oánh ( Thiềm)</item>
+        <item>F.x. Đoàn Văn Oanh</item>
+        <item>Gioan Vũ Hữu Toàn</item>
+        <item>Luca Thúc</item>
+        <item>Đaminh Nguyễn Đức Tuyền</item>
       </txtNguoiChung1>
     </frmGiaDinh>
     <frmTimGiaDinh xmlns="">
@@ -936,6 +1917,13 @@
         <item>'</item>
         <item>'a</item>
         <item>ádasdasdasd</item>
+        <item>ádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđádddddddđ</item>
+        <item>Hội đoàn 23</item>
+        <item>dddđ</item>
+        <item>ccc</item>
+        <item>sss</item>
+        <item>sssss</item>
+        <item>Họi đoàn 1</item>
       </txtTenHoiDoan>
       <txtMaHoiDoan caption="Mã hội đoàn">
         <item>2</item>
@@ -962,6 +1950,9 @@
         <item>24</item>
         <item>25</item>
         <item>26</item>
+        <item>28</item>
+        <item>29</item>
+        <item>30</item>
       </txtMaHoiDoan>
       <txtGhiChu caption="Ghi chú">
         <item>Không có gì</item>
@@ -973,6 +1964,9 @@
         <item>Ghi chú của hội đoàn số 1</item>
         <item>')</item>
         <item>ádasdasdsad</item>
+        <item>Chưa có ghi chú</item>
+        <item>Đây là ghi chú của hội đoàn số 1</item>
+        <item>Không có ghi chú cho hội đoàn 1</item>
       </txtGhiChu>
       <txtThanhBonMang caption="Thánh bổn mạng">
         <item>A</item>
@@ -992,6 +1986,10 @@
         <item>Thánh bổng mạng</item>
         <item>Thánh bổn mạng hội đoàn 1</item>
         <item>ádsdasdasd</item>
+        <item>dddd</item>
+        <item>ccc</item>
+        <item>sssss</item>
+        <item>2</item>
       </txtThanhBonMang>
     </frmHoiDoan>
     <frmBiTichChiTiet xmlns="">
@@ -1010,6 +2008,9 @@
         <item>Trà Cổ 2</item>
         <item>Đại Lộ</item>
         <item>An Phú</item>
+        <item>Tân Mai</item>
+        <item>Mỹ Luông</item>
+        <item>Quỳnh Lang</item>
       </txtNoiBiTich>
       <txtMoTa caption="Mô tả">
         <item>Đợt bí tích ngày 25 tháng 07 năm 1923</item>
@@ -1043,38 +2044,68 @@
         <item>Đợt bí tích ngày 03 tháng 08 năm 2003</item>
         <item>Đợt bí tích Rửa tội ngày 24 tháng 06 năm 2019</item>
         <item>Đợt bí tích ngày 01 tháng 07 năm 1979</item>
+        <item>Đợt bí tích ngày 02 tháng 01 năm 2011</item>
+        <item>Đợt bí tích ngày 06 tháng 01 năm 2007</item>
+        <item>Đợt bí tích ngày 01 tháng 01 năm 1999</item>
+        <item>Đợt bí tích ngày 15 tháng 03 năm 1970</item>
       </txtMoTa>
     </frmBiTichChiTiet>
     <frmHonPhoi xmlns="">
       <txtTenHonPhoi caption="Đôi hôn phối">
         <item>Nam - Kha</item>
+        <item>Vân - Aba</item>
+        <item>Vân - Thiên</item>
+        <item>Trúc - Thúy</item>
+        <item>Anh - Liên</item>
       </txtTenHonPhoi>
       <txtLinhMuc caption="Linh mục chứng">
         <item>Phê-rô Vũ Hoàng Ánh</item>
+        <item>1231</item>
+        <item>Đam Đặng Duy Hòa</item>
       </txtLinhMuc>
       <txtMaHonPhoi caption="Mã hôn phối">
         <item>398</item>
+        <item>1382</item>
+        <item>1387</item>
+        <item>702</item>
+        <item>1384</item>
       </txtMaHonPhoi>
       <txtNguoiChong caption="Người nam">
         <item>Giuse Nguyễn Văn Nam</item>
+        <item>Anna Nguyễn Tường Vân</item>
+        <item>Giacôbê Đoàn Văn Trúc</item>
+        <item>Phanxicô Xavie Phan Quốc Anh</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Đinh Thị Ngọc Kha</item>
+        <item>Achillêô Aba</item>
+        <item>Agatha Nguyễn Hồng Thiên</item>
+        <item>Maria Nguyễn Thị Thanh Thúy</item>
+        <item>Têrêsa Phan Thị Thùy Liên</item>
       </txtNguoiVo>
       <txtGhiChu caption="Ghi chú">
         <item>101/G</item>
+        <item>123123123123</item>
+        <item>208/MC</item>
       </txtGhiChu>
       <txtSoHonPhoi caption="Số hôn phối">
         <item>280/2</item>
+        <item>123123</item>
       </txtSoHonPhoi>
       <txtNguoiChung2 caption="Người chứng 2">
         <item>Maria Đinh Thị Thúy</item>
+        <item>123123123123</item>
+        <item>Maria Nguyễn Kim Thuận</item>
       </txtNguoiChung2>
       <txtNoiHonPhoi caption="Nơi hôn phối">
         <item>Ngũ Phúc</item>
+        <item>13123</item>
+        <item>Đông Vinh</item>
       </txtNoiHonPhoi>
       <txtNguoiChung1 caption="Người chứng 1">
         <item>Giuse Vũ Văn Khánh</item>
+        <item>123123</item>
+        <item>Fx Phan Văn Thuật</item>
       </txtNguoiChung1>
     </frmHonPhoi>
     <frmRaoHonPhoi xmlns="">

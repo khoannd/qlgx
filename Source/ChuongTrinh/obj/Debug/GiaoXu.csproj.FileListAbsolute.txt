@@ -9,6 +9,7 @@ E:\Primas\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.csprojAssemblyReference.cache
 E:\Primas\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.frmChangePass.resources
 E:\Primas\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.frmAccoutList.resources
 E:\Primas\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.frmGopY.resources
+E:\Primas\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.frmHoiDoanList.resources
 E:\Primas\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.frmKiemTraGiaDinhList.resources
 E:\Primas\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.frmKiemTraGiaoDanList.resources
 E:\Primas\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.frmLogin.resources
@@ -45,5 +46,3 @@ E:\Primas\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.csproj.CoreCompileInputs.cach
 E:\Primas\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.csproj.CopyComplete
 E:\Primas\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.exe
 E:\Primas\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.pdb
-E:\Primas\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.frmHoiDoanList.resources
-E:\Primas\qlgx\Source\ChuongTrinh\obj\Debug\GiaoXu.frmLichSuHoiDoan.resources

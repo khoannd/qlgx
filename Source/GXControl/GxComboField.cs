@@ -19,8 +19,9 @@ namespace GxControl
             combo.SelectedValueChanged += new EventHandler(combo_SelectedValueChanged);
             label1.Click += Label1_Click;
             //combo.VisibleChanged += Combo_VisibleChanged;
+           
         }
-
+        
         private void Label1_Click(object sender, EventArgs e)
         {
             combo.Focus();

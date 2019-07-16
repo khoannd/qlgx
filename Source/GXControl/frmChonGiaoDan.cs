@@ -71,7 +71,7 @@ namespace GxControl
                 {
                     isSearching = true;
                     lastSearch = txtHoTen.Text;
-                    gxGiaoDanList1.LoadData(SqlConstants.SELECT_GIAODAN_LIST_CO_GIAOHO + whereSQL + " AND HoTen LIKE ?", new object[] { "%" + txtHoTen.Text.Trim() });
+                    gxGiaoDanList1.LoadData(SqlConstants.SELECT_GIAODAN_LIST_CO_GIAOHO + whereSQL + " AND HoTen LIKE ?", new object[] { "%" + txtHoTen.Text.Trim() + "%" });
                 }
                 //2018-07-19 Gia mod end
             }

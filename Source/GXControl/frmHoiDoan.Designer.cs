@@ -231,7 +231,7 @@
             this.txtThanhBonMang.NumberMode = false;
             this.txtThanhBonMang.ReadOnly = false;
             this.txtThanhBonMang.Size = new System.Drawing.Size(290, 26);
-            this.txtThanhBonMang.TabIndex = 0;
+            this.txtThanhBonMang.TabIndex = 1;
             // 
             // txtTenHoiDoan
             // 
@@ -270,7 +270,7 @@
             this.txtGhiChu.NumberMode = false;
             this.txtGhiChu.ReadOnly = false;
             this.txtGhiChu.Size = new System.Drawing.Size(279, 69);
-            this.txtGhiChu.TabIndex = 0;
+            this.txtGhiChu.TabIndex = 2;
             // 
             // txtMaHoiDoan
             // 
