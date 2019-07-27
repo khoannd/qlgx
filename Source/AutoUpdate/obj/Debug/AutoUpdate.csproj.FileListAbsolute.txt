@@ -1,6 +1,7 @@
 E:\Primas\qlgx\BIN\AutoUpdate.exe.config
 E:\Primas\qlgx\BIN\AutoUpdate.exe
 E:\Primas\qlgx\BIN\AutoUpdate.pdb
+E:\Primas\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.csprojAssemblyReference.cache
 E:\Primas\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.frmProcess.resources
 E:\Primas\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.Properties.Resources.resources
 E:\Primas\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.csproj.GenerateResource.cache

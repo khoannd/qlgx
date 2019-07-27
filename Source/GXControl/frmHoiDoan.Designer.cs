@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             this.gxGroupBox4 = new GxControl.GxGroupBox();
+            this.label1 = new System.Windows.Forms.Label();
             this.gxCommand1 = new GxControl.GxCommand();
             this.gxGroupBox2 = new GxControl.GxGroupBox();
             this.gxGroupBox5 = new GxControl.GxGroupBox();
@@ -36,6 +37,7 @@
             this.gxGroupBox3 = new GxControl.GxGroupBox();
             this.gxAddEdit1 = new GxControl.GxAddEdit();
             this.gxGroupBox1 = new GxControl.GxGroupBox();
+            this.cbThongKe = new GxControl.GxCheckBox();
             this.dtNgayThanhLap = new GxControl.GxDateField();
             this.dtNgayBonMang = new GxControl.GxDateField();
             this.txtThanhBonMang = new GxControl.GxTextField();
@@ -60,11 +62,22 @@
             this.gxGroupBox4.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.gxGroupBox4.BackColor = System.Drawing.Color.AliceBlue;
+            this.gxGroupBox4.Controls.Add(this.label1);
             this.gxGroupBox4.Controls.Add(this.gxCommand1);
             this.gxGroupBox4.Location = new System.Drawing.Point(0, 483);
             this.gxGroupBox4.Name = "gxGroupBox4";
             this.gxGroupBox4.Size = new System.Drawing.Size(991, 51);
             this.gxGroupBox4.TabIndex = 3;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.ForeColor = System.Drawing.Color.Red;
+            this.label1.Location = new System.Drawing.Point(14, 21);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(360, 13);
+            this.label1.TabIndex = 1;
+            this.label1.Text = "*Ghi chú: Những hội viên bị gạch đỏ là những hội viên đã ra khỏi hội đoàn";
             // 
             // gxCommand1
             // 
@@ -89,9 +102,9 @@
             this.gxGroupBox2.BackColor = System.Drawing.Color.AliceBlue;
             this.gxGroupBox2.Controls.Add(this.gxGroupBox5);
             this.gxGroupBox2.Controls.Add(this.gxGroupBox3);
-            this.gxGroupBox2.Location = new System.Drawing.Point(0, 108);
+            this.gxGroupBox2.Location = new System.Drawing.Point(0, 128);
             this.gxGroupBox2.Name = "gxGroupBox2";
-            this.gxGroupBox2.Size = new System.Drawing.Size(991, 380);
+            this.gxGroupBox2.Size = new System.Drawing.Size(991, 360);
             this.gxGroupBox2.TabIndex = 2;
             this.gxGroupBox2.Text = "Các thành viên trong hội đoàn";
             // 
@@ -99,9 +112,9 @@
             // 
             this.gxGroupBox5.Controls.Add(this.gxGiaoDanList1);
             this.gxGroupBox5.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gxGroupBox5.Location = new System.Drawing.Point(3, 61);
+            this.gxGroupBox5.Location = new System.Drawing.Point(3, 63);
             this.gxGroupBox5.Name = "gxGroupBox5";
-            this.gxGroupBox5.Size = new System.Drawing.Size(985, 316);
+            this.gxGroupBox5.Size = new System.Drawing.Size(985, 294);
             this.gxGroupBox5.TabIndex = 1;
             // 
             // gxGiaoDanList1
@@ -128,7 +141,7 @@
             this.gxGiaoDanList1.RowHeaderContent = Janus.Windows.GridEX.RowHeaderContent.RowPosition;
             this.gxGiaoDanList1.RowHeaders = Janus.Windows.GridEX.InheritableBoolean.True;
             this.gxGiaoDanList1.SelectionMode = Janus.Windows.GridEX.SelectionMode.MultipleSelection;
-            this.gxGiaoDanList1.Size = new System.Drawing.Size(979, 305);
+            this.gxGiaoDanList1.Size = new System.Drawing.Size(979, 283);
             this.gxGiaoDanList1.TabIndex = 0;
             this.gxGiaoDanList1.VisualStyle = Janus.Windows.GridEX.VisualStyle.Office2003;
             this.gxGiaoDanList1.WhereSQL = "";
@@ -140,7 +153,7 @@
             this.gxGroupBox3.Dock = System.Windows.Forms.DockStyle.Top;
             this.gxGroupBox3.Location = new System.Drawing.Point(3, 16);
             this.gxGroupBox3.Name = "gxGroupBox3";
-            this.gxGroupBox3.Size = new System.Drawing.Size(985, 45);
+            this.gxGroupBox3.Size = new System.Drawing.Size(985, 47);
             this.gxGroupBox3.TabIndex = 0;
             // 
             // gxAddEdit1
@@ -172,6 +185,7 @@
             // gxGroupBox1
             // 
             this.gxGroupBox1.BackColor = System.Drawing.Color.AliceBlue;
+            this.gxGroupBox1.Controls.Add(this.cbThongKe);
             this.gxGroupBox1.Controls.Add(this.dtNgayThanhLap);
             this.gxGroupBox1.Controls.Add(this.dtNgayBonMang);
             this.gxGroupBox1.Controls.Add(this.txtThanhBonMang);
@@ -181,9 +195,21 @@
             this.gxGroupBox1.Dock = System.Windows.Forms.DockStyle.Top;
             this.gxGroupBox1.Location = new System.Drawing.Point(0, 0);
             this.gxGroupBox1.Name = "gxGroupBox1";
-            this.gxGroupBox1.Size = new System.Drawing.Size(991, 102);
+            this.gxGroupBox1.Size = new System.Drawing.Size(991, 122);
             this.gxGroupBox1.TabIndex = 0;
             this.gxGroupBox1.Text = "Thông tin hội đoàn";
+            // 
+            // cbThongKe
+            // 
+            this.cbThongKe.AutoSize = true;
+            this.cbThongKe.ForeColor = System.Drawing.SystemColors.HotTrack;
+            this.cbThongKe.Location = new System.Drawing.Point(81, 95);
+            this.cbThongKe.Name = "cbThongKe";
+            this.cbThongKe.Size = new System.Drawing.Size(169, 17);
+            this.cbThongKe.TabIndex = 11;
+            this.cbThongKe.Text = "Danh sách tất cả các hội viên";
+            this.cbThongKe.UseVisualStyleBackColor = true;
+            this.cbThongKe.CheckedChanged += new System.EventHandler(this.cbThongKe_CheckedChanged);
             // 
             // dtNgayThanhLap
             // 
@@ -269,7 +295,7 @@
             this.txtGhiChu.NumberInputRequired = true;
             this.txtGhiChu.NumberMode = false;
             this.txtGhiChu.ReadOnly = false;
-            this.txtGhiChu.Size = new System.Drawing.Size(279, 69);
+            this.txtGhiChu.Size = new System.Drawing.Size(279, 89);
             this.txtGhiChu.TabIndex = 2;
             // 
             // txtMaHoiDoan
@@ -304,6 +330,7 @@
             this.Load += new System.EventHandler(this.frmHoiDoan_Load);
             ((System.ComponentModel.ISupportInitialize)(this.gxGroupBox4)).EndInit();
             this.gxGroupBox4.ResumeLayout(false);
+            this.gxGroupBox4.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.gxGroupBox2)).EndInit();
             this.gxGroupBox2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.gxGroupBox5)).EndInit();
@@ -313,6 +340,7 @@
             this.gxGroupBox3.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.gxGroupBox1)).EndInit();
             this.gxGroupBox1.ResumeLayout(false);
+            this.gxGroupBox1.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -333,5 +361,7 @@
         private GxDateField dtNgayThanhLap;
         private GxDateField dtNgayBonMang;
         private GxGiaoDanList gxGiaoDanList1;
+        private GxCheckBox cbThongKe;
+        private System.Windows.Forms.Label label1;
     }
 }

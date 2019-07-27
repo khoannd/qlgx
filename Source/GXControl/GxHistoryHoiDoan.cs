@@ -71,7 +71,7 @@ namespace GxControl
 
         public void loaddata(int id)
         {
-            string Query = @"select ChiTietHoiDoan.NgayVaoHoiDoan,ChiTietHoiDoan.NgayRaHoiDoan,ChiTietHoiDoan.VaiTro,HoiDoan.TenHoiDoan from HoiDoan,ChiTietHoiDoan where HoiDoan.MaHoiDoan=ChiTietHoiDoan.MaHoiDoan and ChiTietHoiDoan.MaGiaoDan=?";
+            string Query = SqlConstants.SELECT_LIST_HISTORY_HOIDOAN_BY_MAGIAODAN;
             gxListHistoryHoiDoan1.LoadData(Query, new object[] { id });
         }
 
@@ -128,7 +128,7 @@ namespace GxControl
             DialogResult tl;
             if (cbTenHoiDoan.Combo.SelectedIndex<0)
             {
-                tl = MessageBox.Show("Chưa chọn tên hội đoàn!! Bạn có muốn chọn tên hội đoàn!!!\r\n Chọn [Yes] nếu có.\r\n Chọn [No] để không cập nhật (không lưu)", "Thông báo",
+                tl = MessageBox.Show("Vui lòng chọn tên hội đoàn !! Bạn có muốn chọn tên hội đoàn!!!\r\n Chọn [Yes] nếu có.\r\n Chọn [No] để không cập nhật (không lưu)", "Thông báo",
                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1);
                 if (tl == DialogResult.Yes)
                 {
@@ -151,7 +151,7 @@ namespace GxControl
                 return true;
             }
             
-            DataRow[] rows = tblDanhSachHoiDoan.Select(String.Concat("MaHoiDoan=", cbTenHoiDoan.combo.SelectedValue.ToString()));
+            
             if (Memory.IsNullOrEmpty(dtNgayVaoHoiDoan.Value))
             {
                tl = MessageBox.Show("Chưa nhập ngày vào hội đoàn.Bạn có muốn tiếp tục không." +
@@ -169,7 +169,7 @@ namespace GxControl
             }
            
             //Kiểm tra ngày vào có sau ngày ra không
-            if(!Memory.IsNullOrEmpty(dtNgayVaoHoiDoan.Value.ToString())&& !Memory.IsNullOrEmpty(dtNgayRaHoiDoan.Value.ToString()))
+            if (!Memory.IsNullOrEmpty(dtNgayVaoHoiDoan.Value.ToString())&& !Memory.IsNullOrEmpty(dtNgayRaHoiDoan.Value.ToString()))
             {
                 if(Memory.CompareTwoStringDate(dtNgayVaoHoiDoan.Value.ToString(), dtNgayRaHoiDoan.Value.ToString()) >=0)
                 {
@@ -181,18 +181,23 @@ namespace GxControl
                     return true;
                 }
             }
-            //Kiểm tra ngày vào và ra hội đoàn có trước ngày thành lập đoàn không
+            //Lấy hội đoàn để lấy ngày thành lập
+            DataRow[] rows = tblDanhSachHoiDoan.Select(String.Concat("MaHoiDoan=", cbTenHoiDoan.combo.SelectedValue.ToString()));
             // Lấy danh sách các hội viên đã ra khỏi hội đoàn.
-            DataTable tblcthd1 = Memory.GetData(String.Concat(SqlConstants.SELECT_CHITIETHOIDOAN_BY_MAHOIDOAN, " and NgayRaHoiDoan is not null and NgayVaoHoiDoan is not null"), cbTenHoiDoan.combo.SelectedValue.ToString());
-
+            DataTable tblcthd1 = Memory.GetData(String.Concat(SqlConstants.SELECT_CHITIETHOIDOAN_BY_MAHOIDOAN, " and NgayRaHoiDoan is not null order by NgayRaHoiDoan is null"), cbTenHoiDoan.combo.SelectedValue.ToString());
+            DataRow[] rowls = tblcthd1.Select(String.Concat("MaGiaoDan=", MaGiaoDan));
             //Ngày vào
             if (!Memory.IsNullOrEmpty(dtNgayVaoHoiDoan.Value.ToString()))
             {
+                //Kiểm tra ngày vào hội đoàn có trước ngày thành lập đoàn không
                 if (!Memory.IsNullOrEmpty(rows[0][HoiDoanConst.NgayThanhLap].ToString()))
                 {
                     if (Memory.CompareTwoStringDate(rows[0][HoiDoanConst.NgayThanhLap].ToString(), dtNgayVaoHoiDoan.Value.ToString()) > 0)
                     {
-                        tl = MessageBox.Show("Vui lòng kiểm tra lại. Ngày vào hội đoàn không thể trước ngày thành lập hội đoàn "+ rows[0][HoiDoanConst.NgayThanhLap].ToString()+". Bạn có muốn quay lại chỉnh sửa không?.\r\n Chọn [Yes] nếu có.\r\n Chọn [No] để không cập nhật (không lưu).", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1);
+                        tl = MessageBox.Show("Vui lòng kiểm tra lại. Ngày vào hội đoàn không thể trước ngày thành lập hội đoàn "+ 
+                            rows[0][HoiDoanConst.NgayThanhLap].ToString()+". Bạn có muốn quay lại chỉnh sửa không?." +
+                            "\r\n Chọn [Yes] nếu có.\r\n Chọn [No] để không cập nhật (không lưu).", 
+                            "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1);
                         if (tl == DialogResult.Yes)
                         {
                             return false;
@@ -200,11 +205,17 @@ namespace GxControl
                         return true;
                     }
                 }
-                //Kiểm tra ngày vào có nằm giữa ngày vào và ngày ra của giáo dân này trong lịch sử ở hội đoàn đó không
-                if(!frmHoiDoan.CheckDate(dtNgayVaoHoiDoan.Value.ToString(),tblcthd1,MaGiaoDan.ToString()))
+                //Kiểm tra xem ngày vào có sau ngày ra hội đoàn lần gần nhất không
+                if (rowls!=null && rowls.Length>0)
+                if (Memory.CompareTwoStringDate(rowls[0][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString(), dtNgayVaoHoiDoan.Value.ToString()) >= 0)
                 {
-                    tl = MessageBox.Show("Bạn có muốn tiếp tục không cập nhật (không lưu).\r\nChọn [Yes] nếu có.\r\nChọn [No] để quay lại chỉnh sửa",
-                        "Thông báo",MessageBoxButtons.YesNo,MessageBoxIcon.Warning,MessageBoxDefaultButton.Button1);
+                   tl= MessageBox.Show(String.Format("Giáo dân {0} đã từng ở trong hội đoàn và ngày gần nhất ra khỏi hội đoàn là {1}.!!!!\r\n" +
+                        "Ngày vào hội đoàn không thể trước hoặc bằng ngày {2} được. " +
+                        "Vui lòng kiểm tra lại.\r\nBạn có muốn tiếp tục không cập nhật (không lưu).\r\n" +
+                        "Chọn [Yes] nếu có.\r\nChọn [No] để quay lại chỉnh sửa",
+                       rowls[0][GiaoDanConst.HoTen].ToString(), rowls[0][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString(),
+                       rowls[0][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString()),
+                       "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1);
                     if(tl==DialogResult.No)
                     {
                         return false;
@@ -215,6 +226,7 @@ namespace GxControl
             //Ngày ra
             if (!Memory.IsNullOrEmpty(dtNgayRaHoiDoan.Value.ToString()))
             {
+                //Kiểm tra ngày ra hội đoàn có trước ngày thành lập đoàn không
                 if (!Memory.IsNullOrEmpty(rows[0][HoiDoanConst.NgayThanhLap].ToString()))
                 {
                     if (Memory.CompareTwoStringDate(rows[0][HoiDoanConst.NgayThanhLap].ToString(), dtNgayRaHoiDoan.Value.ToString()) > 0)
@@ -227,11 +239,17 @@ namespace GxControl
                         return true;
                     }
                 }
-                //Tương tự ngày ra cũng cần kiểm tra
-                if (!frmHoiDoan.CheckDate(dtNgayRaHoiDoan.Value.ToString(), tblcthd1, MaGiaoDan.ToString()))
+                //Kiểm tra xem ngày ra có sau ngày ra hội đoàn lần gần nhất không
+                if (rowls!=null && rowls.Length>0)
+                if (Memory.CompareTwoStringDate(rowls[0][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString(),dtNgayRaHoiDoan.Value.ToString())>=0)
                 {
-                    tl = MessageBox.Show("Bạn có muốn tiếp tục không cập nhật (không lưu).\r\nChọn [Yes] nếu có.\r\nChọn [No] để quay lại chỉnh sửa",
-                        "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1);
+                    tl = MessageBox.Show(String.Format("Giáo dân {0} đã từng ở trong hội đoàn và ngày gần nhất ra khỏi hội đoàn là {1}.!!!!\r\n" +
+                        "Ngày ra hội đoàn không thể trước hoặc bằng ngày {2} được. " +
+                        "Vui lòng kiểm tra lại.\r\nBạn có muốn tiếp tục không cập nhật (không lưu).\r\n" +
+                        "Chọn [Yes] nếu có.\r\nChọn [No] để quay lại chỉnh sửa",
+                    rowls[0][GiaoDanConst.HoTen].ToString(), rowls[0][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString(),
+                    rowls[0][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString()),
+                    "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1);
                     if (tl == DialogResult.No)
                     {
                         return false;
@@ -271,6 +289,8 @@ namespace GxControl
 
         private void GxHistoryHoiDoan_Load(object sender, EventArgs e)
         {
+            dtNgayVaoHoiDoan.DateInput.ReadOnly = true;
+            dtNgayRaHoiDoan.DateInput.ReadOnly = true;
             gxAddEdit1.DeleteButton.Visible = false;
             gxAddEdit1.ReloadButton.Visible = false;
             gxAddEdit1.EditButton.Visible = false;
