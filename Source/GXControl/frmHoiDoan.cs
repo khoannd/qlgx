@@ -30,6 +30,7 @@ namespace GxControl
                 id = value;
             }
         }
+        
 
         public frmHoiDoan()
         {
@@ -43,6 +44,9 @@ namespace GxControl
             dtNgayThanhLap.DateInput.IsNullDate = true;
             //enable button Reload 
             gxAddEdit1.ReloadButton.Enabled = true;
+            gxAddEdit1.PrintButton.Visible = true;
+            gxAddEdit1.PrintButton.Enabled = true;
+
             //Bắt đầu format lại Grid
             gxGiaoDanList1.FormatGrid();
 
@@ -258,7 +262,8 @@ namespace GxControl
                             {
                                 if (Memory.CompareTwoStringDate(dtNgayThanhLap.Value.ToString(), row[ChiTietHoiDoanConst.NgayVaoHoiDoan].ToString()) > 0)
                                 {
-                                    MessageBox.Show(String.Format("Vui lòng kiểm tra lại ngày vào hội đoàn của giáo dân {0} ngày vào hội đoàn không thể trước ngày thành lập hội đoàn {1}", gxGiaoDanList1.CurrentRow.Cells[GiaoDanConst.HoTen].Text, dtNgayThanhLap.Value.ToString()), "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1);
+                                    MessageBox.Show(String.Format("Vui lòng kiểm tra lại ngày vào hội đoàn của giáo dân {0} ngày vào hội đoàn không thể trước ngày thành lập hội đoàn {1}",
+                                        row[GiaoDanConst.HoTen].ToString(), dtNgayThanhLap.Value.ToString()), "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1);
                                     return;
                                 }
                             }
@@ -278,7 +283,8 @@ namespace GxControl
                             //Kiểm tra xem ngày ra hội đoàn có lớn hơn ngày hiện tại không
                             if (Memory.CompareTwoStringDate(row[ChiTietHoiDoanConst.NgayRaHoiDoan].ToString(), DateTime.Now.ToString("dd/MM/yyyy")) > 0)
                             {
-                                DialogResult tl = MessageBox.Show(String.Format("Vui lòng nhập lại ngày ra hội đoàn của giáo dân {0}.\r\nNgày ra hội đoàn không thể sau ngày hiện tại được.\r\nChọn [Yes] để tiếp tục cập nhập.\r\nChọn [No] để đóng màn hình và không cập nhập.\r\nChọn [Cancel] để quay lại chỉnh sửa", gxGiaoDanList1.CurrentRow.Cells[GiaoDanConst.HoTen].Text), "Thông báo", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+                                DialogResult tl = MessageBox.Show(String.Format("Vui lòng nhập lại ngày ra hội đoàn của giáo dân {0}.\r\nNgày ra hội đoàn không thể sau ngày hiện tại được.\r\nChọn [Yes] để tiếp tục cập nhập.\r\nChọn [No] để đóng màn hình và không cập nhập.\r\nChọn [Cancel] để quay lại chỉnh sửa",
+                                    row[GiaoDanConst.HoTen].ToString()), "Thông báo", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
                                 if (tl == DialogResult.No)
                                 {
                                     this.Close();
@@ -294,7 +300,8 @@ namespace GxControl
                             {
                                 if (Memory.CompareTwoStringDate(dtNgayThanhLap.Value.ToString(), row[ChiTietHoiDoanConst.NgayRaHoiDoan].ToString()) > 0)
                                 {
-                                    MessageBox.Show(String.Format("Vui lòng kiểm tra lại ngày ra hội đoàn của giáo dân {0} ngày ra hội đoàn không thể trước ngày thành lập hội đoàn {1}", gxGiaoDanList1.CurrentRow.Cells[GiaoDanConst.HoTen].Text, dtNgayThanhLap.Value.ToString()), "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1);
+                                    MessageBox.Show(String.Format("Vui lòng kiểm tra lại ngày ra hội đoàn của giáo dân {0} ngày ra hội đoàn không thể trước ngày thành lập hội đoàn {1}",
+                                        row[GiaoDanConst.HoTen].ToString(), dtNgayThanhLap.Value.ToString()), "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1);
                                     return;
                                 }
                             }
@@ -302,7 +309,8 @@ namespace GxControl
                             if (rowls != null&& rowls.Length>0)
                             if (Memory.CompareTwoStringDate(rowls[0][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString(), row[ChiTietHoiDoanConst.NgayRaHoiDoan].ToString()) >= 0)
                             {
-                                MessageBox.Show(String.Format("Giáo dân {0} đã từng ở trong hội đoàn và ngày gần nhất ra khỏi hội đoàn là {1}.!!!!\r\nNgày ra hội đoàn không thể trước hoặc bằng ngày {2} được. Vui lòng kiểm tra lại.",
+                                MessageBox.Show(String.Format("Giáo dân {0} đã từng ở trong hội đoàn và ngày gần nhất ra khỏi hội đoàn là {1}.!!!!\r\n" +
+                                    "Ngày ra hội đoàn không thể trước hoặc bằng ngày {2} được. Vui lòng kiểm tra lại.",
                               rowls[0][GiaoDanConst.HoTen].ToString(), rowls[0][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString(), rowls[0][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString()),
                               "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                                 return;
@@ -338,8 +346,9 @@ namespace GxControl
                         }
                     }
                 }
+                tblcthd = Memory.GetData(SqlConstants.SELECT_CHITIETHOIDOAN_BY_MAHOIDOAN, MaHoiDoan);
                 //Update Chi tiết hội đoàn
-                foreach(DataRow row in tblCTHDGrid.Rows)
+                foreach (DataRow row in tblCTHDGrid.Rows)
                 {
                     if(row.RowState==DataRowState.Deleted)
                     {
@@ -371,13 +380,13 @@ namespace GxControl
                 Memory.UpdateDataSet(ds);
                 if (Memory.ShowError())
                 {
-                    MessageBox.Show("Update thất bại");
+                    MessageBox.Show("Update thất bại vui lòng kiểm tra lại hoặc liên hệ nhà cung cấp. Xin cảm ơn!");
                 }
                 this.Close();
             }
             catch (Exception)
             {
-                MessageBox.Show("Update thất bại");
+                MessageBox.Show("Update thất bại vui lòng kiểm tra lại hoặc liên hệ nhà cung cấp. Xin cảm ơn!");
                 this.Close();
             }
         }

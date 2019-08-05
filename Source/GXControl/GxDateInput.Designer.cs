@@ -116,6 +116,8 @@ namespace GxControl
             this.textBox1.Name = "textBox1";
             this.textBox1.Size = new System.Drawing.Size(92, 20);
             this.textBox1.TabIndex = 7;
+            this.textBox1.TabStop = false;
+            this.textBox1.MouseClick += new System.Windows.Forms.MouseEventHandler(this.textBox1_MouseClick);
             this.textBox1.Enter += new System.EventHandler(this.textBox1_Enter);
             // 
             // dateTimePicker1
@@ -124,6 +126,7 @@ namespace GxControl
             this.dateTimePicker1.Name = "dateTimePicker1";
             this.dateTimePicker1.Size = new System.Drawing.Size(19, 20);
             this.dateTimePicker1.TabIndex = 8;
+            this.dateTimePicker1.TabStop = false;
             this.dateTimePicker1.ValueChanged += new System.EventHandler(this.dateTimePicker1_ValueChanged);
             this.dateTimePicker1.DropDown += new System.EventHandler(this.dateTimePicker1_DropDown);
             this.dateTimePicker1.Enter += new System.EventHandler(this.dateTimePicker1_Enter);
@@ -141,7 +144,7 @@ namespace GxControl
             this.Controls.Add(this.textBox1);
             this.Controls.Add(this.dateTimePicker1);
             this.Name = "GxDateInput";
-            this.Size = new System.Drawing.Size(117, 23);
+            this.Size = new System.Drawing.Size(111, 23);
             this.Leave += new System.EventHandler(this.GxDateInput_Leave);
             this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.GxDateInput_MouseMove);
             this.ResumeLayout(false);

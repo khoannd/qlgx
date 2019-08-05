@@ -64,10 +64,10 @@
             this.gxGroupBox4.BackColor = System.Drawing.Color.AliceBlue;
             this.gxGroupBox4.Controls.Add(this.label1);
             this.gxGroupBox4.Controls.Add(this.gxCommand1);
-            this.gxGroupBox4.Location = new System.Drawing.Point(0, 483);
+            this.gxGroupBox4.Location = new System.Drawing.Point(0, 516);
             this.gxGroupBox4.Name = "gxGroupBox4";
-            this.gxGroupBox4.Size = new System.Drawing.Size(991, 51);
-            this.gxGroupBox4.TabIndex = 3;
+            this.gxGroupBox4.Size = new System.Drawing.Size(830, 51);
+            this.gxGroupBox4.TabIndex = 2;
             // 
             // label1
             // 
@@ -84,7 +84,7 @@
             this.gxCommand1.AllowHotkey = false;
             this.gxCommand1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.gxCommand1.DisplayMode = GxGlobal.DisplayMode.Full;
-            this.gxCommand1.Location = new System.Drawing.Point(809, 0);
+            this.gxCommand1.Location = new System.Drawing.Point(648, 0);
             this.gxCommand1.Name = "gxCommand1";
             this.gxCommand1.OKIsAccept = false;
             this.gxCommand1.Size = new System.Drawing.Size(174, 45);
@@ -104,8 +104,8 @@
             this.gxGroupBox2.Controls.Add(this.gxGroupBox3);
             this.gxGroupBox2.Location = new System.Drawing.Point(0, 128);
             this.gxGroupBox2.Name = "gxGroupBox2";
-            this.gxGroupBox2.Size = new System.Drawing.Size(991, 360);
-            this.gxGroupBox2.TabIndex = 2;
+            this.gxGroupBox2.Size = new System.Drawing.Size(830, 393);
+            this.gxGroupBox2.TabIndex = 1;
             this.gxGroupBox2.Text = "Các thành viên trong hội đoàn";
             // 
             // gxGroupBox5
@@ -114,8 +114,8 @@
             this.gxGroupBox5.Dock = System.Windows.Forms.DockStyle.Fill;
             this.gxGroupBox5.Location = new System.Drawing.Point(3, 63);
             this.gxGroupBox5.Name = "gxGroupBox5";
-            this.gxGroupBox5.Size = new System.Drawing.Size(985, 294);
-            this.gxGroupBox5.TabIndex = 1;
+            this.gxGroupBox5.Size = new System.Drawing.Size(824, 327);
+            this.gxGroupBox5.TabIndex = 2;
             // 
             // gxGiaoDanList1
             // 
@@ -141,8 +141,9 @@
             this.gxGiaoDanList1.RowHeaderContent = Janus.Windows.GridEX.RowHeaderContent.RowPosition;
             this.gxGiaoDanList1.RowHeaders = Janus.Windows.GridEX.InheritableBoolean.True;
             this.gxGiaoDanList1.SelectionMode = Janus.Windows.GridEX.SelectionMode.MultipleSelection;
-            this.gxGiaoDanList1.Size = new System.Drawing.Size(979, 283);
-            this.gxGiaoDanList1.TabIndex = 0;
+            this.gxGiaoDanList1.Size = new System.Drawing.Size(818, 316);
+            this.gxGiaoDanList1.TabIndex = 4;
+            this.gxGiaoDanList1.TabStop = false;
             this.gxGiaoDanList1.VisualStyle = Janus.Windows.GridEX.VisualStyle.Office2003;
             this.gxGiaoDanList1.WhereSQL = "";
             this.gxGiaoDanList1.SelectionChanged += new System.EventHandler(this.gxGiaoDanList1_SelectionChanged);
@@ -153,7 +154,7 @@
             this.gxGroupBox3.Dock = System.Windows.Forms.DockStyle.Top;
             this.gxGroupBox3.Location = new System.Drawing.Point(3, 16);
             this.gxGroupBox3.Name = "gxGroupBox3";
-            this.gxGroupBox3.Size = new System.Drawing.Size(985, 47);
+            this.gxGroupBox3.Size = new System.Drawing.Size(824, 47);
             this.gxGroupBox3.TabIndex = 0;
             // 
             // gxAddEdit1
@@ -195,7 +196,7 @@
             this.gxGroupBox1.Dock = System.Windows.Forms.DockStyle.Top;
             this.gxGroupBox1.Location = new System.Drawing.Point(0, 0);
             this.gxGroupBox1.Name = "gxGroupBox1";
-            this.gxGroupBox1.Size = new System.Drawing.Size(991, 122);
+            this.gxGroupBox1.Size = new System.Drawing.Size(830, 122);
             this.gxGroupBox1.TabIndex = 0;
             this.gxGroupBox1.Text = "Thông tin hội đoàn";
             // 
@@ -203,10 +204,11 @@
             // 
             this.cbThongKe.AutoSize = true;
             this.cbThongKe.ForeColor = System.Drawing.SystemColors.HotTrack;
-            this.cbThongKe.Location = new System.Drawing.Point(81, 95);
+            this.cbThongKe.Location = new System.Drawing.Point(83, 95);
             this.cbThongKe.Name = "cbThongKe";
             this.cbThongKe.Size = new System.Drawing.Size(169, 17);
             this.cbThongKe.TabIndex = 11;
+            this.cbThongKe.TabStop = false;
             this.cbThongKe.Text = "Danh sách tất cả các hội viên";
             this.cbThongKe.UseVisualStyleBackColor = true;
             this.cbThongKe.CheckedChanged += new System.EventHandler(this.cbThongKe_CheckedChanged);
@@ -219,11 +221,11 @@
             this.dtNgayThanhLap.FullInputRequired = false;
             this.dtNgayThanhLap.IsNullDate = false;
             this.dtNgayThanhLap.Label = "Ngày thành lập";
-            this.dtNgayThanhLap.Location = new System.Drawing.Point(177, 28);
+            this.dtNgayThanhLap.Location = new System.Drawing.Point(138, 28);
             this.dtNgayThanhLap.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.dtNgayThanhLap.Name = "dtNgayThanhLap";
             this.dtNgayThanhLap.Size = new System.Drawing.Size(210, 26);
-            this.dtNgayThanhLap.TabIndex = 10;
+            this.dtNgayThanhLap.TabIndex = 1;
             this.dtNgayThanhLap.Value = "05/04/2009";
             // 
             // dtNgayBonMang
@@ -234,11 +236,11 @@
             this.dtNgayBonMang.FullInputRequired = false;
             this.dtNgayBonMang.IsNullDate = false;
             this.dtNgayBonMang.Label = "Ngày bổn mạng";
-            this.dtNgayBonMang.Location = new System.Drawing.Point(473, 28);
+            this.dtNgayBonMang.Location = new System.Drawing.Point(359, 28);
             this.dtNgayBonMang.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.dtNgayBonMang.Name = "dtNgayBonMang";
-            this.dtNgayBonMang.Size = new System.Drawing.Size(221, 26);
-            this.dtNgayBonMang.TabIndex = 10;
+            this.dtNgayBonMang.Size = new System.Drawing.Size(198, 26);
+            this.dtNgayBonMang.TabIndex = 2;
             this.dtNgayBonMang.Value = "05/04/2009";
             // 
             // txtThanhBonMang
@@ -248,7 +250,7 @@
             this.txtThanhBonMang.BoxLeft = 0;
             this.txtThanhBonMang.EditEnabled = true;
             this.txtThanhBonMang.Label = "Thánh bổn mạng";
-            this.txtThanhBonMang.Location = new System.Drawing.Point(381, 62);
+            this.txtThanhBonMang.Location = new System.Drawing.Point(353, 62);
             this.txtThanhBonMang.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.txtThanhBonMang.MaxLength = 32767;
             this.txtThanhBonMang.MultiLine = false;
@@ -256,8 +258,8 @@
             this.txtThanhBonMang.NumberInputRequired = true;
             this.txtThanhBonMang.NumberMode = false;
             this.txtThanhBonMang.ReadOnly = false;
-            this.txtThanhBonMang.Size = new System.Drawing.Size(290, 26);
-            this.txtThanhBonMang.TabIndex = 1;
+            this.txtThanhBonMang.Size = new System.Drawing.Size(258, 26);
+            this.txtThanhBonMang.TabIndex = 3;
             // 
             // txtTenHoiDoan
             // 
@@ -274,7 +276,7 @@
             this.txtTenHoiDoan.NumberInputRequired = true;
             this.txtTenHoiDoan.NumberMode = false;
             this.txtTenHoiDoan.ReadOnly = false;
-            this.txtTenHoiDoan.Size = new System.Drawing.Size(364, 26);
+            this.txtTenHoiDoan.Size = new System.Drawing.Size(320, 26);
             this.txtTenHoiDoan.TabIndex = 0;
             // 
             // txtGhiChu
@@ -287,7 +289,7 @@
             this.txtGhiChu.BoxLeft = 0;
             this.txtGhiChu.EditEnabled = true;
             this.txtGhiChu.Label = "Ghi chú";
-            this.txtGhiChu.Location = new System.Drawing.Point(700, 13);
+            this.txtGhiChu.Location = new System.Drawing.Point(617, 28);
             this.txtGhiChu.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.txtGhiChu.MaxLength = 32767;
             this.txtGhiChu.MultiLine = true;
@@ -295,8 +297,8 @@
             this.txtGhiChu.NumberInputRequired = true;
             this.txtGhiChu.NumberMode = false;
             this.txtGhiChu.ReadOnly = false;
-            this.txtGhiChu.Size = new System.Drawing.Size(279, 89);
-            this.txtGhiChu.TabIndex = 2;
+            this.txtGhiChu.Size = new System.Drawing.Size(201, 60);
+            this.txtGhiChu.TabIndex = 4;
             // 
             // txtMaHoiDoan
             // 
@@ -313,14 +315,15 @@
             this.txtMaHoiDoan.NumberInputRequired = true;
             this.txtMaHoiDoan.NumberMode = false;
             this.txtMaHoiDoan.ReadOnly = true;
-            this.txtMaHoiDoan.Size = new System.Drawing.Size(158, 26);
-            this.txtMaHoiDoan.TabIndex = 0;
+            this.txtMaHoiDoan.Size = new System.Drawing.Size(117, 26);
+            this.txtMaHoiDoan.TabIndex = 10;
+            this.txtMaHoiDoan.TabStop = false;
             // 
             // frmHoiDoan
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(991, 531);
+            this.ClientSize = new System.Drawing.Size(830, 564);
             this.Controls.Add(this.gxGroupBox4);
             this.Controls.Add(this.gxGroupBox2);
             this.Controls.Add(this.gxGroupBox1);

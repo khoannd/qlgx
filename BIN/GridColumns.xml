@@ -53,7 +53,7 @@
   <tblColumnWidth>
     <key>frmDotBiTichList_gxDotBiTichList1</key>
     <columns>NgayBiTich,MoTa,LinhMuc,NoiBiTich,SoLuong</columns>
-    <widths>118,236,237,238,238</widths>
+    <widths>119,240,241,242,242</widths>
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmKiemTraGiaDinhList_gxGiaDinhList1</key>
@@ -62,13 +62,13 @@
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmGiaDinh_gxGiaoDanList1</key>
-    <columns>VaiTro,MaGiaoDan,TenThanh,HoTen,Phai,NgaySinh,NgayRuaToi,NgayRuocLe,NgayThemSuc,DaCoGiaDinh,HoTenCha,HoTenMe,TanTong,ConHoc,NgheNghiep,GhiChu,QuaDoi,DienThoai,DiaChi,TenGiaoHo,DaChuyenXu,TrinhDoVanHoa,TrinhDoChuyenMon,BietNgoaiNgu,NoiSinh,NoiRuaToi,NoiRuocLe,NoiThemSuc</columns>
-    <widths>80,50,80,150,50,80,80,80,80,50,100,100,50,50,100,200,50,80,200,80,50,100,80,29,56,77,60,60</widths>
+    <columns>GACH,VaiTro,MaGiaoDan,TenThanh,HoTen,Phai,NgaySinh,NgayRuaToi,NgayRuocLe,NgayThemSuc,DaCoGiaDinh,HoTenCha,HoTenMe,TanTong,ConHoc,NgheNghiep,GhiChu,QuaDoi,DienThoai,DiaChi,TenGiaoHo,DaChuyenXu,TrinhDoVanHoa,TrinhDoChuyenMon,BietNgoaiNgu,NoiSinh,NoiRuaToi,NoiRuocLe,NoiThemSuc</columns>
+    <widths>80,80,50,80,159,50,80,80,80,80,50,100,100,50,50,100,200,50,80,200,80,50,100,80,29,56,77,60,60</widths>
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmChonGiaoDan_gxGiaoDanList1</key>
     <columns>MaGiaoDan,TenThanh,HoTen,Phai,NgaySinh,NgayRuaToi,NgayRuocLe,NgayThemSuc,DaCoGiaDinh,HoTenCha,HoTenMe,TanTong,ConHoc,NgheNghiep,GhiChu,QuaDoi,DienThoai,DiaChi,TenGiaoHo,DaChuyenXu,TrinhDoVanHoa,TrinhDoChuyenMon,BietNgoaiNgu,NoiSinh,NoiRuaToi,NoiRuocLe,NoiThemSuc</columns>
-    <widths>50,80,150,50,74,80,80,80,50,100,100,50,50,100,200,50,80,200,80,50,100,80,50,60,60,60,60</widths>
+    <widths>50,80,244,50,74,80,80,80,50,100,100,50,50,100,200,50,80,200,80,50,100,80,50,60,60,60,60</widths>
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmGiaoDan_gxHonPhoiList1</key>
@@ -87,7 +87,7 @@
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmThongKeChung_gxGiaDinhList1</key>
-    <columns>MaGiaDinh,TenGiaDinh,TenChong,TenVo,SoLuong,DienThoai,DiaChi,TenGiaoHo,DienGiaDinh,GhiChu</columns>
+    <columns>MaGiaDinhRieng,TenGiaDinh,TenChong,TenVo,SoLuong,DienThoai,DiaChi,TenGiaoHo,DienGiaDinh,GhiChu</columns>
     <widths>70,100,200,200,80,80,100,80,100,200</widths>
   </tblColumnWidth>
   <tblColumnWidth>
@@ -113,7 +113,7 @@
   <tblColumnWidth>
     <key>frmLopGiaoLyList_gxHocSinhList1</key>
     <columns>SoThuTu,TenThanh,HoTen,Phai,NgaySinh,HoanThanh,GhiChuGLy,MaLop</columns>
-    <widths>50,90,150,50,80,100,180,8</widths>
+    <widths>60,109,182,61,98,122,220,8</widths>
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmLopGiaoLyList_gxGiaoLyVien1</key>
@@ -189,5 +189,10 @@
     <key>frmGiaoDan_gxListHistoryHoiDoan1</key>
     <columns>TenHoiDoan,NgayVaoHoiDoan,NgayRaHoiDoan,VaiTro</columns>
     <widths>200,210,210,226</widths>
+  </tblColumnWidth>
+  <tblColumnWidth>
+    <key>frmChuyenLop_gxHocSinhList1</key>
+    <columns>SoThuTu,TenThanh,HoTen,Phai,NgaySinh,HoanThanh,GhiChuGLy,Chon,MaGiaoDan</columns>
+    <widths>54,97,163,54,87,109,142,55,100</widths>
   </tblColumnWidth>
 </NewDataSet>
