@@ -1,0 +1,5 @@
+D:\Working\QLGX\QLGX_HIEP_20190810\BIN\ExcelReport.dll
+D:\Working\QLGX\QLGX_HIEP_20190810\BIN\ExcelReport.pdb
+D:\Working\QLGX\QLGX_HIEP_20190810\Source\ExcelReport\obj\Release\ExcelReport.csprojResolveAssemblyReference.cache
+D:\Working\QLGX\QLGX_HIEP_20190810\Source\ExcelReport\obj\Release\ExcelReport.dll
+D:\Working\QLGX\QLGX_HIEP_20190810\Source\ExcelReport\obj\Release\ExcelReport.pdb
