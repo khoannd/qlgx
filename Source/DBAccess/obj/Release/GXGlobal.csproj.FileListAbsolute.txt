@@ -1,7 +1,0 @@
-D:\Working\QLGX\QLGX_HIEP_20190810\BIN\GXGlobal.dll
-D:\Working\QLGX\QLGX_HIEP_20190810\BIN\GXGlobal.pdb
-D:\Working\QLGX\QLGX_HIEP_20190810\Source\DBAccess\obj\Release\GXGlobal.csprojResolveAssemblyReference.cache
-D:\Working\QLGX\QLGX_HIEP_20190810\Source\DBAccess\obj\Release\GxGlobal.Properties.Resources.resources
-D:\Working\QLGX\QLGX_HIEP_20190810\Source\DBAccess\obj\Release\GXGlobal.csproj.GenerateResource.Cache
-D:\Working\QLGX\QLGX_HIEP_20190810\Source\DBAccess\obj\Release\GXGlobal.dll
-D:\Working\QLGX\QLGX_HIEP_20190810\Source\DBAccess\obj\Release\GXGlobal.pdb

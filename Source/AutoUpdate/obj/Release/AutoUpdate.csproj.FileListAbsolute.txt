@@ -1,8 +1,0 @@
-D:\Working\QLGX\QLGX_HIEP_20190810\BIN\AutoUpdate.exe.config
-D:\Working\QLGX\QLGX_HIEP_20190810\BIN\AutoUpdate.exe
-D:\Working\QLGX\QLGX_HIEP_20190810\BIN\AutoUpdate.pdb
-D:\Working\QLGX\QLGX_HIEP_20190810\Source\AutoUpdate\obj\Release\AutoUpdate.frmProcess.resources
-D:\Working\QLGX\QLGX_HIEP_20190810\Source\AutoUpdate\obj\Release\AutoUpdate.Properties.Resources.resources
-D:\Working\QLGX\QLGX_HIEP_20190810\Source\AutoUpdate\obj\Release\AutoUpdate.csproj.GenerateResource.Cache
-D:\Working\QLGX\QLGX_HIEP_20190810\Source\AutoUpdate\obj\Release\AutoUpdate.exe
-D:\Working\QLGX\QLGX_HIEP_20190810\Source\AutoUpdate\obj\Release\AutoUpdate.pdb

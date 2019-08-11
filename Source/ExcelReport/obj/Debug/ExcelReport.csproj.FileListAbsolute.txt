@@ -1,7 +1,0 @@
-E:\Primas\qlgx\BIN\ExcelReport.dll
-E:\Primas\qlgx\BIN\ExcelReport.pdb
-E:\Primas\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.csprojAssemblyReference.cache
-E:\Primas\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.csproj.CoreCompileInputs.cache
-E:\Primas\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.csproj.CopyComplete
-E:\Primas\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.dll
-E:\Primas\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.pdb

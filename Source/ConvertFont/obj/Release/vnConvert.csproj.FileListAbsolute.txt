@@ -1,2 +1,0 @@
-D:\Working\QLGX\QLGX_HIEP_20190810\BIN\vnConvert.dll
-D:\Working\QLGX\QLGX_HIEP_20190810\Source\ConvertFont\obj\Release\vnConvert.dll
