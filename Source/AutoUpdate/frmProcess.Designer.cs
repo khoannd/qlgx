@@ -1,4 +1,4 @@
-namespace AutoUpdate
+﻿namespace AutoUpdate
 {
     partial class frmProcess
     {
@@ -28,6 +28,7 @@ namespace AutoUpdate
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmProcess));
             this.lblUpdating = new System.Windows.Forms.Label();
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
             this.btnClose = new System.Windows.Forms.Button();
@@ -38,9 +39,9 @@ namespace AutoUpdate
             this.lblUpdating.AutoSize = true;
             this.lblUpdating.Location = new System.Drawing.Point(13, 9);
             this.lblUpdating.Name = "lblUpdating";
-            this.lblUpdating.Size = new System.Drawing.Size(59, 13);
+            this.lblUpdating.Size = new System.Drawing.Size(213, 13);
             this.lblUpdating.TabIndex = 0;
-            this.lblUpdating.Text = "Updating...";
+            this.lblUpdating.Text = "Đang tiến hành cập nhật. Xin vui lòng đợi...";
             // 
             // progressBar1
             // 
@@ -70,10 +71,11 @@ namespace AutoUpdate
             this.Controls.Add(this.progressBar1);
             this.Controls.Add(this.lblUpdating);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "frmProcess";
-            this.Text = "Updating...";
+            this.Text = "Đang cập nhật...";
             this.Load += new System.EventHandler(this.frmProcess_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
