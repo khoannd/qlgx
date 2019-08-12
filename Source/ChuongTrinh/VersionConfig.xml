@@ -1,64 +1,37 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <application value="GiaoXu" xmlns="urn:newversion-schema">
-  <version-info value="3.2.0.2" display="3.2.2" exename="GiaoXu.exe">
+  <version-info value="3.2.0.1" display="3.2.1" exename="GiaoXu.exe">
     <info>
-      Các cập nhật phiên bản 3.2.2:
-      - Thêm chức năng quản lý Hội đoàn.
-
-      - Cập nhật chức năng quản lý thông tin Giáo Dân.
-      + Thêm ràng buộc nếu đã có nhập ngày rửa tội thì bắt buộc phải có tên thánh.
-      + Thêm 1 tab Hội đoàn có chức năng thêm giáo dân vào hội đoàn hoặc xem lại lịch sử tham gia hội đoàn của giáo dân.
-      + Sửa lỗi bấm phím tab ở các ô nhập ngày tháng, con trỏ không nhảy đến ô nhập tiếp theo.
-      + Sửa lỗi một số trường hợp một giáo dân đã được chọn lập gia đình nhưng mục "Đã có gia đình" không được chọn trong màn hình thông tin giáo dân.
-
-      - Cập nhật chức năng quản lý thông tin Gia Đình.
-      + Sửa lỗi khi người nam trong gia đình đã mất, chọn người nữ làm chủ hộ, chương trình luôn thông báo chọn chủ hộ khi cập nhật gia đình.
-      + Sửa lỗi khi chọn một thành viên trong gia đình lên làm chủ hộ, chương trình hiển thị lỗi khi lưu.
-      + Ràng buộc số tuổi phải lớn hơn 14 tuổi mới cho phép hôn phối hoặc thêm vào làm người nam, người nữ trong gia đình. Nếu người nam hoặc người nữ dưới 18 tuổi sẽ hiển thị cảnh báo.
-      + Thêm một số ràng buộc khác về việc một thành viên thuộc nhiều gia đình.
-      + Chỉ gạch bỏ những thành viên trong gia đình nếu thành viên đó đã được lập một gia đình mới với vai trò là người nam hoặc người nữ trong màn hình nhập gia đình.
-      + Khi thêm người nam hoặc người nữ vào màn hình nhập gia đình, nếu không có thông tin hôn phối thì không tự động cập nhật trạng thái đã lập gia đình cho người nam hoặc người nữ.
-      + Cập nhật lại chức năng chuyển xứ cho gia đình: Nếu thành viên gia đình đã có gia đình riêng hoặc đã vào danh sách lưu trữ thì sẽ không chuyển xứ cùng gia đình.
-      + Cập nhật lại cách tính số lượng thành viên trong gia đình ở màn hình danh sách gia đình.
-      * Đếm tất cả các thành viên với mọi vai trò. Trước đây chương trình chỉ tính các thành viên có vài trò là con.
-      * Không đếm các thành viên đã chuyển xứ, qua đời, có gia đình và ở trong gia đình khác (bị gạch đỏ trong danh sách thành viên gia đình).
-
-      - Quản lý giáo lý:
-      + Cho phép cập nhật thông tin giáo dân cho danh sách các học viên trong một lớp giáo lý.
-
-      - Màn hình thống kê:
-      + Sửa lỗi sau khi thống kê xong thì không xuất được danh sách kết qua ra Excel.
-      
       Các cập nhật phiên bản 3.2.1:
       - Sửa lỗi khi cập nhật gia đình/giáo dân thì bị mất hình ảnh đã lưu trước đó.
       - Chỉnh sửa mẫu in "Phiếu gia đình" trên MS Word cho giống với các mẫu trên MS Excel.
-      + Trước đây, các tùy chọn cho phiếu gia đình chỉ có tác dụng với mẫu trên MS Excel.
+	      + Trước đây, các tùy chọn cho phiếu gia đình chỉ có tác dụng với mẫu trên MS Excel.
       - Sửa lỗi mẫu in "Phiếu gia đình" trên MS Word không in ra được Mã giáo dân khi chọn tùy chọn "Thay số thứ tự bằng mã giáo dân".
       - Thêm các tùy chọn cho "Phiếu gia đình" như:
-      + In số bí tích bên dưới ngày nhận bí tích.
-      + In người đã đầu bên dưới ngày nhận bí tích.
-      + In người chứng hôn phối bên dưới ngày hôn phối.
-      + In tên cha mẹ (chỉ có với mẫu MS Excel).
+	      + In số bí tích bên dưới ngày nhận bí tích.
+	      + In người đã đầu bên dưới ngày nhận bí tích.
+	      + In người chứng hôn phối bên dưới ngày hôn phối.
+	      + In tên cha mẹ (chỉ có với mẫu MS Excel).
       - Phiếu gia đình luôn in ra các dòng trống cho đủ 8 dòng nếu số lượng thành viên trong gia đình không đủ 8 người.
       * Hiện tại mẫu in trên MS Word chưa được hoàn hảo như mẫu in trên Excel, tốc độ xuất phiếu gia đình trên MS Word cũng chậm hơn, khuyến khích sử dụng mẫu Excel cho phiếu gia đình.
-
+      
       Các cập nhật phiên bản 3.2:
       - Sửa lỗi in Phiếu gia đình in cả những người đã đưa vào hồ sơ lưu trữ hoặc đã lập gia đình.
       - Sửa mẫu in Phiếu gia đình trên MS Word.
       - Cho phép chọn mẫu in Phiếu gia đình bằng MS Word hoặc MS Excel.
-
+      
       Các cập nhật phiên bản 3.1:
       - Cho phép quản trị người dùng với nhiều vai trò khác nhau.
       - Cập nhật tính năng hiển thị ảnh cho cá nhân và gia đình.
       - Sửa lỗi đếm số thành viên trong gia đình (loại bỏ những thành viên đã có gia đình hoặc đã mất)
-      - Cập nhật thêm một số loại thống kê :
-      + Danh sách chủ hộ
-      + Danh sách gia trưởng
-      + Danh sách hiền mẫu
-      + Danh sách cao niên
-      + Danh sách giới trẻ
-      + Danh sách thiếu nhi
-      + Danh sách gia đình theo từng tình trạng hôn phối
+      - Cập nhật thêm một số loại thống kê : 
+          + Danh sách chủ hộ
+          + Danh sách gia trưởng
+          + Danh sách hiền mẫu
+          + Danh sách cao niên
+          + Danh sách giới trẻ
+          + Danh sách thiếu nhi
+          + Danh sách gia đình theo từng tình trạng hôn phối
       - Cập nhật tính năng : quản lý tài khoản người dùng, bảo mật
       - Bổ sung cho chức năng "Giới thiệu hôn phối": khi làm giấy giới thiệu hôn phối, đối tượng được giới thiệu sẽ được thêm vào danh sách giáo dân nếu người đó chưa có thông tin trong giáo xứ
       - Chỉnh sửa "Trình độ văn hóa".
@@ -68,7 +41,7 @@
       - Cho phép in phiếu lý gia đình hàng loạt
     </info>
     <downloadpath value="download.asp?opt=update">http://quanlygiaoxu.net/</downloadpath>
-    <dateupdate>2019-08-11</dateupdate>
-    <size>7.59</size>
+    <dateupdate>2018-12-30</dateupdate>
+    <size>1.2</size>
   </version-info>
 </application>
