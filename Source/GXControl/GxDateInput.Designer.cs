@@ -55,6 +55,7 @@ namespace GxControl
             this.txtYear.Leave += new System.EventHandler(this.txtYear_Leave);
             this.txtYear.MouseMove += new System.Windows.Forms.MouseEventHandler(this.txtYear_MouseMove);
             this.txtYear.Validating += new System.ComponentModel.CancelEventHandler(this.txtYear_Validating);
+            this.txtYear.Validated += new System.EventHandler(this.txtYear_Validated);
             // 
             // txtMonth
             // 
@@ -72,6 +73,7 @@ namespace GxControl
             this.txtMonth.Leave += new System.EventHandler(this.txtMonth_Leave);
             this.txtMonth.MouseMove += new System.Windows.Forms.MouseEventHandler(this.txtMonth_MouseMove);
             this.txtMonth.Validating += new System.ComponentModel.CancelEventHandler(this.txtMonth_Validating);
+            this.txtMonth.Validated += new System.EventHandler(this.txtMonth_Validated);
             // 
             // txtDay
             // 
@@ -89,6 +91,7 @@ namespace GxControl
             this.txtDay.Leave += new System.EventHandler(this.txtDay_Leave);
             this.txtDay.MouseMove += new System.Windows.Forms.MouseEventHandler(this.txtDay_MouseMove);
             this.txtDay.Validating += new System.ComponentModel.CancelEventHandler(this.txtDay_Validating);
+            this.txtDay.Validated += new System.EventHandler(this.txtDay_Validated);
             // 
             // label2
             // 

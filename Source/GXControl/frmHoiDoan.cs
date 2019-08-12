@@ -129,8 +129,23 @@ namespace GxControl
             reloaddata(SqlConstants.SELECT_LIST_HOIVIEN_HOIDOAN);
             tblcthd = Memory.GetData(SqlConstants.SELECT_CHITIETHOIDOAN_BY_MAHOIDOAN, MaHoiDoan);
             reloadGrid();
+            gxAddEdit1.btnPrint.Click += BtnPrint_Click;
         }
-        
+
+        private void BtnPrint_Click(object sender, EventArgs e)
+        {
+            Janus.Windows.GridEX.Export.GridEXExporter ex = new Janus.Windows.GridEX.Export.GridEXExporter();
+            ex.GridEX =gxGiaoDanList1 ;
+
+            string filePath = System.IO.Path.GetRandomFileName() + ".xls";
+            filePath = Memory.GetTempPath(filePath);
+            System.IO.FileInfo file = new System.IO.FileInfo(filePath);
+            System.IO.FileStream stream = file.OpenWrite();
+            ex.Export((System.IO.Stream)stream);
+            stream.Close();
+            System.Diagnostics.Process.Start(filePath);
+        }
+
         public void reloaddata(string QueryString)
         {
             //Điều kiện 

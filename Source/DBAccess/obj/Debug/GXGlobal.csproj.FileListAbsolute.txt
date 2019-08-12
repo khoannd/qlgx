@@ -1,8 +1,0 @@
-E:\Primas\qlgx\BIN\GXGlobal.dll
-E:\Primas\qlgx\BIN\GXGlobal.pdb
-E:\Primas\qlgx\Source\DBAccess\obj\Debug\GxGlobal.Properties.Resources.resources
-E:\Primas\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csproj.GenerateResource.cache
-E:\Primas\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csproj.CoreCompileInputs.cache
-E:\Primas\qlgx\Source\DBAccess\obj\Debug\GXGlobal.csproj.CopyComplete
-E:\Primas\qlgx\Source\DBAccess\obj\Debug\GXGlobal.dll
-E:\Primas\qlgx\Source\DBAccess\obj\Debug\GXGlobal.pdb
