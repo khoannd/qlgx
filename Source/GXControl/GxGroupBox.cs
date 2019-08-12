@@ -15,7 +15,7 @@ namespace GxControl
             InitializeComponent();
         }
 
-        protected override void OnPaint(PaintEventArgs e)
+        protected override void OnPaint(PaintEventArgs e) 
         {
             try
             {

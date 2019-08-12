@@ -12,8 +12,6 @@ namespace GxControl
 {
     public partial class frmHoiDoan : frmBase
     {
-      
-      
         //row chọn để xem hoặc sửa từ danh sách hội đoàn
         public DataRow oldrow = null;
 
@@ -32,6 +30,7 @@ namespace GxControl
                 id = value;
             }
         }
+        
 
         public frmHoiDoan()
         {
@@ -45,55 +44,67 @@ namespace GxControl
             dtNgayThanhLap.DateInput.IsNullDate = true;
             //enable button Reload 
             gxAddEdit1.ReloadButton.Enabled = true;
+            gxAddEdit1.PrintButton.Visible = true;
+            gxAddEdit1.PrintButton.Enabled = true;
+
             //Bắt đầu format lại Grid
             gxGiaoDanList1.FormatGrid();
 
             //Cho phép sửa các cell trong grid
             gxGiaoDanList1.AllowEdit = InheritableBoolean.True;
-
-
+            //Dùng để format date dd/MM/yyyy
+            gxGiaoDanList1.CellUpdated += GxGiaoDanList1_CellUpdated;
             //Đóng tất cả các cột trong List Giáo dân không cho sửa.
             foreach (GridEXColumn col in gxGiaoDanList1.RootTable.Columns)
             {
                 col.EditType = EditType.NoEdit;
             }
 
-            GridEXColumn col1 = new GridEXColumn(ChiTietHoiDoanConst.NgayVaoHoiDoan);
-            col1.Width = 150;
+            GridEXColumn col1 = new GridEXColumn(ChiTietHoiDoanConst.NgayVaoHoiDoan,ColumnType.Text);
+            col1.Width = 110;
             col1.BoundMode = ColumnBoundMode.Bound;
             col1.DataMember = ChiTietHoiDoanConst.NgayVaoHoiDoan;
             col1.Caption = "Ngày vào hội đoàn";
             col1.FilterEditType = FilterEditType.Combo;
             col1.EditType = EditType.CalendarDropDown;
-            //col1.FormatMode = FormatMode.UseIFormattable;
-            //col1.DefaultGroupFormatMode = FormatMode.UseIFormattable;
-            //col1.DefaultGroupFormatString = "dd/MM/yyyy";
-            //col1.FormatString = "dd/MM/yyyy";
+            col1.FormatString = "dd/MM/yyyy";
+            col1.InputMask = "00/00/0000";
 
-
-            GridEXColumn col2 = new GridEXColumn(ChiTietHoiDoanConst.NgayRaHoiDoan);
-            col2.Width = 150;
+            GridEXColumn col2 = new GridEXColumn(ChiTietHoiDoanConst.NgayRaHoiDoan, ColumnType.Text);
+            col2.Width = 110;
             col2.BoundMode = ColumnBoundMode.Bound;
             col2.DataMember = ChiTietHoiDoanConst.NgayRaHoiDoan;
             col2.Caption = "Ngày ra hội đoàn";
             col2.FilterEditType = FilterEditType.Combo;
             col2.EditType = EditType.CalendarDropDown;
+            col2.FormatString = "dd/MM/yyyy";
+            col2.InputMask = "00/00/0000";
 
-            
+
             GridEXColumn col3 = new GridEXColumn(ChiTietHoiDoanConst.VaiTro);
             col3.HasValueList = true;
-            col3.Width = 150;
+            col3.Width = 110;
             col3.BoundMode = ColumnBoundMode.Bound;
             col3.DataMember = ChiTietHoiDoanConst.VaiTro;
             col3.Caption = "Vai trò";
             col3.FilterEditType = FilterEditType.Combo;
             col3.EditType = EditType.DropDownList;
             GridEXValueListItemCollection vl = col3.ValueList;
-            LoadDanhSachVaiTro(vl);
+            GxListHoiDoan.LoadVaiTroHoiDoan(vl);
+            
 
-            gxGiaoDanList1.RootTable.Columns.Insert(0, col1);
-            gxGiaoDanList1.RootTable.Columns.Insert(1, col2);
-            gxGiaoDanList1.RootTable.Columns.Insert(2, col3);
+            gxGiaoDanList1.RootTable.Columns.Insert(3, col1);
+            gxGiaoDanList1.RootTable.Columns.Insert(4, col2);
+            gxGiaoDanList1.RootTable.Columns.Insert(5, col3);
+
+            //Gạch những giáo dân đã ra khỏi hội đoàn
+            GridEXFormatCondition DaRa = new GridEXFormatCondition();
+            GridEXFilterCondition DK = new GridEXFilterCondition(gxGiaoDanList1.RootTable.Columns[ChiTietHoiDoanConst.NgayRaHoiDoan], ConditionOperator.NotIsEmpty," ");
+            DaRa.FilterCondition = DK;
+            DaRa.FormatStyle = new GridEXFormatStyle();
+            DaRa.FormatStyle.ForeColor = Color.Red;
+            DaRa.FormatStyle.FontStrikeout = TriState.True;
+            gxGiaoDanList1.RootTable.FormatConditions.Add(DaRa);
 
             // row này được lấy từ GxListHoiDoan. nếu thêm mới thì oldrow bằng null
             if (oldrow != null)
@@ -115,69 +126,81 @@ namespace GxControl
                  txtMaHoiDoan.TextBox.Text = id.ToString();
             }
             //Load data lên grid
-            reloaddata();
+            reloaddata(SqlConstants.SELECT_LIST_HOIVIEN_HOIDOAN);
             tblcthd = Memory.GetData(SqlConstants.SELECT_CHITIETHOIDOAN_BY_MAHOIDOAN, MaHoiDoan);
             reloadGrid();
+            gxAddEdit1.btnPrint.Click += BtnPrint_Click;
         }
-        public void reloaddata()
+
+        private void BtnPrint_Click(object sender, EventArgs e)
         {
-            //Câu truy vấn lấy danh sách thành viên hội đoàn
-            string QueryString = SqlConstants.SELECT_LIST_HOIVIEN_HOIDOAN;
+            Janus.Windows.GridEX.Export.GridEXExporter ex = new Janus.Windows.GridEX.Export.GridEXExporter();
+            ex.GridEX =gxGiaoDanList1 ;
+
+            string filePath = System.IO.Path.GetRandomFileName() + ".xls";
+            filePath = Memory.GetTempPath(filePath);
+            System.IO.FileInfo file = new System.IO.FileInfo(filePath);
+            System.IO.FileStream stream = file.OpenWrite();
+            ex.Export((System.IO.Stream)stream);
+            stream.Close();
+            System.Diagnostics.Process.Start(filePath);
+        }
+
+        public void reloaddata(string QueryString)
+        {
             //Điều kiện 
             object[] argument = { Convert.ToInt32(txtMaHoiDoan.TextBox.Text) };
 
             //Load data lên grid
             gxGiaoDanList1.LoadData(QueryString, argument);
         }
-        //Load vai trò
-        public void LoadDanhSachVaiTro(GridEXValueListItemCollection vl)
-        {
-            vl.Add("Trưởng hội đoàn", "Trưởng hội đoàn");
-            vl.Add("Phó hội đoàn", "Phó hội đoàn");
-            vl.Add("Thư ký", "Thư ký");
-            vl.Add("Hội viên", "Hội viên");
-        }
-
+     
+        
         private void gxCommand1_OnOK(object sender, EventArgs e)
         {
             try
             {
+                //Danh sách những thành viên chưa ra hội đoàn ở thời điểm trước update
+                DataTable tblHoiVien = Memory.GetData(SqlConstants.SELECT_LIST_HOIVIEN_HOIDOAN,txtMaHoiDoan.Text);
                 //Check input data
                 if (!CheckInputData()) return;
+                DataTable tblListHoiDoan = Memory.GetData("Select * from HoiDoan where MaHoiDoan <> ?",txtMaHoiDoan.Text);
+                foreach (DataRow row in tblListHoiDoan.Rows)
+                {
+                    if (txtTenHoiDoan.Text.Equals(row[HoiDoanConst.TenHoiDoan]))
+                    {
+                        DialogResult tl = MessageBox.Show(String.Concat("Hội đoàn " ,txtTenHoiDoan.Text , " đã tồn tại trong danh sách hội đoàn. " +
+                            "Bạn có muốn tiếp tục lấy tên này???\r\nNếu có chọn [Yes].\r\nNếu không chọn [No]."),
+                            "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+                        if (tl == DialogResult.No)
+                        {
+                            return;
+                        }
+                    }
+                }
              
                 //Check fill input data
                 DataTable tblCTHDGrid = (DataTable)gxGiaoDanList1.DataSource;
                 bool hasEmpty = false;
-                int CountRow = tblCTHDGrid.Rows.Count;
+                int CountRow = gxGiaoDanList1.RecordCount;
                 if (tblCTHDGrid != null && CountRow>0)
                 {
-                    for (int i=0;i< CountRow;i++)
+                    for (int i=0;i< CountRow; i++) 
                     {
-                        if (tblCTHDGrid.Rows[i].RowState!=DataRowState.Deleted)
+                        gxGiaoDanList1.Row = i;
+                        if (Memory.IsNullOrEmpty(gxGiaoDanList1.CurrentRow.Cells[ChiTietHoiDoanConst.NgayVaoHoiDoan].Text)&& Memory.IsNullOrEmpty(gxGiaoDanList1.CurrentRow.Cells[ChiTietHoiDoanConst.NgayRaHoiDoan].Text))
                         {
-                            gxGiaoDanList1.Row = i;
-                            if (Memory.IsNullOrEmpty(tblCTHDGrid.Rows[i][ChiTietHoiDoanConst.NgayVaoHoiDoan]))
-                            {
-                                hasEmpty = true;
-                                if (gxGiaoDanList1.CurrentRow.Cells[ChiTietHoiDoanConst.NgayVaoHoiDoan].FormatStyle == null)
-                                    gxGiaoDanList1.CurrentRow.Cells[ChiTietHoiDoanConst.NgayVaoHoiDoan].FormatStyle = new Janus.Windows.GridEX.GridEXFormatStyle();
-                                gxGiaoDanList1.CurrentRow.Cells[ChiTietHoiDoanConst.NgayVaoHoiDoan].FormatStyle.BackColor = Color.Red;
-                            }
-                            if (Memory.IsNullOrEmpty(tblCTHDGrid.Rows[i][ChiTietHoiDoanConst.VaiTro]))
-                            {
-                                hasEmpty = true;
-                                if (gxGiaoDanList1.CurrentRow.Cells[ChiTietHoiDoanConst.VaiTro].FormatStyle == null)
-                                    gxGiaoDanList1.CurrentRow.Cells[ChiTietHoiDoanConst.VaiTro].FormatStyle = new Janus.Windows.GridEX.GridEXFormatStyle();
-                                gxGiaoDanList1.CurrentRow.Cells[ChiTietHoiDoanConst.VaiTro].FormatStyle.BackColor = Color.Red;
-                            }
+                            hasEmpty = true;
+                            if (gxGiaoDanList1.CurrentRow.Cells[ChiTietHoiDoanConst.NgayVaoHoiDoan].FormatStyle == null)
+                                gxGiaoDanList1.CurrentRow.Cells[ChiTietHoiDoanConst.NgayVaoHoiDoan].FormatStyle = new Janus.Windows.GridEX.GridEXFormatStyle();
+                            gxGiaoDanList1.CurrentRow.Cells[ChiTietHoiDoanConst.NgayVaoHoiDoan].FormatStyle.BackColor = Color.Red;
                         }
                     }
-                    gxGiaoDanList1.Row = -3;
                 }
 
                 if(hasEmpty)
                 {
-                    DialogResult rs = MessageBox.Show("Có hội viên chưa nhập ngày vào hội hoặc vai trò." +
+                    DialogResult rs = MessageBox.Show("Có hội viên chưa nhập ngày vào hội." +
                         "\r\nBạn có muốn tiếp tục cập nhật danh sách hội đoàn không?\r\n" +
                         "Nhấp nút [Yes] để tiếp tục.\r\n" +
                         "Nhấp nút [No] để đóng màn hình mà không cập nhật danh sách\r\n" +
@@ -192,50 +215,119 @@ namespace GxControl
                         return;
                     }
                 }
+                //Kiểm tra trong database
                 // Lấy danh sách các hội viên đã ra khỏi hội đoàn.
-                DataTable tblcthd1 = Memory.GetData(SqlConstants.SELECT_CHITIETHOIDOAN_BY_MAHOIDOAN+" and NgayRaHoiDoan is not null", MaHoiDoan);
-               
-                //Kiểm tra dữ liệu ngày vào ngày ra của hội viên.
-                for (int i=0;i<CountRow;i++)
-                {
-                    if (tblCTHDGrid.Rows[i].RowState != DataRowState.Deleted)
-                    {
-                        gxGiaoDanList1.Row = i;
-                        
-                        if (!Memory.IsNullOrEmpty(tblCTHDGrid.Rows[i][ChiTietHoiDoanConst.NgayVaoHoiDoan]))
-                        {
-                            DataRow[] rows = tblcthd1.Select("MaGiaoDan = "+ tblCTHDGrid.Rows[i]["MaGiaoDan"].ToString(),"ID desc");
-                            
-                            if (rows!=null && rows.Length>0)
-                            {
-                                string a = tblCTHDGrid.Rows[i][ChiTietHoiDoanConst.NgayVaoHoiDoan].ToString();
-                                DateTime newNgayVaoHoiDoan = Memory.FormatStringToDateTime(a);
+                DataTable tblcthdLichSu = Memory.GetData(String.Concat(SqlConstants.SELECT_CHITIETHOIDOAN_BY_MAHOIDOAN, " and NgayRaHoiDoan is not null order by NgayRaHoiDoan is null"), MaHoiDoan);
 
-                                for (int j=0;j<rows.Length;j++)
-                                {
-                                    a = rows[j][ChiTietHoiDoanConst.NgayVaoHoiDoan].ToString();
-                                    DateTime oldNgayVaoHoiDoan = Memory.FormatStringToDateTime(a);
-                                    a = rows[j][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString();
-                                    DateTime oldNgayRaHoiDoan = Memory.FormatStringToDateTime(a);
-                                    if (DateTime.Compare(oldNgayVaoHoiDoan, newNgayVaoHoiDoan) <=0 && DateTime.Compare(newNgayVaoHoiDoan, oldNgayRaHoiDoan) <=0)
-                                    {
-                                        MessageBox.Show(String.Format("Từ ngày {0} đến ngày {1} giáo dân {2} đã ở trong hội đoàn rồi!!!!", 
-                                            rows[j][ChiTietHoiDoanConst.NgayVaoHoiDoan].ToString(), rows[j][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString(), rows[j][GiaoDanConst.HoTen].ToString()),
-                                            "Thông báo",MessageBoxButtons.OK,MessageBoxIcon.Warning);
-                                        return;
-                                    }
-                                }
+                //Kiểm tra ngày vào ngày ra của hội viên trong hội đoàn
+                foreach (DataRow row in tblCTHDGrid.Rows)
+                {
+                    //Kiểm tra hội viên hiện tại còn ở trong hội đoàn không 
+                    if (row.RowState != DataRowState.Deleted && row[GxConstants.EXISTED_COLUMN] is DBNull)   //Thêm mới
+                    {
+                        DataRow[] rows = tblHoiVien.Select(String.Concat("MaGiaoDan=", row[GiaoDanConst.MaGiaoDan].ToString()));
+                        if(rows!=null&& rows.Length>0)
+                        {
+                            MessageBox.Show(String.Concat("Giáo dân ",row[GiaoDanConst.HoTen].ToString()," đã có ở trong hội đoàn rồi.\r\n" +
+                                " Vui lòng tải lại danh sách hoặc xóa giáo dân ",row[GiaoDanConst.HoTen].ToString(),
+                                " ra khỏi lưới để làm việc tiếp"),"Thông báo lỗi",MessageBoxButtons.OK,
+                                MessageBoxIcon.Error,MessageBoxDefaultButton.Button1);
+                            return;
+                        }
+                    }
+
+                    //Những hội viên chưa xóa mới được kiểm tra
+                    if (row.RowState!= DataRowState.Deleted && row["Deleted"].ToString() != "0")
+                    {
+                        //Kiểm tra ngày ra không thể trước ngày vào
+                        if (!Memory.IsNullOrEmpty(row[ChiTietHoiDoanConst.NgayRaHoiDoan].ToString()) && !Memory.IsNullOrEmpty(row[ChiTietHoiDoanConst.NgayVaoHoiDoan].ToString()))
+                        {
+                            if (Memory.CompareTwoStringDate(row[ChiTietHoiDoanConst.NgayVaoHoiDoan].ToString(), row[ChiTietHoiDoanConst.NgayRaHoiDoan].ToString()) >= 0)
+                            {
+                                MessageBox.Show(String.Format("Vui lòng nhập lại ngày ra và ngày vào hội đoàn của giáo dân {0}." +
+                                    "\r\nNgày ra hội đoàn không thể trước hoặc bằng ngày vào hội đoàn.", 
+                                    row[GiaoDanConst.HoTen].ToString()), "Thông báo", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
                             }
                         }
-                        if (!Memory.IsNullOrEmpty(tblCTHDGrid.Rows[i][ChiTietHoiDoanConst.NgayRaHoiDoan]) && !Memory.IsNullOrEmpty(tblCTHDGrid.Rows[i][ChiTietHoiDoanConst.NgayVaoHoiDoan]))
+                        DataRow[] rowls = tblcthdLichSu.Select(String.Concat("MaGiaoDan=", row[GiaoDanConst.MaGiaoDan].ToString()));
+                        //Kiểm tra ngày vào 
+                        if (!Memory.IsNullOrEmpty(row[ChiTietHoiDoanConst.NgayVaoHoiDoan].ToString()))
                         {
-                            string a = tblCTHDGrid.Rows[i][ChiTietHoiDoanConst.NgayVaoHoiDoan].ToString();
-                            DateTime newNgayVaoHoiDoan = Memory.FormatStringToDateTime(a);
-                            a = tblCTHDGrid.Rows[i][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString();
-                            DateTime newNgayRaHoiDoan = Memory.FormatStringToDateTime(a);
-                            if (DateTime.Compare(newNgayVaoHoiDoan,newNgayRaHoiDoan) >= 0)
+                            //Kiểm tra xem ngày vào hội đoàn có lớn hơn ngày hiện tại không
+                            if (Memory.CompareTwoStringDate(row[ChiTietHoiDoanConst.NgayVaoHoiDoan].ToString(), DateTime.Now.ToString("dd/MM/yyyy")) > 0)
                             {
-                                 MessageBox.Show(String.Format("Vui lòng nhập lại ngày ra vào đoàn của giáo dân {0}.Ngày ra không thể trước ngày vào", tblCTHDGrid.Rows[i][GiaoDanConst.HoTen]), "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                DialogResult tl = MessageBox.Show(String.Format("Vui lòng nhập lại ngày vào hội đoàn của giáo dân {0}." +
+                                    "\r\nNgày vào hội đoàn không thể sau ngày hiện tại được.\r\nChọn [Yes] để tiếp tục cập nhập." +
+                                    "\r\nChọn [No] để đóng màn hình và không cập nhập.\r\nChọn [Cancel] để quay lại chỉnh sửa", 
+                                    row[GiaoDanConst.HoTen].ToString()), "Thông báo", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+                                if (tl == DialogResult.No)
+                                {
+                                    this.Close();
+                                    return;
+                                }
+                                if (tl == DialogResult.Cancel)
+                                {
+                                    return;
+                                }
+                            }
+                            //Kiểm tra ngày vào hội đoàn có trước ngày thành lập hội đoàn không.
+                            if (!Memory.IsNullOrEmpty(dtNgayThanhLap.Value.ToString()))
+                            {
+                                if (Memory.CompareTwoStringDate(dtNgayThanhLap.Value.ToString(), row[ChiTietHoiDoanConst.NgayVaoHoiDoan].ToString()) > 0)
+                                {
+                                    MessageBox.Show(String.Format("Vui lòng kiểm tra lại ngày vào hội đoàn của giáo dân {0} ngày vào hội đoàn không thể trước ngày thành lập hội đoàn {1}",
+                                        row[GiaoDanConst.HoTen].ToString(), dtNgayThanhLap.Value.ToString()), "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1);
+                                    return;
+                                }
+                            }
+                            //Kiêm tra ngày vào của giáo dân có trước ngày ra đoàn lần cuối cùng không
+                            if (rowls != null&& rowls.Length>0)
+                            if (Memory.CompareTwoStringDate(rowls[0][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString(), row[ChiTietHoiDoanConst.NgayVaoHoiDoan].ToString()) >= 0)
+                            {
+                                MessageBox.Show(String.Format("Giáo dân {0} đã từng ở trong hội đoàn và ngày gần nhất ra khỏi hội đoàn là {1}.!!!!\r\nNgày vào hội đoàn không thể trước hoặc bằng ngày {2} được. Vui lòng kiểm tra lại.",
+                              rowls[0][GiaoDanConst.HoTen].ToString(), rowls[0][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString(), rowls[0][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString()),
+                              "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                        }
+                        //Kiểm tra ngày ra 
+                        if (!Memory.IsNullOrEmpty(row[ChiTietHoiDoanConst.NgayRaHoiDoan].ToString()))
+                        {
+                            //Kiểm tra xem ngày ra hội đoàn có lớn hơn ngày hiện tại không
+                            if (Memory.CompareTwoStringDate(row[ChiTietHoiDoanConst.NgayRaHoiDoan].ToString(), DateTime.Now.ToString("dd/MM/yyyy")) > 0)
+                            {
+                                DialogResult tl = MessageBox.Show(String.Format("Vui lòng nhập lại ngày ra hội đoàn của giáo dân {0}.\r\nNgày ra hội đoàn không thể sau ngày hiện tại được.\r\nChọn [Yes] để tiếp tục cập nhập.\r\nChọn [No] để đóng màn hình và không cập nhập.\r\nChọn [Cancel] để quay lại chỉnh sửa",
+                                    row[GiaoDanConst.HoTen].ToString()), "Thông báo", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+                                if (tl == DialogResult.No)
+                                {
+                                    this.Close();
+                                    return;
+                                }
+                                if (tl == DialogResult.Cancel)
+                                {
+                                    return;
+                                }
+                            }
+                            //Kiểm tra ngày ra hội đoàn có trước ngày thành lập hội đoàn không.
+                            if (!Memory.IsNullOrEmpty(dtNgayThanhLap.Value.ToString()))
+                            {
+                                if (Memory.CompareTwoStringDate(dtNgayThanhLap.Value.ToString(), row[ChiTietHoiDoanConst.NgayRaHoiDoan].ToString()) > 0)
+                                {
+                                    MessageBox.Show(String.Format("Vui lòng kiểm tra lại ngày ra hội đoàn của giáo dân {0} ngày ra hội đoàn không thể trước ngày thành lập hội đoàn {1}",
+                                        row[GiaoDanConst.HoTen].ToString(), dtNgayThanhLap.Value.ToString()), "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1);
+                                    return;
+                                }
+                            }
+                            //Kiểm tra ngày ra của giáo dân có trước ngày ra đoàn lần cuối cùng không
+                            if (rowls != null&& rowls.Length>0)
+                            if (Memory.CompareTwoStringDate(rowls[0][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString(), row[ChiTietHoiDoanConst.NgayRaHoiDoan].ToString()) >= 0)
+                            {
+                                MessageBox.Show(String.Format("Giáo dân {0} đã từng ở trong hội đoàn và ngày gần nhất ra khỏi hội đoàn là {1}.!!!!\r\n" +
+                                    "Ngày ra hội đoàn không thể trước hoặc bằng ngày {2} được. Vui lòng kiểm tra lại.",
+                              rowls[0][GiaoDanConst.HoTen].ToString(), rowls[0][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString(), rowls[0][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString()),
+                              "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                                 return;
                             }
                         }
@@ -269,13 +361,14 @@ namespace GxControl
                         }
                     }
                 }
+                tblcthd = Memory.GetData(SqlConstants.SELECT_CHITIETHOIDOAN_BY_MAHOIDOAN, MaHoiDoan);
                 //Update Chi tiết hội đoàn
-                foreach(DataRow row in tblCTHDGrid.Rows)
+                foreach (DataRow row in tblCTHDGrid.Rows)
                 {
                     if(row.RowState==DataRowState.Deleted)
                     {
-                        Memory.ExecuteSqlCommand("Delete form ChiTietHoiDoan where NgayVaoHoiDoan is null " +
-                            "and NgayRaHoiDoan is null and MaGiaoDan = "+row[GiaoDanConst.MaGiaoDan]);
+                        row.RejectChanges();
+                        Memory.ExecuteSqlCommand(String.Concat("Delete from ChiTietHoiDoan where NgayRaHoiDoan is null and MaGiaoDan = ",row[GiaoDanConst.MaGiaoDan]," and MaHoiDoan = ",txtMaHoiDoan.Text));
                         continue;
                     }
                     //Thêm vào bảng chi tiết
@@ -287,8 +380,11 @@ namespace GxControl
 
                     }else
                     {
-                        DataRow[] rows = tblcthd.Select("MaGiaoDan = " + row[GiaoDanConst.MaGiaoDan] + " and NgayRaHoiDoan is null");
-                        UpdateHoiVien(rows[0], row);
+                        if(row["Deleted"].ToString()!="0")
+                        {
+                            DataRow[] rows = tblcthd.Select(String.Concat("MaGiaoDan = ", row[GiaoDanConst.MaGiaoDan] + " and NgayRaHoiDoan is null"));
+                            UpdateHoiVien(rows[0], row);
+                        }
                     }
                 }
 
@@ -299,27 +395,29 @@ namespace GxControl
                 Memory.UpdateDataSet(ds);
                 if (Memory.ShowError())
                 {
-                    MessageBox.Show("Update thất bại");
+                    MessageBox.Show("Update thất bại vui lòng kiểm tra lại hoặc liên hệ nhà cung cấp. Xin cảm ơn!");
                 }
                 this.Close();
             }
             catch (Exception)
             {
-                MessageBox.Show("Update thất bại");
-                throw;
+                MessageBox.Show("Update thất bại vui lòng kiểm tra lại hoặc liên hệ nhà cung cấp. Xin cảm ơn!");
+                this.Close();
             }
         }
-       //Check input data
-       private bool CheckInputData()
+
+        //Check input data
+        private bool CheckInputData()
         {
             if (txtTenHoiDoan.Text.Trim() == "")
             {
-                MessageBox.Show("Vui lòng nhập tên hội đoàn");
+                MessageBox.Show("Vui lòng nhập tên hội đoàn","Thông báo",MessageBoxButtons.OK,MessageBoxIcon.Warning,MessageBoxDefaultButton.Button1);
+                txtTenHoiDoan.Focus();
                 return false;
             }
             if(gxGiaoDanList1.RowCount==0)
             {
-                MessageBox.Show("Cần có ít nhất 1 hội viên trong hội đoàn");
+                MessageBox.Show("Cần có ít nhất 1 hội viên trong hội đoàn", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1);
                 return false;
             }
             if (!ktHoiTruong()) return false;
@@ -329,7 +427,7 @@ namespace GxControl
        
         public void AssignDataSourceHoiDoan(DataRow row)
         {
-            row[HoiDoanConst.MaHoiDoan] = Convert.ToInt32(txtMaHoiDoan.TextBox.Text.ToString());
+            row[HoiDoanConst.MaHoiDoan] = Convert.ToInt32(MaHoiDoan);
             row[HoiDoanConst.TenHoiDoan] = txtTenHoiDoan.TextBox.Text.ToString();
             row[HoiDoanConst.ThanhBonMang] = txtThanhBonMang.TextBox.Text.ToString();
             row[HoiDoanConst.NgayBonMang] = dtNgayBonMang.Value.ToString();
@@ -341,7 +439,7 @@ namespace GxControl
         {
             try
             {
-                r1[HoiDoanConst.MaHoiDoan] = txtMaHoiDoan.TextBox.Text.ToString();
+                r1[HoiDoanConst.MaHoiDoan] = MaHoiDoan;
                 r1[GiaoDanConst.MaGiaoDan] = r2[GiaoDanConst.MaGiaoDan];
                 r1[ChiTietHoiDoanConst.NgayVaoHoiDoan] = r2[ChiTietHoiDoanConst.NgayVaoHoiDoan];
                 r1[ChiTietHoiDoanConst.NgayRaHoiDoan] = r2[ChiTietHoiDoanConst.NgayRaHoiDoan];
@@ -371,40 +469,53 @@ namespace GxControl
 
         public void insertDataGrid(frmBase frm)
         {
-            DataTable tbl = (DataTable)gxGiaoDanList1.DataSource;
-            if(tbl!=null)
+            try
             {
-                //Check input data
-
-                DataRow[] rows = tbl.Select("MaGiaoDan=" + frm.DataReturn[GiaoDanConst.MaGiaoDan].ToString()+" and NgayRaHoiDoan is null");
-                if(rows!=null && rows.Length>0)
+                DataTable tblTVHDGrid = (DataTable)gxGiaoDanList1.DataSource;
+                if (tblTVHDGrid != null)                                                                                    
                 {
-                    MessageBox.Show(String.Format("Giáo dân {0} đã tồn tại trong hội đoàn rồi !!!", frm.DataReturn[GiaoDanConst.HoTen].ToString()),
-                        "Thông báo",MessageBoxButtons.OK,MessageBoxIcon.Information,MessageBoxDefaultButton.Button1);
+                    //Check input data
+                    DataRow[] rows = tblTVHDGrid.Select(String.Concat("MaGiaoDan= " , frm.DataReturn[GiaoDanConst.MaGiaoDan].ToString(), " and Deleted=-1") );
+
+                    if (rows != null && rows.Length > 0)
+                    {
+                        if (!Memory.IsNullOrEmpty(rows[0][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString()))
+                        {
+                            MessageBox.Show(String.Format("Giáo dân {0} đang được sửa đổi vui lòng cập nhật rồi làm việc tiếp!!!", frm.DataReturn[GiaoDanConst.HoTen].ToString()),
+                            "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
+                            return;
+                        }
+                        MessageBox.Show(String.Format("Giáo dân {0} đã tồn tại trong hội đoàn rồi!!!", frm.DataReturn[GiaoDanConst.HoTen].ToString()),
+                            "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
+                        return;
+                    }
+                    frm.DataReturn.Table.Columns.Add(ChiTietHoiDoanConst.NgayVaoHoiDoan, typeof(string));
+                    frm.DataReturn.Table.Columns.Add(ChiTietHoiDoanConst.NgayRaHoiDoan, typeof(string));
+                    frm.DataReturn.Table.Columns.Add(ChiTietHoiDoanConst.VaiTro, typeof(string));
+                    frm.DataReturn.Table.Columns.Add("Deleted", typeof(string));
+                    frm.DataReturn[ChiTietHoiDoanConst.VaiTro] = "Hội viên";
+                    frm.DataReturn["Deleted"] = "-1";
+
+                    frm.DataReturn.AcceptChanges();
+                    frm.DataReturn.SetAdded();
+                    tblTVHDGrid.ImportRow(frm.DataReturn);
+                    gxGiaoDanList1.Row = gxGiaoDanList1.RowCount - 1;
                     return;
                 }
-                frm.DataReturn.Table.Columns.Add(ChiTietHoiDoanConst.NgayVaoHoiDoan, typeof(string));
-                frm.DataReturn.Table.Columns.Add(ChiTietHoiDoanConst.NgayRaHoiDoan, typeof(string));
-                frm.DataReturn.Table.Columns.Add(ChiTietHoiDoanConst.VaiTro, typeof(string));
-
-
-                frm.DataReturn.AcceptChanges();
-                frm.DataReturn.SetAdded();
-                tbl.ImportRow(frm.DataReturn);
-                gxGiaoDanList1.Row = gxGiaoDanList1.RowCount - 1;
-                return;
+            }catch
+            {
+                MessageBox.Show("Thêm giáo dân thất bại");
             }
         }
 
-        //Kiểm tra xem danh sách có hội trưởng chưa hoặc nhóm trưởng có nhiều hơn một người không.
+        //Kiểm tra xem danh sách có hội trưởng chưa hoặc hội trưởng có nhiều hơn một người không.
 
         public bool ktHoiTruong()
         {
            DataTable tbl = (DataTable)gxGiaoDanList1.DataSource;
            if(tbl != null && tbl.Rows.Count > 0)
             {
-                string query = String.Concat("VaiTro='", HoiDoanConst.TruongHoiDoan, "' and NgayRaHoiDoan is null");
-                DataRow[] rows = tbl.Select(query);
+                DataRow[] rows = tbl.Select(String.Concat("VaiTro='", HoiDoanConst.TruongHoiDoan, "' and NgayRaHoiDoan is null"));
                 if (rows != null && rows.Length > 0)
                 {
                     if (rows.Length > 1)
@@ -422,29 +533,19 @@ namespace GxControl
                        }
                         return false;
                     }
-                    if(!Memory.IsNullOrEmpty(rows[0][ChiTietHoiDoanConst.NgayRaHoiDoan].ToString()))
-                    {
-                        DialogResult tl = MessageBox.Show("Mỗi hội đoàn cần có một hội trưởng." +
-                      "\r\nChọn [Yes] để đóng màn hình và không cập nhập." +
-                      "\r\nChọn [No] để quay lại nhập dữ liệu, không đóng màn hình và không cập nhập." +
-                      "\r\nChọn [Cancel] để thoát.",
-                      "Nhắc nhở", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button3);
-                        if (tl == DialogResult.Yes)
-                        {
-                            this.Close();
-                            return false;
-                        }
-                        return false;
-                    }
                 }
                 else
                 {
                     DialogResult tl = MessageBox.Show("Mỗi hội đoàn cần có một hội trưởng." +
-                       "\r\nChọn [Yes] để đóng màn hình và không cập nhập." +
-                       "\r\nChọn [No] để quay lại nhập dữ liệu, không đóng màn hình và không cập nhập." +
-                       "\r\nChọn [Cancel] để thoát.",
+                       "\r\nChọn [Yes] để tiếp tục." +
+                       "\r\nChọn [No] để đóng màn hình và không cập nhập." +
+                       "\r\nChọn [Cancel] để quay lại chỉnh sửa dữ liệu.",
                        "Nhắc nhở", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button3);
                     if (tl == DialogResult.Yes)
+                    {
+                        return true;
+                    }
+                    if (tl == DialogResult.No)
                     {
                         this.Close();
                         return false;
@@ -452,69 +553,54 @@ namespace GxControl
                     return false;
                 }
             }
-            else
-            {
-                DialogResult tl = MessageBox.Show("Mỗi hội đoàn cần có một hội trưởng." +
-                       "\r\nChọn [Yes] để đóng màn hình và không cập nhập." +
-                       "\r\nChọn [No] để quay lại nhập dữ liệu, không đóng màn hình và không cập nhập." +
-                       "\r\nChọn [Cancel] để thoát.",
-                       "Thông báo", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Information, MessageBoxDefaultButton.Button3);
-                if (tl == DialogResult.Yes)
-                {
-                    this.Close();
-                    return true;
-                }
-                return false;
-            }
             return true;
         }
 
         private void gxAddEdit1_DeleteClick(object sender, EventArgs e)
         {
-           
-           if(gxGiaoDanList1.Row<0)
+            try
             {
-                MessageBox.Show("Vui lòng chọn hội viên để xóa");
-            }
-           else
-            {
-                if (gxGiaoDanList1.CurrentRow.DataRow != null)
+                if (gxGiaoDanList1.Row < 0)
                 {
-                    if(!Memory.IsNullOrEmpty(gxGiaoDanList1.CurrentRow.Cells[ChiTietHoiDoanConst.NgayRaHoiDoan].Text.ToString()))
+                    MessageBox.Show("Vui lòng chọn hội viên để xóa");
+                }
+                else
+                {
+                    if (gxGiaoDanList1.CurrentRow.DataRow != null)
                     {
-                        MessageBox.Show("Giáo dân này đã được xóa khỏi hội đoàn.");
-                        return;
-                    }
-                    if (!Memory.IsNullOrEmpty(gxGiaoDanList1.CurrentRow.Cells[ChiTietHoiDoanConst.NgayVaoHoiDoan].Text.ToString()))
-                    {
-                        DialogResult tl = MessageBox.Show("Bạn có thực sự muốn giáo dân ["
-                            + gxGiaoDanList1.CurrentRow.Cells[GiaoDanConst.HoTen].Text.ToString() + "] ra khỏi hội đoàn.\r\n" +
-                            "Chọn [Yes] để lấy ngày hiện tại làm ngày ra khỏi đoàn.\r\n" +
-                            "Chọn [No] để nhập ngày ra khỏi đoàn.\r\n" +
-                            "Chọn [Cancel] để thoát.",
-                            "Nhắc nhở", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button3);
-                        if (tl == DialogResult.Yes)
+                        if (!Memory.IsNullOrEmpty(gxGiaoDanList1.CurrentRow.Cells[ChiTietHoiDoanConst.NgayRaHoiDoan].Text.ToString()))
                         {
-                            gxGiaoDanList1.CurrentRow.Cells[ChiTietHoiDoanConst.NgayRaHoiDoan].Value = DateTime.Now.ToString("dd/MM/yyyy");
-                            gxGiaoDanList1.Row = -3;
+                            MessageBox.Show("Giáo dân này đang được chỉnh sửa hoặc là đã được xóa ra khỏi hội đoàn. Vui lòng kiểm tra lại");
                             return;
                         }
-                    }
-                    else
-                    {
-                        DialogResult tl = MessageBox.Show("Bạn có thực sự muốn XÓA giáo dân ["
-                            + gxGiaoDanList1.CurrentRow.Cells[GiaoDanConst.HoTen].Text.ToString() + "] ra khỏi hội đoàn.\r\n" +
-                            "Chọn [Yes] để xóa.\r\n" +
-                            "Chọn [No] để nhập ngày vào và ra khỏi đoàn.\r\n" +
-                            "Chọn [Cancel] để thoát.",
-                            "Nhắc nhở", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button3);
-                        if (tl == DialogResult.Yes)
+                        DialogResult tl = MessageBox.Show("Bạn có thực sự muốn giáo dân ["
+                                + gxGiaoDanList1.CurrentRow.Cells[GiaoDanConst.HoTen].Text.ToString() + "] ra khỏi hội đoàn vĩnh viễn.\r\n" +
+                                "Nếu có chọn [Yes] để xóa.\r\n" +
+                                "Nếu không chọn [No] để lấy ngày hiện tại làm ngày ra khỏi đoàn.\r\n" +
+                                "Chọn [Cancel] để thoát.",
+                                "Nhắc nhở", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button3);
+                        if(tl==DialogResult.Yes)
                         {
                             gxGiaoDanList1.CurrentRow.Delete();
+                            gxGiaoDanList1.Refetch();
+                            gxGiaoDanList1.Refresh();
+                            gxGiaoDanList1.Row = -2;
                             return;
                         }
+                        if(tl==DialogResult.No)
+                        {
+                            gxGiaoDanList1.CurrentRow.Cells[ChiTietHoiDoanConst.NgayRaHoiDoan].Value = DateTime.Now.ToString("dd/MM/yyyy");
+                            gxGiaoDanList1.Row = -2;
+                            return;
+                        }
+                        return;
                     }
                 }
+            }
+            catch (Exception)
+            {
+                MessageBox.Show("Xóa thất bại!");
+                this.Close();
             }
         }
 
@@ -525,7 +611,8 @@ namespace GxControl
 
         private void gxAddEdit1_ReloadClick(object sender, EventArgs e)
         {
-            reloaddata();
+            reloaddata(SqlConstants.SELECT_LIST_HOIVIEN_HOIDOAN);
+            cbThongKe.Checked = false;
         }
 
         private void gxGiaoDanList1_SelectionChanged(object sender, EventArgs e)
@@ -542,6 +629,30 @@ namespace GxControl
             }
             gxAddEdit1.DeleteButton.Enabled = true;
             gxAddEdit1.EditButton.Enabled = true;
+        }
+
+        private void cbThongKe_CheckedChanged(object sender, EventArgs e)
+        {
+            if(cbThongKe.Checked)
+            {
+                reloaddata(SqlConstants.SELECT_LIST_HISTORY_HOIVIEN_HOIDOAN);
+                return;
+            }
+            reloaddata(SqlConstants.SELECT_LIST_HOIVIEN_HOIDOAN);
+        }
+
+        private void GxGiaoDanList1_CellUpdated(object sender, ColumnActionEventArgs e)
+        {
+            if (e.Column.Caption.Equals("Ngày vào hội đoàn")|| e.Column.Caption.Equals("Ngày ra hội đoàn"))
+            {
+                string str = gxGiaoDanList1.CurrentRow.Cells[e.Column].Value.ToString();
+                if (!str.Equals(String.Empty))
+                {
+                    DateTime mdt = Convert.ToDateTime(str);
+                    str = String.Format("{0:dd/MM/yyyy}", mdt);
+                    gxGiaoDanList1.CurrentRow.Cells[e.Column].Value = str;
+                }
+            }
         }
     }
 }

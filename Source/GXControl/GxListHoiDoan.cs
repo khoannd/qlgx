@@ -29,6 +29,14 @@ namespace GxControl
         {
             base.LoadData();
         }
+        public static void LoadVaiTroHoiDoan(GridEXValueListItemCollection vl)
+        {
+            Dictionary<string,string> listvaitro= Memory.GetVaiTroHoiDoan();
+            foreach (var item in listvaitro)
+            {
+                vl.Add(item.Key,item.Value);
+            }
+        }
 
         public override void FormatGrid()
         {
@@ -92,6 +100,7 @@ namespace GxControl
                 throw;
             }
         }
+
 
         private void gxListHoiDoan_RowDoubleClick(object sender, RowActionEventArgs e)
         {
