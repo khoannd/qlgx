@@ -146,6 +146,12 @@
       <DependentUpon>frmXemGiaDinhGiaoDan.cs</DependentUpon>
     </Compile>
     <Compile Include="GenerateDotBiTichProcess.cs" />
+    <Compile Include="GxDayMonthField.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GxDayMonthField.Designer.cs">
+      <DependentUpon>GxDayMonthField.cs</DependentUpon>
+    </Compile>
     <Compile Include="GxDienGiaDinh.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -200,6 +206,12 @@
     </Compile>
     <Compile Include="GxListHoiDoan.Designer.cs">
       <DependentUpon>GxListHoiDoan.cs</DependentUpon>
+    </Compile>
+    <Compile Include="GxMaskInput.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GxMaskInput.Designer.cs">
+      <DependentUpon>GxMaskInput.cs</DependentUpon>
     </Compile>
     <Compile Include="GxNgoaiNgu.cs">
       <SubType>UserControl</SubType>
@@ -567,6 +579,9 @@
     <EmbeddedResource Include="frmXemGiaDinhGiaoDan.resx">
       <DependentUpon>frmXemGiaDinhGiaoDan.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="GxDayMonthField.resx">
+      <DependentUpon>GxDayMonthField.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="GxExtract.resx">
       <DependentUpon>GxExtract.cs</DependentUpon>
     </EmbeddedResource>
@@ -592,6 +607,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="GxListHoiDoan.resx">
       <DependentUpon>GxListHoiDoan.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="GxMaskInput.resx">
+      <DependentUpon>GxMaskInput.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="GxPictureField.resx">
       <DependentUpon>GxPictureField.cs</DependentUpon>

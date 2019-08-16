@@ -40,7 +40,7 @@ namespace GxControl
         private void frmHoiDoan_Load(object sender, EventArgs e)
         {
             //dt input null
-            dtNgayBonMang.DateInput.IsNullDate = true;
+            dmNgayBonMang.MaskInput.IsNullMask = true;
             dtNgayThanhLap.DateInput.IsNullDate = true;
             //enable button Reload 
             gxAddEdit1.ReloadButton.Enabled = true;
@@ -117,7 +117,7 @@ namespace GxControl
                 txtTenHoiDoan.TextBox.Text = oldrow["TenHoiDoan"].ToString();
                 txtThanhBonMang.TextBox.Text = oldrow["ThanhBonMang"].ToString();
                 dtNgayThanhLap.Value = oldrow["NgayThanhLap"].ToString();
-                dtNgayBonMang.Value = oldrow["NgayBonMang"].ToString();
+                dmNgayBonMang.Value = oldrow["NgayBonMang"].ToString();
                 txtGhiChu.TextBox.Text = oldrow["GhiChu"].ToString();
             }
             else
@@ -430,7 +430,7 @@ namespace GxControl
             row[HoiDoanConst.MaHoiDoan] = Convert.ToInt32(MaHoiDoan);
             row[HoiDoanConst.TenHoiDoan] = txtTenHoiDoan.TextBox.Text.ToString();
             row[HoiDoanConst.ThanhBonMang] = txtThanhBonMang.TextBox.Text.ToString();
-            row[HoiDoanConst.NgayBonMang] = dtNgayBonMang.Value.ToString();
+            row[HoiDoanConst.NgayBonMang] = dmNgayBonMang.Value.ToString();
             row[HoiDoanConst.NgayThanhLap] = dtNgayThanhLap.Value.ToString();
             row[HoiDoanConst.GhiChu] = txtGhiChu.TextBox.Text.ToString();
         }
@@ -653,6 +653,11 @@ namespace GxControl
                     gxGiaoDanList1.CurrentRow.Cells[e.Column].Value = str;
                 }
             }
+        }
+
+        private void gxGroupBox1_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

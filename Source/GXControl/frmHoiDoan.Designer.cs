@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmHoiDoan));
             this.gxGroupBox4 = new GxControl.GxGroupBox();
             this.label1 = new System.Windows.Forms.Label();
             this.gxCommand1 = new GxControl.GxCommand();
@@ -37,9 +38,9 @@
             this.gxGroupBox3 = new GxControl.GxGroupBox();
             this.gxAddEdit1 = new GxControl.GxAddEdit();
             this.gxGroupBox1 = new GxControl.GxGroupBox();
+            this.dmNgayBonMang = new GxControl.GxDayMonthField();
             this.cbThongKe = new GxControl.GxCheckBox();
             this.dtNgayThanhLap = new GxControl.GxDateField();
-            this.dtNgayBonMang = new GxControl.GxDateField();
             this.txtThanhBonMang = new GxControl.GxTextField();
             this.txtTenHoiDoan = new GxControl.GxTextField();
             this.txtGhiChu = new GxControl.GxTextField();
@@ -186,9 +187,9 @@
             // gxGroupBox1
             // 
             this.gxGroupBox1.BackColor = System.Drawing.Color.AliceBlue;
+            this.gxGroupBox1.Controls.Add(this.dmNgayBonMang);
             this.gxGroupBox1.Controls.Add(this.cbThongKe);
             this.gxGroupBox1.Controls.Add(this.dtNgayThanhLap);
-            this.gxGroupBox1.Controls.Add(this.dtNgayBonMang);
             this.gxGroupBox1.Controls.Add(this.txtThanhBonMang);
             this.gxGroupBox1.Controls.Add(this.txtTenHoiDoan);
             this.gxGroupBox1.Controls.Add(this.txtGhiChu);
@@ -199,6 +200,21 @@
             this.gxGroupBox1.Size = new System.Drawing.Size(830, 122);
             this.gxGroupBox1.TabIndex = 0;
             this.gxGroupBox1.Text = "Thông tin hội đoàn";
+            this.gxGroupBox1.Click += new System.EventHandler(this.gxGroupBox1_Click);
+            // 
+            // dmNgayBonMang
+            // 
+            this.dmNgayBonMang.AutoUpperFirstChar = false;
+            this.dmNgayBonMang.BoxLeft = 0;
+            this.dmNgayBonMang.EditEnabled = true;
+            this.dmNgayBonMang.IsNullMask = true;
+            this.dmNgayBonMang.Label = "Ngày bổn mạng";
+            this.dmNgayBonMang.Location = new System.Drawing.Point(188, 25);
+            this.dmNgayBonMang.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
+            this.dmNgayBonMang.Name = "dmNgayBonMang";
+            this.dmNgayBonMang.Size = new System.Drawing.Size(145, 29);
+            this.dmNgayBonMang.TabIndex = 1;
+            this.dmNgayBonMang.Value = ((object)(resources.GetObject("dmNgayBonMang.Value")));
             // 
             // cbThongKe
             // 
@@ -221,27 +237,12 @@
             this.dtNgayThanhLap.FullInputRequired = false;
             this.dtNgayThanhLap.IsNullDate = false;
             this.dtNgayThanhLap.Label = "Ngày thành lập";
-            this.dtNgayThanhLap.Location = new System.Drawing.Point(138, 28);
+            this.dtNgayThanhLap.Location = new System.Drawing.Point(360, 28);
             this.dtNgayThanhLap.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.dtNgayThanhLap.Name = "dtNgayThanhLap";
             this.dtNgayThanhLap.Size = new System.Drawing.Size(210, 26);
-            this.dtNgayThanhLap.TabIndex = 1;
+            this.dtNgayThanhLap.TabIndex = 2;
             this.dtNgayThanhLap.Value = "05/04/2009";
-            // 
-            // dtNgayBonMang
-            // 
-            this.dtNgayBonMang.AutoUpperFirstChar = false;
-            this.dtNgayBonMang.BoxLeft = 0;
-            this.dtNgayBonMang.EditEnabled = true;
-            this.dtNgayBonMang.FullInputRequired = false;
-            this.dtNgayBonMang.IsNullDate = false;
-            this.dtNgayBonMang.Label = "Ngày bổn mạng";
-            this.dtNgayBonMang.Location = new System.Drawing.Point(359, 28);
-            this.dtNgayBonMang.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-            this.dtNgayBonMang.Name = "dtNgayBonMang";
-            this.dtNgayBonMang.Size = new System.Drawing.Size(198, 26);
-            this.dtNgayBonMang.TabIndex = 2;
-            this.dtNgayBonMang.Value = "05/04/2009";
             // 
             // txtThanhBonMang
             // 
@@ -315,7 +316,7 @@
             this.txtMaHoiDoan.NumberInputRequired = true;
             this.txtMaHoiDoan.NumberMode = false;
             this.txtMaHoiDoan.ReadOnly = true;
-            this.txtMaHoiDoan.Size = new System.Drawing.Size(117, 26);
+            this.txtMaHoiDoan.Size = new System.Drawing.Size(143, 26);
             this.txtMaHoiDoan.TabIndex = 10;
             this.txtMaHoiDoan.TabStop = false;
             // 
@@ -362,9 +363,9 @@
         private GxGroupBox gxGroupBox5;
         private GxTextField txtThanhBonMang;
         private GxDateField dtNgayThanhLap;
-        private GxDateField dtNgayBonMang;
         private GxGiaoDanList gxGiaoDanList1;
         private GxCheckBox cbThongKe;
         private System.Windows.Forms.Label label1;
+        private GxDayMonthField dmNgayBonMang;
     }
 }
