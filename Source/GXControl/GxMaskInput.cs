@@ -243,14 +243,24 @@ namespace GxControl
             }
             if (ce.Cancel)
             {
-                FocusText();
+                isMonthError = true;
                 return;
             }
         }
 
         private void GxMaskInput_Leave(object sender, EventArgs e)
         {
+            if (isMonthError) return;
             CancelEventArgs ce = new CancelEventArgs();
+            if (ErrorMonth != null)
+            {
+                ErrorMonth(sender, ce);
+            }
+            if (ce.Cancel)
+            {
+                FocusText();
+                return;
+            }
             if(ErrorDate!=null)
             {
                 ErrorDate(sender, ce,true);
@@ -260,6 +270,5 @@ namespace GxControl
                 FocusText();
             }
         }
-       
     }
 }

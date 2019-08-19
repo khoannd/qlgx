@@ -56,12 +56,11 @@ namespace GxControl
                 {
                     if(day>30)
                     {
-                        gxMaskInput1.IsDayError = true;
-                        gxMaskInput1.IsMonthError = false;
+                        gxMaskInput1.IsMonthError = true;
                         ce.Cancel = true;
                         if (notice)
                         {
-                            MessageBox.Show("Hãy nhập ngày hợp lệ", "Thông báo lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            MessageBox.Show("Hãy nhập tháng hợp lệ", "Thông báo lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }
                         return;
                     }
@@ -71,11 +70,10 @@ namespace GxControl
                 if (day > 29)
                 {
                     ce.Cancel = true;
-                    gxMaskInput1.IsDayError = true;
-                    gxMaskInput1.IsMonthError = false;
+                    gxMaskInput1.IsMonthError = true;
                     if (notice)
                     {
-                        MessageBox.Show("Hãy nhập ngày hợp lệ", "Thông báo lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Hãy nhập tháng hợp lệ", "Thông báo lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                     return;
                 }
