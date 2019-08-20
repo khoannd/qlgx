@@ -29,7 +29,6 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>x86</PlatformTarget>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -39,7 +38,6 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>x86</PlatformTarget>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="AutoComplete, Version=1.0.4094.32818, Culture=neutral, processorArchitecture=MSIL">
@@ -132,11 +130,23 @@
     <Compile Include="frmHoiDoanList.Designer.cs">
       <DependentUpon>frmHoiDoanList.cs</DependentUpon>
     </Compile>
+    <Compile Include="frmCreateGiaoXu.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmCreateGiaoXu.Designer.cs">
+      <DependentUpon>frmCreateGiaoXu.cs</DependentUpon>
+    </Compile>
     <Compile Include="frmLogin.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="frmLogin.Designer.cs">
       <DependentUpon>frmLogin.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmProcessSyn.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmProcessSyn.Designer.cs">
+      <DependentUpon>frmProcessSyn.cs</DependentUpon>
     </Compile>
     <Compile Include="frmResetPWord.cs">
       <SubType>Form</SubType>
@@ -317,6 +327,9 @@
     <EmbeddedResource Include="frmAccoutList.resx">
       <DependentUpon>frmAccoutList.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="frmCreateGiaoXu.resx">
+      <DependentUpon>frmCreateGiaoXu.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="frmGopY.resx">
       <SubType>Designer</SubType>
       <DependentUpon>frmGopY.cs</DependentUpon>
@@ -334,6 +347,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="frmLogin.resx">
       <DependentUpon>frmLogin.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmProcessSyn.resx">
+      <DependentUpon>frmProcessSyn.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="frmResetPWord.resx">
       <DependentUpon>frmResetPWord.cs</DependentUpon>
@@ -451,6 +467,10 @@
       <Project>{9712914B-5500-4833-887B-2733F2B3FE97}</Project>
       <Name>GXGlobal</Name>
     </ProjectReference>
+    <ProjectReference Include="..\DongBoDuLieu\DongBoDuLieu.csproj">
+      <Project>{2ea639a3-1101-46f5-90a5-93a0e6f933a0}</Project>
+      <Name>DongBoDuLieu</Name>
+    </ProjectReference>
     <ProjectReference Include="..\ExcelReport\ExcelReport.csproj">
       <Project>{410FD24C-6FB4-4277-9D48-2415BF92D612}</Project>
       <Name>ExcelReport</Name>
@@ -465,7 +485,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="Resources\church_icon.jpg" />
   </ItemGroup>
   <ItemGroup>

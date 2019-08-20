@@ -14,6 +14,8 @@ using System.Configuration;
 using System.Net;
 using System.Collections.Specialized;
 using Newtonsoft.Json;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace GiaoXu
 {
@@ -61,7 +63,7 @@ namespace GiaoXu
             finally
             {
                 if (OnFinished != null) OnFinished(this, EventArgs.Empty);
-            }            
+            }
         }
 
         #region for check version and update
@@ -196,7 +198,7 @@ namespace GiaoXu
             string version = Memory.GetConfig(GxConstants.CF_CURRENT_DB_VERSION);
             if (version != "")
             {
-                
+
                 if (version == "2.0.0.0")
                 {
                     if (!isDbVersion2())
@@ -374,7 +376,7 @@ namespace GiaoXu
         private void createBackupData()
         {
             try
-            {
+            {         
                 int max = 40;
                 string maxBackup = Memory.GetConfig(GxConstants.CF_MAX_BACKUP);
                 if (Validator.IsNumber(maxBackup))
@@ -404,9 +406,13 @@ namespace GiaoXu
                     //    }
                     //}
                 }
-                //2018-08-13 Gia modify start
+                //2018/09/30 gnguyen start delete
+                //string fileName = "data" + System.DateTime.Now.ToString("yyyyMMddHH") + ".zip";
+                //2018/09/30 gnguyen end delete 
+                //2018/09/30 gnguyen start add
                 string fileName = "data" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".zip";
-                //2018-08-13 Gia modify end
+                //2018/09/30 gnguyen end add 
+             
 
                 if (!Directory.Exists(backupPath))
                 {
@@ -526,7 +532,216 @@ namespace GiaoXu
             //2018-08-01 Gia add end
         }
 
+        //2018/09/30 gnguyen start add
+        
+     
+        private string createrFileSyn()
+        {
+            string giaoxusynPath = Memory.AppPath + "sync\\";
+            if (!Directory.Exists(giaoxusynPath))
+            {
+                Directory.CreateDirectory(giaoxusynPath);
+            }
+            DataSet ds = new DataSet();
+            ds.Tables.AddRange(new DataTable[] {
+                Memory.GetData(SqlConstants.SELECT_ALLBiTichChiTiet,BiTichChiTietConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLCauHinh,CauHinhConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLChiTietLopGiaoLy,ChiTietLopGiaoLyConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLChuyenXu,ChuyenXuConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLDotBiTich,DotBiTichConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLDuLieuChung,DuLieuChungConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLGiaDinh,GiaDinhConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLGiaoDan,GiaoDanConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLGiaoDanHonPhoi,GiaoDanHonPhoiConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLGiaoHat,GiaoHatConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLGiaoHo,GiaoHoConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLGiaoLyVien,GiaoLyVienConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLGiaoPhan,GiaoPhanConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLGiaoXu,GiaoXuConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLHonPhoi,HonPhoiConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLKhoiGiaoLy,KhoiGiaoLyConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLLinhMuc,LinhMucConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLLopGiaoLy,LopGiaoLyConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLRaoHonPhoi,RaoHonPhoiConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLTanHien,TanHienConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLThanhVienGiaDinh,ThanhVienGiaDinhConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLVaiTro,VaiTroConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLTaiKhoan,TaiKhoanConst.TableName),
+                Memory.GetData(SqlConstants.SELECT_ALLTenLoaiTaiKhoan,TenLoaiTaiKhoanConst.TableName),
+            });
+            if (ds.Tables.Count>0)
+            {
+                foreach (DataTable item in ds.Tables)
+                {
+                    string temp = this.ToCSV(item);
+                    using (StreamWriter sw = new StreamWriter(giaoxusynPath + item.TableName + ".csv"))
+                    {
+                        sw.Write(temp);
+                    }
 
+                }
+                string fileName = "gxsyn" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".zip";
+                FastZip fzip = new FastZip();
+                fzip.CreateZip(giaoxusynPath + fileName, giaoxusynPath, false, @"\.csv$");
+                foreach (string sFile in System.IO.Directory.GetFiles(giaoxusynPath, "*.csv"))
+                {
+                    System.IO.File.Delete(sFile);
+                }
+                return giaoxusynPath + fileName;
+            }
+            return null;
+        }
+        private string ToCSV(DataTable table)
+        {
+            var result = new StringBuilder();
+            for (int i = 0; i < table.Columns.Count; i++)
+            {
+                result.Append(table.Columns[i].ColumnName);
+                result.Append(i == table.Columns.Count - 1 ? "\n" : ";");
+            }
+
+            foreach (DataRow row in table.Rows)
+            {
+                for (int i = 0; i < table.Columns.Count; i++)
+                {
+                   
+                    var value = row[i];
+                    if (value.GetType().Name=="String")
+                    {
+                        value = Regex.Replace(value.ToString(), @"(\s{2,})|\n", " ");
+                        
+                    }
+                    if (value.GetType().Name=="DateTime")
+                    {
+                        value = string.Format("{0:yyyy/MM/dd hh:mm:ss}", value);
+                    }
+                    result.Append(value);
+                    result.Append(i == table.Columns.Count - 1 ? "\n" : ";");
+                }
+            }
+
+            return result.ToString();
+        }
+       
+        private int insertInfoGXInFirstTime()
+        {
+            WebClient cl = new WebClient();
+            NameValueCollection infoGX = new NameValueCollection();
+            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOXU), GiaoXuConst.TableName, GiaoXuConst.MaGiaoXuRieng));
+            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOHAT), GiaoHatConst.TableName, GiaoHatConst.MaGiaoHatRieng));
+            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOPHAN), GiaoPhanConst.TableName, GiaoPhanConst.MaGiaoPhanRieng));
+            if (infoGX.Count > 0)
+            {
+                byte[] rs = cl.UploadValues(ConfigurationManager.AppSettings["SERVER"] + @"GiaoXuCL/insert", "post", infoGX);
+                string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
+                Dictionary<string, int> maID = JsonConvert.DeserializeObject<Dictionary<string, int>>(temp);
+                if (maID.Count > 0)
+                {
+                    if (maID.ContainsKey("IDGP"))
+                    {
+                        Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOPHANRIENG, new object[] { maID["IDGP"] });
+                    }
+                    if (maID.ContainsKey("IDGH"))
+                    {
+                        Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOHATRIENG, new object[] { maID["IDGH"] });
+                    }
+                    if (maID.ContainsKey("IDGX"))
+                    {
+                        Memory.SetMaGiaoXuRiengAllTable(maID["IDGX"]);
+                    }
+                    return maID["IDGX"];
+                }
+            }
+            return -1;
+
+        }
+        private NameValueCollection createrInfoTable(DataTable tbl, string nameTable, string nameCotRieng)
+        {
+            if (tbl != null && tbl.Rows.Count > 0)
+            {
+                NameValueCollection temp = new NameValueCollection();
+                int maRieng;
+                bool check = int.TryParse(tbl.Rows[0][nameCotRieng].ToString(), out maRieng);
+                if (!check)
+                {
+                    temp.Add(nameTable, "");
+                    foreach (DataColumn item in tbl.Columns)
+                    {
+                        temp.Add(nameTable + item.ColumnName, tbl.Rows[0][item].ToString());
+                    }
+                }
+                else
+                {
+                    temp.Add(nameTable + "Id", maRieng.ToString());
+                }
+                return temp;
+
+            }
+            return null;
+        }
+        
+        private void uploadFile(string fileName, string backupPath)
+        {
+
+            //2018-08-01 Gia add start
+            WebClient cl = new WebClient();
+            try
+            {
+                //upload to server
+                //get thong tin giaoxu
+                DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
+                if (tblGiaoXu != null && tblGiaoXu.Rows.Count > 0)
+
+                {
+                    int maGiaoXuRieng;
+                    bool check = int.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString(), out maGiaoXuRieng);
+                    if (!check)//Giao xu chưa có thông tin trên server
+                    {
+                        maGiaoXuRieng = insertInfoGXInFirstTime();
+                    }
+                    //check Last Upload
+                    DateTime lastUpload;
+                    check = DateTime.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.LastUpload].ToString(), out lastUpload);
+                    if (/*!check || DateTime.Now.Subtract(lastUpload).TotalDays > 1.0*/true)//last > 1 ngày
+                    {
+                        //check GX đã được duyệt
+                        string temp = cl.DownloadString(ConfigurationManager.AppSettings["SERVER"] + @"GiaoXuCL/checkStatus/" + maGiaoXuRieng);
+                        int duyet;
+                        check = int.TryParse(temp, out duyet);
+                        if (check)
+                        {
+                            if (duyet == 1)
+                            {
+                                //upload csv to server
+                                string pathFileSyn = this.createrFileSyn();
+                                cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + @"/SynFileCL/getFileSyn/" + maGiaoXuRieng, pathFileSyn);
+                                // upload file backup to server//lay ve time upload server
+                                byte[] rs = cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + @"BackupCL/uploadFile/" + maGiaoXuRieng, backupPath + fileName);
+                                temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
+                                check = DateTime.TryParse(temp, out lastUpload);
+                                if (check)
+                                {
+                                    Memory.ExecuteSqlCommand(SqlConstants.UPDATE_LASTUPLOAD, new object[] { lastUpload });
+                                }
+                            }
+                            else if (duyet == 0)
+                            {
+                                MessageBox.Show("Giáo xứ chưa được xác nhận trên server hệ thống\nKhông thể upload file backup", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            }
+                        }
+                    }
+
+                }
+            }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show("Không kết nối được với server\nKiểm tra kết nối mạng", "Lỗi Exception uploadfileServer", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+            //2018-08-01 Gia add end
+        }
+        //2018/09/30 gnguyen end add
         #endregion
     }
 }
