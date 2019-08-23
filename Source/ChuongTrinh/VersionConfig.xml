@@ -70,6 +70,7 @@
     <downloadpath value="download.asp?opt=update">http://quanlygiaoxu.net/</downloadpath>
     <dateupdate>2019-08-11</dateupdate>
     <size>7.59</size>
+  </version-info>
   <version-info value="2.1.3.0" display="3.1" exename="GiaoXu.exe">
     <info>
       <!--2018-07-18 Gia del start-->

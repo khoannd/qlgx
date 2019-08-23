@@ -26,12 +26,6 @@ namespace GxControl
         {
             combo.Focus();
         }
-
-        private void Label1_Click(object sender, EventArgs e)
-        {
-            combo.Focus();
-        }
-
         private void Combo_VisibleChanged(object sender, EventArgs e)
         {
             combo.SelectedIndex = -1;
