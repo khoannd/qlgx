@@ -425,7 +425,7 @@ namespace GiaoXu
                     fzip.CreateZip(backupPath + fileName, Memory.AppPath, false, "giaoxu.mdb");
                 }
                 //2018-08-08 Gia add start
-               // uploadFile(fileName, backupPath);
+                uploadFile(fileName, backupPath);
                 //2018-08-08 Gia add end
             }
             catch (Exception ex)
@@ -436,34 +436,42 @@ namespace GiaoXu
         //2018-08-14 Gia add start
         private int insertInfoGXInFirstTime()
         {
-            WebClient cl = new WebClient();
-            NameValueCollection infoGX = new NameValueCollection();
-            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOXU), GiaoXuConst.TableName, GiaoXuConst.MaGiaoXuRieng));
-            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOHAT), GiaoHatConst.TableName, GiaoHatConst.MaGiaoHatRieng));
-            infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOPHAN), GiaoPhanConst.TableName, GiaoPhanConst.MaGiaoPhanRieng));
-            if (infoGX.Count > 0)
+            try
             {
-                byte[] rs = cl.UploadValues(ConfigurationManager.AppSettings["SERVER"] + @"GiaoXuCL/insert", "post", infoGX);
-                string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
-                Dictionary<string, int> maID = JsonConvert.DeserializeObject<Dictionary<string, int>>(temp);
-                if (maID.Count > 0)
+                WebClient cl = new WebClient();
+                NameValueCollection infoGX = new NameValueCollection();
+                infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOXU), GiaoXuConst.TableName, GiaoXuConst.MaGiaoXuRieng));
+                infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOHAT), GiaoHatConst.TableName, GiaoHatConst.MaGiaoHatRieng));
+                infoGX.Add(createrInfoTable(Memory.GetData(SqlConstants.SELECT_GIAOPHAN), GiaoPhanConst.TableName, GiaoPhanConst.MaGiaoPhanRieng));
+                if (infoGX.Count > 0)
                 {
-                    if (maID.ContainsKey("IDGP"))
+                    byte[] rs = cl.UploadValues(ConfigurationManager.AppSettings["SERVER"] + @"GiaoXuCL/insert", "POST", infoGX);
+                    string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
+                    Dictionary<string, int> maID = JsonConvert.DeserializeObject<Dictionary<string, int>>(temp);
+                    if (maID.Count > 0)
                     {
-                        Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOPHANRIENG, new object[] { maID["IDGP"] });
+                        if (maID.ContainsKey("IDGP"))
+                        {
+                            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOPHANRIENG, new object[] { maID["IDGP"] });
+                        }
+                        if (maID.ContainsKey("IDGH"))
+                        {
+                            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOHATRIENG, new object[] { maID["IDGH"] });
+                        }
+                        if (maID.ContainsKey("IDGX"))
+                        {
+                            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOXURIENG, new object[] { maID["IDGX"] });
+                        }
+                        return maID["IDGX"];
                     }
-                    if (maID.ContainsKey("IDGH"))
-                    {
-                        Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOHATRIENG, new object[] { maID["IDGH"] });
-                    }
-                    if (maID.ContainsKey("IDGX"))
-                    {
-                        Memory.ExecuteSqlCommand(SqlConstants.UPDATE_MAGIAOXURIENG, new object[] { maID["IDGX"] });
-                    }
-                    return maID["IDGX"];
                 }
+                return -1;
             }
-            return -1;
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                throw;
+            }
 
         }
         private NameValueCollection createrInfoTable(DataTable tbl, string nameTable, string nameCotRieng)
