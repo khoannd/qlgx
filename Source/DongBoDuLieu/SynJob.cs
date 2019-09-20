@@ -56,12 +56,12 @@ namespace DongBoDuLieu
                 int maGiaoXuRieng;
                 int.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString(), out maGiaoXuRieng);
 
-                cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + @"/SynFileCL/getFileSyn/" + maGiaoXuRieng, pathFileSyn);
-                cl.DownloadString(ConfigurationManager.AppSettings["SERVER"] + @"/SynJobCL/excuteByMaGiaoXu/" + maGiaoXuRieng);
+                cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + @"SynFileCL/getFileSyn/" + maGiaoXuRieng, pathFileSyn);
+                cl.DownloadString(ConfigurationManager.AppSettings["SERVER"] + @"SynJobCL/excuteByMaGiaoXu/" + maGiaoXuRieng);
             }
             catch (System.Exception ex)
             {
-                MessageBox.Show("Quá trình đưa dữ liệu lên server bị lỗi", "Lỗi đồng bộ", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Quá trình đưa dữ liệu lên server bị lỗi\r\n"+ex.Message, "Lỗi đồng bộ", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 errorState = true;
                 return;
             }
@@ -107,8 +107,7 @@ namespace DongBoDuLieu
             GiaoDanCompare giaodan = new GiaoDanCompare(dir, "GiaoDan.csv");
             giaodan.getListGiaoHoTracks(giaoho.ListTracks);
             giaodan.importCacObject();//Chua Lam
-
-
+            
 
             GiaDinhCompare giadinh = new GiaDinhCompare(dir, "GiaDinh.csv");
             ThanhVienGiaDinhCompare thanhviengiadinh = new ThanhVienGiaDinhCompare(dir, "ThanhVienGiaDinh.csv");
@@ -179,6 +178,20 @@ namespace DongBoDuLieu
             CauHinhCompare cauhinh = new CauHinhCompare(dir, "CauHinh.csv");
             cauhinh.importCacObject();
         }
+        //gán tên cho table
+        public DataSet ListTable(string [,] stringListTable)
+        {
+            int CountTbl = (int)stringListTable.GetLongLength(0);  //Số table
+            DataSet ds = new DataSet();
+            DataTable tblex = new DataTable();
+            for(int i=0;i<CountTbl;i++)
+            {
+                tblex = Memory.GetData(stringListTable[i, 0], stringListTable[i, 1]);
+                tblex.TableName = stringListTable[i, 1];
+                ds.Tables.Add(tblex);
+            }
+            return ds;
+        }
         private string createrFileSyn()
         {
             string giaoxusynPath = Memory.AppPath + "sync\\";
@@ -186,41 +199,67 @@ namespace DongBoDuLieu
             {
                 Directory.CreateDirectory(giaoxusynPath);
             }
-            DataSet ds = new DataSet();
-            ds.Tables.AddRange(new DataTable[] {
-                Memory.GetData(SqlConstants.SELECT_ALLBiTichChiTiet,BiTichChiTietConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLCauHinh,CauHinhConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLChiTietLopGiaoLy,ChiTietLopGiaoLyConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLChuyenXu,ChuyenXuConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLDotBiTich,DotBiTichConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLDuLieuChung,DuLieuChungConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLGiaDinh,GiaDinhConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLGiaoDan,GiaoDanConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLGiaoDanHonPhoi,GiaoDanHonPhoiConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLGiaoHat,GiaoHatConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLGiaoHo,GiaoHoConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLGiaoLyVien,GiaoLyVienConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLGiaoPhan,GiaoPhanConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLGiaoXu,GiaoXuConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLHonPhoi,HonPhoiConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLKhoiGiaoLy,KhoiGiaoLyConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLLinhMuc,LinhMucConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLLopGiaoLy,LopGiaoLyConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLRaoHonPhoi,RaoHonPhoiConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLTanHien,TanHienConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLThanhVienGiaDinh,ThanhVienGiaDinhConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLVaiTro,VaiTroConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLTaiKhoan,TaiKhoanConst.TableName),
-                Memory.GetData(SqlConstants.SELECT_ALLTenLoaiTaiKhoan,TenLoaiTaiKhoanConst.TableName),
-            });
+            string[,] stringListTable = new string[,]
+            {
+                {SqlConstants.SELECT_ALLBiTichChiTiet,BiTichChiTietConst.TableName },
+                {SqlConstants.SELECT_ALLCauHinh,CauHinhConst.TableName },
+                {SqlConstants.SELECT_ALLChiTietLopGiaoLy,ChiTietLopGiaoLyConst.TableName },
+                {SqlConstants.SELECT_ALLChuyenXu,ChuyenXuConst.TableName },
+                {SqlConstants.SELECT_ALLDotBiTich,DotBiTichConst.TableName },
+                {SqlConstants.SELECT_ALLDuLieuChung,DuLieuChungConst.TableName },
+                {SqlConstants.SELECT_ALLGiaDinh,GiaDinhConst.TableName },
+                {SqlConstants.SELECT_ALLGiaoDan,GiaoDanConst.TableName },
+                {SqlConstants.SELECT_ALLGiaoDanHonPhoi,GiaoDanHonPhoiConst.TableName },
+                {SqlConstants.SELECT_ALLGiaoHat,GiaoHatConst.TableName },
+                {SqlConstants.SELECT_ALLGiaoHo,GiaoHoConst.TableName },
+                {SqlConstants.SELECT_ALLGiaoLyVien,GiaoLyVienConst.TableName },
+                {SqlConstants.SELECT_ALLGiaoPhan,GiaoPhanConst.TableName },
+                {SqlConstants.SELECT_ALLGiaoXu,GiaoXuConst.TableName },
+                {SqlConstants.SELECT_ALLHonPhoi,HonPhoiConst.TableName },
+                {SqlConstants.SELECT_ALLKhoiGiaoLy,KhoiGiaoLyConst.TableName },
+                {SqlConstants.SELECT_ALLLinhMuc,LinhMucConst.TableName },
+                {SqlConstants.SELECT_ALLLopGiaoLy,LopGiaoLyConst.TableName },
+                {SqlConstants.SELECT_ALLRaoHonPhoi,RaoHonPhoiConst.TableName },
+                {SqlConstants.SELECT_ALLTanHien,TanHienConst.TableName },
+                {SqlConstants.SELECT_ALLThanhVienGiaDinh,ThanhVienGiaDinhConst.TableName },
+                {SqlConstants.SELECT_ALLVaiTro,VaiTroConst.TableName },
+                {SqlConstants.SELECT_ALLTaiKhoan,TaiKhoanConst.TableName },
+                { SqlConstants.SELECT_ALLTenLoaiTaiKhoan,TenLoaiTaiKhoanConst.TableName }
+            };
+            DataSet ds = ListTable(stringListTable);
+            //DataSet ds = new DataSet();
+            //ds.Tables.AddRange(new DataTable[] {
+            //    Memory.GetData(SqlConstants.SELECT_ALLBiTichChiTiet, BiTichChiTietConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLCauHinh, CauHinhConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLChiTietLopGiaoLy, ChiTietLopGiaoLyConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLChuyenXu, ChuyenXuConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLDotBiTich, DotBiTichConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLDuLieuChung, DuLieuChungConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLGiaDinh, GiaDinhConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLGiaoDan, GiaoDanConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLGiaoDanHonPhoi, GiaoDanHonPhoiConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLGiaoHat, GiaoHatConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLGiaoHo, GiaoHoConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLGiaoLyVien, GiaoLyVienConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLGiaoPhan, GiaoPhanConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLGiaoXu, GiaoXuConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLHonPhoi, HonPhoiConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLKhoiGiaoLy, KhoiGiaoLyConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLLinhMuc, LinhMucConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLLopGiaoLy, LopGiaoLyConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLRaoHonPhoi, RaoHonPhoiConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLTanHien, TanHienConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLThanhVienGiaDinh, ThanhVienGiaDinhConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLVaiTro, VaiTroConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLTaiKhoan, TaiKhoanConst.TableName),
+            //    Memory.GetData(SqlConstants.SELECT_ALLTenLoaiTaiKhoan, TenLoaiTaiKhoanConst.TableName)
+            //});
             if (ds.Tables.Count > 0)
             {
                 foreach (DataTable item in ds.Tables)
                 {
                     WriteFileCSV(item, 0);
                     //ghi xong 1 table;
-
-
                 }
                 string fileName = "gxsyn" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".zip";
                 FastZip fzip = new FastZip();

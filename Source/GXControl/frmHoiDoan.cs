@@ -654,10 +654,5 @@ namespace GxControl
                 }
             }
         }
-
-        private void gxGroupBox1_Click(object sender, EventArgs e)
-        {
-
-        }
     }
 }

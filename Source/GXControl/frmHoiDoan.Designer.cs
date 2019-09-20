@@ -200,7 +200,6 @@
             this.gxGroupBox1.Size = new System.Drawing.Size(830, 122);
             this.gxGroupBox1.TabIndex = 0;
             this.gxGroupBox1.Text = "Thông tin hội đoàn";
-            this.gxGroupBox1.Click += new System.EventHandler(this.gxGroupBox1_Click);
             // 
             // dmNgayBonMang
             // 
