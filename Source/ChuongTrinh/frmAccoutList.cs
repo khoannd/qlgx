@@ -195,6 +195,23 @@ namespace GiaoXu
                     return false;
                 }
             }
+            //hiepdv begin add
+            if(cbPhanQuyen.SelectedIndex==0)
+            {
+                if (txtEmail.Text == "")
+                {
+                    MessageBox.Show("Vui lòng nhập Email", "Nhắc nhở", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtEmail.Focus();
+                    return false;
+                }
+                if (txtPhone.Text == "")
+                {
+                    MessageBox.Show("Vui lòng nhập số điện thoại", "Nhắc nhở", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtPhone.Focus();
+                    return false;
+                }
+            }
+            //hiepdv end add
             return true;
         }
         private void GxAddEdit_EditClick(object sender, EventArgs e)

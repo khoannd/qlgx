@@ -210,10 +210,14 @@ namespace GiaoXu
             {
                 // upload file backup to server
                 //lay ve time upload server
-                byte[] rs = cl.UploadFile(String.Concat(linkToServer,maGiaoXuRieng), String.Concat(linkToFolderInLocal,fileName));
-                string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
-                bool check = DateTime.TryParse(temp, out UploadDate);
-                return true;
+                if(File.Exists(String.Concat(linkToFolderInLocal,"/" ,fileName)))
+                {
+                    byte[] rs = cl.UploadFile(String.Concat(linkToServer, maGiaoXuRieng), String.Concat(linkToFolderInLocal, fileName));
+                    string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
+                    bool check = DateTime.TryParse(temp, out UploadDate);
+                    return true;
+                }
+                return false;
             }
             catch (Exception ex)
             {
@@ -225,7 +229,7 @@ namespace GiaoXu
         public void UploadFileAvatar()
         {
             DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
-            if(tblGiaoXu!=null &&tblGiaoXu.Rows.Count>0 && tblGiaoXu.Rows[0][GiaoXuConst.Hinh].ToString() != "church.jpg")
+            if(tblGiaoXu!=null &&tblGiaoXu.Rows.Count>0 && tblGiaoXu.Rows[0][GiaoXuConst.Hinh].ToString() != "church.jpg" && tblGiaoXu.Rows[0][GiaoXuConst.Hinh].ToString() != "")
             {
                 DateTime a;
                 UploadFileToServer(ConfigurationManager.AppSettings["SERVER"] + @"GiaoXuCL/uploadAvatar/", 
@@ -315,7 +319,7 @@ namespace GiaoXu
             }
             else
             {
-                if (tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString().Trim() == "" && tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuDoi].ToString().Trim() != "1")
+                if (tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString().Trim() == "" && tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuDoi].ToString().Trim() == "")
                 {
                     if (Memory.TestConnectToServer() && Memory.GetConfig(GxConstants.BACKUP_DATA_TO_SERVER) == "1" )
                     {
