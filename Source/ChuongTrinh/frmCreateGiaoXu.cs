@@ -25,7 +25,7 @@ namespace GiaoXu
         public frmCreateGiaoXu()
         {
             InitializeComponent();
-           // listView1.SelectedIndexChanged += ListView1_SelectedIndexChanged;
+            // listView1.SelectedIndexChanged += ListView1_SelectedIndexChanged;
             listView1.MouseDoubleClick += ListView1_MouseDoubleClick;
             Control.CheckForIllegalCrossThreadCalls = false;
         }
@@ -62,7 +62,7 @@ namespace GiaoXu
                 var responds = (HttpWebResponse)request.GetResponse();
                 if (responds == null || responds.StatusCode != HttpStatusCode.OK)
                 {
-                    
+
                 }
                 var rs = responds.GetResponseStream();
                 StreamReader reader = new StreamReader(rs);
@@ -74,7 +74,7 @@ namespace GiaoXu
                 return null;
             }
         }
-        
+
 
         private void listView1_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -85,17 +85,18 @@ namespace GiaoXu
             if (listGX == null) return;
             foreach (var giaoXu in listGX)
             {
-                var gs = new GiaoXu() { TenGiaoXu = giaoXu.TenGiaoXu, TenGiaoHat = giaoXu.TenGiaoHat, TenGiaoPhan = giaoXu.TenGiaoPhan, DiaChi = giaoXu.DiaChi, DienThoai = giaoXu.DienThoai, Website = giaoXu.Website,MaGiaoXuRieng = giaoXu.ID,MaGiaoHatRieng = giaoXu.Ma_GiaoHat,MaGiaoPhanRieng = giaoXu.MaGiaoPhan,Hinh = giaoXu.Hinh,Email = giaoXu.Email};
-                ListViewItem item = new ListViewItem(new string[] { string.Concat("Giáo xứ:",giaoXu.TenGiaoXu), string.Concat("Thuộc giáo hạt :",giaoXu.TenGiaoHat), string.Concat("Thuộc giáo phận:",giaoXu.TenGiaoPhan),string.Concat("Địa chỉ:",giaoXu.DiaChi),string.Concat("Số điện thoại:", giaoXu.DienThoai) }, 0);
+                var gs = new GiaoXu() { TenGiaoXu = giaoXu.TenGiaoXu, TenGiaoHat = giaoXu.TenGiaoHat, TenGiaoPhan = giaoXu.TenGiaoPhan, DiaChi = giaoXu.DiaChi, DienThoai = giaoXu.DienThoai, Website = giaoXu.Website, MaGiaoXuRieng = giaoXu.MaGiaoXuRieng, MaGiaoHatRieng = giaoXu.Ma_GiaoHat, MaGiaoPhanRieng = giaoXu.MaGiaoPhan, Hinh = giaoXu.Hinh, Email = giaoXu.Email };
+                ListViewItem item = new ListViewItem(new string[] { string.Concat("Giáo xứ:", giaoXu.TenGiaoXu), string.Concat("Thuộc giáo hạt :", giaoXu.TenGiaoHat), string.Concat("Thuộc giáo phận:", giaoXu.TenGiaoPhan), string.Concat("Địa chỉ:", giaoXu.DiaChi), string.Concat("Số điện thoại:", giaoXu.DienThoai) }, 0);
                 item.Tag = gs;
                 listView1.Items.Add(item);
                 var img = GetImage(gs.MaGiaoXuRieng);
-                if(img != null)
+                if (img != null)
                 {
                     imageList1.Images.Add(img);
                     item.ImageIndex = imageList1.Images.Count - 1;
                     giaoXu.ImageIndex = item.ImageIndex;
-                } else
+                }
+                else
                 {
                     item.ImageIndex = 0;
                     giaoXu.ImageIndex = 0;
@@ -103,11 +104,11 @@ namespace GiaoXu
                 Thread.Sleep(500);
             }
         }
-        public Image GetImage(string idGiaoXu)
+        public Image GetImage(string MaGiaoXuRieng)
         {
             try
             {
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(string.Concat(GxConstants.URL_DOWNLOAD_GIAO_XU_IMAGE,idGiaoXu));
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(string.Concat(GxConstants.URL_DOWNLOAD_GIAO_XU_IMAGE, MaGiaoXuRieng));
                 request.ContentType = "image/jpg";
                 request.Method = "POST";
                 var responds = (HttpWebResponse)request.GetResponse();
@@ -130,7 +131,7 @@ namespace GiaoXu
             foreach (var giaoXu in listGX)
             {
                 if (!giaoXu.TenGiaoXu.ToLower().Contains(name)) continue;
-                var gs = new GiaoXu() { TenGiaoXu = giaoXu.TenGiaoXu, TenGiaoHat = giaoXu.TenGiaoHat, TenGiaoPhan = giaoXu.TenGiaoPhan, DiaChi = giaoXu.DiaChi, DienThoai = giaoXu.DienThoai, Website = giaoXu.Website, MaGiaoXuRieng = giaoXu.ID, MaGiaoHatRieng = giaoXu.Ma_GiaoHat, MaGiaoPhanRieng = giaoXu.MaGiaoPhan, Hinh = giaoXu.Hinh, Email = giaoXu.Email };
+                var gs = new GiaoXu() { TenGiaoXu = giaoXu.TenGiaoXu, TenGiaoHat = giaoXu.TenGiaoHat, TenGiaoPhan = giaoXu.TenGiaoPhan, DiaChi = giaoXu.DiaChi, DienThoai = giaoXu.DienThoai, Website = giaoXu.Website, MaGiaoXuRieng = giaoXu.MaGiaoXuRieng, MaGiaoHatRieng = giaoXu.Ma_GiaoHat, MaGiaoPhanRieng = giaoXu.MaGiaoPhan, Hinh = giaoXu.Hinh, Email = giaoXu.Email };
                 ListViewItem item = new ListViewItem(new string[] { string.Concat("Giáo xứ:", giaoXu.TenGiaoXu), string.Concat("Thuộc giáo hạt :", giaoXu.TenGiaoHat), string.Concat("Thuộc giáo phận:", giaoXu.TenGiaoPhan), string.Concat("Địa chỉ:", giaoXu.DiaChi), string.Concat("Số điện thoại:", giaoXu.DienThoai) }, giaoXu.ImageIndex);
                 item.Tag = gs;
                 listView1.Items.Add(item);
@@ -144,9 +145,9 @@ namespace GiaoXu
             //var sql = SqlConstants.GiaoXu
             var giaoXuInfo = selectd.Tag as GiaoXu;
             //confirm Giáo xứ đã chọn
-            DialogResult tl = MessageBox.Show(String.Format("Bạn đã chọn giáo xứ [{0}] thuộc giáo hạt [{1}] của giáo phận [{2}]. \r\nChọn [Yes] để chấp nhận.\r\nChọn [No] để chọn lại.",giaoXuInfo.TenGiaoXu, giaoXuInfo.TenGiaoHat, giaoXuInfo.TenGiaoPhan),
-                "Thông báo",MessageBoxButtons.YesNo,MessageBoxIcon.Information,MessageBoxDefaultButton.Button1);
-           if(tl==DialogResult.Yes)
+            DialogResult tl = MessageBox.Show(String.Format("Bạn đã chọn giáo xứ [{0}] thuộc giáo hạt [{1}] của giáo phận [{2}]. \r\nChọn [Yes] để chấp nhận.\r\nChọn [No] để chọn lại.", giaoXuInfo.TenGiaoXu, giaoXuInfo.TenGiaoHat, giaoXuInfo.TenGiaoPhan),
+                "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
+            if (tl == DialogResult.Yes)
             {
                 Thread thread = new Thread(() =>
                 {
@@ -160,7 +161,12 @@ namespace GiaoXu
                 });
                 thread.IsBackground = true;
                 thread.Start();
-                insertInforGiaoXu(giaoXuInfo);
+                if(!insertInforGiaoXu(giaoXuInfo))
+                {
+                    MessageBox.Show("Bạn đã chọn giáo xứ thất bại!!!\r\n Vui lòng tắt chương trình và khởi động lại.\r\nHoặc liên hệ qlgx.net", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    this.Close();
+                }
+
                 /*
                 var rsGiaoPhan = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_PHAN, giaoXuInfo.TenGiaoPhan, giaoXuInfo.MaGiaoPhanRieng);
                 var rsGiaoHat = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_HAT, giaoXuInfo.TenGiaoHat, giaoXuInfo.MaGiaoHatRieng);
@@ -184,38 +190,45 @@ namespace GiaoXu
         }
 
         //Insert giáo phận giáo hạt và giáo xứ
-        public void insertInforGiaoXu(GiaoXu giaoXuInfo)
+        public bool insertInforGiaoXu(GiaoXu giaoXuInfo)
         {
-            DataTable tbl;
-            //Giáo phận
-            tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoPhan);
-            if(tbl!=null && tbl.Rows.Count>0)
+            string MaDinhDanh = GenerateUniqueCode.GetUniqueCode();
+            string TenMay = GenerateUniqueCode.GetComputerName();
+            if (Memory.SendMaDinhDanhTenMayLenServer(MaDinhDanh, TenMay, giaoXuInfo.MaGiaoXuRieng))
             {
-                Memory.ExecuteSqlCommand("Delete from GiaoPhan");
-            }
-            Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_PHAN, giaoXuInfo.TenGiaoPhan, giaoXuInfo.MaGiaoPhanRieng);
-            //Giáo hạt
-            tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoHat);
-            if (tbl != null && tbl.Rows.Count > 0)
-            {
-                Memory.ExecuteSqlCommand("Delete from GiaoHat");
-            }
-            Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_HAT, giaoXuInfo.TenGiaoHat, giaoXuInfo.MaGiaoHatRieng);
+                DataTable tbl;
+                //Giáo phận
+                tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoPhan);
+                if (tbl != null && tbl.Rows.Count > 0)
+                {
+                    Memory.ExecuteSqlCommand("Delete from GiaoPhan");
+                }
+                Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_PHAN, giaoXuInfo.TenGiaoPhan, giaoXuInfo.MaGiaoPhanRieng);
+                //Giáo hạt
+                tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoHat);
+                if (tbl != null && tbl.Rows.Count > 0)
+                {
+                    Memory.ExecuteSqlCommand("Delete from GiaoHat");
+                }
+                Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_HAT, giaoXuInfo.TenGiaoHat, giaoXuInfo.MaGiaoHatRieng);
 
-            //Giáo xứ
-            tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoXu);
-            if (tbl != null && tbl.Rows.Count > 0)
-            {
-                Memory.ExecuteSqlCommand("Delete from GiaoXu");
-            }
-            Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email);
+                //Giáo xứ
+                tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoXu);
+                if (tbl != null && tbl.Rows.Count > 0)
+                {
+                    Memory.ExecuteSqlCommand("Delete from GiaoXu");
+                }
+                Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email,MaDinhDanh,TenMay);
 
+                return true;
+            }
+            return false;
         }
         public List<GiaoXu> GetGiaoXus(string giaoHatId)
         {
             try
             {
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(string.Concat(GxConstants.URL_GET_LIST_GIAO_XU_THEO_GIAO_HAT,giaoHatId));
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(string.Concat(GxConstants.URL_GET_LIST_GIAO_XU_THEO_GIAO_HAT, giaoHatId));
                 request.ContentType = "application/json";
                 request.Method = "GET";
                 request.Headers["PassWord"] = "admin";
@@ -228,7 +241,8 @@ namespace GiaoXu
                 StreamReader reader = new StreamReader(rs);
                 string data = reader.ReadToEnd();
                 return JsonConvert.DeserializeObject<List<GiaoXu>>(data);
-            }catch(Exception ex)
+            }
+            catch (Exception ex)
             {
                 return null;
             }
@@ -266,13 +280,13 @@ namespace GiaoXu
 
         private void txtSearch_TextChanged(object sender, EventArgs e)
         {
-            if(chkSearchAll.Checked)
+            if (chkSearchAll.Checked)
             {
-                SetListViewSearch(txtSearch.Text.ToLower(),giaoXuAll);
+                SetListViewSearch(txtSearch.Text.ToLower(), giaoXuAll);
             }
             else
             {
-                SetListViewSearch(txtSearch.Text.ToLower(),giaoXus);
+                SetListViewSearch(txtSearch.Text.ToLower(), giaoXus);
             }
         }
 
@@ -283,7 +297,7 @@ namespace GiaoXu
         private void cbGiaoPhan_SelectedIndexChanged(object sender, EventArgs e)
         {
             var item = cbGiaoPhan.SelectedValue;
-            if(item is GiaoPhan)
+            if (item is GiaoPhan)
             {
                 item = (cbGiaoPhan.SelectedValue as GiaoPhan).MaGiaoPhan;
             }
@@ -297,7 +311,7 @@ namespace GiaoXu
         {
             try
             {
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(string.Concat(GxConstants.URL_GET_LIST_GIAO_HAT_THEO_GIAO_PHAN,giaoPhanId));
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(string.Concat(GxConstants.URL_GET_LIST_GIAO_HAT_THEO_GIAO_PHAN, giaoPhanId));
                 request.ContentType = "application/json";
                 request.Method = "GET";
                 request.Headers["PassWord"] = "admin";
@@ -339,7 +353,7 @@ namespace GiaoXu
 
         private void chkSearchAll_CheckedChanged(object sender, EventArgs e)
         {
-            if(chkSearchAll.Checked)
+            if (chkSearchAll.Checked)
             {
                 Thread thread = new Thread(() =>
                 {
@@ -353,7 +367,7 @@ namespace GiaoXu
             {
                 changeData();
             }
-          
+
         }
     }
     public class GiaoXu
