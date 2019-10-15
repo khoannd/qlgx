@@ -217,7 +217,6 @@
             this.cbGiaoHat.Name = "cbGiaoHat";
             this.cbGiaoHat.Size = new System.Drawing.Size(158, 21);
             this.cbGiaoHat.TabIndex = 3;
-            this.cbGiaoHat.SelectedIndexChanged += new System.EventHandler(this.cbGiaoHat_SelectedIndexChanged);
             // 
             // cbGiaoPhan
             // 
@@ -229,7 +228,6 @@
             this.cbGiaoPhan.Name = "cbGiaoPhan";
             this.cbGiaoPhan.Size = new System.Drawing.Size(158, 21);
             this.cbGiaoPhan.TabIndex = 2;
-            this.cbGiaoPhan.SelectedIndexChanged += new System.EventHandler(this.cbGiaoPhan_SelectedIndexChanged);
             // 
             // label2
             // 

@@ -16,6 +16,7 @@ namespace GiaoXu
 {
     public partial class frmCreateGiaoXu : Form
     {
+        private static frmLoadDataProcess frmLoadDataProcessform = new frmLoadDataProcess();
         //hiepdv begin add
         List<GiaoXu> giaoXuAll = new List<GiaoXu>();
         //hiepdv end add
@@ -25,30 +26,38 @@ namespace GiaoXu
         public frmCreateGiaoXu()
         {
             InitializeComponent();
-            // listView1.SelectedIndexChanged += ListView1_SelectedIndexChanged;
             listView1.MouseDoubleClick += ListView1_MouseDoubleClick;
-            Control.CheckForIllegalCrossThreadCalls = false;
         }
         public void Set()
         {
-            SetGiaoPhan();
-            Thread thread = new Thread(() =>
+            Thread threadset = new Thread(() =>
             {
-                //SetListView();
-                //SetGiaoPhan();
-                //cbGiaoPhan.SelectedIndex = 0;
+                SetGiaoPhan();
             });
-            thread.IsBackground = true;
-            thread.Start();
+            threadset.IsBackground = true;
+            threadset.Start();
         }
 
         private void SetGiaoPhan()
         {
             var giaoPhans = GetGiaoPhans();
             ListGiaoPhan = giaoPhans;
-            cbGiaoPhan.DataSource = giaoPhans;
-            cbGiaoPhan.DisplayMember = "TenGiaoPhan";
-            cbGiaoPhan.ValueMember = "MaGiaoPhan";
+            var methodGetGiaoPhan = new MethodInvoker(delegate ()
+            {
+                cbGiaoPhan.DataSource = giaoPhans;
+                this.cbGiaoPhan.SelectedIndexChanged += new System.EventHandler(this.cbGiaoPhan_SelectedIndexChanged);
+                cbGiaoPhan.DisplayMember = "TenGiaoPhan";
+                cbGiaoPhan.ValueMember = "MaGiaoPhan";
+            });
+
+            if (cbGiaoPhan.InvokeRequired)
+            {
+                cbGiaoPhan.Invoke(methodGetGiaoPhan);
+            }
+            else
+            {
+                methodGetGiaoPhan();
+            }
         }
 
         private List<GiaoPhan> GetGiaoPhans()
@@ -69,40 +78,48 @@ namespace GiaoXu
                 string data = reader.ReadToEnd();
                 return JsonConvert.DeserializeObject<List<GiaoPhan>>(data);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return null;
             }
         }
 
-
-        private void listView1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-        }
         public void SetListView(List<GiaoXu> listGX)
         {
-            listView1.Items.Clear();
-            if (listGX == null) return;
-            foreach (var giaoXu in listGX)
+            var methodSetListView = new MethodInvoker(delegate ()
             {
-                var gs = new GiaoXu() { TenGiaoXu = giaoXu.TenGiaoXu, TenGiaoHat = giaoXu.TenGiaoHat, TenGiaoPhan = giaoXu.TenGiaoPhan, DiaChi = giaoXu.DiaChi, DienThoai = giaoXu.DienThoai, Website = giaoXu.Website, MaGiaoXuRieng = giaoXu.MaGiaoXuRieng, MaGiaoHatRieng = giaoXu.Ma_GiaoHat, MaGiaoPhanRieng = giaoXu.MaGiaoPhan, Hinh = giaoXu.Hinh, Email = giaoXu.Email };
-                ListViewItem item = new ListViewItem(new string[] { string.Concat("Giáo xứ:", giaoXu.TenGiaoXu), string.Concat("Thuộc giáo hạt :", giaoXu.TenGiaoHat), string.Concat("Thuộc giáo phận:", giaoXu.TenGiaoPhan), string.Concat("Địa chỉ:", giaoXu.DiaChi), string.Concat("Số điện thoại:", giaoXu.DienThoai) }, 0);
-                item.Tag = gs;
-                listView1.Items.Add(item);
-                var img = GetImage(gs.MaGiaoXuRieng);
-                if (img != null)
+                listView1.Items.Clear();
+                if (listGX == null) return;
+                foreach (var giaoXu in listGX)
                 {
-                    imageList1.Images.Add(img);
-                    item.ImageIndex = imageList1.Images.Count - 1;
-                    giaoXu.ImageIndex = item.ImageIndex;
+                    var gs = new GiaoXu() { TenGiaoXu = giaoXu.TenGiaoXu, TenGiaoHat = giaoXu.TenGiaoHat, TenGiaoPhan = giaoXu.TenGiaoPhan, DiaChi = giaoXu.DiaChi, DienThoai = giaoXu.DienThoai, Website = giaoXu.Website, MaGiaoXuRieng = giaoXu.MaGiaoXuRieng, MaGiaoHatRieng = giaoXu.Ma_GiaoHat, MaGiaoPhanRieng = giaoXu.MaGiaoPhan, Hinh = giaoXu.Hinh, Email = giaoXu.Email };
+                    ListViewItem item = new ListViewItem(new string[] { string.Concat("Giáo xứ:", giaoXu.TenGiaoXu), string.Concat("Thuộc giáo hạt :", giaoXu.TenGiaoHat), string.Concat("Thuộc giáo phận:", giaoXu.TenGiaoPhan), string.Concat("Địa chỉ:", giaoXu.DiaChi), string.Concat("Số điện thoại:", giaoXu.DienThoai) }, 0);
+                    item.Tag = gs;
+                    listView1.Items.Add(item);
+                    var img = GetImage(gs.MaGiaoXuRieng);
+                    if (img != null)
+                    {
+                        imageList1.Images.Add(img);
+                        item.ImageIndex = imageList1.Images.Count - 1;
+                        giaoXu.ImageIndex = item.ImageIndex;
+                    }
+                    else
+                    {
+                        item.ImageIndex = 0;
+                        giaoXu.ImageIndex = 0;
+                    }
                 }
-                else
-                {
-                    item.ImageIndex = 0;
-                    giaoXu.ImageIndex = 0;
-                }
-                Thread.Sleep(500);
+            });
+
+            if (listView1.InvokeRequired)
+            {
+                listView1.Invoke(methodSetListView);
             }
+            else
+            {
+                methodSetListView();
+            }
+
         }
         public Image GetImage(string MaGiaoXuRieng)
         {
@@ -119,7 +136,7 @@ namespace GiaoXu
                 var rs = responds.GetResponseStream();
                 return Image.FromStream(rs);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return null;
             }
@@ -161,10 +178,11 @@ namespace GiaoXu
                 });
                 thread.IsBackground = true;
                 thread.Start();
-                if(!insertInforGiaoXu(giaoXuInfo))
+                if (!insertInforGiaoXu(giaoXuInfo))
                 {
                     MessageBox.Show("Bạn đã chọn giáo xứ thất bại!!!\r\n Vui lòng tắt chương trình và khởi động lại.\r\nHoặc liên hệ qlgx.net", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     this.Close();
+                    return;
                 }
 
                 /*
@@ -212,13 +230,13 @@ namespace GiaoXu
                 }
                 Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_HAT, giaoXuInfo.TenGiaoHat, giaoXuInfo.MaGiaoHatRieng);
 
-                //Giáo xứ
+                //Giáo xứ 
                 tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoXu);
                 if (tbl != null && tbl.Rows.Count > 0)
                 {
                     Memory.ExecuteSqlCommand("Delete from GiaoXu");
                 }
-                Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email,MaDinhDanh,TenMay);
+                Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email, MaDinhDanh, TenMay);
 
                 return true;
             }
@@ -242,7 +260,7 @@ namespace GiaoXu
                 string data = reader.ReadToEnd();
                 return JsonConvert.DeserializeObject<List<GiaoXu>>(data);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return null;
             }
@@ -266,7 +284,7 @@ namespace GiaoXu
                 string data = reader.ReadToEnd();
                 return JsonConvert.DeserializeObject<List<GiaoXu>>(data);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return null;
             }
@@ -303,9 +321,21 @@ namespace GiaoXu
             }
             var giaoHats = GetGiaoHatsInGiaoPhan(item.ToString());
             ListGiaoHat = giaoHats;
-            cbGiaoHat.DataSource = giaoHats;
-            cbGiaoHat.ValueMember = "MaGiaoHat";
-            cbGiaoHat.DisplayMember = "TenGiaoHat";
+            var methodGetGiaoHat = new MethodInvoker(delegate ()
+            {
+                cbGiaoHat.DataSource = giaoHats;
+                this.cbGiaoHat.SelectedIndexChanged += new System.EventHandler(this.cbGiaoHat_SelectedIndexChanged);
+                cbGiaoHat.DisplayMember = "TenGiaoHat";
+                cbGiaoHat.ValueMember = "MaGiaoHat";
+            });
+            if (cbGiaoHat.InvokeRequired)
+            {
+                cbGiaoHat.Invoke(methodGetGiaoHat);
+            }
+            else
+            {
+                methodGetGiaoHat();
+            }
         }
         public List<GiaoHat> GetGiaoHatsInGiaoPhan(string giaoPhanId)
         {
@@ -325,7 +355,7 @@ namespace GiaoXu
                 string data = reader.ReadToEnd();
                 return JsonConvert.DeserializeObject<List<GiaoHat>>(data);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return null;
             }
@@ -334,9 +364,14 @@ namespace GiaoXu
         {
             changeData();
         }
-        //
         public void changeData()
         {
+            Thread threadwait = new Thread(() =>
+            {
+                frmLoadDataProcessform.ShowDialog();
+            });
+            threadwait.IsBackground = true;
+            threadwait.Start();
             var item = cbGiaoHat.SelectedValue;
             if (item is GiaoHat)
             {
@@ -346,6 +381,7 @@ namespace GiaoXu
             {
                 giaoXus = GetGiaoXus(item.ToString());
                 SetListView(giaoXus);
+                frmLoadDataProcessform.Close();
             });
             thread.IsBackground = true;
             thread.Start();
@@ -353,12 +389,24 @@ namespace GiaoXu
 
         private void chkSearchAll_CheckedChanged(object sender, EventArgs e)
         {
+
+            cbGiaoHat.Enabled = !chkSearchAll.Checked;
+            cbGiaoPhan.Enabled = !chkSearchAll.Checked;
             if (chkSearchAll.Checked)
             {
+                Thread threadwait = new Thread(() =>
+                {
+                    frmLoadDataProcessform.ShowDialog();                
+                });
+                threadwait.IsBackground = true;
+                threadwait.Start();
+
+
                 Thread thread = new Thread(() =>
                 {
                     giaoXuAll = GetAllGiaoXu();
                     SetListView(giaoXuAll);
+                    frmLoadDataProcessform.Close();
                 });
                 thread.IsBackground = true;
                 thread.Start();
@@ -367,7 +415,6 @@ namespace GiaoXu
             {
                 changeData();
             }
-
         }
     }
     public class GiaoXu
