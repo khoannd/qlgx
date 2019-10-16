@@ -197,8 +197,9 @@ namespace GiaoXu
 
             WebClient wcl = new WebClient();
             if (!Memory.ServerUrl.EndsWith("/")) Memory.ServerUrl += "/";
-            string UrlBackup = "http://testserver.22domain.com/";
-            //string UrlBackup = "http://localhost:81/Parish-data-synchronization/QuanLyGiaoXu/";
+            //string UrlBackup = "http://testserver.22domain.com/";
+            //string UrlBackup = "http://98de0122.ngrok.io/Parish-data-synchronization/QuanLyGiaoXu/";
+            string UrlBackup = "http://localhost:80/Parish-data-synchronization/QuanLyGiaoXu/";
             //string UrlBackup =  wcl.DownloadString(Memory.ServerUrl + "urlbackup.txt").Replace("ï»¿", "");
             Memory.ChangeValueAppConfig("SERVER", UrlBackup);
             //Thread t = new Thread(()=> {

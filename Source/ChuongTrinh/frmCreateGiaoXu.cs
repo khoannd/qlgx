@@ -366,12 +366,12 @@ namespace GiaoXu
         }
         public void changeData()
         {
-            Thread threadwait = new Thread(() =>
-            {
-                frmLoadDataProcessform.ShowDialog();
-            });
-            threadwait.IsBackground = true;
-            threadwait.Start();
+            //Thread threadwait = new Thread(() =>
+            //{
+            //    frmLoadDataProcessform.ShowDialog();
+            //});
+            //threadwait.IsBackground = true;
+            //threadwait.Start();
             var item = cbGiaoHat.SelectedValue;
             if (item is GiaoHat)
             {
@@ -381,7 +381,7 @@ namespace GiaoXu
             {
                 giaoXus = GetGiaoXus(item.ToString());
                 SetListView(giaoXus);
-                frmLoadDataProcessform.Close();
+                //frmLoadDataProcessform.Close();
             });
             thread.IsBackground = true;
             thread.Start();
