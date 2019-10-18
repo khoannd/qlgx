@@ -404,8 +404,10 @@ namespace GiaoXu
 
                 Thread thread = new Thread(() =>
                 {
+                    this.Enabled = false;
                     giaoXuAll = GetAllGiaoXu();
                     SetListView(giaoXuAll);
+                    this.Enabled = true;
                     frmLoadDataProcessform.Close();
                 });
                 thread.IsBackground = true;
