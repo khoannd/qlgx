@@ -238,6 +238,7 @@ namespace GiaoXu
                 }
                 Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email, MaDinhDanh, TenMay);
 
+                Memory.SetMaGiaoXuRiengAllTable(giaoXuInfo.MaGiaoXuRieng);
                 return true;
             }
             return false;
