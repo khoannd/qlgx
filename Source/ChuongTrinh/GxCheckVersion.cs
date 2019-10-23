@@ -197,20 +197,10 @@ namespace GiaoXu
 
             WebClient wcl = new WebClient();
             if (!Memory.ServerUrl.EndsWith("/")) Memory.ServerUrl += "/";
-            //string UrlBackup = "http://testserver.22domain.com/";
-            //string UrlBackup = "http://98de0122.ngrok.io/Parish-data-synchronization/QuanLyGiaoXu/";
             string UrlBackup = "http://localhost:80/Parish-data-synchronization/QuanLyGiaoXu/";
             //string UrlBackup =  wcl.DownloadString(Memory.ServerUrl + "urlbackup.txt").Replace("ï»¿", "");
             Memory.ChangeValueAppConfig("SERVER", UrlBackup);
-            //Thread t = new Thread(()=> {
-            //    if (CheckThongTinDaRequest())
-            //    {
-            //        UploadFileAvatar();
-            //    }
-            //});
-            //t.IsBackground = true;
-            //t.Start();
-            //Thread.Sleep(1000);
+    
             if (CheckThongTinDaRequest())
             {
                 UploadFileAvatar();
@@ -285,6 +275,7 @@ namespace GiaoXu
                             Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOXU, GiaoXuDoi[0].TenGiaoXu, GiaoXuDoi[0].DiaChi, GiaoXuDoi[0].DienThoai,
                                                      GiaoXuDoi[0].Email, GiaoXuDoi[0].Website, GiaoXuDoi[0].Hinh, GiaoXuDoi[0].GhiChu, GiaoXuDoi[0].MaGiaoXuRieng, MaDinhDanh, TenMay);
                         }
+                        Memory.SetMaGiaoXuRiengAllTable(GiaoXuDoi[0].MaGiaoXuRieng);
                         return true;
                     }
                 }
