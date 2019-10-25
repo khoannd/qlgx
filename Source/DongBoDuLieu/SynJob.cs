@@ -20,7 +20,6 @@ namespace DongBoDuLieu
         private static bool errorState = false;
         public void Synchronize(Form frm)
         {
-
             Thread thread = new Thread(() =>
             {
                 Push();
@@ -47,17 +46,15 @@ namespace DongBoDuLieu
 
         public void Push()
         {
-
             try
             {
                 WebClient cl = new WebClient();
                 string pathFileSyn = this.createrFileSyn();
                 DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
-                int maGiaoXuRieng;
-                int.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString(), out maGiaoXuRieng);
+                string maGiaoXuRieng= tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString();
 
                 cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + @"SynFileCL/getFileSyn/" + maGiaoXuRieng, pathFileSyn);
-                cl.DownloadString(ConfigurationManager.AppSettings["SERVER"] + @"SynJobCL/excuteByMaGiaoXu/" + maGiaoXuRieng);
+                cl.DownloadString(ConfigurationManager.AppSettings["SERVER"] + @"SynJobCL/executeByMaGiaoXu/" + maGiaoXuRieng);
             }
             catch (System.Exception ex)
             {
@@ -65,11 +62,9 @@ namespace DongBoDuLieu
                 errorState = true;
                 return;
             }
-
         }
         public void Pull()
         {
-
             try
             {
                 WebClient cl = new WebClient();
@@ -90,7 +85,6 @@ namespace DongBoDuLieu
                     zip.ExtractZip(pathDB + maGiaoXuRieng + ".zip", pathDB, null);
                     compareGiaoXu(pathDB);
                 }
-
             }
             catch (System.Exception ex)
             {
@@ -274,7 +268,6 @@ namespace DongBoDuLieu
         }
         private static void CatFileCSV(string pathFile, string nameTable)
         {
-
             using (StreamWriter sw = new StreamWriter(pathFile + nameTable + ".csv", true))
             {
                 bool check = File.Exists(pathFile + nameTable + "Deleted" + ".csv");
@@ -294,7 +287,6 @@ namespace DongBoDuLieu
         }
         public static void WriteFileCSV(DataTable tblRow, int isDelete)
         {
-
             if (tblRow != null)
             {
                 string pathFile = Memory.AppPath + "sync\\";
@@ -311,11 +303,8 @@ namespace DongBoDuLieu
                         sw.Write(createHeader(tblRow));
                     }
                     sw.Write(createRowValue(tblRow, isDelete));
-
-
                 }
                 CatFileCSV(pathFile, tblRow.TableName);
-
             }
         }
         public static string createRowValue(DataTable tblRow, int isDelete)
@@ -325,12 +314,10 @@ namespace DongBoDuLieu
             {
                 for (int i = 0; i < tblRow.Columns.Count; i++)
                 {
-
                     var value = row[i];
                     if (value.GetType().Name == "String")
                     {
                         value = Regex.Replace(value.ToString(), @"(\s{2,})|\n", " ");
-
                     }
                     if (value.GetType().Name == "DateTime")
                     {
@@ -365,12 +352,10 @@ namespace DongBoDuLieu
                     result.Append(i == table.Columns.Count - 1 ? "\n" : ";");
                 }
             }
-
             foreach (DataRow row in table.Rows)
             {
                 for (int i = 0; i < table.Columns.Count; i++)
                 {
-
                     var value = row[i];
                     if (value.GetType().Name == "String")
                     {
@@ -385,7 +370,6 @@ namespace DongBoDuLieu
                     result.Append(i == table.Columns.Count - 1 ? "\n" : ";");
                 }
             }
-
             return result.ToString();
         }
     }
