@@ -69,8 +69,8 @@ namespace DongBoDuLieu
             {
                 WebClient cl = new WebClient();
                 DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
-                int maGiaoXuRieng;
-                int.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString(), out maGiaoXuRieng);
+                string maGiaoXuRieng = tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString();
+
                 byte[] rs = cl.DownloadData(ConfigurationManager.AppSettings["SERVER"] + @"SynToClientCL/createrFileSyn/" + maGiaoXuRieng);
                 string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
                 if (string.Compare(temp, "1") == 0)
@@ -299,7 +299,6 @@ namespace DongBoDuLieu
                 {
                     if (!check)
                     {
-
                         sw.Write(createHeader(tblRow));
                     }
                     sw.Write(createRowValue(tblRow, isDelete));

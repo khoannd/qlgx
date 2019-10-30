@@ -197,10 +197,13 @@ namespace GiaoXu
 
             WebClient wcl = new WebClient();
             if (!Memory.ServerUrl.EndsWith("/")) Memory.ServerUrl += "/";
-            string UrlBackup = "http://localhost:80/Parish-data-synchronization/QuanLyGiaoXu/";
+            string UrlBackup = "http://10ffb64c.ngrok.io/Parish-data-synchronization/QuanLyGiaoXu/";
             //string UrlBackup =  wcl.DownloadString(Memory.ServerUrl + "urlbackup.txt").Replace("ï»¿", "");
             Memory.ChangeValueAppConfig("SERVER", UrlBackup);
-    
+            string UrlBackupFile = "http://10ffb64c.ngrok.io/Parish-data-synchronization/data/CsvToClient/";
+            //string UrlBackup =  wcl.DownloadString(Memory.ServerUrl + "urlbackupfile.txt").Replace("ï»¿", "");
+            Memory.ChangeValueAppConfig("SERVER_FILE", UrlBackupFile);
+
             if (CheckThongTinDaRequest())
             {
                 UploadFileAvatar();
