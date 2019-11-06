@@ -21,6 +21,7 @@ namespace GiaoXu
 {
     public class GxCheckVersion
     {
+        private static frmLoadDataProcess fLoad = new frmLoadDataProcess();
         public event EventHandler ShowFormCreateGiaoXuOnline = null;
         public event EventHandler OnStart = null;
         public event EventHandler OnError = null;
@@ -197,14 +198,20 @@ namespace GiaoXu
 
             WebClient wcl = new WebClient();
             if (!Memory.ServerUrl.EndsWith("/")) Memory.ServerUrl += "/";
-            string UrlBackup = "http://localhost:80/Parish-data-synchronization/QuanLyGiaoXu/";
+            string UrlBackup = "http://13.76.128.252/Parish-data-synchronization/QuanLyGiaoXu/";
             //string UrlBackup =  wcl.DownloadString(Memory.ServerUrl + "urlbackup.txt").Replace("ï»¿", "");
             Memory.ChangeValueAppConfig("SERVER", UrlBackup);
-    
+
+            Thread tWait = new Thread(()=> {
+                fLoad.ShowDialog();
+            });
+            tWait.IsBackground = true;
+            tWait.Start();
             if (CheckThongTinDaRequest())
             {
                 UploadFileAvatar();
             }
+            fLoad.Close();
             CheckThongTinTenServer();
             //hiepdv end add
         }
@@ -371,7 +378,13 @@ namespace GiaoXu
                 {
                     if (Memory.TestConnectToServer() && Memory.GetConfig(GxConstants.BACKUP_DATA_TO_SERVER) == "1")
                     {
+                        Thread tWait = new Thread(() => {
+                            fLoad.ShowDialog();
+                        });
+                        tWait.IsBackground = true;
+                        tWait.Start();
                         createBackupData();
+                        fLoad.Close();
                     }
                 }
             }
