@@ -258,6 +258,9 @@ namespace GiaoXu
         {
             try
             {
+                if (!Memory.TestConnectToServer())
+                    return false;
+
                 DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
                 if (tblGiaoXu != null && tblGiaoXu.Rows.Count > 0)
                 {
