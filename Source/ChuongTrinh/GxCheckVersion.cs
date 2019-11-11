@@ -21,7 +21,7 @@ namespace GiaoXu
 {
     public class GxCheckVersion
     {
-        private static frmLoadDataProcess fLoad = new frmLoadDataProcess();
+        private static frmLoadDataProcess fLoad;
         public event EventHandler ShowFormCreateGiaoXuOnline = null;
         public event EventHandler OnStart = null;
         public event EventHandler OnError = null;
@@ -201,21 +201,30 @@ namespace GiaoXu
             string UrlBackup = "http://13.76.128.252/Parish-data-synchronization/QuanLyGiaoXu/";
             //string UrlBackup =  wcl.DownloadString(Memory.ServerUrl + "urlbackup.txt").Replace("ï»¿", "");
             Memory.ChangeValueAppConfig("SERVER", UrlBackup);
-           
-            //Thread tWait = new Thread(() =>
-            //{
-            //    fLoad.ShowDialog();
-            //});
-            //tWait.IsBackground = true;
-            //tWait.Start();
-            if (CheckThongTinDaRequest())
+
+            DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
+            if (tblGiaoXu != null && tblGiaoXu.Rows.Count > 0)
             {
-                UploadFileAvatar();
+                if (tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString() == "" && tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuDoi].ToString() != "")
+                {
+                    Thread tWait = new Thread(() =>
+                    {
+                        fLoad = new frmLoadDataProcess();
+                        fLoad.ShowDialog();
+                    });
+                    tWait.IsBackground = true;
+                    tWait.Start();
+                    if (CheckThongTinDaRequest(tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuDoi].ToString()))
+                    {
+                        UploadFileAvatar();
+                    }
+                    fLoad.Invoke((MethodInvoker)delegate
+                    {
+                        fLoad.Close();
+                    });
+                }
             }
-            //fLoad.Invoke((MethodInvoker)delegate
-            //{
-            //    fLoad.Close();
-            //});
+           
             CheckThongTinTenServer();
         }
         //upload file to server 
@@ -256,41 +265,35 @@ namespace GiaoXu
         }
 
         //kiểm tra thông tin đã request
-        public bool CheckThongTinDaRequest()
+        public bool CheckThongTinDaRequest(string MaGiaoXuDoi)
         {
             try
             {
                 if (!Memory.TestConnectToServer())
                     return false;
-                DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
-                if (tblGiaoXu != null && tblGiaoXu.Rows.Count > 0)
+
+                //request lên server kiểm tra xem giáo xứ đã được phê duyệt chưa
+                WebClient cl = new WebClient();
+                byte[] rs = cl.DownloadData(ConfigurationManager.AppSettings["SERVER"] + @"GiaoXuCL/getGiaoXuDaPheDuyet/" + MaGiaoXuDoi);
+                string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
+                if (temp == "-1")
+                    return false;
+                List<GiaoXu> GiaoXuDoi = JsonConvert.DeserializeObject<List<GiaoXu>>(temp);
+                string MaDinhDanh = GenerateUniqueCode.GetUniqueCode();
+                string TenMay = GenerateUniqueCode.GetComputerName();
+                if (Memory.SendMaDinhDanhTenMayLenServer(MaDinhDanh, TenMay, GiaoXuDoi[0].MaGiaoXuRieng))
                 {
-                    if (tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString() == "" && tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuDoi].ToString() != "")
-                    {
-                        //request lên server kiểm tra xem giáo xứ đã được phê duyệt chưa
-                        WebClient cl = new WebClient();
-                        byte[] rs = cl.DownloadData(ConfigurationManager.AppSettings["SERVER"] + @"GiaoXuCL/getGiaoXuDaPheDuyet/" + tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuDoi].ToString());
-                        string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
-                        if (temp == "-1")
-                            return false;
-                        List<GiaoXu> GiaoXuDoi = JsonConvert.DeserializeObject<List<GiaoXu>>(temp);
-                        string MaDinhDanh = GenerateUniqueCode.GetUniqueCode();
-                        string TenMay = GenerateUniqueCode.GetComputerName();
-                        if (Memory.SendMaDinhDanhTenMayLenServer(MaDinhDanh, TenMay, GiaoXuDoi[0].MaGiaoXuRieng))
-                        {
-                            //Update Giáo Phận
-                            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOPHAN, GiaoXuDoi[0].TenGiaoPhan, GiaoXuDoi[0].MaGiaoPhanRieng);
-                            //Update Giáo Hạt
-                            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOHAT, GiaoXuDoi[0].TenGiaoHat, GiaoXuDoi[0].MaGiaoHatRieng);
-                            //Update Giáo Xứ
-                            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOXU, GiaoXuDoi[0].TenGiaoXu, GiaoXuDoi[0].DiaChi, GiaoXuDoi[0].DienThoai,
-                                                     GiaoXuDoi[0].Email, GiaoXuDoi[0].Website, GiaoXuDoi[0].Hinh, GiaoXuDoi[0].GhiChu, GiaoXuDoi[0].MaGiaoXuRieng, MaDinhDanh, TenMay);
-                        }
-                        Memory.SetMaGiaoXuRiengAllTable(GiaoXuDoi[0].MaGiaoXuRieng);
-                        return true;
-                    }
+                    //Update Giáo Phận
+                    Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOPHAN, GiaoXuDoi[0].TenGiaoPhan, GiaoXuDoi[0].MaGiaoPhanRieng);
+                    //Update Giáo Hạt
+                    Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOHAT, GiaoXuDoi[0].TenGiaoHat, GiaoXuDoi[0].MaGiaoHatRieng);
+                    //Update Giáo Xứ
+                    Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOXU, GiaoXuDoi[0].TenGiaoXu, GiaoXuDoi[0].DiaChi, GiaoXuDoi[0].DienThoai,
+                                                GiaoXuDoi[0].Email, GiaoXuDoi[0].Website, GiaoXuDoi[0].Hinh, GiaoXuDoi[0].GhiChu, GiaoXuDoi[0].MaGiaoXuRieng, MaDinhDanh, TenMay);
                 }
-                return false;
+                Memory.SetMaGiaoXuRiengAllTable(GiaoXuDoi[0].MaGiaoXuRieng);
+                return true;
+                  
             }
             catch (Exception ex)
             {
@@ -298,9 +301,19 @@ namespace GiaoXu
                 return false;
             }
         }
+
+
         //kiểm tra có thông tin trên server
         public void CheckThongTinTenServer()
         {
+            if (Memory.GetConfig(GxConstants.BACKUP_DATA_TO_SERVER) == "0")
+            {
+                return;
+            }
+            //chuỗi thông báo 
+            string noti = "";
+            if (Memory.GetConfig(GxConstants.BACKUP_DATA_TO_SERVER) == "1")
+                noti = " SAO LƯU DỮ LIỆU ";
             //Sao lưu dữ liệu lên server
             DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
             if (Memory.ShowError())
@@ -309,90 +322,87 @@ namespace GiaoXu
             }
             if (tblGiaoXu == null || tblGiaoXu.Rows.Count <= 0)
             {
-                if (Memory.GetConfig(GxConstants.BACKUP_DATA_TO_SERVER) == "0")
-                {
-                    return;
-                }
-                DialogResult tl = MessageBox.Show("Chương trình hiện đang có tính năng sao lưu dữ liệu để phòng trường hợp giáo xứ bị mất dữ liệu, " +
-                     "hoàn toàn không có mục đích nào khác và thông tin của giáo xứ là bảo mật.\r\n" +
-                     "Chọn [YES] để chọn giáo xứ của bạn. \r\n" +
-                     "Chọn [NO] để bỏ tính năng sao lưu dữ liệu và nhập thông tin giáo xứ.\r\n" +
-                     "Chọn [CANCEL] để nhập thông tin giáo xứ.\r\n" +
-                     "(Để bật (tắt) tính năng sao lưu dữ liệu vui lòng vào Công cụ -> Tùy chọn -> Sao lưu dữ).",
-                     "Thông báo", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
-                if (tl == DialogResult.Yes)
-                {
-                    if (!Memory.TestConnectToServer())
-                    {
-
-                        DialogResult tl1 = MessageBox.Show("Hiện tại máy tính của bạn không có kết nối Internet.Bạn vui lòng kiểm tra và khởi động lại chương trình!\r\n" +
-                            "Chọn [YES] để thoát chương trình và kiểm tra lại Internet.\r\n" +
-                            "Chọn [NO] để tiếp tục nhập thông tin giáo xứ.",
-                            "Thông báo lỗi", MessageBoxButtons.YesNo, MessageBoxIcon.Error, MessageBoxDefaultButton.Button2);
-                        if (tl1 == DialogResult.Yes)
-                        {
-                            Application.Exit();
-                        }
-                        return;
-                    }
-                    else
-                    {
-                        if (ShowFormCreateGiaoXuOnline != null)
-                        {
-                            ShowFormCreateGiaoXuOnline(null, null);
-                            return;
-                        }
-                    }
-                }
-                if (tl == DialogResult.No)
-                {
-                    Memory.SetConfig(GxConstants.BACKUP_DATA_TO_SERVER, 0);
-                }
-                return;
+                Notify(true, noti);
             }
             else
             {
                 if (tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString().Trim() == "" && tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuDoi].ToString().Trim() == "")
                 {
-                    if (Memory.TestConnectToServer() && Memory.GetConfig(GxConstants.BACKUP_DATA_TO_SERVER) == "1")
-                    {
-                        DialogResult tl = MessageBox.Show("Chương trình mới cập nhật tính năng sao lưu dữ liệu để phòng trường hợp giáo xứ bị mất dữ liệu, " +
-                        "hoàn toàn không có mục đích nào khác và thông tin của giáo xứ là bảo mật.\r\n" +
-                        "Chọn [YES] để chọn giáo xứ của bạn. \r\n" +
-                        "Chọn [NO] để bỏ qua tính năng sao lưu dữ liệu.\r\n" +
-                        "Chọn [CANCEL] để bỏ qua và tiếp tục làm việc.\r\n" +
-                        "(Để bật (tắt) tính năng sao lưu dữ liệu vui lòng vào Công cụ -> Tùy chọn -> Sao lưu dữ).",
-                        "Thông báo", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Information, MessageBoxDefaultButton.Button3);
-                        if (tl == DialogResult.Cancel)
-                        {
-                            return;
-                        }
-                        if (tl == DialogResult.No)
-                        {
-                            Memory.SetConfig(GxConstants.BACKUP_DATA_TO_SERVER, 0);
-                            return;
-                        }
-                        if (ShowFormCreateGiaoXuOnline != null)
-                        {
-                            ShowFormCreateGiaoXuOnline(null, null);
-                        }
-                    }
+                    Notify(false, noti);
                 }
                 else
                 {
                     if (Memory.TestConnectToServer() && Memory.GetConfig(GxConstants.BACKUP_DATA_TO_SERVER) == "1")
                     {
-                        Thread tWait = new Thread(() => {
+                        Thread tWait = new Thread(() =>
+                        {
+                            fLoad = new frmLoadDataProcess();
                             fLoad.ShowDialog();
                         });
                         tWait.IsBackground = true;
                         tWait.Start();
                         createBackupData();
-                        fLoad.Close();
+                        fLoad.Invoke((MethodInvoker)delegate
+                        {
+                            fLoad.Close();
+                        });
+                        
                     }
                 }
             }
-
+        }
+        public void Notify(bool theFirst, string noti)
+        {
+            string info = "";
+            if (theFirst)
+            {
+                info = "Chương trình hiện đang có tính năng" + noti + "để phòng trường hợp giáo xứ bị mất dữ liệu, " +
+                      "hoàn toàn không có mục đích nào khác và thông tin của giáo xứ là bảo mật.\r\n" +
+                      "Chọn [YES] để chọn giáo xứ của bạn. \r\n" +
+                      "Chọn [NO] để bỏ tính năng" + noti + "và nhập thông tin giáo xứ.\r\n" +
+                      "Chọn [CANCEL] để nhập thông tin giáo xứ.\r\n" +
+                      "(Để bật (tắt) tính năng" + noti + "vui lòng vào Công cụ -> Tùy chọn -> Sao lưu dữ).";
+            }
+            else
+            {
+                info = "Chương trình mới cập nhật tính năng" + noti + "để phòng trường hợp giáo xứ bị mất dữ liệu, " +
+                        "hoàn toàn không có mục đích nào khác và thông tin của giáo xứ là bảo mật.\r\n" +
+                        "Chọn [YES] để chọn giáo xứ của bạn. \r\n" +
+                        "Chọn [NO] để bỏ tính năng" + noti + "và tiếp tục.\r\n" +
+                        "Chọn [CANCEL] để nhập thông tin giáo xứ.\r\n" +
+                        "(Để bật (tắt) tính năng" + noti + "vui lòng vào Công cụ -> Tùy chọn -> Sao lưu dữ).";
+            }
+            DialogResult tl = MessageBox.Show(info, "Thông báo", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
+            if (tl == DialogResult.Yes)
+            {
+                if (!Memory.TestConnectToServer())
+                {
+                    DialogResult tl1 = MessageBox.Show("Hiện tại máy tính của bạn không có kết nối Internet. Bạn vui lòng kiểm tra và khởi động lại chương trình!\r\n" +
+                        "Chọn [YES] để thoát chương trình và kiểm tra lại Internet.\r\n" +
+                        "Chọn [NO] để tiếp tục.",
+                        "Thông báo lỗi", MessageBoxButtons.YesNo, MessageBoxIcon.Error, MessageBoxDefaultButton.Button2);
+                    if (tl1 == DialogResult.Yes)
+                    {
+                        Application.Exit();
+                    }
+                    return;
+                }
+                else
+                {
+                    if (ShowFormCreateGiaoXuOnline != null)
+                    {
+                        ShowFormCreateGiaoXuOnline(this,EventArgs.Empty);
+                        return;
+                    }
+                }
+            }
+            if (tl == DialogResult.No)
+            {
+                Memory.SetConfig(GxConstants.BACKUP_DATA_TO_SERVER, 0);
+                MessageBox.Show("Hiện tại tính năng" + noti + " đã tắt.\r\n" +
+                    "(Để bật (tắt) tính năng" + noti + "vui lòng vào Công cụ -> Tùy chọn -> Sao lưu dữ).", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
 
         public string GetDbVersion()
@@ -716,7 +726,7 @@ namespace GiaoXu
                     string maGiaoXuRieng = tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString().Trim();
                     string maDinhDanh = tblGiaoXu.Rows[0][GiaoXuConst.MaDinhDanh].ToString().Trim();
                     string tenMay = tblGiaoXu.Rows[0][GiaoXuConst.TenMay].ToString().Trim();
-                    if (maGiaoXuRieng!= ""&&maDinhDanh!="")
+                    if (maGiaoXuRieng != "" && maDinhDanh != "")
                     {
                         // bool check = int.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString(), out maGiaoXuRieng);
                         //if (!check)//Giao xu chưa có thông tin trên server

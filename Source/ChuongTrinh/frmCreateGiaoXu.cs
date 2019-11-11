@@ -16,6 +16,7 @@ namespace GiaoXu
 {
     public partial class frmCreateGiaoXu : Form
     {
+        bool thefirst = false;
         private static frmLoadDataProcess frmLoadDataProcessform = new frmLoadDataProcess();
         //hiepdv begin add
         List<GiaoXu> giaoXuAll = new List<GiaoXu>();
@@ -44,6 +45,7 @@ namespace GiaoXu
             ListGiaoPhan = giaoPhans;
             var methodGetGiaoPhan = new MethodInvoker(delegate ()
             {
+                thefirst = true;
                 cbGiaoPhan.DataSource = giaoPhans;
                 this.cbGiaoPhan.SelectedIndexChanged += new System.EventHandler(this.cbGiaoPhan_SelectedIndexChanged);
                 cbGiaoPhan.DisplayMember = "TenGiaoPhan";
@@ -89,7 +91,13 @@ namespace GiaoXu
             var methodSetListView = new MethodInvoker(delegate ()
             {
                 listView1.Items.Clear();
-                if (listGX == null) return;
+                if (listGX == null || listGX.Count < 0) 
+                {
+                    MessageBox.Show("Không có giáo xứ nào!\r\n" +
+                        "Nếu không tìm thấy giáo xứ của mình vui lòng chọn \"Tôi không tìm thấy giáo xứ của mình\" bên góc phải.",
+                        "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
                 foreach (var giaoXu in listGX)
                 {
                     var gs = new GiaoXu() { TenGiaoXu = giaoXu.TenGiaoXu, TenGiaoHat = giaoXu.TenGiaoHat, TenGiaoPhan = giaoXu.TenGiaoPhan, DiaChi = giaoXu.DiaChi, DienThoai = giaoXu.DienThoai, Website = giaoXu.Website, MaGiaoXuRieng = giaoXu.MaGiaoXuRieng, MaGiaoHatRieng = giaoXu.Ma_GiaoHat, MaGiaoPhanRieng = giaoXu.MaGiaoPhan, Hinh = giaoXu.Hinh, Email = giaoXu.Email };
@@ -325,7 +333,11 @@ namespace GiaoXu
             var methodGetGiaoHat = new MethodInvoker(delegate ()
             {
                 cbGiaoHat.DataSource = giaoHats;
-                this.cbGiaoHat.SelectedIndexChanged += new System.EventHandler(this.cbGiaoHat_SelectedIndexChanged);
+                if(thefirst)
+                {
+                    this.cbGiaoHat.SelectedIndexChanged += new System.EventHandler(this.cbGiaoHat_SelectedIndexChanged);
+                    thefirst = false;
+                }
                 cbGiaoHat.DisplayMember = "TenGiaoHat";
                 cbGiaoHat.ValueMember = "MaGiaoHat";
             });
@@ -405,11 +417,15 @@ namespace GiaoXu
 
                 Thread thread = new Thread(() =>
                 {
-                    this.Enabled = false;
-                    giaoXuAll = GetAllGiaoXu();
-                    SetListView(giaoXuAll);
-                    this.Enabled = true;
+                btnCreate.Enabled = false;
+                this.Enabled = false;
+                giaoXuAll = GetAllGiaoXu();
+                SetListView(giaoXuAll);
+                btnCreate.Enabled = true;
+                this.Enabled = true;
+                frmLoadDataProcessform.Invoke((MethodInvoker)delegate{
                     frmLoadDataProcessform.Close();
+                });
                 });
                 thread.IsBackground = true;
                 thread.Start();
