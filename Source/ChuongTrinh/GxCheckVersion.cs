@@ -201,19 +201,22 @@ namespace GiaoXu
             string UrlBackup = "http://13.76.128.252/Parish-data-synchronization/QuanLyGiaoXu/";
             //string UrlBackup =  wcl.DownloadString(Memory.ServerUrl + "urlbackup.txt").Replace("ï»¿", "");
             Memory.ChangeValueAppConfig("SERVER", UrlBackup);
-
-            Thread tWait = new Thread(()=> {
-                fLoad.ShowDialog();
-            });
-            tWait.IsBackground = true;
-            tWait.Start();
+           
+            //Thread tWait = new Thread(() =>
+            //{
+            //    fLoad.ShowDialog();
+            //});
+            //tWait.IsBackground = true;
+            //tWait.Start();
             if (CheckThongTinDaRequest())
             {
                 UploadFileAvatar();
             }
-            fLoad.Close();
+            //fLoad.Invoke((MethodInvoker)delegate
+            //{
+            //    fLoad.Close();
+            //});
             CheckThongTinTenServer();
-            //hiepdv end add
         }
         //upload file to server 
         public bool UploadFileToServer(string linkToServer, string maGiaoXuRieng, string linkToFolderInLocal, string fileName, out DateTime UploadDate)
@@ -250,7 +253,6 @@ namespace GiaoXu
                     tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString(),
                     Memory.AppPath, tblGiaoXu.Rows[0][GiaoXuConst.Hinh].ToString(), out a);
             }
-
         }
 
         //kiểm tra thông tin đã request
@@ -260,7 +262,6 @@ namespace GiaoXu
             {
                 if (!Memory.TestConnectToServer())
                     return false;
-
                 DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
                 if (tblGiaoXu != null && tblGiaoXu.Rows.Count > 0)
                 {
