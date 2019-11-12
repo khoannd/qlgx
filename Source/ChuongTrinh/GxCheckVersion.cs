@@ -202,6 +202,7 @@ namespace GiaoXu
             //string UrlBackup =  wcl.DownloadString(Memory.ServerUrl + "urlbackup.txt").Replace("ï»¿", "");
             Memory.ChangeValueAppConfig("SERVER", UrlBackup);
 
+            //check info giáo xứ
             DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
             if (tblGiaoXu != null && tblGiaoXu.Rows.Count > 0)
             {
@@ -224,8 +225,10 @@ namespace GiaoXu
                     });
                 }
             }
-           
-            CheckThongTinTenServer();
+            //create file backup
+            string pathFileName=createBackupData();
+            //Check info to server
+            CheckThongTinTenServer(pathFileName);
         }
         //upload file to server 
         public bool UploadFileToServer(string linkToServer, string maGiaoXuRieng, string linkToFolderInLocal, string fileName, out DateTime UploadDate)
@@ -304,9 +307,9 @@ namespace GiaoXu
 
 
         //kiểm tra có thông tin trên server
-        public void CheckThongTinTenServer()
+        public void CheckThongTinTenServer(string pathFileName)
         {
-            if (Memory.GetConfig(GxConstants.BACKUP_DATA_TO_SERVER) == "0")
+            if (Memory.GetConfig(GxConstants.BACKUP_DATA_TO_SERVER) != "1")
             {
                 return;
             }
@@ -341,12 +344,13 @@ namespace GiaoXu
                         });
                         tWait.IsBackground = true;
                         tWait.Start();
-                        createBackupData();
+                        //Backupfile
+                        if(pathFileName!="")
+                        uploadFile(pathFileName);
                         fLoad.Invoke((MethodInvoker)delegate
                         {
                             fLoad.Close();
                         });
-                        
                     }
                 }
             }
@@ -361,7 +365,7 @@ namespace GiaoXu
                       "Chọn [YES] để chọn giáo xứ của bạn. \r\n" +
                       "Chọn [NO] để bỏ tính năng" + noti + "và nhập thông tin giáo xứ.\r\n" +
                       "Chọn [CANCEL] để nhập thông tin giáo xứ.\r\n" +
-                      "(Để bật (tắt) tính năng" + noti + "vui lòng vào Công cụ -> Tùy chọn -> Sao lưu dữ).";
+                      "(Để bật (tắt) tính năng" + noti + "vui lòng vào Công cụ -> Tùy chọn -> Sao lưu dữ liệu).";
             }
             else
             {
@@ -370,7 +374,7 @@ namespace GiaoXu
                         "Chọn [YES] để chọn giáo xứ của bạn. \r\n" +
                         "Chọn [NO] để bỏ tính năng" + noti + "và tiếp tục.\r\n" +
                         "Chọn [CANCEL] để nhập thông tin giáo xứ.\r\n" +
-                        "(Để bật (tắt) tính năng" + noti + "vui lòng vào Công cụ -> Tùy chọn -> Sao lưu dữ).";
+                        "(Để bật (tắt) tính năng" + noti + "vui lòng vào Công cụ -> Tùy chọn -> Sao lưu dữ liệu).";
             }
             DialogResult tl = MessageBox.Show(info, "Thông báo", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
             if (tl == DialogResult.Yes)
@@ -586,7 +590,7 @@ namespace GiaoXu
         #endregion
 
         #region backup data
-        private void createBackupData()
+        private string createBackupData()
         {
             try
             {
@@ -634,12 +638,14 @@ namespace GiaoXu
                     fzip.CreateZip(backupPath + fileName, Memory.AppPath, false, "giaoxu.mdb");
                 }
                 //2018-08-08 Gia add start
-                uploadFile(fileName, backupPath);
+                //uploadFile(fileName, backupPath);
+                return backupPath + fileName;
                 //2018-08-08 Gia add end
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Lỗi Exception createBackupData()", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return "";
             }
         }
         #region 2018-08-14 Gia add start
@@ -711,9 +717,8 @@ namespace GiaoXu
 
 
         //2018-08-14 Gia add end
-        private void uploadFile(string fileName, string backupPath)
+        private void uploadFile(string pathFileName)
         {
-
             //2018-08-01 Gia add start
             WebClient cl = new WebClient();
             try
@@ -739,7 +744,9 @@ namespace GiaoXu
                         if (!check || DateTime.Now.Subtract(lastUpload).TotalDays > 0.0)//last > 1 ngày
                         {
                             // upload file backup to server//lay ve time upload server
-                            byte[] rs = cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + String.Format("BackupCL/uploadFile/{0}/{1}/{2}", maGiaoXuRieng, maDinhDanh, tenMay), backupPath + fileName);
+                            byte[] rs = cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + String.Format("BackupCL/uploadFile/{0}/{1}/{2}", 
+                                maGiaoXuRieng, maDinhDanh, tenMay), pathFileName);
+
                             string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
                             check = DateTime.TryParse(temp, out lastUpload);
                             if (check)
@@ -752,7 +759,6 @@ namespace GiaoXu
             }
             catch (Exception ex)
             {
-
                 MessageBox.Show(ex.Message, "Lỗi Exception uploadfileServer", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 

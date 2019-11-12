@@ -188,7 +188,7 @@ namespace GiaoXu
                 thread.Start();
                 if (!insertInforGiaoXu(giaoXuInfo))
                 {
-                    MessageBox.Show("Bạn đã chọn giáo xứ thất bại!!!\r\n Vui lòng tắt chương trình và khởi động lại.\r\nHoặc liên hệ qlgx.net", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Bạn đã chọn giáo xứ thất bại!!!\r\nVui lòng tắt chương trình và khởi động lại.\r\nHoặc liên hệ qlgx.net", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     this.Close();
                     return;
                 }
@@ -218,38 +218,60 @@ namespace GiaoXu
         //Insert giáo phận giáo hạt và giáo xứ
         public bool insertInforGiaoXu(GiaoXu giaoXuInfo)
         {
-            string MaDinhDanh = GenerateUniqueCode.GetUniqueCode();
-            string TenMay = GenerateUniqueCode.GetComputerName();
-            if (Memory.SendMaDinhDanhTenMayLenServer(MaDinhDanh, TenMay, giaoXuInfo.MaGiaoXuRieng))
+            try
             {
-                DataTable tbl;
-                //Giáo phận
-                tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoPhan);
-                if (tbl != null && tbl.Rows.Count > 0)
+                string MaDinhDanh = GenerateUniqueCode.GetUniqueCode();
+                string TenMay = GenerateUniqueCode.GetComputerName();
+                if (Memory.SendMaDinhDanhTenMayLenServer(MaDinhDanh, TenMay, giaoXuInfo.MaGiaoXuRieng))
                 {
-                    Memory.ExecuteSqlCommand("Delete from GiaoPhan");
-                }
-                Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_PHAN, giaoXuInfo.TenGiaoPhan, giaoXuInfo.MaGiaoPhanRieng);
-                //Giáo hạt
-                tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoHat);
-                if (tbl != null && tbl.Rows.Count > 0)
-                {
-                    Memory.ExecuteSqlCommand("Delete from GiaoHat");
-                }
-                Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_HAT, giaoXuInfo.TenGiaoHat, giaoXuInfo.MaGiaoHatRieng);
+                    Thread twait = new Thread(() => {
+                        frmLoadDataProcessform.ShowDialog();
+                    });
+                    twait.IsBackground = true;
+                    twait.Start();
 
-                //Giáo xứ 
-                tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoXu);
-                if (tbl != null && tbl.Rows.Count > 0)
-                {
-                    Memory.ExecuteSqlCommand("Delete from GiaoXu");
-                }
-                Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email, MaDinhDanh, TenMay);
+                    DataTable tbl;
+                    //Giáo phận
+                    tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoPhan);
+                    if (tbl != null && tbl.Rows.Count > 0)
+                    {
+                        Memory.ExecuteSqlCommand("Delete from GiaoPhan");
+                    }
+                    Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_PHAN, giaoXuInfo.TenGiaoPhan, giaoXuInfo.MaGiaoPhanRieng);
+                    //Giáo hạt
+                    tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoHat);
+                    if (tbl != null && tbl.Rows.Count > 0)
+                    {
+                        Memory.ExecuteSqlCommand("Delete from GiaoHat");
+                    }
+                    Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_HAT, giaoXuInfo.TenGiaoHat, giaoXuInfo.MaGiaoHatRieng);
 
-                Memory.SetMaGiaoXuRiengAllTable(giaoXuInfo.MaGiaoXuRieng);
-                return true;
+                    //Giáo xứ 
+                    tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoXu);
+                    if (tbl != null && tbl.Rows.Count > 0)
+                    {
+                        Memory.ExecuteSqlCommand("Delete from GiaoXu");
+                    }
+                    Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email, MaDinhDanh, TenMay);
+
+                    Memory.SetMaGiaoXuRiengAllTable(giaoXuInfo.MaGiaoXuRieng);
+                    frmLoadDataProcessform.Invoke((MethodInvoker)delegate
+                    {
+                        frmLoadDataProcessform.Close();
+                    });
+                    return true;
+                }
+                return false;
             }
-            return false;
+            catch (Exception)
+            {
+                frmLoadDataProcessform.Invoke((MethodInvoker)delegate
+                {
+                    frmLoadDataProcessform.Close();
+                });
+                return false;
+            }
+            
         }
         public List<GiaoXu> GetGiaoXus(string giaoHatId)
         {
