@@ -202,6 +202,11 @@ namespace GiaoXu
             //string UrlBackup =  wcl.DownloadString(Memory.ServerUrl + "urlbackup.txt").Replace("ï»¿", "");
             Memory.ChangeValueAppConfig("SERVER", UrlBackup);
 
+            //check thông tin lên server
+            CheckThongTin();
+        }
+        public void CheckThongTin()
+        {
             //check info giáo xứ
             DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
             if (tblGiaoXu != null && tblGiaoXu.Rows.Count > 0)
@@ -226,7 +231,7 @@ namespace GiaoXu
                 }
             }
             //create file backup
-            string pathFileName=createBackupData();
+            string pathFileName = createBackupData();
             //Check info to server
             CheckThongTinTenServer(pathFileName);
         }

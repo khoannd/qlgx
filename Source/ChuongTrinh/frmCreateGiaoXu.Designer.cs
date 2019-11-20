@@ -40,17 +40,17 @@
             this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.panel4 = new System.Windows.Forms.Panel();
             this.panel3 = new System.Windows.Forms.Panel();
-            this.label5 = new System.Windows.Forms.Label();
-            this.btnCreate = new GxControl.GxButton();
             this.label1 = new System.Windows.Forms.Label();
             this.panel1 = new System.Windows.Forms.Panel();
-            this.chkSearchAll = new GxControl.GxCheckBox();
             this.label4 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
-            this.cbGiaoHat = new GxControl.GxComboBox();
-            this.cbGiaoPhan = new GxControl.GxComboBox();
             this.label2 = new System.Windows.Forms.Label();
             this.txtSearch = new System.Windows.Forms.TextBox();
+            this.btnSelectGiaoXu = new GxControl.GxButton();
+            this.btnCreate = new GxControl.GxButton();
+            this.chkSearchAll = new GxControl.GxCheckBox();
+            this.cbGiaoHat = new GxControl.GxComboBox();
+            this.cbGiaoPhan = new GxControl.GxComboBox();
             this.panel2.SuspendLayout();
             this.panel3.SuspendLayout();
             this.panel1.SuspendLayout();
@@ -108,43 +108,13 @@
             // panel3
             // 
             this.panel3.BackColor = System.Drawing.Color.AliceBlue;
-            this.panel3.Controls.Add(this.label5);
+            this.panel3.Controls.Add(this.btnSelectGiaoXu);
             this.panel3.Controls.Add(this.btnCreate);
             this.panel3.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.panel3.Location = new System.Drawing.Point(0, 465);
             this.panel3.Name = "panel3";
             this.panel3.Size = new System.Drawing.Size(1244, 49);
             this.panel3.TabIndex = 2;
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label5.ForeColor = System.Drawing.Color.Red;
-            this.label5.Location = new System.Drawing.Point(48, 16);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(347, 16);
-            this.label5.TabIndex = 4;
-            this.label5.Text = "*Click 2 cái vào giáo xứ để chọn giáo xứ của mình";
-            // 
-            // btnCreate
-            // 
-            this.btnCreate.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnCreate.BackColor = System.Drawing.SystemColors.ActiveCaptionText;
-            this.btnCreate.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("btnCreate.BackgroundImage")));
-            this.btnCreate.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-            this.btnCreate.FlatAppearance.BorderColor = System.Drawing.Color.SteelBlue;
-            this.btnCreate.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkOrange;
-            this.btnCreate.FlatAppearance.MouseOverBackColor = System.Drawing.Color.SkyBlue;
-            this.btnCreate.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this.btnCreate.Location = new System.Drawing.Point(983, 6);
-            this.btnCreate.Name = "btnCreate";
-            this.btnCreate.Size = new System.Drawing.Size(244, 37);
-            this.btnCreate.TabIndex = 3;
-            this.btnCreate.Text = "Tôi không tìm thấy giáo xứ của mình";
-            this.btnCreate.UseVisualStyleBackColor = false;
-            this.btnCreate.Click += new System.EventHandler(this.btnCreate_Click);
             // 
             // label1
             // 
@@ -174,17 +144,6 @@
             this.panel1.Size = new System.Drawing.Size(1244, 97);
             this.panel1.TabIndex = 0;
             // 
-            // chkSearchAll
-            // 
-            this.chkSearchAll.AutoSize = true;
-            this.chkSearchAll.Location = new System.Drawing.Point(982, 55);
-            this.chkSearchAll.Name = "chkSearchAll";
-            this.chkSearchAll.Size = new System.Drawing.Size(159, 17);
-            this.chkSearchAll.TabIndex = 6;
-            this.chkSearchAll.Text = "Tìm kiếm tất cả các giáo xứ ";
-            this.chkSearchAll.UseVisualStyleBackColor = true;
-            this.chkSearchAll.CheckedChanged += new System.EventHandler(this.chkSearchAll_CheckedChanged);
-            // 
             // label4
             // 
             this.label4.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -206,6 +165,77 @@
             this.label3.Size = new System.Drawing.Size(56, 13);
             this.label3.TabIndex = 4;
             this.label3.Text = "Giáo phận";
+            // 
+            // label2
+            // 
+            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(885, 27);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(91, 13);
+            this.label2.TabIndex = 2;
+            this.label2.Text = "Tìm kiếm theo tên";
+            // 
+            // txtSearch
+            // 
+            this.txtSearch.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtSearch.Location = new System.Drawing.Point(982, 24);
+            this.txtSearch.Name = "txtSearch";
+            this.txtSearch.Size = new System.Drawing.Size(248, 20);
+            this.txtSearch.TabIndex = 1;
+            this.txtSearch.TextChanged += new System.EventHandler(this.txtSearch_TextChanged);
+            // 
+            // btnSelectGiaoXu
+            // 
+            this.btnSelectGiaoXu.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnSelectGiaoXu.BackColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.btnSelectGiaoXu.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("btnSelectGiaoXu.BackgroundImage")));
+            this.btnSelectGiaoXu.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+            this.btnSelectGiaoXu.FlatAppearance.BorderColor = System.Drawing.Color.SteelBlue;
+            this.btnSelectGiaoXu.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkOrange;
+            this.btnSelectGiaoXu.FlatAppearance.MouseOverBackColor = System.Drawing.Color.SkyBlue;
+            this.btnSelectGiaoXu.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this.btnSelectGiaoXu.Location = new System.Drawing.Point(915, 6);
+            this.btnSelectGiaoXu.Name = "btnSelectGiaoXu";
+            this.btnSelectGiaoXu.Size = new System.Drawing.Size(62, 37);
+            this.btnSelectGiaoXu.TabIndex = 3;
+            this.btnSelectGiaoXu.Text = "Chọn";
+            this.btnSelectGiaoXu.UseVisualStyleBackColor = false;
+            this.btnSelectGiaoXu.Visible = false;
+            this.btnSelectGiaoXu.Click += new System.EventHandler(this.btnSelectGiaoXu_Click);
+            // 
+            // btnCreate
+            // 
+            this.btnCreate.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnCreate.BackColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.btnCreate.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("btnCreate.BackgroundImage")));
+            this.btnCreate.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+            this.btnCreate.FlatAppearance.BorderColor = System.Drawing.Color.SteelBlue;
+            this.btnCreate.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkOrange;
+            this.btnCreate.FlatAppearance.MouseOverBackColor = System.Drawing.Color.SkyBlue;
+            this.btnCreate.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this.btnCreate.Location = new System.Drawing.Point(983, 6);
+            this.btnCreate.Name = "btnCreate";
+            this.btnCreate.Size = new System.Drawing.Size(244, 37);
+            this.btnCreate.TabIndex = 3;
+            this.btnCreate.Text = "Tôi không tìm thấy giáo xứ của mình";
+            this.btnCreate.UseVisualStyleBackColor = false;
+            this.btnCreate.Click += new System.EventHandler(this.btnCreate_Click);
+            // 
+            // chkSearchAll
+            // 
+            this.chkSearchAll.AutoSize = true;
+            this.chkSearchAll.Location = new System.Drawing.Point(982, 55);
+            this.chkSearchAll.Name = "chkSearchAll";
+            this.chkSearchAll.Size = new System.Drawing.Size(159, 17);
+            this.chkSearchAll.TabIndex = 6;
+            this.chkSearchAll.Text = "Tìm kiếm tất cả các giáo xứ ";
+            this.chkSearchAll.UseVisualStyleBackColor = true;
+            this.chkSearchAll.CheckedChanged += new System.EventHandler(this.chkSearchAll_CheckedChanged);
             // 
             // cbGiaoHat
             // 
@@ -229,27 +259,6 @@
             this.cbGiaoPhan.Size = new System.Drawing.Size(158, 21);
             this.cbGiaoPhan.TabIndex = 2;
             // 
-            // label2
-            // 
-            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(885, 27);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(91, 13);
-            this.label2.TabIndex = 2;
-            this.label2.Text = "Tìm kiếm theo tên";
-            // 
-            // txtSearch
-            // 
-            this.txtSearch.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtSearch.Location = new System.Drawing.Point(982, 24);
-            this.txtSearch.Name = "txtSearch";
-            this.txtSearch.Size = new System.Drawing.Size(248, 20);
-            this.txtSearch.TabIndex = 1;
-            this.txtSearch.TextChanged += new System.EventHandler(this.txtSearch_TextChanged);
-            // 
             // frmCreateGiaoXu
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -262,7 +271,6 @@
             this.Text = "Chọn giáo xứ";
             this.panel2.ResumeLayout(false);
             this.panel3.ResumeLayout(false);
-            this.panel3.PerformLayout();
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
             this.ResumeLayout(false);
@@ -290,6 +298,6 @@
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Label label3;
         private GxControl.GxCheckBox chkSearchAll;
-        private System.Windows.Forms.Label label5;
+        private GxControl.GxButton btnSelectGiaoXu;
     }
 }
