@@ -97,8 +97,10 @@ namespace GiaoXu
                 btnSelectGiaoXu.Invoke((MethodInvoker)delegate{
                     btnSelectGiaoXu.Visible = false;
                 });
-                    MessageBox.Show("Không có giáo xứ nào!\r\n" +
-                        "Nếu không tìm thấy giáo xứ của mình vui lòng chọn \"Tôi không tìm thấy giáo xứ của mình\" bên góc phải.",
+                    MessageBox.Show("Giáo hạt ["+cbGiaoHat.Text+"] không có giáo xứ nào!\r\n" +
+                        "Vui lòng chọn giáo hạt khác hoặc giáo phận khác để tìm giáo xứ của mình\r\n" +
+                        "Trường hợp không tìm thấy giáo xứ của mình vui lòng chọn \"Tôi không tìm thấy giáo xứ của mình\" " +
+                        "bên dưới góc phải màn hình để cập nhập thông tin của giáo xứ lên hệ thống qlgx.net.",
                         "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
@@ -230,12 +232,6 @@ namespace GiaoXu
                 string TenMay = GenerateUniqueCode.GetComputerName();
                 if (Memory.SendMaDinhDanhTenMayLenServer(MaDinhDanh, TenMay, giaoXuInfo.MaGiaoXuRieng))
                 {
-                    Thread twait = new Thread(() => {
-                        frmLoadDataProcessform.ShowDialog();
-                    });
-                    twait.IsBackground = true;
-                    twait.Start();
-
                     DataTable tbl;
                     //Giáo phận
                     tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoPhan);
@@ -258,23 +254,15 @@ namespace GiaoXu
                     {
                         Memory.ExecuteSqlCommand("Delete from GiaoXu");
                     }
-                    Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email, MaDinhDanh, TenMay);
+                    Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email);
 
                     Memory.SetMaGiaoXuRiengAllTable(giaoXuInfo.MaGiaoXuRieng);
-                    frmLoadDataProcessform.Invoke((MethodInvoker)delegate
-                    {
-                        frmLoadDataProcessform.Close();
-                    });
                     return true;
                 }
                 return false;
             }
             catch (Exception)
             {
-                frmLoadDataProcessform.Invoke((MethodInvoker)delegate
-                {
-                    frmLoadDataProcessform.Close();
-                });
                 return false;
             }
             
@@ -477,43 +465,64 @@ namespace GiaoXu
                     "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
                 if (tl == DialogResult.Yes)
                 {
-                    Thread thread = new Thread(() =>
+                    try
                     {
-                        var image = GetImage(giaoXuInfo.MaGiaoXuRieng);
-                        //2018-08-28 Gia modifi start
-                        if (image != null)
-                        {
-                            image.Save(giaoXuInfo.Hinh);
-                        }
-                        //2018-08-28 Gia modifi end
-                    });
-                    thread.IsBackground = true;
-                    thread.Start();
-                    if (!insertInforGiaoXu(giaoXuInfo))
-                    {
-                        MessageBox.Show("Bạn đã chọn giáo xứ thất bại!!!\r\nVui lòng tắt chương trình và khởi động lại.\r\nHoặc liên hệ qlgx.net", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        this.Close();
-                        return;
-                    }
+                        Thread twait = new Thread(() => {
+                            frmLoadDataProcessform.ShowDialog();
+                        });
+                        twait.IsBackground = true;
+                        twait.Start();
 
-                    /*
-                    var rsGiaoPhan = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_PHAN, giaoXuInfo.TenGiaoPhan, giaoXuInfo.MaGiaoPhanRieng);
-                    var rsGiaoHat = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_HAT, giaoXuInfo.TenGiaoHat, giaoXuInfo.MaGiaoHatRieng);
-                    var rsGiaoXu = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email);
-                    */
-                    //2018-08-29 Gia add start
-                    //Memory.SetMaGiaoXuRiengAllTable(int.Parse(giaoXuInfo.MaGiaoXuRieng));
-                    //2018-08-29 Gia add end
-                    Memory.ShowError();
-                    if (!Memory.HasError())
-                    {
-                        //this.Hide();
+
+                        Thread thread = new Thread(() =>
+                        {
+                            var image = GetImage(giaoXuInfo.MaGiaoXuRieng);
+                            //2018-08-28 Gia modifi start
+                            if (image != null)
+                            {
+                                image.Save(giaoXuInfo.Hinh);
+                            }
+                            //2018-08-28 Gia modifi end
+                        });
+                        thread.IsBackground = true;
+                        thread.Start();
+                        if (!insertInforGiaoXu(giaoXuInfo))
+                        {
+                            MessageBox.Show("Bạn đã chọn giáo xứ thất bại!!!\r\nVui lòng tắt chương trình và khởi động lại.\r\nHoặc liên hệ qlgx.net", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            this.Close();
+                            return;
+                        }
+
+                        /*
+                        var rsGiaoPhan = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_PHAN, giaoXuInfo.TenGiaoPhan, giaoXuInfo.MaGiaoPhanRieng);
+                        var rsGiaoHat = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_HAT, giaoXuInfo.TenGiaoHat, giaoXuInfo.MaGiaoHatRieng);
+                        var rsGiaoXu = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email);
+                        */
+                        //2018-08-29 Gia add start
+                        //Memory.SetMaGiaoXuRiengAllTable(int.Parse(giaoXuInfo.MaGiaoXuRieng));
+                        //2018-08-29 Gia add end
+                        Memory.ShowError();
+                        if (!Memory.HasError())
+                        {
+                            //this.Hide();
+                        }
+                        //hiepdv begin add
+                        frmLoadDataProcessform.Invoke((MethodInvoker)delegate
+                        {
+                            frmLoadDataProcessform.Close();
+                        });
+                        MessageBox.Show("Bạn đã chọn xong giáo xứ!!!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        this.Close();
+                        //hiepdv end add
                     }
-                    //hiepdv begin add
-                    MessageBox.Show("Bạn đã chọn xong giáo xứ!!!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    this.Close();
-                    //hiepdv end add
-                    return;
+                    catch (Exception)
+                    {
+                        frmLoadDataProcessform.Invoke((MethodInvoker)delegate
+                        {
+                            frmLoadDataProcessform.Close();
+                        });
+                        MessageBox.Show("Chọn giáo xứ thất bại!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
                 }
                 return;
             }
@@ -522,6 +531,14 @@ namespace GiaoXu
                 MessageBox.Show("Vui lòng chọn giáo xứ", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             
+        }
+
+        private void frmCreateGiaoXu_Shown(object sender, EventArgs e)
+        {
+            MessageBox.Show("Vui lòng chọn giáo phận và giáo hạt để tìm giáo xứ của mình.\r\n" +
+                        "Trường hợp không tìm thấy giáo xứ của mình vui lòng chọn \"Tôi không tìm thấy giáo xứ của mình\" " +
+                        "bên dưới góc phải màn hình để cập nhập thông tin của giáo xứ lên hệ thống qlgx.net.",
+                        "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
     public class GiaoXu

@@ -196,6 +196,12 @@
     <Compile Include="frmTaoDotBiTich.Designer.cs">
       <DependentUpon>frmTaoDotBiTich.cs</DependentUpon>
     </Compile>
+    <Compile Include="frmYeuCauFileBackup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmYeuCauFileBackup.Designer.cs">
+      <DependentUpon>frmYeuCauFileBackup.cs</DependentUpon>
+    </Compile>
     <Compile Include="GxCheckVersion.cs" />
     <Compile Include="ReviewGiaDinhProcess.cs" />
     <Compile Include="frmKiemTraGiaDinhList.cs">
@@ -425,6 +431,9 @@
     <EmbeddedResource Include="frmProcess.resx">
       <SubType>Designer</SubType>
       <DependentUpon>frmProcess.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmYeuCauFileBackup.resx">
+      <DependentUpon>frmYeuCauFileBackup.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
