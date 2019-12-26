@@ -30,6 +30,9 @@ namespace GxGlobal
         private ApplicationClass WordApp = null;
         private Documents WordDocs = null;
         private Document WordDoc = null;
+        //hiepdv begin add 
+        private PageSetup SetupPage = null;
+        //hiepdv end add
         //private Selection CurrentSelection;
         public Selection CurrentSelection
         {
@@ -105,6 +108,9 @@ namespace GxGlobal
                                         ref fal, ref oMissing, ref oMissing, ref oMissing, ref oMissing);
              
                 WordDoc.Activate();
+                //hiepdv begin add
+                SetupPage = WordDoc.PageSetup;
+                //hiepdv end add
                 //CurrentSelection = WordDoc.Application.Selection;
 
                 Thread.CurrentThread.CurrentCulture = cultureinfo;
@@ -1307,6 +1313,72 @@ namespace GxGlobal
                 ref missing, ref missing, ref missing, ref replaceAll,
                 ref missing, ref missing, ref missing, ref missing);
         }
+
+        //hiepdv begin add
+        /// <summary>
+        /// add row vào cuối bảng
+        /// </summary>
+        /// <param name="numrow">số lượng row cần add</param>
+        /// <param name="index">index của bảng</param>
+        public void AddRowPhieuGiaDinh(int numrow,int index)
+        {
+            object missing = System.Type.Missing;
+            Table tbl =GetTable(index);
+            Range range = tbl.Range;
+
+            for (int i = 0; i < numrow; i++)
+            {
+                // Select the last row as source row.
+                int selectedRow = tbl.Rows.Count;
+
+                // Select and copy content of the source row.
+                range.Start = tbl.Rows[selectedRow].Cells[1].Range.Start;
+                range.End = tbl.Rows[selectedRow].Cells[tbl.Rows[selectedRow].Cells.Count].Range.End;
+                range.Copy();
+
+                // Insert a new row after the last row.
+                tbl.Rows.Add(ref missing);
+
+                // Moves the cursor to the first cell of target row.
+                range.Start = tbl.Rows[tbl.Rows.Count].Cells[1].Range.Start;
+                range.End = range.Start;
+
+                // Paste values to target row.
+                range.Paste();
+                int newCount = tbl.Rows.Count;
+
+                string cell1 = tbl.Rows[newCount].Cells[1].Range.Text.Trim();
+                string cell2 = tbl.Rows[newCount].Cells[2].Range.Text.Trim();
+                string cell3 = tbl.Rows[newCount].Cells[3].Range.Text.Trim();
+                string cell4 = tbl.Rows[newCount].Cells[4].Range.Text.Trim();
+                string cell5 = tbl.Rows[newCount].Cells[5].Range.Text.Trim();
+                string cell6 = tbl.Rows[newCount].Cells[6].Range.Text.Trim();
+                string cell7 = tbl.Rows[newCount].Cells[7].Range.Text.Trim();
+                string cell8 = tbl.Rows[newCount].Cells[8].Range.Text.Trim();
+                string cell9 = tbl.Rows[newCount].Cells[9].Range.Text.Trim();
+            
+                //// Write new vaules to each cell.
+                tbl.Rows[newCount].Cells[1].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell1.Replace((newCount - 2).ToString(), (newCount - 1).ToString()).Trim());
+                tbl.Rows[newCount].Cells[2].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell2.Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim());
+                tbl.Rows[newCount].Cells[3].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell3.Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim()); ;
+                tbl.Rows[newCount].Cells[4].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell4.Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim()); ;
+                tbl.Rows[newCount].Cells[5].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell5.Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim()); ;
+                tbl.Rows[newCount].Cells[6].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell6.Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim()); ;
+                tbl.Rows[newCount].Cells[7].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell7.Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim()); ;
+                tbl.Rows[newCount].Cells[8].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell8.Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim()); ;
+                tbl.Rows[newCount].Cells[9].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell9.Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim()); ;
+            }
+
+
+
+            tbl.AllowAutoFit = true;
+            tbl.AutoFitBehavior(WdAutoFitBehavior.wdAutoFitContent);
+            tbl.Borders.Enable = 1;
+            SetupPage.PaperSize = WdPaperSize.wdPaperA4;
+            SetupPage.Orientation = WdOrientation.wdOrientLandscape;
+        }
+
+        //hiepdv end add
     }
 
     public enum WdSaveFormat

@@ -19,7 +19,7 @@ namespace GxGlobal
                 OleDbConnection connect = new OleDbConnection();
                 OleDbDataAdapter adapter = new OleDbDataAdapter();
 
-                connect = new OleDbConnection("provider=Microsoft.ACE.OLEDB.12.0;Data Source='" + path + "';Extended Properties='Excel 12.0;HDR=YES;IMEX=1'");
+                connect = new OleDbConnection("provider=Microsoft.ACE.OLEDB.12.0;Data Source='" + path + "';Extended Properties='Excel 8.0;HDR=YES;IMEX=1'");
                 if (string.IsNullOrEmpty(sql))
                 {
                     sql = string.Format("select * from [{0}$]", tableName);
