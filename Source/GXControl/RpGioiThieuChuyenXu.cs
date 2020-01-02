@@ -56,11 +56,32 @@ namespace GxControl
         }
         public void SetTableFimaly(DataTable tbl)
         {
-        
-            for(int i = 0;i<7;i++)
+            //hiepdv begin add
+            const int ROW_MAX_TEMPLATE = 7;
+            int maxRow = tbl.Rows.Count;
+            //xóa hàng khi số lượng thành viên ít hơn row max template
+            if (ROW_MAX_TEMPLATE > maxRow)
             {
-                if (i < tbl.Rows.Count)
+                for (int j = ROW_MAX_TEMPLATE; j > maxRow; j--)
                 {
+                    word.DeleteRow(1, j + 1);
+                }
+                word.FormatTable(1, Microsoft.Office.Interop.Word.WdPaperSize.wdPaperA4);
+            }
+
+            //check số thành viên cần in
+            if (maxRow > ROW_MAX_TEMPLATE)
+            {
+                //Tiến hành add thêm row. số row cần add = maxrow - row_holder
+                word.AddRowColumnFirstSTT(maxRow - ROW_MAX_TEMPLATE, 1,5);
+                word.FormatTable(1, Microsoft.Office.Interop.Word.WdPaperSize.wdPaperA4);
+            }
+            //hiepdv end add
+
+            for (int i = 0;i< maxRow; i++)
+            {
+                //if (i < maxRow)
+                //{
                     var dataRow = (tbl.Rows[i] as DataRow);
                     word.Replace(GetName(GiaoDanConst.TenThanh, i), dataRow[GiaoDanConst.TenThanh]);
                     word.Replace(GetName(GiaoDanConst.HoTen, i), dataRow[GiaoDanConst.HoTen]);
@@ -68,15 +89,15 @@ namespace GxControl
                     word.Replace(GetName(GiaoDanConst.NoiSinh, i), dataRow[GiaoDanConst.NoiSinh]);
                     word.Replace(GetName(ThanhVienGiaDinhConst.VaiTro, i), vaiTro[(int)dataRow[ThanhVienGiaDinhConst.VaiTro]]);
                     
-                }
-                else
-                {
-                    word.Replace(GetName(GiaoDanConst.TenThanh, i), "");
-                    word.Replace(GetName(GiaoDanConst.HoTen, i), "");
-                    word.Replace(GetName(GiaoDanConst.NgaySinh, i), "");
-                    word.Replace(GetName(GiaoDanConst.NoiSinh, i), "");
-                    word.Replace(GetName(ThanhVienGiaDinhConst.VaiTro, i), "");
-                }
+                //}
+                //else
+                //{
+                //    word.Replace(GetName(GiaoDanConst.TenThanh, i), "");
+                //    word.Replace(GetName(GiaoDanConst.HoTen, i), "");
+                //    word.Replace(GetName(GiaoDanConst.NgaySinh, i), "");
+                //    word.Replace(GetName(GiaoDanConst.NoiSinh, i), "");
+                //    word.Replace(GetName(ThanhVienGiaDinhConst.VaiTro, i), "");
+                //}
               
             }
         }

@@ -1239,7 +1239,8 @@ namespace GxGlobal
                 // prompt the user or stop when it hits the end of
                 // the section)
                 tmpRange.Find.Wrap = Word.WdFindWrap.wdFindContinue;
-                
+
+
                 // Declare an object to pass as a parameter that sets
                 // the Replace parameter to the "wdReplaceAll" enum
                 object replaceAll = Word.WdReplace.wdReplaceAll;
@@ -1316,15 +1317,16 @@ namespace GxGlobal
 
         //hiepdv begin add
         /// <summary>
-        /// add row vào cuối bảng
+        /// add row vào cuối bảng với cột đầu tiên là stt
         /// </summary>
         /// <param name="numrow">số lượng row cần add</param>
         /// <param name="index">index của bảng</param>
-        public void AddRowPhieuGiaDinh(int numrow,int index)
+        /// <param name="numcell">Số cột trong table</param>
+        public void AddRowColumnFirstSTT(int numrow,int index,int numcell)
         {
             object missing = System.Type.Missing;
             Table tbl =GetTable(index);
-            Range range = tbl.Range;
+            Range range = tbl.Range; 
 
             for (int i = 0; i < numrow; i++)
             {
@@ -1347,37 +1349,27 @@ namespace GxGlobal
                 range.Paste();
                 int newCount = tbl.Rows.Count;
 
-                string cell1 = tbl.Rows[newCount].Cells[1].Range.Text.Trim();
-                string cell2 = tbl.Rows[newCount].Cells[2].Range.Text.Trim();
-                string cell3 = tbl.Rows[newCount].Cells[3].Range.Text.Trim();
-                string cell4 = tbl.Rows[newCount].Cells[4].Range.Text.Trim();
-                string cell5 = tbl.Rows[newCount].Cells[5].Range.Text.Trim();
-                string cell6 = tbl.Rows[newCount].Cells[6].Range.Text.Trim();
-                string cell7 = tbl.Rows[newCount].Cells[7].Range.Text.Trim();
-                string cell8 = tbl.Rows[newCount].Cells[8].Range.Text.Trim();
-                string cell9 = tbl.Rows[newCount].Cells[9].Range.Text.Trim();
-            
+
                 //// Write new vaules to each cell.
-                tbl.Rows[newCount].Cells[1].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell1.Replace((newCount - 2).ToString(), (newCount - 1).ToString()).Trim());
-                tbl.Rows[newCount].Cells[2].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell2.Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim());
-                tbl.Rows[newCount].Cells[3].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell3.Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim()); ;
-                tbl.Rows[newCount].Cells[4].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell4.Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim()); ;
-                tbl.Rows[newCount].Cells[5].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell5.Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim()); ;
-                tbl.Rows[newCount].Cells[6].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell6.Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim()); ;
-                tbl.Rows[newCount].Cells[7].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell7.Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim()); ;
-                tbl.Rows[newCount].Cells[8].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell8.Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim()); ;
-                tbl.Rows[newCount].Cells[9].Range.Text = Memory.XoaKiTuXuongHangLienTiep(cell9.Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim()); ;
+                tbl.Rows[newCount].Cells[1].Range.Text = Memory.XoaKiTuXuongHangLienTiep(tbl.Rows[newCount].Cells[1].Range.Text.Trim().Replace((newCount - 2).ToString(), (newCount - 1).ToString()).Trim());
+                for (int j = 2; j <=numcell; j++)
+                {
+                    tbl.Rows[newCount].Cells[j].Range.Text = Memory.XoaKiTuXuongHangLienTiep(tbl.Rows[newCount].Cells[j].Range.Text.Trim().Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim());
+                }
             }
-
-
-
-            tbl.AllowAutoFit = true;
-            tbl.AutoFitBehavior(WdAutoFitBehavior.wdAutoFitContent);
-            tbl.Borders.Enable = 1;
-            SetupPage.PaperSize = WdPaperSize.wdPaperA4;
-            SetupPage.Orientation = WdOrientation.wdOrientLandscape;
         }
-
+        /// <summary>
+        /// Format table 
+        /// </summary>
+        public void FormatTable(int indextable, WdPaperSize ppz= WdPaperSize.wdPaperA4, WdOrientation orientation= WdOrientation.wdOrientPortrait)
+        {
+            Table table = GetTable(indextable);
+            table.AllowAutoFit = true;
+            table.AutoFitBehavior(WdAutoFitBehavior.wdAutoFitContent);
+            table.Borders.Enable = 1;
+            SetupPage.PaperSize = ppz;
+            SetupPage.Orientation = orientation;
+        }
         //hiepdv end add
     }
 

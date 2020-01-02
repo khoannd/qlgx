@@ -32,9 +32,22 @@ namespace GxControl
             get { return txtLyDo.Text.Trim(); }
         }
 
+        public GxCheckBox CheckBoxRaoHonPhoi 
+        {
+            get
+            {
+                return ckbRaoHonPhoi;
+            }
+            set
+            {
+                ckbRaoHonPhoi = value;
+            }
+        }
+
         public frmGoiChungNhan()
         {
             InitializeComponent();
+            ckbRaoHonPhoi.Visible = false;
             this.AcceptButton = gxCommand1.OKButton;
             //load linh muc combobox
             DataTable tblLinhMuc = Memory.GetData(SqlConstants.SELECT_LINHMUC_LIST + " AND DenNgay IS NULL ORDER BY ChucVu ASC, TuNgay DESC");
