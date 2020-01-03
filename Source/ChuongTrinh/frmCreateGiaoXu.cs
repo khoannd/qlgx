@@ -236,8 +236,8 @@ namespace GiaoXu
                 {
                     Memory.ExecuteSqlCommand("Delete from GiaoXu");
                 }
-                Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email, MaDinhDanh, TenMay);
-
+                Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email);
+                Memory.ShowError();
                 Memory.SetMaGiaoXuRiengAllTable(giaoXuInfo.MaGiaoXuRieng);
                 return true;
             }
