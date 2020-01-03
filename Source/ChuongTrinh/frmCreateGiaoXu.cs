@@ -16,6 +16,7 @@ namespace GiaoXu
 {
     public partial class frmCreateGiaoXu : Form
     {
+        bool thefirst = false;
         private static frmLoadDataProcess frmLoadDataProcessform = new frmLoadDataProcess();
         //hiepdv begin add
         List<GiaoXu> giaoXuAll = new List<GiaoXu>();
@@ -44,10 +45,12 @@ namespace GiaoXu
             ListGiaoPhan = giaoPhans;
             var methodGetGiaoPhan = new MethodInvoker(delegate ()
             {
+                thefirst = true;
                 cbGiaoPhan.DataSource = giaoPhans;
-                this.cbGiaoPhan.SelectedIndexChanged += new System.EventHandler(this.cbGiaoPhan_SelectedIndexChanged);
                 cbGiaoPhan.DisplayMember = "TenGiaoPhan";
                 cbGiaoPhan.ValueMember = "MaGiaoPhan";
+                cbGiaoPhan.SelectedIndex = -1;
+                this.cbGiaoPhan.SelectedIndexChanged += new System.EventHandler(this.cbGiaoPhan_SelectedIndexChanged);
             });
 
             if (cbGiaoPhan.InvokeRequired)
@@ -88,8 +91,19 @@ namespace GiaoXu
         {
             var methodSetListView = new MethodInvoker(delegate ()
             {
-                listView1.Items.Clear();
-                if (listGX == null) return;
+            listView1.Items.Clear();
+            if (listGX == null || listGX.Count < 0)
+            {
+                btnSelectGiaoXu.Invoke((MethodInvoker)delegate{
+                    btnSelectGiaoXu.Visible = false;
+                });
+                    MessageBox.Show("Giáo hạt ["+cbGiaoHat.Text+"] không có giáo xứ nào!\r\n" +
+                        "Vui lòng chọn giáo hạt khác hoặc giáo phận khác để tìm giáo xứ của mình\r\n" +
+                        "Trường hợp không tìm thấy giáo xứ của mình vui lòng chọn \"Tôi không tìm thấy giáo xứ của mình\" " +
+                        "bên dưới góc phải màn hình để cập nhập thông tin của giáo xứ lên hệ thống qlgx.net.",
+                        "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
                 foreach (var giaoXu in listGX)
                 {
                     var gs = new GiaoXu() { TenGiaoXu = giaoXu.TenGiaoXu, TenGiaoHat = giaoXu.TenGiaoHat, TenGiaoPhan = giaoXu.TenGiaoPhan, DiaChi = giaoXu.DiaChi, DienThoai = giaoXu.DienThoai, Website = giaoXu.Website, MaGiaoXuRieng = giaoXu.MaGiaoXuRieng, MaGiaoHatRieng = giaoXu.Ma_GiaoHat, MaGiaoPhanRieng = giaoXu.MaGiaoPhan, Hinh = giaoXu.Hinh, Email = giaoXu.Email };
@@ -109,6 +123,9 @@ namespace GiaoXu
                         giaoXu.ImageIndex = 0;
                     }
                 }
+                btnSelectGiaoXu.Invoke((MethodInvoker)delegate {
+                    btnSelectGiaoXu.Visible = true;
+                });
             });
 
             if (listView1.InvokeRequired)
@@ -119,7 +136,6 @@ namespace GiaoXu
             {
                 methodSetListView();
             }
-
         }
         public Image GetImage(string MaGiaoXuRieng)
         {
@@ -157,91 +173,99 @@ namespace GiaoXu
 
         private void ListView1_MouseDoubleClick(object sender, MouseEventArgs e)
         {
-            //Insert
-            var selectd = listView1.SelectedItems[0];
-            //var sql = SqlConstants.GiaoXu
-            var giaoXuInfo = selectd.Tag as GiaoXu;
-            //confirm Giáo xứ đã chọn
-            DialogResult tl = MessageBox.Show(String.Format("Bạn đã chọn giáo xứ [{0}] thuộc giáo hạt [{1}] của giáo phận [{2}]. \r\nChọn [Yes] để chấp nhận.\r\nChọn [No] để chọn lại.", giaoXuInfo.TenGiaoXu, giaoXuInfo.TenGiaoHat, giaoXuInfo.TenGiaoPhan),
-                "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
-            if (tl == DialogResult.Yes)
-            {
-                Thread thread = new Thread(() =>
-                {
-                    var image = GetImage(giaoXuInfo.MaGiaoXuRieng);
-                    //2018-08-28 Gia modifi start
-                    if (image != null)
-                    {
-                        image.Save(giaoXuInfo.Hinh);
-                    }
-                    //2018-08-28 Gia modifi end
-                });
-                thread.IsBackground = true;
-                thread.Start();
-                if (!insertInforGiaoXu(giaoXuInfo))
-                {
-                    MessageBox.Show("Bạn đã chọn giáo xứ thất bại!!!\r\n Vui lòng tắt chương trình và khởi động lại.\r\nHoặc liên hệ qlgx.net", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    this.Close();
-                    return;
-                }
+            ////Insert
+            //var selectd = listView1.SelectedItems[0];
+            ////var sql = SqlConstants.GiaoXu
+            //var giaoXuInfo = selectd.Tag as GiaoXu;
+            ////confirm Giáo xứ đã chọn
+            //DialogResult tl = MessageBox.Show(String.Format("Bạn đã chọn giáo xứ [{0}] thuộc giáo hạt [{1}] của giáo phận [{2}]. \r\nChọn [Yes] để chấp nhận.\r\nChọn [No] để chọn lại.", giaoXuInfo.TenGiaoXu, giaoXuInfo.TenGiaoHat, giaoXuInfo.TenGiaoPhan),
+            //    "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
+            //if (tl == DialogResult.Yes)
+            //{
+            //    Thread thread = new Thread(() =>
+            //    {
+            //        var image = GetImage(giaoXuInfo.MaGiaoXuRieng);
+            //        //2018-08-28 Gia modifi start
+            //        if (image != null)
+            //        {
+            //            image.Save(giaoXuInfo.Hinh);
+            //        }
+            //        //2018-08-28 Gia modifi end
+            //    });
+            //    thread.IsBackground = true;
+            //    thread.Start();
+            //    if (!insertInforGiaoXu(giaoXuInfo))
+            //    {
+            //        MessageBox.Show("Bạn đã chọn giáo xứ thất bại!!!\r\nVui lòng tắt chương trình và khởi động lại.\r\nHoặc liên hệ qlgx.net", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            //        this.Close();
+            //        return;
+            //    }
 
-                /*
-                var rsGiaoPhan = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_PHAN, giaoXuInfo.TenGiaoPhan, giaoXuInfo.MaGiaoPhanRieng);
-                var rsGiaoHat = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_HAT, giaoXuInfo.TenGiaoHat, giaoXuInfo.MaGiaoHatRieng);
-                var rsGiaoXu = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email);
-                */
-                //2018-08-29 Gia add start
-                //Memory.SetMaGiaoXuRiengAllTable(int.Parse(giaoXuInfo.MaGiaoXuRieng));
-                //2018-08-29 Gia add end
-                Memory.ShowError();
-                if (!Memory.HasError())
-                {
-                    //this.Hide();
-                }
-                //hiepdv begin add
-                MessageBox.Show("Bạn đã chọn xong giáo xứ!!!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                this.Close();
-                //hiepdv end add
-                return;
-            }
-            return;
+            //    /*
+            //    var rsGiaoPhan = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_PHAN, giaoXuInfo.TenGiaoPhan, giaoXuInfo.MaGiaoPhanRieng);
+            //    var rsGiaoHat = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_HAT, giaoXuInfo.TenGiaoHat, giaoXuInfo.MaGiaoHatRieng);
+            //    var rsGiaoXu = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email);
+            //    */
+            //    //2018-08-29 Gia add start
+            //    //Memory.SetMaGiaoXuRiengAllTable(int.Parse(giaoXuInfo.MaGiaoXuRieng));
+            //    //2018-08-29 Gia add end
+            //    Memory.ShowError();
+            //    if (!Memory.HasError())
+            //    {
+            //        //this.Hide();
+            //    }
+            //    //hiepdv begin add
+            //    MessageBox.Show("Bạn đã chọn xong giáo xứ!!!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            //    this.Close();
+            //    //hiepdv end add
+            //    return;
+            //}
+            //return;
         }
 
         //Insert giáo phận giáo hạt và giáo xứ
         public bool insertInforGiaoXu(GiaoXu giaoXuInfo)
         {
-            string MaDinhDanh = GenerateUniqueCode.GetUniqueCode();
-            string TenMay = GenerateUniqueCode.GetComputerName();
-            if (Memory.SendMaDinhDanhTenMayLenServer(MaDinhDanh, TenMay, giaoXuInfo.MaGiaoXuRieng))
+            try
             {
-                DataTable tbl;
-                //Giáo phận
-                tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoPhan);
-                if (tbl != null && tbl.Rows.Count > 0)
+                string MaDinhDanh = GenerateUniqueCode.GetUniqueCode();
+                string TenMay = GenerateUniqueCode.GetComputerName();
+                if (Memory.SendMaDinhDanhTenMayLenServer(MaDinhDanh, TenMay, giaoXuInfo.MaGiaoXuRieng))
                 {
-                    Memory.ExecuteSqlCommand("Delete from GiaoPhan");
-                }
-                Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_PHAN, giaoXuInfo.TenGiaoPhan, giaoXuInfo.MaGiaoPhanRieng);
-                //Giáo hạt
-                tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoHat);
-                if (tbl != null && tbl.Rows.Count > 0)
-                {
-                    Memory.ExecuteSqlCommand("Delete from GiaoHat");
-                }
-                Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_HAT, giaoXuInfo.TenGiaoHat, giaoXuInfo.MaGiaoHatRieng);
+                    DataTable tbl;
+                    //Giáo phận
+                    tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoPhan);
+                    if (tbl != null && tbl.Rows.Count > 0)
+                    {
+                        Memory.ExecuteSqlCommand("Delete from GiaoPhan");
+                    }
+                    Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_PHAN, giaoXuInfo.TenGiaoPhan, giaoXuInfo.MaGiaoPhanRieng);
+                    //Giáo hạt
+                    tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoHat);
+                    if (tbl != null && tbl.Rows.Count > 0)
+                    {
+                        Memory.ExecuteSqlCommand("Delete from GiaoHat");
+                    }
+                    Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_HAT, giaoXuInfo.TenGiaoHat, giaoXuInfo.MaGiaoHatRieng);
 
-                //Giáo xứ 
-                tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoXu);
-                if (tbl != null && tbl.Rows.Count > 0)
-                {
-                    Memory.ExecuteSqlCommand("Delete from GiaoXu");
+                    //Giáo xứ 
+                    tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoXu);
+                    if (tbl != null && tbl.Rows.Count > 0)
+                    {
+                        Memory.ExecuteSqlCommand("Delete from GiaoXu");
+                    }
+                    Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email);
+
+                    Memory.SetMaGiaoXuRiengAllTable(giaoXuInfo.MaGiaoXuRieng);
+                    return true;
                 }
-                Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email);
-                Memory.ShowError();
-                Memory.SetMaGiaoXuRiengAllTable(giaoXuInfo.MaGiaoXuRieng);
-                return true;
+                return false;
             }
-            return false;
+            catch (Exception)
+            {
+                return false;
+            }
+            
         }
         public List<GiaoXu> GetGiaoXus(string giaoHatId)
         {
@@ -325,7 +349,11 @@ namespace GiaoXu
             var methodGetGiaoHat = new MethodInvoker(delegate ()
             {
                 cbGiaoHat.DataSource = giaoHats;
-                this.cbGiaoHat.SelectedIndexChanged += new System.EventHandler(this.cbGiaoHat_SelectedIndexChanged);
+                if(thefirst)
+                {
+                    this.cbGiaoHat.SelectedIndexChanged += new System.EventHandler(this.cbGiaoHat_SelectedIndexChanged);
+                    thefirst = false;
+                }
                 cbGiaoHat.DisplayMember = "TenGiaoHat";
                 cbGiaoHat.ValueMember = "MaGiaoHat";
             });
@@ -405,11 +433,15 @@ namespace GiaoXu
 
                 Thread thread = new Thread(() =>
                 {
-                    this.Enabled = false;
-                    giaoXuAll = GetAllGiaoXu();
-                    SetListView(giaoXuAll);
-                    this.Enabled = true;
+                btnCreate.Enabled = false;
+                this.Enabled = false;
+                giaoXuAll = GetAllGiaoXu();
+                SetListView(giaoXuAll);
+                btnCreate.Enabled = true;
+                this.Enabled = true;
+                frmLoadDataProcessform.Invoke((MethodInvoker)delegate{
                     frmLoadDataProcessform.Close();
+                });
                 });
                 thread.IsBackground = true;
                 thread.Start();
@@ -418,6 +450,95 @@ namespace GiaoXu
             {
                 changeData();
             }
+        }
+
+        private void btnSelectGiaoXu_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                //Insert
+                var selectd = listView1.SelectedItems[0];
+                //var sql = SqlConstants.GiaoXu
+                var giaoXuInfo = selectd.Tag as GiaoXu;
+                //confirm Giáo xứ đã chọn
+                DialogResult tl = MessageBox.Show(String.Format("Bạn đã chọn giáo xứ [{0}] thuộc giáo hạt [{1}] của giáo phận [{2}]. \r\nChọn [Yes] để chấp nhận.\r\nChọn [No] để chọn lại.", giaoXuInfo.TenGiaoXu, giaoXuInfo.TenGiaoHat, giaoXuInfo.TenGiaoPhan),
+                    "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
+                if (tl == DialogResult.Yes)
+                {
+                    try
+                    {
+                        Thread twait = new Thread(() => {
+                            frmLoadDataProcessform.ShowDialog();
+                        });
+                        twait.IsBackground = true;
+                        twait.Start();
+
+
+                        Thread thread = new Thread(() =>
+                        {
+                            var image = GetImage(giaoXuInfo.MaGiaoXuRieng);
+                            //2018-08-28 Gia modifi start
+                            if (image != null)
+                            {
+                                image.Save(giaoXuInfo.Hinh);
+                            }
+                            //2018-08-28 Gia modifi end
+                        });
+                        thread.IsBackground = true;
+                        thread.Start();
+                        if (!insertInforGiaoXu(giaoXuInfo))
+                        {
+                            MessageBox.Show("Bạn đã chọn giáo xứ thất bại!!!\r\nVui lòng tắt chương trình và khởi động lại.\r\nHoặc liên hệ qlgx.net", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            this.Close();
+                            return;
+                        }
+
+                        /*
+                        var rsGiaoPhan = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_PHAN, giaoXuInfo.TenGiaoPhan, giaoXuInfo.MaGiaoPhanRieng);
+                        var rsGiaoHat = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_HAT, giaoXuInfo.TenGiaoHat, giaoXuInfo.MaGiaoHatRieng);
+                        var rsGiaoXu = Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email);
+                        */
+                        //2018-08-29 Gia add start
+                        //Memory.SetMaGiaoXuRiengAllTable(int.Parse(giaoXuInfo.MaGiaoXuRieng));
+                        //2018-08-29 Gia add end
+                        Memory.ShowError();
+                        if (!Memory.HasError())
+                        {
+                            //this.Hide();
+                        }
+                        //hiepdv begin add
+                        frmLoadDataProcessform.Invoke((MethodInvoker)delegate
+                        {
+                            frmLoadDataProcessform.Close();
+                        });
+                        MessageBox.Show("Bạn đã chọn xong giáo xứ!!!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        this.Close();
+                        //hiepdv end add
+                    }
+                    catch (Exception)
+                    {
+                        frmLoadDataProcessform.Invoke((MethodInvoker)delegate
+                        {
+                            frmLoadDataProcessform.Close();
+                        });
+                        MessageBox.Show("Chọn giáo xứ thất bại!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                return;
+            }
+            catch (Exception )
+            {
+                MessageBox.Show("Vui lòng chọn giáo xứ", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            
+        }
+
+        private void frmCreateGiaoXu_Shown(object sender, EventArgs e)
+        {
+            MessageBox.Show("Vui lòng chọn giáo phận và giáo hạt để tìm giáo xứ của mình.\r\n" +
+                        "Trường hợp không tìm thấy giáo xứ của mình vui lòng chọn \"Tôi không tìm thấy giáo xứ của mình\" " +
+                        "bên dưới góc phải màn hình để cập nhập thông tin của giáo xứ lên hệ thống qlgx.net.",
+                        "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
     public class GiaoXu

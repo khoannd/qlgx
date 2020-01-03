@@ -14,13 +14,14 @@ using System.Configuration;
 using System.Net;
 using System.Collections.Specialized;
 using Newtonsoft.Json;
-using System.Text;
+using System.Text; 
 using System.Text.RegularExpressions;
 
 namespace GiaoXu
 {
     public class GxCheckVersion
     {
+        private static frmLoadDataProcess fLoad;
         public event EventHandler ShowFormCreateGiaoXuOnline = null;
         public event EventHandler OnStart = null;
         public event EventHandler OnError = null;
@@ -204,12 +205,40 @@ namespace GiaoXu
             //string UrlBackup =  wcl.DownloadString(Memory.ServerUrl + "urlbackupfile.txt").Replace("ï»¿", "");
             Memory.ChangeValueAppConfig("SERVER_FILE", UrlBackupFile);
 
-            if (CheckThongTinDaRequest())
+           
+            CheckThongTin();
+        }
+        public void CheckThongTin()
+        {
+             //create file backup and save to local
+            string pathFileName = createBackupData();
+
+            //check info giáo xứ
+            DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
+            if (tblGiaoXu != null && tblGiaoXu.Rows.Count > 0)
             {
-                UploadFileAvatar();
+                //Kiểm tra giáo xứ đã gửi thông tin lên server chưa
+                if (tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString() == "" && tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuDoi].ToString() != "")
+                {
+                    Thread tWait = new Thread(() =>
+                    {
+                        fLoad = new frmLoadDataProcess();
+                        fLoad.ShowDialog();
+                    });
+                    tWait.IsBackground = true;
+                    tWait.Start();
+                    if (CheckThongTinDaRequest(tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuDoi].ToString()))
+                    {
+                        UploadFileAvatar();
+                    }
+                    fLoad.Invoke((MethodInvoker)delegate
+                    {
+                        fLoad.Close();
+                    });
+                }
             }
             //Đối với backup
-            CheckThongTinTenServer();
+            CheckThongTinTenServer(pathFileName);
             //Đối với Sync
 
             //hiepdv end add
@@ -249,46 +278,38 @@ namespace GiaoXu
                     tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString(),
                     Memory.AppPath, tblGiaoXu.Rows[0][GiaoXuConst.Hinh].ToString(), out a);
             }
-
         }
 
         //kiểm tra thông tin đã request
-        public bool CheckThongTinDaRequest()
+        public bool CheckThongTinDaRequest(string MaGiaoXuDoi)
         {
             try
             {
                 if (!Memory.TestConnectToServer())
                     return false;
 
-                DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
-                if (tblGiaoXu != null && tblGiaoXu.Rows.Count > 0)
+                //request lên server kiểm tra xem giáo xứ đã được phê duyệt chưa
+                WebClient cl = new WebClient();
+                byte[] rs = cl.DownloadData(ConfigurationManager.AppSettings["SERVER"] + @"GiaoXuCL/getGiaoXuDaPheDuyet/" + MaGiaoXuDoi);
+                string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
+                if (temp == "-1")
+                    return false;
+                List<GiaoXu> GiaoXuDoi = JsonConvert.DeserializeObject<List<GiaoXu>>(temp);
+                string MaDinhDanh = GenerateUniqueCode.GetUniqueCode();
+                string TenMay = GenerateUniqueCode.GetComputerName();
+                if (Memory.SendMaDinhDanhTenMayLenServer(MaDinhDanh, TenMay, GiaoXuDoi[0].MaGiaoXuRieng))
                 {
-                    if (tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString() == "" && tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuDoi].ToString() != "")
-                    {
-                        //request lên server kiểm tra xem giáo xứ đã được phê duyệt chưa
-                        WebClient cl = new WebClient();
-                        byte[] rs = cl.DownloadData(ConfigurationManager.AppSettings["SERVER"] + @"GiaoXuCL/getGiaoXuDaPheDuyet/" + tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuDoi].ToString());
-                        string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
-                        if (temp == "-1")
-                            return false;
-                        List<GiaoXu> GiaoXuDoi = JsonConvert.DeserializeObject<List<GiaoXu>>(temp);
-                        string MaDinhDanh = GenerateUniqueCode.GetUniqueCode();
-                        string TenMay = GenerateUniqueCode.GetComputerName();
-                        if (Memory.SendMaDinhDanhTenMayLenServer(MaDinhDanh, TenMay, GiaoXuDoi[0].MaGiaoXuRieng))
-                        {
-                            //Update Giáo Phận
-                            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOPHAN, GiaoXuDoi[0].TenGiaoPhan, GiaoXuDoi[0].MaGiaoPhanRieng);
-                            //Update Giáo Hạt
-                            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOHAT, GiaoXuDoi[0].TenGiaoHat, GiaoXuDoi[0].MaGiaoHatRieng);
-                            //Update Giáo Xứ
-                            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOXU, GiaoXuDoi[0].TenGiaoXu, GiaoXuDoi[0].DiaChi, GiaoXuDoi[0].DienThoai,
-                                                     GiaoXuDoi[0].Email, GiaoXuDoi[0].Website, GiaoXuDoi[0].Hinh, GiaoXuDoi[0].GhiChu, GiaoXuDoi[0].MaGiaoXuRieng, MaDinhDanh, TenMay);
-                        }
-                        Memory.SetMaGiaoXuRiengAllTable(GiaoXuDoi[0].MaGiaoXuRieng);
-                        return true;
-                    }
+                    //Update Giáo Phận
+                    Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOPHAN, GiaoXuDoi[0].TenGiaoPhan, GiaoXuDoi[0].MaGiaoPhanRieng);
+                    //Update Giáo Hạt
+                    Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOHAT, GiaoXuDoi[0].TenGiaoHat, GiaoXuDoi[0].MaGiaoHatRieng);
+                    //Update Giáo Xứ
+                    Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOXU, GiaoXuDoi[0].TenGiaoXu, GiaoXuDoi[0].DiaChi, GiaoXuDoi[0].DienThoai,
+                                                GiaoXuDoi[0].Email, GiaoXuDoi[0].Website, GiaoXuDoi[0].Hinh, GiaoXuDoi[0].GhiChu, GiaoXuDoi[0].MaGiaoXuRieng);
                 }
-                return false;
+                Memory.SetMaGiaoXuRiengAllTable(GiaoXuDoi[0].MaGiaoXuRieng);
+                return true;
+                  
             }
             catch (Exception ex)
             {
@@ -296,8 +317,10 @@ namespace GiaoXu
                 return false;
             }
         }
+
+
         //kiểm tra có thông tin trên server
-        public void CheckThongTinTenServer()
+        public void CheckThongTinTenServer(string pathFileName)
         {
             if (Memory.GetConfig(GxConstants.BACKUP_DATA_TO_SERVER) == "0" && Memory.GetConfig(GxConstants.SYNC_DATA_TO_SERVER) == "0")
             {
@@ -337,6 +360,20 @@ namespace GiaoXu
                     if (Memory.TestConnectToServer() && Memory.GetConfig(GxConstants.BACKUP_DATA_TO_SERVER) == "1")
                     {
                         createBackupData();
+                        Thread tWait = new Thread(() =>
+                        {
+                            fLoad = new frmLoadDataProcess();
+                            fLoad.ShowDialog();
+                        });
+                        tWait.IsBackground = true;
+                        tWait.Start();
+                        //Backupfile
+                        if(pathFileName!="")
+                        uploadFile(pathFileName);
+                        fLoad.Invoke((MethodInvoker)delegate
+                        {
+                            fLoad.Close();
+                        });
                     }
                 }
             }
@@ -381,7 +418,7 @@ namespace GiaoXu
                 {
                     if (ShowFormCreateGiaoXuOnline != null)
                     {
-                        ShowFormCreateGiaoXuOnline(null, null);
+                        ShowFormCreateGiaoXuOnline(this,EventArgs.Empty);
                         return;
                     }
                 }
@@ -577,7 +614,7 @@ namespace GiaoXu
         #endregion
 
         #region backup data
-        private void createBackupData()
+        private string createBackupData()
         {
             try
             {
@@ -625,12 +662,14 @@ namespace GiaoXu
                     fzip.CreateZip(backupPath + fileName, Memory.AppPath, false, "giaoxu.mdb");
                 }
                 //2018-08-08 Gia add start
-                uploadFile(fileName, backupPath);
+                //uploadFile(fileName, backupPath);
+                return backupPath + fileName;
                 //2018-08-08 Gia add end
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Lỗi Exception createBackupData()", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return "";
             }
         }
         #region 2018-08-14 Gia add start
@@ -702,9 +741,8 @@ namespace GiaoXu
 
 
         //2018-08-14 Gia add end
-        private void uploadFile(string fileName, string backupPath)
+        private void uploadFile(string pathFileName)
         {
-
             //2018-08-01 Gia add start
             WebClient cl = new WebClient();
             try
@@ -730,7 +768,9 @@ namespace GiaoXu
                         if (!check || DateTime.Now.Subtract(lastUpload).TotalDays > 1.0)//last > 1 ngày
                         {
                             // upload file backup to server//lay ve time upload server
-                            byte[] rs = cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + String.Format("BackupCL/uploadFile/{0}/{1}/{2}", maGiaoXuRieng, maDinhDanh, tenMay), backupPath + fileName);
+                            byte[] rs = cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + String.Format("BackupCL/uploadFile/{0}/{1}/{2}", 
+                                maGiaoXuRieng, maDinhDanh, tenMay), pathFileName);
+
                             string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
                             check = DateTime.TryParse(temp, out lastUpload);
                             if (check)
@@ -743,7 +783,6 @@ namespace GiaoXu
             }
             catch (Exception ex)
             {
-
                 MessageBox.Show(ex.Message, "Lỗi Exception uploadfileServer", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
