@@ -189,6 +189,9 @@
       <SubType>Designer</SubType>
       <DependentUpon>frmLopGiaoLy.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="GxHocSinh.resx">
+      <DependentUpon>GxHocSinh.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\licenses.licx" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <SubType>Designer</SubType>
