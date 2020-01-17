@@ -36,7 +36,7 @@ namespace GxControl
 
             DataRow rowGiaoXu = tblGiaoXu.Rows[0];
             DataRow rowGiaoDan = tblGiaoDan.Rows[0];
-            DataRow rowGiaoXuNhan = tblGiaoXuNhan.Rows[0];
+            DataRow rowGiaoXuNhan = tblGiaoXuNhan.Rows[0]; 
 
             string reportFormat = Memory.GetReportFormat();
             templatePath = string.Concat(templatePath, reportFormat);

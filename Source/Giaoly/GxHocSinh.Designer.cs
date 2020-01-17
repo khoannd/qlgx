@@ -28,15 +28,17 @@ namespace GxControl
         /// </summary>
         private void InitializeComponent()
         {
-            components = new System.ComponentModel.Container();
-
-            //Janus.Windows.GridEX.GridEXLayout gridEXLayout1 = new Janus.Windows.GridEX.GridEXLayout();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmChonDuLieu));
-            
-            this.AllowEdit = Janus.Windows.GridEX.InheritableBoolean.True;
-            //gridEXLayout1.LayoutString = resources.GetString("gridEXLayout1.LayoutString");
-            //this.DesignTimeLayout = gridEXLayout1;
+            ((System.ComponentModel.ISupportInitialize)(this)).BeginInit();
+            this.SuspendLayout();
+            // 
+            // GxHocSinh
+            // 
             this.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Controls.SetChildIndex(this.LblLoadData, 0);
+            ((System.ComponentModel.ISupportInitialize)(this)).EndInit();
+            this.ResumeLayout(false);
+            this.PerformLayout();
+
         }
 
         #endregion

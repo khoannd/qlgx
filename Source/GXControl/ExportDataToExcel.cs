@@ -8,7 +8,7 @@ using System.ComponentModel;
 
 namespace GxControl
 {
-    public class ExportDataToExcel : IGxProcess
+    public class ExportDataToExcel : IGxProcess 
     {
         private DataProvider provider = null;
         private DataTable tblGiaoHo = null;

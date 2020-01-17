@@ -369,6 +369,7 @@
         <item>123123asd</item>
         <item>00120123</item>
         <item>King123</item>
+        <item>123123123123</item>
       </gxTextCmnd>
       <txtGiaoXu caption="Giáo xứ">
         <item>R</item>
@@ -854,9 +855,11 @@
     <frmKhoiGiaoLy xmlns="">
       <txtTenKhoi caption="Tên khối">
         <item>đâsd</item>
+        <item>sdadasda</item>
       </txtTenKhoi>
       <txtNguoiQuanLy caption="Người quản lý">
         <item>Martinô R</item>
+        <item>Timothy Edward Belfield</item>
       </txtNguoiQuanLy>
       <txtGhiChu caption="Ghi chú">
         <item>weqweqwe</item>

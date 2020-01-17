@@ -56,7 +56,7 @@ namespace GxControl
             }
             set
             {
-                if (value == DBNull.Value)
+                if (value == DBNull.Value || value.ToString()=="")
                 {
                     gxDateInput1.IsNullDate = true;
                     return;

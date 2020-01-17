@@ -30,6 +30,9 @@ namespace GxGlobal
         private ApplicationClass WordApp = null;
         private Documents WordDocs = null;
         private Document WordDoc = null;
+        //hiepdv begin add 
+        private PageSetup SetupPage = null;
+        //hiepdv end add
         //private Selection CurrentSelection;
         public Selection CurrentSelection
         {
@@ -105,6 +108,9 @@ namespace GxGlobal
                                         ref fal, ref oMissing, ref oMissing, ref oMissing, ref oMissing);
              
                 WordDoc.Activate();
+                //hiepdv begin add
+                SetupPage = WordDoc.PageSetup;
+                //hiepdv end add
                 //CurrentSelection = WordDoc.Application.Selection;
 
                 Thread.CurrentThread.CurrentCulture = cultureinfo;
@@ -1233,7 +1239,8 @@ namespace GxGlobal
                 // prompt the user or stop when it hits the end of
                 // the section)
                 tmpRange.Find.Wrap = Word.WdFindWrap.wdFindContinue;
-                
+
+
                 // Declare an object to pass as a parameter that sets
                 // the Replace parameter to the "wdReplaceAll" enum
                 object replaceAll = Word.WdReplace.wdReplaceAll;
@@ -1307,6 +1314,63 @@ namespace GxGlobal
                 ref missing, ref missing, ref missing, ref replaceAll,
                 ref missing, ref missing, ref missing, ref missing);
         }
+
+        //hiepdv begin add
+        /// <summary>
+        /// add row vào cuối bảng với cột đầu tiên là stt
+        /// </summary>
+        /// <param name="numrow">số lượng row cần add</param>
+        /// <param name="index">index của bảng</param>
+        /// <param name="numcell">Số cột trong table</param>
+        public void AddRowColumnFirstSTT(int numrow,int index,int numcell)
+        {
+            object missing = System.Type.Missing;
+            Table tbl =GetTable(index);
+            Range range = tbl.Range; 
+
+            for (int i = 0; i < numrow; i++)
+            {
+                // Select the last row as source row.
+                int selectedRow = tbl.Rows.Count;
+
+                // Select and copy content of the source row.
+                range.Start = tbl.Rows[selectedRow].Cells[1].Range.Start;
+                range.End = tbl.Rows[selectedRow].Cells[tbl.Rows[selectedRow].Cells.Count].Range.End;
+                range.Copy();
+
+                // Insert a new row after the last row.
+                tbl.Rows.Add(ref missing);
+
+                // Moves the cursor to the first cell of target row.
+                range.Start = tbl.Rows[tbl.Rows.Count].Cells[1].Range.Start;
+                range.End = range.Start;
+
+                // Paste values to target row.
+                range.Paste();
+                int newCount = tbl.Rows.Count;
+
+
+                //// Write new vaules to each cell.
+                tbl.Rows[newCount].Cells[1].Range.Text = Memory.XoaKiTuXuongHangLienTiep(tbl.Rows[newCount].Cells[1].Range.Text.Trim().Replace((newCount - 2).ToString(), (newCount - 1).ToString()).Trim());
+                for (int j = 2; j <=numcell; j++)
+                {
+                    tbl.Rows[newCount].Cells[j].Range.Text = Memory.XoaKiTuXuongHangLienTiep(tbl.Rows[newCount].Cells[j].Range.Text.Trim().Replace((newCount - 3).ToString(), (newCount - 2).ToString()).Trim());
+                }
+            }
+        }
+        /// <summary>
+        /// Format table 
+        /// </summary>
+        public void FormatTable(int indextable, WdPaperSize ppz= WdPaperSize.wdPaperA4, WdOrientation orientation= WdOrientation.wdOrientPortrait)
+        {
+            Table table = GetTable(indextable);
+            table.AllowAutoFit = true;
+            table.AutoFitBehavior(WdAutoFitBehavior.wdAutoFitContent);
+            table.Borders.Enable = 1;
+            SetupPage.PaperSize = ppz;
+            SetupPage.Orientation = orientation;
+        }
+        //hiepdv end add
     }
 
     public enum WdSaveFormat
