@@ -468,6 +468,13 @@ namespace GxGlobal
             Range objRange = ActiveSheet.Columns;
             objRange.ColumnWidth = value;
         }
+        //hiepdv begin add
+        //hide 1 column
+        public void HideColumn(string column, bool hidden = true)
+        {
+            ActiveSheet.get_Range(string.Format("{0}:{1}",column,column),Type.Missing).EntireColumn.Hidden = hidden;
+        }
+        //hiepdv end add
 
         public void ExecuteExport()
         {

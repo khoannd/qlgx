@@ -72,7 +72,18 @@ namespace GxControl
         }
         public void SetGiaoDanForChuyenXu(DataTable tblGiaoDan)
         {
-          
+            //hiepdv begin add
+            //Thêm table Thông tin gia đình
+            DataTable tblGiaDinh = new DataTable();
+            tblGiaDinh.Columns.Add(GiaDinhConst.DienThoai);
+            tblGiaDinh.Columns.Add(GiaDinhConst.DiaChi);
+            DataRow rowGiaDinh = tblGiaDinh.NewRow();
+            rowGiaDinh[GiaDinhConst.DienThoai] = RowInfor[GiaDinhConst.DienThoai];
+            rowGiaDinh[GiaDinhConst.DiaChi] = RowInfor[GiaDinhConst.DiaChi];
+            tblGiaDinh.TableName = GiaDinhConst.TableName;
+            DataObj.Tables.Add(tblGiaDinh);
+            //hiepdv end add
+
             tblGiaoDan.Columns.Add(GiaoDanConst.HoTen);
             tblGiaoDan.Columns.Add(GiaoDanConst.TenThanh);
             tblGiaoDan.Columns.Add(GiaoDanConst.NgaySinh);
