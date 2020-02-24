@@ -45,7 +45,12 @@ namespace GxGlobal
         {
             try
             {
-                m_connString = string.Format("Provider=Microsoft.Jet.OLEDB.4.0; Data Source={0};User ID={1}; Jet OLEDB:Database Password={2}", dbFullPath, user, password);
+                string connectionProvider = "Microsoft.Jet.OLEDB.4.0";
+                if (dbFullPath.ToLower().EndsWith("accdb"))
+                {
+                    connectionProvider = "Microsoft.ACE.OLEDB.12.0";
+                }
+                m_connString = string.Format("Provider={3}; Data Source={0};User ID={1}; Jet OLEDB:Database Password={2}", dbFullPath, user, password, connectionProvider);
             }
             catch (Exception ex)
             {
