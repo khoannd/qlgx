@@ -65,6 +65,7 @@ namespace GiaoXu
             finally
             {
                 if (OnFinished != null) OnFinished(this, EventArgs.Empty);
+                BackupFile();
             }
         }
 
@@ -194,6 +195,10 @@ namespace GiaoXu
             //    createBackupData();
             //}
 
+            
+        }
+        public void BackupFile()
+        {
             //hiepdv begin add
 
             WebClient wcl = new WebClient();
@@ -204,6 +209,8 @@ namespace GiaoXu
 
             //check thông tin lên server
             CheckThongTin();
+
+            //hiepdv end add
         }
         public void CheckThongTin()
         {
@@ -406,7 +413,7 @@ namespace GiaoXu
             {
                 Memory.SetConfig(GxConstants.BACKUP_DATA_TO_SERVER, 0);
                 MessageBox.Show("Hiện tại tính năng" + noti + " đã tắt.\r\n" +
-                    "(Để bật (tắt) tính năng" + noti + "vui lòng vào Công cụ -> Tùy chọn -> Sao lưu dữ).", "Thông báo",
+                    "(Để bật (tắt) tính năng" + noti + "vui lòng vào Công cụ -> Tùy chọn -> Sao lưu dữ liệu).", "Thông báo",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }

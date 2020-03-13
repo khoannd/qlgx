@@ -66,7 +66,7 @@ namespace GiaoXu
             t.Start();
             DataTable tblGiaoXu = Memory.GetData("Select * from GiaoXu");
             string tenGiaoXu = tblGiaoXu.Rows[0][GiaoXuConst.TenGiaoXu].ToString();
-            string tenMay = tblGiaoXu.Rows[0][GiaoXuConst.TenMay].ToString();
+            string tenMay = GenerateUniqueCode.GetComputerName();
             string email = txtConfirmEmail.Text;
             string ghiChu = txtGhiChu.Text;
             string tenMayNhap = cbTenMayNhap.Text;
