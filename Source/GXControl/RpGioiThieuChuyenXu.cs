@@ -18,12 +18,15 @@ namespace GxControl
             {
                 DataRow rowGiaoXu = tblGiaoXu.Rows[0];
                 DataRow rowGiaoXuNhan = tblGiaoXuNhan.Rows[0];
+                DataRow rowGiaoDan = tblGiaoDan.Rows[0];
                 word.Replace(GiaoXuNhanConst.TenGiaoPhan2, rowGiaoXuNhan[GiaoXuNhanConst.TenGiaoPhan2]);
                 word.Replace(GiaoXuNhanConst.TenGiaoXu2, rowGiaoXuNhan[GiaoXuNhanConst.TenGiaoXu2]);
                 word.Replace(GiaoXuConst.TenGiaoXu, rowGiaoXu[GiaoXuConst.TenGiaoXu]);
                 word.Replace(GiaoHatConst.TenGiaoHat, rowGiaoXu[GiaoHatConst.TenGiaoHat]);
                 word.Replace(GiaoPhanConst.TenGiaoPhan, rowGiaoXu[GiaoPhanConst.TenGiaoPhan]);
-                word.Replace("FullNameLinhMuc", TenLinhMuc);
+                word.Replace("TenLinhMuc", TenLinhMuc);
+                word.Replace(GiaDinhConst.DienThoai, rowGiaoDan["DienThoaiGiaDinh"]);
+                word.Replace(GiaDinhConst.DiaChi, rowGiaoDan["DiaChiGiaDinh"]);
                 //Chu ho
                 var chuHoRow = GetChuHo(tblGiaoDan);
                 if(chuHoRow != null)
@@ -34,7 +37,7 @@ namespace GxControl
                 {
                     chuHoRow = tblGiaoDan.Rows[0];
                 }
-                word.Replace(RpChuyenGiaoXuConst.FullTenChuHo, string.Concat(chuHoRow[GiaoDanConst.TenThanh], " ", chuHoRow[GiaoDanConst.HoTen]));
+                word.Replace(RpChuyenGiaoXuConst.TenChuHo, string.Concat(chuHoRow[GiaoDanConst.TenThanh], " ", chuHoRow[GiaoDanConst.HoTen]));
 
                 SetTableFimaly(tblGiaoDan);
 

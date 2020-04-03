@@ -373,6 +373,25 @@ namespace GxGlobal
             }
         }
 
+        public void AutoFitCol(int startCol, int lastCol)
+        {
+            for (int i = startCol; i <= lastCol; i++)
+            {
+                try
+                {
+                    ((Range)ActiveSheet.Columns[i, Type.Missing]).AutoFit();
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        public void SetPrintArea(string startColName, string endColName)
+        {
+            ActiveSheet.PageSetup.PrintArea = string.Format("{0}:{1}", startColName, endColName);
+        }
+
         public void Write_to_excel(string key, object value)
         {
             string lang = Memory.GetConfig(GxConstants.CF_LANGUAGE);
@@ -468,6 +487,13 @@ namespace GxGlobal
             Range objRange = ActiveSheet.Columns;
             objRange.ColumnWidth = value;
         }
+        //hiepdv begin add
+        //hide 1 column
+        public void HideColumn(string column, bool hidden = true)
+        {
+            ActiveSheet.get_Range(string.Format("{0}:{1}",column,column),Type.Missing).EntireColumn.Hidden = hidden;
+        }
+        //hiepdv end add
 
         public void ExecuteExport()
         {

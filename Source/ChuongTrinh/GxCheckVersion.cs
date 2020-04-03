@@ -86,7 +86,7 @@ namespace GiaoXu
                 //check new version
                 if (!Memory.ServerUrl.EndsWith("/")) Memory.ServerUrl += "/";
                 string serverVersion = web.DownloadString(Memory.ServerUrl + "version.txt").Replace("ï»¿", "");
-                serverVersion = serverVersion.Substring(serverVersion.Length - 7);
+                serverVersion = serverVersion.Trim();
                 string t = serverVersion.Replace(".", "");
                 if (!Validator.IsNumber(t)) return;
 

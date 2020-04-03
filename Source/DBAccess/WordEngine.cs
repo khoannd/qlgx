@@ -765,6 +765,7 @@ namespace GxGlobal
         public void WriteTextInTable(int tableIndex, int row, int col, string text)
         {
             var table = GetTable(tableIndex);
+            if(table!=null)
             table.Cell(row, col).Range.Text = text;
         }
 
@@ -798,7 +799,8 @@ namespace GxGlobal
         }
         public Table GetTable(int index)
         {
-            if(WordDoc.Tables.Count <= index)
+            //hiepdv: logic cũ WordDoc.Tables.Count <= index
+            if (WordDoc.Tables.Count >= index && index > 0)
             {
                 return WordDoc.Tables[index];
             }
@@ -806,7 +808,7 @@ namespace GxGlobal
         }
         public Row GetTableRow(int index, int rowIndex)
         {
-            if (WordDoc.Tables.Count <= index)
+            if (WordDoc.Tables.Count >= index && index > 0)
             {
                 var table = WordDoc.Tables[index];
                 if(rowIndex <= table.Rows.Count)
@@ -1326,6 +1328,8 @@ namespace GxGlobal
         {
             object missing = System.Type.Missing;
             Table tbl =GetTable(index);
+            if (tbl == null)
+                return;
             Range range = tbl.Range; 
 
             for (int i = 0; i < numrow; i++)
@@ -1364,11 +1368,14 @@ namespace GxGlobal
         public void FormatTable(int indextable, WdPaperSize ppz= WdPaperSize.wdPaperA4, WdOrientation orientation= WdOrientation.wdOrientPortrait)
         {
             Table table = GetTable(indextable);
-            table.AllowAutoFit = true;
-            table.AutoFitBehavior(WdAutoFitBehavior.wdAutoFitContent);
-            table.Borders.Enable = 1;
-            SetupPage.PaperSize = ppz;
-            SetupPage.Orientation = orientation;
+            if(table!=null)
+            {
+                table.AllowAutoFit = true;
+                table.AutoFitBehavior(WdAutoFitBehavior.wdAutoFitContent);
+                table.Borders.Enable = 1;
+                SetupPage.PaperSize = ppz;
+                SetupPage.Orientation = orientation;
+            }
         }
         //hiepdv end add
     }
