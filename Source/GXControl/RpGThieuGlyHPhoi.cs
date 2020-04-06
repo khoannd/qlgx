@@ -31,7 +31,7 @@ namespace GxControl
                 word.Replace(GiaoDanConst.NgayRuaToi, rowGiaoDan[GiaoDanConst.NgayRuaToi]);
                 word.Replace(GiaoDanConst.NoiThemSuc, rowGiaoDan[GiaoDanConst.NoiThemSuc]);
                 word.Replace(GiaoDanConst.NgayThemSuc, rowGiaoDan[GiaoDanConst.NgayThemSuc]);
-                word.Replace("FullNameLinhMuc", TenLinhMuc);
+                word.Replace("HoTenLinhMuc", TenLinhMuc);
             }
             catch (Exception ex)
             {

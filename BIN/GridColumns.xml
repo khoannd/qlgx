@@ -62,8 +62,8 @@
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmGiaDinh_gxGiaoDanList1</key>
-    <columns>VaiTro,MaGiaoDan,TenThanh,HoTen,Phai,NgaySinh,NgayRuaToi,NgayRuocLe,NgayThemSuc,DaCoGiaDinh,HoTenCha,HoTenMe,TanTong,ConHoc,NgheNghiep,GhiChu,QuaDoi,DienThoai,DiaChi,TenGiaoHo,DaChuyenXu,TrinhDoVanHoa,TrinhDoChuyenMon,BietNgoaiNgu,NoiSinh,NoiRuaToi,NoiRuocLe,NoiThemSuc</columns>
-    <widths>80,50,80,150,50,80,80,80,80,50,100,100,50,50,100,200,50,80,200,80,50,100,80,50,60,60,60,60</widths>
+    <columns>GACH,VaiTro,MaGiaoDan,TenThanh,HoTen,Phai,NgaySinh,NgayRuaToi,NgayRuocLe,NgayThemSuc,DaCoGiaDinh,HoTenCha,HoTenMe,TanTong,ConHoc,NgheNghiep,GhiChu,QuaDoi,DienThoai,DiaChi,TenGiaoHo,DaChuyenXu,TrinhDoVanHoa,TrinhDoChuyenMon,BietNgoaiNgu,NoiSinh,NoiRuaToi,NoiRuocLe,NoiThemSuc</columns>
+    <widths>80,80,50,80,150,50,80,80,80,80,50,100,100,50,50,100,200,50,80,200,80,50,100,80,50,60,60,60,60</widths>
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmChonGiaoDan_gxGiaoDanList1</key>

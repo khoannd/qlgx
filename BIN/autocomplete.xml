@@ -81,6 +81,8 @@
         <item>Giuse Nguyễn Văn Uy</item>
         <item>Vinhson Nguyễn Văn Tuyền</item>
         <item>Đaminh Vũ Hùng Cường</item>
+        <item>Người Ban Bí Tích</item>
+        <item>Người Ban Bí Tích Rửa Tội</item>
       </txtLinhMucRuaToi>
       <txtNoiRuaToi caption="Nơi rửa tội">
         <item>Vinh An</item>
@@ -116,6 +118,7 @@
         <item>Teresa Trần Đình Thiên Nga</item>
         <item>Đaminh Bùi Văn Chánh</item>
         <item>Maria Nguyễn Thị Hồng Quế</item>
+        <item>Người Đỡ Đầu Rửa Tội</item>
       </txtNguoiDoDauRuaToi>
       <txtTenMe caption="Tên Mẹ">
         <item>Maria Phạm Thị Đình</item>
@@ -165,6 +168,7 @@
         <item>Maria Bùi Thị Tuyền</item>
         <item>Maria Nguyễn Thị Hoàng Yến</item>
         <item>Anna Đào Thị Nhuần</item>
+        <item>Maria Nguyễn Thị Khoa</item>
       </txtTenMe>
       <txtTenCha caption="Tên Cha">
         <item>Gb Nguyễn Văn Niệm</item>
@@ -214,6 +218,7 @@
         <item>Giuse Bùi Xuân Hào</item>
         <item>Phanxico Xavie Đoàn Xuân Hoàng ( Vinh)</item>
         <item>Đaminh Võ Thành Long</item>
+        <item>F.x. Phan Văn Quynh</item>
       </txtTenCha>
       <txtHoTen caption="Họ tên">
         <item>Nguyễn Phạm Thiên Nhân</item>
@@ -331,6 +336,13 @@
         <item>Đoàn Nguyễn Thiên Vy</item>
         <item>Võ Đào Bích Nga</item>
         <item>Peponis</item>
+        <item>Testmoiwnhaaa</item>
+        <item>Abcxyz</item>
+        <item>N</item>
+        <item>M</item>
+        <item>nhan</item>
+        <item>Nhanhnha</item>
+        <item>Phan Quốc Anh</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Đăk Nông</item>
@@ -361,6 +373,7 @@
       <txtDiaChi caption="Địa chỉ">
         <item>123 Đỗ Xuân Hợp</item>
         <item>Xuân Sơn</item>
+        <item>Đâsdadasdsasda</item>
       </txtDiaChi>
       <gxTextCmnd caption="CMND">
         <item>0010123123</item>
@@ -370,13 +383,14 @@
         <item>00120123</item>
         <item>King123</item>
         <item>123123123123</item>
+        <item>215123123</item>
       </gxTextCmnd>
       <txtGiaoXu caption="Giáo xứ">
         <item>R</item>
         <item>12</item>
         <item>St Martha</item>
       </txtGiaoXu>
-      <txtGhiChu caption="Ghi chú chung">
+      <txtGhiChu caption="Ghi chú">
         <item>240/MC</item>
         <item>042/MC</item>
         <item>004/MC - Thư Ký BĐH họ 1 2013-2017</item>
@@ -398,32 +412,39 @@
         <item>002/MT</item>
         <item>056/MC</item>
         <item>072/MC</item>
+        <item>001/G - trưởng BĐH Họ Giuse 2005-2009 ; 2009-2013 ; phó 2 BĐH Họ 2 2013-2017</item>
       </txtGhiChu>
       <txtNoiThemSuc caption="Nơi thêm sức">
         <item>Gx Tân Hòa, Tgp Sài Gòn</item>
         <item>Ngũ Phúc</item>
         <item>Gx Trà Cổ 2 ( Xuân Trà)</item>
         <item>Gx Ngũ Phúc</item>
+        <item>Nơi Thêm Sức</item>
       </txtNoiThemSuc>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Thanh Nga</item>
         <item>Têrêsa Phạm Thị Phương Lan</item>
+        <item>Maria Trần Thị Mai Anh</item>
       </txtNguoiVo>
       <txtNguoiChong caption="Người nam">
         <item>Vinh-sơn Trần Đức Đạt</item>
         <item>Martinô Nguyễn Hữu Anh</item>
+        <item>Phanxicô Xavie Phan Quốc Anh</item>
       </txtNguoiChong>
       <txtLinhMuc caption="Linh mục chứng">
         <item>Gioan Phạm Quang Tự</item>
         <item>Gioan Baotixita Nguyễn Văn Bình</item>
+        <item>Đaminh Nguyễn Văn Tòng</item>
       </txtLinhMuc>
       <txtNguoiChung2 caption="Người chứng 2">
         <item>Maria Vũ Thị Thúy</item>
         <item>Maria Võ Thị Thu Thủy</item>
+        <item>Maria Đỗ Thị Thay</item>
       </txtNguoiChung2>
       <txtNguoiChung1 caption="Người chứng 1">
         <item>Trần Văn Phùng</item>
         <item>Tôma Nguyễn Hữu Lai</item>
+        <item>F.x. Đoàn Văn Oanh</item>
       </txtNguoiChung1>
       <txtNoiHonPhoi caption="Nơi hôn phối">
         <item>Ngũ Phúc</item>
@@ -432,6 +453,7 @@
       <txtTenHonPhoi caption="Đôi hôn phối">
         <item>Đạt - Nga</item>
         <item>Anh - Lan</item>
+        <item>Anh - Anh</item>
       </txtTenHonPhoi>
       <txtLinhMucThemSuc caption="Người ban bí tích">
         <item>Đaminh Nguyễn Chu Trinh</item>
@@ -441,6 +463,8 @@
         <item>Gm Phaolo Maria Nguyễn Minh Nhật</item>
         <item>Gm. Đaminh Nguyễn Chu Trinh</item>
         <item>Gm. Đaminh Nguyễn Văn Lãng</item>
+        <item>Người Ban Bí Tích</item>
+        <item>Người Ban Bí Tích Thêm Sức</item>
       </txtLinhMucThemSuc>
       <txtNguoiDoDauThemSuc caption="Người đỡ đầu">
         <item>Giuse Nguyễn Hữu Tài</item>
@@ -458,6 +482,7 @@
         <item>Maria Đặng Thị Tốt</item>
         <item>Teresa Trần Đình Thiên Hằng</item>
         <item>Maria Nguyễn Thị Hồng Quế</item>
+        <item>Người Đỡ Đầu Thêm Sức</item>
       </txtNguoiDoDauThemSuc>
       <txtLinhMucRuocLe caption="Người ban bí tích">
         <item>Đamih Đặng Duy Hòa</item>
@@ -465,16 +490,22 @@
         <item>Lm. Đaminh Vũ Hùng Cường</item>
         <item>Đaminh Nguyễn Văn Tòng</item>
         <item>Đaminh Vũ Hùng Cường</item>
+        <item>Người Ban Bí Tích</item>
+        <item>Người Ban Bí Tích Rước Lễ</item>
       </txtLinhMucRuocLe>
       <txtNoiRuocLe caption="Nơi rước lễ">
         <item>Ngũ Phúci</item>
         <item>Ngũ Phúc</item>
         <item>Gx Ngũ Phúc</item>
         <item>Gx. Ngũ Phúc</item>
+        <item>Nơi Rước Lễ</item>
       </txtNoiRuocLe>
       <txtGiaoXuChuyen caption="Giáo xứ">
         <item>Hoa Kỳ</item>
       </txtGiaoXuChuyen>
+      <cbChuyenMon caption="Trình độ ch.môn">
+        <item>chuyên môn</item>
+      </cbChuyenMon>
     </frmGiaoDan>
     <frmGiaDinh xmlns="">
       <txtMaGiaDinh caption="Mã gia đình">
@@ -522,6 +553,7 @@
         <item>76</item>
         <item>32</item>
         <item>988</item>
+        <item>1</item>
       </txtMaGiaDinh>
       <txtNguoiChong caption="Người nam">
         <item>Phêrô Nguyễn Văn Hòa</item>
@@ -567,6 +599,7 @@
         <item>Phanxicô Xavie Phan Văn Ân</item>
         <item>Phanxicô Xavie Đoàn Văn Cừ</item>
         <item>Vinh-sơn Lê Thanh Bình</item>
+        <item>Phanxicô Xavie Phan Quốc Anh</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Hương</item>
@@ -614,6 +647,7 @@
         <item>Têrêsa Nguyễn Thị Yến</item>
         <item>Anna Võ Đào Bích Nga</item>
         <item>Maria Nguyễn Thị Dâng</item>
+        <item>Maria Trần Thị Mai Anh</item>
       </txtNguoiVo>
       <txtDiaChi caption="Địa chỉ">
         <item>123 Đỗ Xuân Hợp</item>
@@ -665,6 +699,8 @@
         <item>019/MT</item>
         <item>008/MT</item>
         <item>012/MT</item>
+        <item>2-001/G</item>
+        <item>001/G</item>
       </txtGhiChu>
       <txtLinhMuc caption="Linh mục chứng">
         <item>Giuse Nguyễn Văn Uy</item>
@@ -710,6 +746,7 @@
         <item>Maria Trần Thị Hà</item>
         <item>Maria Đinh Thị Riêng</item>
         <item>Rosa Trần Thị Lệ Tuyền</item>
+        <item>Maria Đỗ Thị Thay</item>
       </txtNguoiChung2>
       <txtNoiHonPhoi caption="Nơi hôn phối">
         <item>Tiên Chu</item>
@@ -754,6 +791,7 @@
         <item>Giuse Vũ Văn Viện</item>
         <item>Giuse Trần Văn Bình</item>
         <item>Phaolo Lê Công Lý</item>
+        <item>F.x. Đoàn Văn Oanh</item>
       </txtNguoiChung1>
     </frmGiaDinh>
     <frmTimGiaDinh xmlns="">
@@ -1085,5 +1123,56 @@
         <item>11111</item>
       </txtDoiRao>
     </frmRaoHonPhoi>
+    <frmGoiChungNhan xmlns="">
+      <txtGiaoPhanNhan caption="Thuộc giáo phận">
+        <item>Thuộc giáo xứ nhận</item>
+      </txtGiaoPhanNhan>
+      <txtGiaoXuNhan caption="Tên giáo xứ nhận">
+        <item>Tên Giáo xứ nhận</item>
+      </txtGiaoXuNhan>
+    </frmGoiChungNhan>
+    <frmReportGioiThieuHP xmlns="">
+      <txtTenThanh caption="Tên thánh">
+        <item>Tên Tháng</item>
+        <item>Tên Thánh</item>
+      </txtTenThanh>
+      <txtNoiHocGiaoLy caption="Nơi học GLHN:">
+        <item>Nói Học Giasao Lý Hôn Phối</item>
+      </txtNoiHocGiaoLy>
+      <txtNguoi1 caption="Giới thiệu cho:">
+        <item>Phanxicô Xavie Phan Quốc Anh</item>
+      </txtNguoi1>
+      <txtGiaoXu2 caption="Giáo xứ:">
+        <item>Giáo Xứ</item>
+      </txtGiaoXu2>
+      <txtGiaoPhan2 caption="Giáo phận:">
+        <item>Giáo Phận</item>
+      </txtGiaoPhan2>
+      <txtTenMe2 caption="và bà:">
+        <item>Con Bà</item>
+      </txtTenMe2>
+      <txtHoten caption="Họ tên">
+        <item>Họ Tên</item>
+      </txtHoten>
+      <txtTenCha2 caption="Con ông:">
+        <item>Con Ông</item>
+      </txtTenCha2>
+      <txtGiaoXuNhan caption="Giáo phận:">
+        <item>Giáo Phận</item>
+        <item>Giáo Phận Nhận</item>
+      </txtGiaoXuNhan>
+      <txtChaNhan caption="Kính gửi cha xứ:">
+        <item>Kính Gửi Cha Xứ</item>
+        <item>Cha Xứ Nhận</item>
+      </txtChaNhan>
+    </frmReportGioiThieuHP>
+    <frmReport xmlns="">
+      <txtGiaoPhan caption="Giáo phận : ">
+        <item>Giáo Phận</item>
+      </txtGiaoPhan>
+      <txtGiaoXu caption="Giáo xứ nhận : ">
+        <item>Giáo Xứ Nhận</item>
+      </txtGiaoXu>
+    </frmReport>
   </forms>
 </application>
