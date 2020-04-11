@@ -69,7 +69,7 @@ namespace GxControl
                 {
                     word.DeleteRow(1, j + 1);
                 }
-                word.FormatTable(1, Microsoft.Office.Interop.Word.WdPaperSize.wdPaperA4);
+                //word.FormatTable(1, Microsoft.Office.Interop.Word.WdPaperSize.wdPaperA4);
             }
 
             //check số thành viên cần in
@@ -77,7 +77,7 @@ namespace GxControl
             {
                 //Tiến hành add thêm row. số row cần add = maxrow - row_holder
                 word.AddRowColumnFirstSTT(maxRow - ROW_MAX_TEMPLATE, 1,5);
-                word.FormatTable(1, Microsoft.Office.Interop.Word.WdPaperSize.wdPaperA4);
+                //word.FormatTable(1, Microsoft.Office.Interop.Word.WdPaperSize.wdPaperA4);
             }
             //hiepdv end add
 
