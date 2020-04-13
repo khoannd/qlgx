@@ -6,7 +6,7 @@ using System.ComponentModel;
 namespace GxControl
 {
     public interface IGxProcess
-    {
+    { 
         event EventHandler OnStart;
         event CancelEventHandler OnError;
         event EventHandler OnFinished;

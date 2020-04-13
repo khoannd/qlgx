@@ -1,0 +1,7 @@
+﻿
+START IMPORT FROM OWNER - 09/04/2020 14:57:11 -----------------------
+Không thể chuyển dữ liệu. File bạn chọn không đúng định dạng dữ liệu mà chương trình có thể chuyển đổi.
+Hoặc có thể file bạn chọn thuộc version cũ. Bạn hãy cập nhật version mới cho bản đang sử dụng của file được chọn rồi thử lại lần nữa
+END IMPORT FROM OWNER  - 09/04/2020 14:57:11 -----------------------
+START IMPORT FROM OWNER - 09/04/2020 16:49:30 -----------------------
+END IMPORT FROM OWNER - 09/04/2020 16:50:51 -----------------------

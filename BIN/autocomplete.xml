@@ -169,6 +169,8 @@
         <item>Maria Nguyễn Thị Hoàng Yến</item>
         <item>Anna Đào Thị Nhuần</item>
         <item>Maria Nguyễn Thị Khoa</item>
+        <item>Maria Đỗ Thị Hoài</item>
+        <item>Anna Đồng Thị Trí</item>
       </txtTenMe>
       <txtTenCha caption="Tên Cha">
         <item>Gb Nguyễn Văn Niệm</item>
@@ -219,6 +221,8 @@
         <item>Phanxico Xavie Đoàn Xuân Hoàng ( Vinh)</item>
         <item>Đaminh Võ Thành Long</item>
         <item>F.x. Phan Văn Quynh</item>
+        <item>Giuse Vũ Văn Đề</item>
+        <item>Đaminh Nguyễn Văn Thử</item>
       </txtTenCha>
       <txtHoTen caption="Họ tên">
         <item>Nguyễn Phạm Thiên Nhân</item>
@@ -343,6 +347,8 @@
         <item>nhan</item>
         <item>Nhanhnha</item>
         <item>Phan Quốc Anh</item>
+        <item>Vũ Văn Đồng</item>
+        <item>Nguyễn Văn Bằng</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Đăk Nông</item>
@@ -369,6 +375,8 @@
         <item>Bv Thống Nhất</item>
         <item>Bv Từ Dũ , Tp H C M</item>
         <item>Hố Nai 3</item>
+        <item>Phú Thọ</item>
+        <item>Bắc Việt</item>
       </txtNoiSinh>
       <txtDiaChi caption="Địa chỉ">
         <item>123 Đỗ Xuân Hợp</item>
@@ -390,7 +398,7 @@
         <item>12</item>
         <item>St Martha</item>
       </txtGiaoXu>
-      <txtGhiChu caption="Ghi chú">
+      <txtGhiChu caption="Ghi chú chung">
         <item>240/MC</item>
         <item>042/MC</item>
         <item>004/MC - Thư Ký BĐH họ 1 2013-2017</item>
@@ -413,6 +421,7 @@
         <item>056/MC</item>
         <item>072/MC</item>
         <item>001/G - trưởng BĐH Họ Giuse 2005-2009 ; 2009-2013 ; phó 2 BĐH Họ 2 2013-2017</item>
+        <item>009/MC</item>
       </txtGhiChu>
       <txtNoiThemSuc caption="Nơi thêm sức">
         <item>Gx Tân Hòa, Tgp Sài Gòn</item>
@@ -1174,5 +1183,11 @@
         <item>Giáo Xứ Nhận</item>
       </txtGiaoXu>
     </frmReport>
+    <frmMergeData xmlns="">
+      <txtDB caption="Chọn tập tin">
+        <item>G:\Primas\Database\New folder\giaoxu.mdb</item>
+        <item>G:\Primas\Database\giaoxu.mdb</item>
+      </txtDB>
+    </frmMergeData>
   </forms>
 </application>
