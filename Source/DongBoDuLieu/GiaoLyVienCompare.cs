@@ -1,38 +1,27 @@
 ﻿using GxGlobal;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Text;
 
 namespace DongBoDuLieu
 {
-    class GiaoLyVienCompare : CompareRelationTable
+    class GiaoLyVienCompare:CompareRelationTable
     {
-        public GiaoLyVienCompare(string dir, string nameCSV) : base(dir, nameCSV)
+        DataTable tblGiaoLyVien;
+        public GiaoLyVienCompare(string dir, string nameCSV,DataTable tblGiaoLyVien):base(dir,nameCSV)
         {
+            this.tblGiaoLyVien = tblGiaoLyVien;
         }
 
-        private List<Dictionary<string, object>> listTracksLopGiaoLy;
-        private List<Dictionary<string, object>> listTracksGiaoDan;
-
-        public override void importCacObject()
+        public override void ExProcessData()
         {
-            foreach (var objectTrack in listTracksLopGiaoLy)
-            {
-                importObjectRelation(objectTrack, LopGiaoLyConst.MaLop, GiaoDanConst.MaGiaoDan, listTracksGiaoDan, GiaoLyVienConst.TableName);
-            }
+            Tbl = tblGiaoLyVien;
+            KhoaChinh1 = GiaoDanConst.MaGiaoDan;
+            TableNameKhoaChinh1 = GiaoDanConst.TableName;
+            KhoaChinh2 = LopGiaoLyConst.MaLop;
+            TableNameKhoaChinh2 = LopGiaoLyConst.TableName;
+            ProcessData();
         }
-        public void getListTracksLopGiaoLy(List<Dictionary<string, object>> lopGiaoLyTracks)
-        {
-            listTracksLopGiaoLy = lopGiaoLyTracks;
-        }
-        public void getListTracksGiaoDan(List<Dictionary<string, object>> giaoDanTracks)
-        {
-            listTracksGiaoDan = giaoDanTracks;
-        }
-
-        //public override void deleteObjectRelation()
-        //{
-        //    deleteObjecChild(ListTracks, GiaoLyVienConst.MaLop, GiaoLyVienConst.MaGiaoDan, GiaoLyVienConst.TableName);
-        //}
     }
 }

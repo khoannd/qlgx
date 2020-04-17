@@ -18,6 +18,7 @@ namespace GiaoXu
     {
         bool thefirst = false;
         private static frmLoadDataProcess frmLoadDataProcessform = new frmLoadDataProcess();
+        public event EventHandler selectGiaoXu;
         //hiepdv begin add
         List<GiaoXu> giaoXuAll = new List<GiaoXu>();
         //hiepdv end add
@@ -256,7 +257,7 @@ namespace GiaoXu
                     }
                     Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email);
 
-                    Memory.SetMaGiaoXuRiengAllTable(giaoXuInfo.MaGiaoXuRieng);
+                    //Memory.SetMaGiaoXuRiengAllTable(giaoXuInfo.MaGiaoXuRieng);
                     return true;
                 }
                 return false;
@@ -333,10 +334,6 @@ namespace GiaoXu
             }
         }
 
-        private void btnCreate_Click(object sender, EventArgs e)
-        {
-            this.Close();
-        }
         private void cbGiaoPhan_SelectedIndexChanged(object sender, EventArgs e)
         {
             var item = cbGiaoPhan.SelectedValue;
@@ -433,11 +430,11 @@ namespace GiaoXu
 
                 Thread thread = new Thread(() =>
                 {
-                btnCreate.Enabled = false;
+                btnKTimThay.Enabled = false;
                 this.Enabled = false;
                 giaoXuAll = GetAllGiaoXu();
                 SetListView(giaoXuAll);
-                btnCreate.Enabled = true;
+                btnKTimThay.Enabled = true;
                 this.Enabled = true;
                 frmLoadDataProcessform.Invoke((MethodInvoker)delegate{
                     frmLoadDataProcessform.Close();
@@ -539,6 +536,15 @@ namespace GiaoXu
                         "Trường hợp không tìm thấy giáo xứ của mình vui lòng chọn \"Tôi không tìm thấy giáo xứ của mình\" " +
                         "bên dưới góc phải màn hình để cập nhập thông tin của giáo xứ lên hệ thống qlgx.net.",
                         "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void btnKTimThay_Click(object sender, EventArgs e)
+        {
+            if(selectGiaoXu!=null)
+            {
+                selectGiaoXu(this, EventArgs.Empty);
+            }
+            this.Close();
         }
     }
     public class GiaoXu

@@ -1,37 +1,27 @@
 ﻿using GxGlobal;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Text;
 
 namespace DongBoDuLieu
 {
-    class GiaoDanHonPhoiCompare : CompareRelationTable
+    class GiaoDanHonPhoiCompare:CompareRelationTable
     {
-        public GiaoDanHonPhoiCompare(string dir, string nameCSV) : base(dir, nameCSV)
+        DataTable tblGDHP;
+        public GiaoDanHonPhoiCompare(string dir, string nameCSV,DataTable tblGDHP):base(dir,nameCSV)
         {
+            this.tblGDHP = tblGDHP;
         }
-        private List<Dictionary<string, object>> listTracksHonPhoi;
-        private List<Dictionary<string, object>> listTracksGiaoDan;
-        //public override void deleteObjectRelation()
-        //{
-        //    deleteObjecChild(ListTracks, GiaoDanHonPhoiConst.MaHonPhoi, GiaoDanHonPhoiConst.MaGiaoDan, GiaoDanHonPhoiConst.TableName);
 
-        //}
-
-        public override void importCacObject()
+        public override void ExProcessData()
         {
-            foreach (var objectTrack in listTracksHonPhoi)
-            {
-                importObjectRelation(objectTrack, HonPhoiConst.MaHonPhoi, GiaoDanConst.MaGiaoDan, listTracksGiaoDan, GiaoDanHonPhoiConst.TableName);
-            }
-        }
-        public void getListTracksHonPhoi(List<Dictionary<string, object>> honPhoiTracks)
-        {
-            listTracksHonPhoi = honPhoiTracks;
-        }
-        public void getListTracksGiaoDan(List<Dictionary<string, object>> giaoDanTracks)
-        {
-            listTracksGiaoDan = giaoDanTracks;
+            Tbl = tblGDHP;
+            KhoaChinh1 = GiaoDanConst.MaGiaoDan;
+            TableNameKhoaChinh1 = GiaoDanConst.TableName;
+            KhoaChinh2 = HonPhoiConst.MaHonPhoi;
+            TableNameKhoaChinh2 = HonPhoiConst.TableName;
+            ProcessData();
         }
     }
 }

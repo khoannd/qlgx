@@ -8,72 +8,99 @@ namespace DongBoDuLieu
 {
     public abstract class CompareMasterTable : Compare
     {
+        private string khoaChinh;
+        private int newIDMayKhach;
+        private string khoaNgoai = null;
+        private string tableNameKhoaNgoai = null;
+        private string khoaNgoai2 = null;
+        private string tableNameKhoaNgoai2 = null;
         public CompareMasterTable(string dir, string nameCSV) : base(dir, nameCSV)
         {
         }
-        
-        public abstract void importCacObject();
-        public abstract bool deleteObjectMaster(Dictionary<string, object> objectCSV, DataTable item);
-
-        public void importObjectMaster(Dictionary<string, object> objectCSV, DataTable objectClient, string fieldID, string nameTable)
+        public abstract void ExProcessData();
+        public override void ProcessData()
         {
-            Dictionary<string, object> objectTrack = new Dictionary<string, object>();
-            objectTrack.Add("updated", "false");
-            objectTrack.Add("oldIdIsCsv", "true");
-            objectTrack.Add("newId", "");
-            objectTrack.Add("nowId", "");
-            objectTrack.Add("oldId", "");
-            if (objectClient == null)
+            if (Data.Count > 0)
             {
-               try
-               {
-                    //insert new
-                    objectTrack["oldId"] = objectCSV[fieldID];
-                    objectTrack["newId"] = Memory.Instance.GetNextId(nameTable, fieldID, true).ToString();
-                    objectTrack["nowId"] = objectTrack["newId"];
-                    //objectCSV[fieldID] = objectTrack["newId"];
-                    DataTable resultAdd=assignDataAdd(objectCSV,fieldID,objectTrack["nowId"], nameTable);
-                    update(resultAdd);
-                }
-               catch (System.Exception ex)
-               {
-                    return;
-               }
-
-            }
-            else
-            {
-               try
-               {
-                    //update
-                    processDataNull(objectCSV, objectClient);
-                    objectTrack["updated"] = "true";
-                    if (compareDate(objectCSV["UpdateDate"], objectClient.Rows[0]["UpdateDate"].ToString()))
+                foreach (var item in Data)
+                {
+                    DataRow dongboRow = findRowDongBo(Convert.ToInt32(item[khoaChinh].ToString()), Tbl.TableName);
+                    if (dongboRow != null)
                     {
-                        objectTrack["newId"] = objectCSV[fieldID];
-                        objectTrack["oldId"] = objectClient.Rows[0][fieldID].ToString();
-                        objectTrack["nowId"] = objectClient.Rows[0][fieldID].ToString();
-                        objectTrack["oldIdIsCsv"] = "false";
-                        //objectCSV[fieldID] = objectTrack["nowId"];
-                        DataTable result=assignData(objectCSV,objectClient,nameTable,fieldID);
-                        update(result);
+                        int IDClient = Convert.ToInt32(dongboRow[DongBoConst.MaIDMayKhach].ToString());
+                        DataRow[] row = Tbl.Select(string.Format("{0} = {1}", khoaChinh, IDClient));
+                        if (row != null && row.Length > 0)
+                        {
+                            if (Convert.ToInt32(item["DeleteSV"].ToString()) == 1)
+                            {
+                                row[0].Delete();
+                                dongboRow["DaXoa"] = 1;
+                            }
+                            else
+                            {
+                                if (khoaNgoai != null)
+                                {
+                                    if (!changeValueKey(item, khoaNgoai, tableNameKhoaNgoai))
+                                        continue;
+                                    if (khoaNgoai2 != null)
+                                    {
+                                        if (!changeValueKey(item, khoaNgoai2, tableNameKhoaNgoai2))
+                                            continue;
+                                    }
+                                }
+                                processDataNull(item, row[0]);
+                                assignData(item, row[0], khoaChinh);
+                            }
+                        }
+                        continue;
                     }
-                    else
+                    if (Convert.ToInt32(item["DeleteSV"].ToString()) == 0)
                     {
-                        objectTrack["oldIdIsCsv"] = "true";
-                        objectTrack["newId"] = objectClient.Rows[0][fieldID].ToString();
-                        objectTrack["oldId"] = objectCSV[fieldID];
-                        objectTrack["nowId"] = objectClient.Rows[0][fieldID].ToString();
+                        if (khoaNgoai != null)
+                        {
+                            if (!changeValueKey(item, khoaNgoai, tableNameKhoaNgoai))
+                                continue;
+                            if (khoaNgoai2 != null)
+                            {
+                                if (!changeValueKey(item, khoaNgoai2, tableNameKhoaNgoai2))
+                                    continue;
+                            }
+                        }
+                        assignDataAdd(Tbl, item, khoaChinh, newIDMayKhach);
+                        insertDongBoID(newIDMayKhach++, Convert.ToInt32(item[khoaChinh]), Tbl.TableName);
                     }
                 }
-               catch (System.Exception ex)
-               {
-                    return;
-               }
             }
-            ListTracks.Add(objectTrack);
         }
-
-       
+        public string KhoaChinh
+        {
+            get { return khoaChinh; }
+            set { khoaChinh = value; }
+        }
+        public int NewIDMayKhach
+        {
+            get { return newIDMayKhach; }
+            set { newIDMayKhach = value; }
+        }
+        public string KhoaNgoai
+        {
+            get { return khoaNgoai; }
+            set { khoaNgoai = value; }
+        }
+        public string TableNameKhoaNgoai
+        {
+            get { return tableNameKhoaNgoai; }
+            set { tableNameKhoaNgoai = value; }
+        }
+        public string KhoaNgoai2
+        {
+            get { return khoaNgoai2; }
+            set { khoaNgoai2 = value; }
+        }
+        public string TableNameKhoaNgoai2
+        {
+            get { return tableNameKhoaNgoai2; }
+            set { tableNameKhoaNgoai2 = value; }
+        }
     }
 }

@@ -52,17 +52,21 @@
   <ItemGroup>
     <Compile Include="BiTichChiTietCompare.cs" />
     <Compile Include="CauHinhCompare.cs" />
+    <Compile Include="ChiTietHoiDoanCompare.cs" />
     <Compile Include="ChiTietLopGiaoLyCompare.cs" />
     <Compile Include="ChuyenXuCompare.cs" />
     <Compile Include="Compare.cs" />
+    <Compile Include="CompareKeyStringTable.cs" />
     <Compile Include="CompareMasterTable.cs" />
     <Compile Include="CompareRelationTable.cs" />
+    <Compile Include="DongBoID.cs" />
     <Compile Include="DotBiTichCompare.cs" />
     <Compile Include="GiaDinhCompare.cs" />
     <Compile Include="GiaoDanCompare.cs" />
     <Compile Include="GiaoDanHonPhoiCompare.cs" />
     <Compile Include="GiaoHoCompare.cs" />
     <Compile Include="GiaoLyVienCompare.cs" />
+    <Compile Include="HoiDoanCompare.cs" />
     <Compile Include="HonPhoiCompare.cs" />
     <Compile Include="KhoiGiaoLyCompare.cs" />
     <Compile Include="LinhMucCompare.cs" />

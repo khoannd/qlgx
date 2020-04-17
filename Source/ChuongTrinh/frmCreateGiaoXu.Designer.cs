@@ -41,7 +41,7 @@
             this.panel4 = new System.Windows.Forms.Panel();
             this.panel3 = new System.Windows.Forms.Panel();
             this.btnSelectGiaoXu = new GxControl.GxButton();
-            this.btnCreate = new GxControl.GxButton();
+            this.btnKTimThay = new GxControl.GxButton();
             this.label1 = new System.Windows.Forms.Label();
             this.panel1 = new System.Windows.Forms.Panel();
             this.chkSearchAll = new GxControl.GxCheckBox();
@@ -109,7 +109,7 @@
             // 
             this.panel3.BackColor = System.Drawing.Color.AliceBlue;
             this.panel3.Controls.Add(this.btnSelectGiaoXu);
-            this.panel3.Controls.Add(this.btnCreate);
+            this.panel3.Controls.Add(this.btnKTimThay);
             this.panel3.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.panel3.Location = new System.Drawing.Point(0, 465);
             this.panel3.Name = "panel3";
@@ -136,24 +136,24 @@
             this.btnSelectGiaoXu.Visible = false;
             this.btnSelectGiaoXu.Click += new System.EventHandler(this.btnSelectGiaoXu_Click);
             // 
-            // btnCreate
+            // btnKTimThay
             // 
-            this.btnCreate.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this.btnKTimThay.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnCreate.BackColor = System.Drawing.SystemColors.ActiveCaptionText;
-            this.btnCreate.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("btnCreate.BackgroundImage")));
-            this.btnCreate.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-            this.btnCreate.FlatAppearance.BorderColor = System.Drawing.Color.SteelBlue;
-            this.btnCreate.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkOrange;
-            this.btnCreate.FlatAppearance.MouseOverBackColor = System.Drawing.Color.SkyBlue;
-            this.btnCreate.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this.btnCreate.Location = new System.Drawing.Point(983, 6);
-            this.btnCreate.Name = "btnCreate";
-            this.btnCreate.Size = new System.Drawing.Size(244, 37);
-            this.btnCreate.TabIndex = 3;
-            this.btnCreate.Text = "Tôi không tìm thấy giáo xứ của mình";
-            this.btnCreate.UseVisualStyleBackColor = false;
-            this.btnCreate.Click += new System.EventHandler(this.btnCreate_Click);
+            this.btnKTimThay.BackColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.btnKTimThay.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("btnKTimThay.BackgroundImage")));
+            this.btnKTimThay.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+            this.btnKTimThay.FlatAppearance.BorderColor = System.Drawing.Color.SteelBlue;
+            this.btnKTimThay.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkOrange;
+            this.btnKTimThay.FlatAppearance.MouseOverBackColor = System.Drawing.Color.SkyBlue;
+            this.btnKTimThay.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this.btnKTimThay.Location = new System.Drawing.Point(983, 6);
+            this.btnKTimThay.Name = "btnKTimThay";
+            this.btnKTimThay.Size = new System.Drawing.Size(244, 37);
+            this.btnKTimThay.TabIndex = 3;
+            this.btnKTimThay.Text = "Tôi không tìm thấy giáo xứ của mình";
+            this.btnKTimThay.UseVisualStyleBackColor = false;
+            this.btnKTimThay.Click += new System.EventHandler(this.btnKTimThay_Click);
             // 
             // label1
             // 
@@ -296,7 +296,7 @@
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Panel panel4;
         private System.Windows.Forms.Panel panel3;
-        private GxControl.GxButton btnCreate;
+        private GxControl.GxButton btnKTimThay;
         private GxControl.GxComboBox cbGiaoHat;
         private GxControl.GxComboBox cbGiaoPhan;
         private System.Windows.Forms.Label label4;

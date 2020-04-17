@@ -5,7 +5,6 @@ using System.Data;
 using System.IO;
 using System.Reflection;
 using System.Text;
-using GxGlobal;
 
 namespace DongBoDuLieu
 {
@@ -20,6 +19,10 @@ namespace DongBoDuLieu
                 using (StreamReader sr = new StreamReader(fileName))
                 {
                     string[] header = sr.ReadLine().Split(';');
+                    for (int i = 0; i < header.Length; i++)
+                    {
+                        header[i] = header[i].Trim('`');
+                    }
                     string[] path = fileName.Split('\\');
                     string nameTable = path[path.Length - 1].Split('.')[0];
                     DataTable tbl = Memory.GetData(string.Format("Select * from {0} Where UpdateDate=#01/01/0001#", nameTable));
@@ -29,14 +32,14 @@ namespace DongBoDuLieu
                         {
                             string[] data = line.Split(';');
                             Dictionary<string, object> dic = new Dictionary<string, object>();
-                            for (int i = 0; i < header.Length-1; i++)
+                            for (int i = 0; i < header.Length; i++)
                             {
                                 if (header[i]=="DeleteSV")
                                 {
-                                    dic.Add(header[i], data[i]);
+                                    dic.Add(header[i], data[i].Trim('`'));
                                     continue;
                                 }
-                                dic.Add(header[i], processTypeValue(data[i], tbl.Columns[header[i]].DataType));
+                                dic.Add(header[i], processTypeValue(data[i].Trim('`'), tbl.Columns[header[i]].DataType));
                             }
                             this.Data.Add(dic);
                         }
@@ -53,7 +56,6 @@ namespace DongBoDuLieu
                     return (value == "0") ? false : true;
                 }
                 return Convert.ChangeType(value, typeValue);
-
             }
             if (typeValue.Name=="Int32")
             {

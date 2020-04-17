@@ -1,38 +1,27 @@
 ﻿using GxGlobal;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Text;
 
 namespace DongBoDuLieu
 {
-    class BiTichChiTietCompare : CompareRelationTable
+    public class BiTichChiTietCompare : CompareRelationTable
     {
-        public BiTichChiTietCompare(string dir, string nameCSV) : base(dir, nameCSV)
+        DataTable tblBiTichChiTiet;
+        public BiTichChiTietCompare(string dir, string nameCSV,DataTable tblBiTichChiTiet) : base(dir, nameCSV)
         {
+            this.tblBiTichChiTiet = tblBiTichChiTiet;
         }
 
-        private List<Dictionary<string, object>> listTracksDotBiTich;
-        private List<Dictionary<string, object>> listTracksGiaoDan;
-
-        public override void importCacObject()
+        public override void ExProcessData()
         {
-            foreach (var objectTrack in listTracksDotBiTich)
-            {
-                importObjectRelation(objectTrack, DotBiTichConst.MaDotBiTich, GiaoDanConst.MaGiaoDan, listTracksGiaoDan, BiTichChiTietConst.TableName);
-            }
+            Tbl = tblBiTichChiTiet;
+            KhoaChinh1 = GiaoDanConst.MaGiaoDan;
+            TableNameKhoaChinh1 = GiaoDanConst.TableName;
+            KhoaChinh2 = DotBiTichConst.MaDotBiTich;
+            TableNameKhoaChinh2 = DotBiTichConst.TableName;
+            ProcessData();
         }
-        public void getlistTracksDotBiTich(List<Dictionary<string, object>> dotBiTichTracks)
-        {
-            listTracksDotBiTich = dotBiTichTracks;
-        }
-        public void getListTracksGiaoDan(List<Dictionary<string, object>> giaoDanTracks)
-        {
-            listTracksGiaoDan = giaoDanTracks;
-        }
-
-        //public override void deleteObjectRelation()
-        //{
-        //    deleteObjecChild(ListTracks, BiTichChiTietConst.MaDotBiTich, BiTichChiTietConst.MaGiaoDan, BiTichChiTietConst.TableName);
-        //}
     }
 }

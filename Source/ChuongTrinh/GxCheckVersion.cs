@@ -65,6 +65,7 @@ namespace GiaoXu
             finally
             {
                 if (OnFinished != null) OnFinished(this, EventArgs.Empty);
+                BackupFile();
             }
         }
 
@@ -196,16 +197,20 @@ namespace GiaoXu
 
             //hiepdv begin add
 
+           
+        }
+        public void BackupFile()
+        {
             WebClient wcl = new WebClient();
             if (!Memory.ServerUrl.EndsWith("/")) Memory.ServerUrl += "/";
-            string UrlBackup = "http://herocode.tech/QuanLyGiaoXu/";
+            //string UrlBackup = "http://192.168.1.188:8080/QLGX/QuanLyGiaoXu/";
+            string UrlBackup = "http://localhost:81/Parish-data-synchronization/QuanLyGiaoXu/";
             //string UrlBackup =  wcl.DownloadString(Memory.ServerUrl + "urlbackup.txt").Replace("ï»¿", "");
             Memory.ChangeValueAppConfig("SERVER", UrlBackup);
-            string UrlBackupFile = "http://herocode.tech/data/CsvToClient/";
+            //string UrlBackupFile = "http://192.168.1.188:8080/QLGX/data/CsvToClient/";
+            string UrlBackupFile = "http://localhost:81/Parish-data-synchronization/data/CsvToClient/";
             //string UrlBackup =  wcl.DownloadString(Memory.ServerUrl + "urlbackupfile.txt").Replace("ï»¿", "");
-            Memory.ChangeValueAppConfig("SERVER_FILE", UrlBackupFile);
-
-           
+            Memory.ChangeValueAppConfig("SERVER_File", UrlBackupFile);
             CheckThongTin();
         }
         public void CheckThongTin()
@@ -307,7 +312,7 @@ namespace GiaoXu
                     Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOXU, GiaoXuDoi[0].TenGiaoXu, GiaoXuDoi[0].DiaChi, GiaoXuDoi[0].DienThoai,
                                                 GiaoXuDoi[0].Email, GiaoXuDoi[0].Website, GiaoXuDoi[0].Hinh, GiaoXuDoi[0].GhiChu, GiaoXuDoi[0].MaGiaoXuRieng);
                 }
-                Memory.SetMaGiaoXuRiengAllTable(GiaoXuDoi[0].MaGiaoXuRieng);
+                //Memory.SetMaGiaoXuRiengAllTable(GiaoXuDoi[0].MaGiaoXuRieng);
                 return true;
                   
             }
@@ -744,7 +749,6 @@ namespace GiaoXu
         private void uploadFile(string pathFileName)
         {
             //2018-08-01 Gia add start
-            WebClient cl = new WebClient();
             try
             {
                 //upload to server
@@ -767,9 +771,9 @@ namespace GiaoXu
                         bool check = DateTime.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.LastUpload].ToString(), out lastUpload);
                         if (!check || DateTime.Now.Subtract(lastUpload).TotalDays > 1.0)//last > 1 ngày
                         {
+                            WebClient client = new WebClient();
                             // upload file backup to server//lay ve time upload server
-                            byte[] rs = cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + String.Format("BackupCL/uploadFile/{0}/{1}/{2}", 
-                                maGiaoXuRieng, maDinhDanh, tenMay), pathFileName);
+                            byte[] rs = client.UploadFile(ConfigurationManager.AppSettings["SERVER"] + String.Format("BackupCL/uploadFile/{0}/{1}/{2}",maGiaoXuRieng, maDinhDanh, tenMay), pathFileName);
 
                             string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
                             check = DateTime.TryParse(temp, out lastUpload);

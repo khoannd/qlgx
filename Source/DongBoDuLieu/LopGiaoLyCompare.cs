@@ -8,121 +8,21 @@ namespace DongBoDuLieu
 {
     class LopGiaoLyCompare : CompareMasterTable
     {
-        public LopGiaoLyCompare(string dir, string nameCSV) : base(dir, nameCSV)
+        private DataTable tblLopGiaoLy;
+        private int newIDMayKhach = Memory.Instance.GetNextId(LopGiaoLyConst.TableName, LopGiaoLyConst.MaLop, true);
+        public LopGiaoLyCompare(string dir, string nameCSV,DataTable tblLopGiaoLy):base(dir,nameCSV)
         {
-        }
-        private List<Dictionary<string, object>> ListGiaoDanTracks;
-        private List<Dictionary<string, object>> ListKhoiGiaoLyTracks;
-        List<Dictionary<string, object>> chiTietLopGiaoLy;
-        public void getListChiTietLopGiaoLyCSV(List<Dictionary<string, object>> ChiTietLopGiaoLyCSV)
-        {
-            chiTietLopGiaoLy = ChiTietLopGiaoLyCSV;
-        }
-      
-        public void getListGiaoDanTracks(List<Dictionary<string, object>> giaoDanTracks)
-        {
-            ListGiaoDanTracks = giaoDanTracks;
-        }
-        public void getListKhoiGiaoLy(List<Dictionary<string, object>> khoiGiaoLyTracks)
-        {
-            ListKhoiGiaoLyTracks = khoiGiaoLyTracks;
+            this.tblLopGiaoLy = tblLopGiaoLy;
         }
 
-        public override void importCacObject()
+        public override void ExProcessData()
         {
-            if (Data.Count > 0)
-            {
-                foreach (var item in Data)
-                {
-                   
-                    int idMaKhoi = findIdObjectClient(ListKhoiGiaoLyTracks, item["MaKhoi"]);
-                    if (idMaKhoi == 0)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        item["MaKhoi"] = idMaKhoi.ToString();
-                    }
-                    DataTable lopGiaoLy = findLopGiaoLy(item);
-                    if (deleteObjectMaster(item, lopGiaoLy))
-                    {
-                        continue;
-                    }
-                    importObjectMaster(item, lopGiaoLy, "MaLop", LopGiaoLyConst.TableName);
-                }
-            }
-        }
-
-        private DataTable findLopGiaoLy(Dictionary<string, object> objectCSV)
-        {
-            DataTable tbl = null;
-            try
-            {
-                string query = string.Format(@"SELECT TOP 1 * FROM {0} WHERE TenLop=? AND Nam=? AND MaKhoi=?", LopGiaoLyConst.TableName);
-                tbl = Memory.GetData(query, objectCSV["TenLop"], objectCSV["Nam"], objectCSV["MaKhoi"]);
-                if (tbl!=null&&tbl.Rows.Count>0)
-                {
-                    if (compareHocVien(objectCSV,tbl.Rows[0]))
-                    {
-                        return tbl;
-                    }
-                }
-            }
-            catch (System.Exception ex)
-            {
-                return null;
-            }
-            return null;
-        }
-
-        public bool compareHocVien(Dictionary<string, object> lopCSV, DataRow lopDB)
-        {
-            DataTable hocVienDB = Memory.GetData(@"Select * from ChiTietLopGiaoLy Where MaLop=?",lopDB["MaLop"]);
-            List<Dictionary<string, object>> hocvienCSV = getListByID(chiTietLopGiaoLy, "MaLop", lopCSV["MaLop"]);
-            if (hocVienDB != null && hocVienDB.Rows.Count == 0 && hocvienCSV != null && hocvienCSV.Count == 0)
-            {
-                return true;
-            }
-            if (hocVienDB != null && hocVienDB.Rows.Count == 0 || hocvienCSV != null && hocvienCSV.Count == 0)
-            {
-                return false;
-            }
-            foreach (var hocvienInCSV in hocvienCSV)
-            {
-                int idHocVieDB = findIdObjectClient(ListGiaoDanTracks, hocvienInCSV["MaGiaoDan"]);
-                foreach (DataRow hocvienInDB in hocVienDB.Rows)
-                {
-                    if (int.Parse(hocvienInDB["MaGiaoDan"].ToString())==idHocVieDB)
-                    {
-                        return true;
-                    }
-                }
-
-            }
-            return false;
-        }
-
-     
-
-        public override bool deleteObjectMaster(Dictionary<string, object> objectCSV, DataTable item)
-        {
-            if (int.Parse(objectCSV["DeleteSV"].ToString()) == 1 && item != null && item.Rows.Count > 0
-                                                             && compareDate(objectCSV[GxSyn.UpdateDate], item.Rows[0][GxSyn.UpdateDate].ToString()))
-            {
-                //xoa lop
-                delete(@"MaLop=?", LopGiaoLyConst.TableName, item.Rows[0][LopGiaoLyConst.MaLop]);
-                //xoa giao ly vien
-                delete(@"MaLop=?", GiaoLyVienConst.TableName, item.Rows[0][GiaoLyVienConst.MaLop]);
-                //Xoa chi tiet lop giao ly
-                delete(@"MaLop=?", ChiTietLopGiaoLyConst.TableName, item.Rows[0][ChiTietLopGiaoLyConst.MaLop]);
-                return true;
-            }
-            if (int.Parse(objectCSV["DeleteSV"].ToString()) == 1)
-            {
-                return true;
-            }
-            return false;
+            Tbl = tblLopGiaoLy;
+            KhoaChinh = LopGiaoLyConst.MaLop;
+            NewIDMayKhach = newIDMayKhach;
+            KhoaNgoai = KhoiGiaoLyConst.MaKhoi;
+            TableNameKhoaNgoai = KhoiGiaoLyConst.TableName;
+            ProcessData();
         }
     }
 }
