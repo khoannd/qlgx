@@ -86,6 +86,7 @@
         <item>Lm Phêrô Trần Đình Tứ</item>
         <item>Vinh Sơn Đặng Văn Tú</item>
         <item>Lm Đaminh Trịnh Đình Cương</item>
+        <item>Đaminh Phạm Ngọc Đỉnh</item>
       </txtLinhMucRuaToi>
       <txtNoiRuaToi caption="Nơi rửa tội">
         <item>Vinh An</item>
@@ -99,6 +100,7 @@
         <item>Bùi Chu</item>
         <item>Tân Mai</item>
         <item>Hà Nội</item>
+        <item>Thạch Bi</item>
       </txtNoiRuaToi>
       <txtNguoiDoDauRuaToi caption="Người đỡ đầu">
         <item>Anna Nguyễn Thị Kim Dung</item>
@@ -141,6 +143,7 @@
         <item>Đaminh Đàm Công Khánh</item>
         <item>Maria Phạm Quỳnh Quế Anh</item>
         <item>Giuse Phạm Văn Thịnh</item>
+        <item>Maria Mới</item>
       </txtNguoiDoDauRuaToi>
       <txtTenMe caption="Tên Mẹ">
         <item>Maria Phạm Thị Đình</item>
@@ -219,6 +222,8 @@
         <item>Maria Trần Thị Nhiệm</item>
         <item>Maria Đoàn Thị Gần</item>
         <item>Maria Trần Thị Triều</item>
+        <item>Maria Đỗ Thị Thêu</item>
+        <item>Maria Nguyễn Thị Mai</item>
       </txtTenMe>
       <txtTenCha caption="Tên Cha">
         <item>Gb Nguyễn Văn Niệm</item>
@@ -301,6 +306,8 @@
         <item>Phêrô Nguyễn Văn Toản</item>
         <item>Giuse Nguyễn Văn Danh</item>
         <item>Phêrô Đỗ Văn Thực</item>
+        <item>Giuse Vũ Văn Thanh</item>
+        <item>Giuse Nguyễn Văn Thu</item>
       </txtTenCha>
       <txtHoTen caption="Họ tên">
         <item>Nguyễn Phạm Thiên Nhân</item>
@@ -464,6 +471,8 @@
         <item>Quý</item>
         <item>Nguyễn Qúy</item>
         <item>Nguyễn Quý</item>
+        <item>Vũ Văn Thủy</item>
+        <item>Nguyễn Thị Nhạn</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Đăk Nông</item>
@@ -728,6 +737,7 @@
         <item>1</item>
         <item>23</item>
         <item>2</item>
+        <item>839</item>
       </txtMaGiaDinh>
       <txtNguoiChong caption="Người nam">
         <item>Phêrô Nguyễn Văn Hòa</item>
@@ -786,6 +796,8 @@
         <item>Giuse Đoàn Văn Dương</item>
         <item>Albertô Nguyễn Duy Chất</item>
         <item>Phêrô Nguyễn Ngọc Tuấn Khoát</item>
+        <item>Giuse Vũ Văn Thủy</item>
+        <item>Giuse Nguyễn Văn Thu</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Hương</item>
@@ -845,6 +857,8 @@
         <item>Catarina Bùi Bích Nhuận</item>
         <item>Maria Hoàng Thị Hồng Hân</item>
         <item>Maria Nguyễn Kim Tình</item>
+        <item>Maria Nguyễn Thị Nhạn</item>
+        <item>Maria Nguyễn Thị Mai</item>
       </txtNguoiVo>
       <txtDiaChi caption="Địa chỉ">
         <item>123 Đỗ Xuân Hợp</item>
@@ -924,6 +938,7 @@
         <item>F.x. Nguyễn Đức Đạt</item>
         <item>Giuse Nguyễn Đức Giang</item>
         <item>Vinh Sơn Phạm Liên Hùng</item>
+        <item>Phêrô Phạm Văn Cử</item>
       </txtLinhMuc>
       <txtNguoiChung2 caption="Người chứng 2">
         <item>Maria Trần Thị Ngọc Mai</item>
@@ -953,6 +968,7 @@
         <item>Maria Mới</item>
         <item>Teresa Nguyễn Thị Kím Ánh</item>
         <item>Maria Nguyễn Thị Trạch</item>
+        <item>Maria</item>
       </txtNguoiChung2>
       <txtNoiHonPhoi caption="Nơi hôn phối">
         <item>Tiên Chu</item>
@@ -973,6 +989,7 @@
         <item>Thánh Tâm</item>
         <item>Nam Trực</item>
         <item>Bùi Đức</item>
+        <item>Tương Nam</item>
       </txtNoiHonPhoi>
       <txtNguoiChung1 caption="Người chứng 1">
         <item>Giuse Trương Đức Tân</item>
@@ -1003,6 +1020,7 @@
         <item>Giuse Nam</item>
         <item>Phê-rô Lê Trọng Hợp</item>
         <item>Gioakim Phạm Văn Tiếp</item>
+        <item>Micae Nguyễn Văn Tính</item>
       </txtNguoiChung1>
     </frmGiaDinh>
     <frmTimGiaDinh xmlns="">
