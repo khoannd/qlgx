@@ -83,6 +83,9 @@
         <item>Đaminh Vũ Hùng Cường</item>
         <item>Người Ban Bí Tích</item>
         <item>Người Ban Bí Tích Rửa Tội</item>
+        <item>Lm Phêrô Trần Đình Tứ</item>
+        <item>Vinh Sơn Đặng Văn Tú</item>
+        <item>Lm Đaminh Trịnh Đình Cương</item>
       </txtLinhMucRuaToi>
       <txtNoiRuaToi caption="Nơi rửa tội">
         <item>Vinh An</item>
@@ -93,6 +96,9 @@
         <item>Chân Phúc Khang</item>
         <item>Gò Vấp</item>
         <item>Ngọc Đồng</item>
+        <item>Bùi Chu</item>
+        <item>Tân Mai</item>
+        <item>Hà Nội</item>
       </txtNoiRuaToi>
       <txtNguoiDoDauRuaToi caption="Người đỡ đầu">
         <item>Anna Nguyễn Thị Kim Dung</item>
@@ -119,6 +125,22 @@
         <item>Đaminh Bùi Văn Chánh</item>
         <item>Maria Nguyễn Thị Hồng Quế</item>
         <item>Người Đỡ Đầu Rửa Tội</item>
+        <item>F.x. Phan Quốc Toản</item>
+        <item>Maria Phạm Thị Phượng</item>
+        <item>Maria Trần Thị Thanh Nga</item>
+        <item>Vinhsơn Trần Ban</item>
+        <item>F.x. Phan Văn Ái</item>
+        <item>Maria Hoàng Thị Hạnh</item>
+        <item>Maria Nguyễn Thị Hội</item>
+        <item>Maria Nguyễn Thị Thanh Thảo</item>
+        <item>Maria Hoàng Thị Hồng Vân</item>
+        <item>Giuse Bùi Xuân Đắc</item>
+        <item>Maria Đỗ Thị Huyền Liên</item>
+        <item>Maria Madalena Nguyễn Dạ Nguyệt An</item>
+        <item>Maria Đặng Thị Bích Trâm</item>
+        <item>Đaminh Đàm Công Khánh</item>
+        <item>Maria Phạm Quỳnh Quế Anh</item>
+        <item>Giuse Phạm Văn Thịnh</item>
       </txtNguoiDoDauRuaToi>
       <txtTenMe caption="Tên Mẹ">
         <item>Maria Phạm Thị Đình</item>
@@ -171,6 +193,32 @@
         <item>Maria Nguyễn Thị Khoa</item>
         <item>Maria Đỗ Thị Hoài</item>
         <item>Anna Đồng Thị Trí</item>
+        <item>Maria Đỗ Thị Hiền</item>
+        <item>Maria Phạm Thị Kim Nhiên</item>
+        <item>Maria Nguyễn Thị Trung</item>
+        <item>Maria Trịnh Thị Huê</item>
+        <item>Maria Trương Thị Trữ</item>
+        <item>Maria Nguyễn Thị Khánh</item>
+        <item>Maria Trần Thị Mai Tẽo</item>
+        <item>Maria Nguyễn Thị Thục</item>
+        <item>Maria Phạm Thị Tiết</item>
+        <item>Maria Vũ Thị Dong</item>
+        <item>Maria Nguyễn Thị Thạch</item>
+        <item>Maria Chu Thị Hoa</item>
+        <item>Mã Huỳnh Trâm</item>
+        <item>Maria Đặng Thị Trữ</item>
+        <item>Maria Nguyễn Thị Kim Cát</item>
+        <item>Maria Hoàng Thị Hồng Hân</item>
+        <item>Tê-rê-sa Nguyễn Thị Phin</item>
+        <item>Tê-rê-sa Phạm Thị Phương Thụy</item>
+        <item>Tê-rê-sa Phạm Thị Phương Miền</item>
+        <item>Maria Bùi Thị Triệu</item>
+        <item>Maria Đỗ Thị Kim Lệ</item>
+        <item>Catarina Bùi Bích Nhuận</item>
+        <item>Maria Nguyễn Thị Kim Nhi</item>
+        <item>Maria Trần Thị Nhiệm</item>
+        <item>Maria Đoàn Thị Gần</item>
+        <item>Maria Trần Thị Triều</item>
       </txtTenMe>
       <txtTenCha caption="Tên Cha">
         <item>Gb Nguyễn Văn Niệm</item>
@@ -223,6 +271,36 @@
         <item>F.x. Phan Văn Quynh</item>
         <item>Giuse Vũ Văn Đề</item>
         <item>Đaminh Nguyễn Văn Thử</item>
+        <item>Giuse Vũ Văn Tĩnh</item>
+        <item>Phê-rô Trân Văn Báu</item>
+        <item>Phanxico Xavie Đoàn Thanh Đồng</item>
+        <item>F.x. Đoàn Văn Mao</item>
+        <item>Martin Nguyễn Trung Ninh</item>
+        <item>F.x. Phan Văn Hưng</item>
+        <item>Phanxico Xavie Phan Quốc Tin</item>
+        <item>Đaminh Nguyễn Viết Xuân</item>
+        <item>Vinh-sơn Lê Công Thông</item>
+        <item>Phê-rô Lê Văn Phú</item>
+        <item>Phanxico Xavie Phan Quốc Tiến</item>
+        <item>Vinh-sơn Trần Hổ</item>
+        <item>Đaminh Nguyễn Công Hữu</item>
+        <item>Bùi Minh Thân</item>
+        <item>Fx. Phan Văn Phô</item>
+        <item>Phanxico Xavie Phan Văn Ái</item>
+        <item>Giuse Đoàn Văn Dương</item>
+        <item>Đaminh Nguyễn Văn Tử</item>
+        <item>Martin Nguyễn Hữu Lục</item>
+        <item>Phanxico Xavie Đoàn Thanh Tròn</item>
+        <item>Martin Nguyễn Hữu 1111</item>
+        <item>Giuse Hoàng Văn Bách ( Đắc</item>
+        <item>Phêrô Phạm Xuân Công</item>
+        <item>Mar-ti-nô Nguyễn Quang Nhật Đôn</item>
+        <item>Martinô Nguyễn Quang Nhật Triều</item>
+        <item>Phê-rô Phạm Xuân Biết</item>
+        <item>Giuse Phạm Văn Tấn</item>
+        <item>Phêrô Nguyễn Văn Toản</item>
+        <item>Giuse Nguyễn Văn Danh</item>
+        <item>Phêrô Đỗ Văn Thực</item>
       </txtTenCha>
       <txtHoTen caption="Họ tên">
         <item>Nguyễn Phạm Thiên Nhân</item>
@@ -349,6 +427,43 @@
         <item>Phan Quốc Anh</item>
         <item>Vũ Văn Đồng</item>
         <item>Nguyễn Văn Bằng</item>
+        <item>Vũ Văn Khiết</item>
+        <item>Trần Ngọc Xuân Quy</item>
+        <item>Đoàn Nguyễn Như Quỳnh Điền</item>
+        <item>Đoàn Thanh Trụ</item>
+        <item>Nguyễn Thị Trung</item>
+        <item>Phan Quốc Tỷ</item>
+        <item>Phan Phát Trường</item>
+        <item>Nguyễn Thị Thạch</item>
+        <item>Lê Thị Hồng Thêm</item>
+        <item>Lê Công Thông</item>
+        <item>Phan Thị Thùy Oanh</item>
+        <item>Trần Thị Mai Tẽo</item>
+        <item>Nguyễn Quang Nhật Triều</item>
+        <item>Bùi Bích Nhuận</item>
+        <item>Phan Văn Kháng</item>
+        <item>Phan Quốc Huỳnh</item>
+        <item>Đoàn Thị Hoàng San</item>
+        <item>Nguyễn Thị Thanh Vở</item>
+        <item>Nguyễn Phạm Yến Mùi</item>
+        <item>Đoàn Nguyễn Đăng Kỷ</item>
+        <item>Nguyễn Phạm Trúc Khuê</item>
+        <item>Hoàng Thị Phương Hoan</item>
+        <item>Hoàng Việt Triều</item>
+        <item>Phạm Thanh Thơ</item>
+        <item>Nguyễn Tường Diễm</item>
+        <item>Nguyễn Tường Một</item>
+        <item>Phạm Hà Nhu</item>
+        <item>Đoàn Minh Văn</item>
+        <item>Phạm Ngọc Điều</item>
+        <item>Phạm Xuân Công</item>
+        <item>Nguyễn Ngọc Tuấn Khoát</item>
+        <item>Nguyễn Kim Tình</item>
+        <item>Đỗ Thị Kim Lệ</item>
+        <item>Qúy</item>
+        <item>Quý</item>
+        <item>Nguyễn Qúy</item>
+        <item>Nguyễn Quý</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Đăk Nông</item>
@@ -377,6 +492,11 @@
         <item>Hố Nai 3</item>
         <item>Phú Thọ</item>
         <item>Bắc Việt</item>
+        <item>Hố Nai 2</item>
+        <item>Cà Mau</item>
+        <item>Tân Mai</item>
+        <item>Biên Hòa, Đồng Nai</item>
+        <item>Tp Hố Chí Minh</item>
       </txtNoiSinh>
       <txtDiaChi caption="Địa chỉ">
         <item>123 Đỗ Xuân Hợp</item>
@@ -422,6 +542,13 @@
         <item>072/MC</item>
         <item>001/G - trưởng BĐH Họ Giuse 2005-2009 ; 2009-2013 ; phó 2 BĐH Họ 2 2013-2017</item>
         <item>009/MC</item>
+        <item>193/G</item>
+        <item>034/G</item>
+        <item>002/MT - thư ký BTS giới Gia trưởng 2009-2013</item>
+        <item>001/MT</item>
+        <item>005/MT</item>
+        <item>008/MC</item>
+        <item>006/MC</item>
       </txtGhiChu>
       <txtNoiThemSuc caption="Nơi thêm sức">
         <item>Gx Tân Hòa, Tgp Sài Gòn</item>
@@ -429,40 +556,57 @@
         <item>Gx Trà Cổ 2 ( Xuân Trà)</item>
         <item>Gx Ngũ Phúc</item>
         <item>Nơi Thêm Sức</item>
+        <item>Bùi Chu</item>
+        <item>Lai Ổn</item>
+        <item>Hà Nội</item>
       </txtNoiThemSuc>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Thanh Nga</item>
         <item>Têrêsa Phạm Thị Phương Lan</item>
         <item>Maria Trần Thị Mai Anh</item>
+        <item>Maria Nguyễn Thị Chín</item>
+        <item>Maria Trần Ngọc Xuân Quy</item>
       </txtNguoiVo>
       <txtNguoiChong caption="Người nam">
         <item>Vinh-sơn Trần Đức Đạt</item>
         <item>Martinô Nguyễn Hữu Anh</item>
         <item>Phanxicô Xavie Phan Quốc Anh</item>
+        <item>Giuse Vũ Văn Khiết</item>
+        <item>Giuse Vũ Quốc Lưỡng</item>
       </txtNguoiChong>
       <txtLinhMuc caption="Linh mục chứng">
         <item>Gioan Phạm Quang Tự</item>
         <item>Gioan Baotixita Nguyễn Văn Bình</item>
         <item>Đaminh Nguyễn Văn Tòng</item>
+        <item>Giuse Nguyễn Đức Giang</item>
+        <item>Đaminh Vũ Hùng Cường</item>
       </txtLinhMuc>
       <txtNguoiChung2 caption="Người chứng 2">
         <item>Maria Vũ Thị Thúy</item>
         <item>Maria Võ Thị Thu Thủy</item>
         <item>Maria Đỗ Thị Thay</item>
+        <item>Maria Mới</item>
+        <item>Maria Trần Thị Huệ</item>
       </txtNguoiChung2>
       <txtNguoiChung1 caption="Người chứng 1">
         <item>Trần Văn Phùng</item>
         <item>Tôma Nguyễn Hữu Lai</item>
         <item>F.x. Đoàn Văn Oanh</item>
+        <item>Giuse Nam</item>
+        <item>Giuse Vũ Đình Phương</item>
       </txtNguoiChung1>
       <txtNoiHonPhoi caption="Nơi hôn phối">
         <item>Ngũ Phúc</item>
         <item>Suối Nho</item>
+        <item>Nam Trực</item>
+        <item>Gx Ngũ Phúc</item>
       </txtNoiHonPhoi>
       <txtTenHonPhoi caption="Đôi hôn phối">
         <item>Đạt - Nga</item>
         <item>Anh - Lan</item>
         <item>Anh - Anh</item>
+        <item>Khiết - Chín</item>
+        <item>Lưỡng - Quy</item>
       </txtTenHonPhoi>
       <txtLinhMucThemSuc caption="Người ban bí tích">
         <item>Đaminh Nguyễn Chu Trinh</item>
@@ -474,6 +618,8 @@
         <item>Gm. Đaminh Nguyễn Văn Lãng</item>
         <item>Người Ban Bí Tích</item>
         <item>Người Ban Bí Tích Thêm Sức</item>
+        <item>Tôma Nguyễn Văn Trâm</item>
+        <item>Đaminh Nguyễn Văn Lãng</item>
       </txtLinhMucThemSuc>
       <txtNguoiDoDauThemSuc caption="Người đỡ đầu">
         <item>Giuse Nguyễn Hữu Tài</item>
@@ -492,6 +638,19 @@
         <item>Teresa Trần Đình Thiên Hằng</item>
         <item>Maria Nguyễn Thị Hồng Quế</item>
         <item>Người Đỡ Đầu Thêm Sức</item>
+        <item>F.x. Phan Quốc Toản</item>
+        <item>Maria Phạm Thị Phượng</item>
+        <item>Maria Trần Thị Thanh Nga</item>
+        <item>Vinhsơn Trần Ban</item>
+        <item>F.x. Phan Văn Ái</item>
+        <item>Maria Hoàng Thị Hạnh</item>
+        <item>Anna Nguyễn Thị Môn</item>
+        <item>Maria Nguyễn Thị Thanh Thảo</item>
+        <item>Maria Hoàng Thị Hồng Vân</item>
+        <item>Giuse Bùi Xuân Đắc</item>
+        <item>Đaminh Đàm Công Khánh</item>
+        <item>Giuse Phạm Văn Thịnh</item>
+        <item>Maria Nguyễn Thị Hoa</item>
       </txtNguoiDoDauThemSuc>
       <txtLinhMucRuocLe caption="Người ban bí tích">
         <item>Đamih Đặng Duy Hòa</item>
@@ -501,6 +660,8 @@
         <item>Đaminh Vũ Hùng Cường</item>
         <item>Người Ban Bí Tích</item>
         <item>Người Ban Bí Tích Rước Lễ</item>
+        <item>Lm. Đaminh Nguyễn Văn Tòng</item>
+        <item>Đaminh Đặng Duy Hòa</item>
       </txtLinhMucRuocLe>
       <txtNoiRuocLe caption="Nơi rước lễ">
         <item>Ngũ Phúci</item>
@@ -508,6 +669,8 @@
         <item>Gx Ngũ Phúc</item>
         <item>Gx. Ngũ Phúc</item>
         <item>Nơi Rước Lễ</item>
+        <item>Bùi Chu</item>
+        <item>Đông Vinh</item>
       </txtNoiRuocLe>
       <txtGiaoXuChuyen caption="Giáo xứ">
         <item>Hoa Kỳ</item>
@@ -563,6 +726,8 @@
         <item>32</item>
         <item>988</item>
         <item>1</item>
+        <item>23</item>
+        <item>2</item>
       </txtMaGiaDinh>
       <txtNguoiChong caption="Người nam">
         <item>Phêrô Nguyễn Văn Hòa</item>
@@ -609,6 +774,18 @@
         <item>Phanxicô Xavie Đoàn Văn Cừ</item>
         <item>Vinh-sơn Lê Thanh Bình</item>
         <item>Phanxicô Xavie Phan Quốc Anh</item>
+        <item>Giuse Vũ Văn Khiết</item>
+        <item>Vinh-sơn Trần Công Yêng</item>
+        <item>Phanxicô Xavie Phan Quốc Tỷ</item>
+        <item>Vinh-sơn Lê Công Thông</item>
+        <item>Phanxicô Xavie Phan Văn Luyện</item>
+        <item>Giuse Hoàng Văn Bách ( Đắc</item>
+        <item>Phêrô Phạm Xuân Công</item>
+        <item>Phanxicô Xavie Phan Văn Kháng</item>
+        <item>Martinô Nguyễn Quang Nhật Triều</item>
+        <item>Giuse Đoàn Văn Dương</item>
+        <item>Albertô Nguyễn Duy Chất</item>
+        <item>Phêrô Nguyễn Ngọc Tuấn Khoát</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Hương</item>
@@ -657,6 +834,17 @@
         <item>Anna Võ Đào Bích Nga</item>
         <item>Maria Nguyễn Thị Dâng</item>
         <item>Maria Trần Thị Mai Anh</item>
+        <item>Maria Nguyễn Thị Chín</item>
+        <item>Maria Trần Thị Lan Nhấn</item>
+        <item>Maria Trần Thị Mai Tẽo</item>
+        <item>Maria Phạm Thị Tiết</item>
+        <item>Maria Nguyễn Thị Kim Cát</item>
+        <item>Maria Bùi Thị Triệu</item>
+        <item>Maria Đỗ Thị Kim Lệ</item>
+        <item>Maria Nguyễn Thị Thau</item>
+        <item>Catarina Bùi Bích Nhuận</item>
+        <item>Maria Hoàng Thị Hồng Hân</item>
+        <item>Maria Nguyễn Kim Tình</item>
       </txtNguoiVo>
       <txtDiaChi caption="Địa chỉ">
         <item>123 Đỗ Xuân Hợp</item>
@@ -710,6 +898,10 @@
         <item>012/MT</item>
         <item>2-001/G</item>
         <item>001/G</item>
+        <item>1-006/G</item>
+        <item>006/G</item>
+        <item>1-002/G</item>
+        <item>002/G</item>
       </txtGhiChu>
       <txtLinhMuc caption="Linh mục chứng">
         <item>Giuse Nguyễn Văn Uy</item>
@@ -730,6 +922,8 @@
         <item>Raphael Nguyễn Văn Chúa</item>
         <item>Giuse Đinh Nam Hưng</item>
         <item>F.x. Nguyễn Đức Đạt</item>
+        <item>Giuse Nguyễn Đức Giang</item>
+        <item>Vinh Sơn Phạm Liên Hùng</item>
       </txtLinhMuc>
       <txtNguoiChung2 caption="Người chứng 2">
         <item>Maria Trần Thị Ngọc Mai</item>
@@ -756,6 +950,9 @@
         <item>Maria Đinh Thị Riêng</item>
         <item>Rosa Trần Thị Lệ Tuyền</item>
         <item>Maria Đỗ Thị Thay</item>
+        <item>Maria Mới</item>
+        <item>Teresa Nguyễn Thị Kím Ánh</item>
+        <item>Maria Nguyễn Thị Trạch</item>
       </txtNguoiChung2>
       <txtNoiHonPhoi caption="Nơi hôn phối">
         <item>Tiên Chu</item>
@@ -774,6 +971,8 @@
         <item>Tân Mai</item>
         <item>Lương Hội</item>
         <item>Thánh Tâm</item>
+        <item>Nam Trực</item>
+        <item>Bùi Đức</item>
       </txtNoiHonPhoi>
       <txtNguoiChung1 caption="Người chứng 1">
         <item>Giuse Trương Đức Tân</item>
@@ -801,11 +1000,17 @@
         <item>Giuse Trần Văn Bình</item>
         <item>Phaolo Lê Công Lý</item>
         <item>F.x. Đoàn Văn Oanh</item>
+        <item>Giuse Nam</item>
+        <item>Phê-rô Lê Trọng Hợp</item>
+        <item>Gioakim Phạm Văn Tiếp</item>
       </txtNguoiChung1>
     </frmGiaDinh>
     <frmTimGiaDinh xmlns="">
       <txtTuKhoa caption="Tên giáo dân">
         <item>King</item>
+        <item>Vũ Văn Thủy</item>
+        <item>Phan Quốc Tỷ</item>
+        <item>Phan Thị Thùy Oanh</item>
       </txtTuKhoa>
       <txtSoHoKhau caption="Số hộ khẩu">
         <item>King123123</item>
@@ -1130,7 +1335,26 @@
     <frmRaoHonPhoi xmlns="">
       <txtDoiRao caption="Đôi rao:">
         <item>11111</item>
+        <item>Sắc - Chè</item>
       </txtDoiRao>
+      <txtNguoi1 caption="Người thứ nhất:">
+        <item>Giuse Hoàng Văn Sắc</item>
+      </txtNguoi1>
+      <txtGiaoXu1 caption="Hiện ở giáo xứ:">
+        <item>Thạch Bi</item>
+      </txtGiaoXu1>
+      <txtGiaoPhan1 caption="Giáo phận:">
+        <item>Bùi Chu</item>
+      </txtGiaoPhan1>
+      <txtNguoi2 caption="Người thứ 2:">
+        <item>Maria Vũ Thị Chè</item>
+      </txtNguoi2>
+      <txtGiaoXu2 caption="Hiện ở giáo xứ:">
+        <item>Trang Hậu</item>
+      </txtGiaoXu2>
+      <txtGiaoPhan2 caption="Giáo phận:">
+        <item>Bùi Chu</item>
+      </txtGiaoPhan2>
     </frmRaoHonPhoi>
     <frmGoiChungNhan xmlns="">
       <txtGiaoPhanNhan caption="Thuộc giáo phận">

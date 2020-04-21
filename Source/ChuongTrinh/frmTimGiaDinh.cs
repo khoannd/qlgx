@@ -7,6 +7,7 @@ using System.Text;
 using System.Windows.Forms;
 using GxGlobal;
 using GxControl;
+using System.Security.Cryptography.X509Certificates;
 
 namespace GiaoXu
 {
@@ -20,8 +21,8 @@ namespace GiaoXu
             cbGiaoHo.HasShowAll = true;
             cbGiaoHo.SelectedValue = -1;
             gxCommand1.OKIsAccept = true;
+            
         }
-
         private void gxCommand1_OnOK(object sender, EventArgs e)
         {
             string where = " WHERE GiaoDan.HoTen LIKE ? ";

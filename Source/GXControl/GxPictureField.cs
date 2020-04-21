@@ -37,6 +37,20 @@ namespace GxControl
             context.BackColor = Color.FromArgb(240, 240, 240);
             context.Items.Add("Xem ảnh").Click += SeePictureField_Click; ;
             context.Items.Add("Thay đổi ảnh đại diện").Click += ChangeGxPictureField_Click;
+            context.Items.Add("Đặt ảnh về mặc định").Click += ResetPictureField_Click;
+        }
+
+        private void ResetPictureField_Click(object sender, EventArgs e)
+        {
+            fileName = "";
+            if(manHinh=="Giáo dân")
+            {
+                picAvatar.Image = GxControl.Properties.Resources.avatar;
+            } 
+            else
+            {
+                picAvatar.Image = GxControl.Properties.Resources.family_hope_cntr_icon;
+            }    
         }
 
         private void ChangeGxPictureField_Click(object sender, EventArgs e)
@@ -92,6 +106,18 @@ namespace GxControl
             get
             {
                 return fileName;
+            }
+        }
+        private string manHinh;
+        public string TenManHinh
+        {
+            set
+            {
+                manHinh = value;
+            }
+            get
+            {
+                return manHinh;
             }
         }
     }
