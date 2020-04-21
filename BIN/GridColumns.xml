@@ -37,7 +37,7 @@
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmGiaDinhList_gxGiaDinhList1</key>
-    <columns>GACH,MaGiaDinhRieng,TenGiaDinh,TenChong,TenVo,SoLuong,DienThoai,DiaChi,TenGiaoHo,DienGiaDinh,GhiChu</columns>
+    <columns>GACH,MaGiaDinh,TenGiaDinh,TenChong,TenVo,SoLuong,DienThoai,DiaChi,TenGiaoHo,DienGiaDinh,GhiChu</columns>
     <widths>80,70,100,200,200,80,80,100,80,100,200</widths>
   </tblColumnWidth>
   <tblColumnWidth>
@@ -47,7 +47,7 @@
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmDotBiTichList_gxHonPhoiList1</key>
-    <columns>MaHonPhoi,Nam,Nữ,SoHonPhoi,NoiHonPhoi,NgayHonPhoi,CachThucHonPhoi,LinhMucChung,NguoiChung1,NguoiChung2,GhiChu,QuaDoi,TenGiaoHo</columns>
+    <columns>MaHonPhoi,NguoiNam,NguoiNu,SoHonPhoi,NoiHonPhoi,NgayHonPhoi,CachThucHonPhoi,LinhMucChung,NguoiChung1,NguoiChung2,GhiChu,QuaDoi,TenGiaoHo</columns>
     <widths>60,100,100,80,100,80,100,100,100,100,200,50,80</widths>
   </tblColumnWidth>
   <tblColumnWidth>

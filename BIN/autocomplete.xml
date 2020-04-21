@@ -87,6 +87,7 @@
         <item>Vinh Sơn Đặng Văn Tú</item>
         <item>Lm Đaminh Trịnh Đình Cương</item>
         <item>Đaminh Phạm Ngọc Đỉnh</item>
+        <item>Giuse Nguyễn Đức Giang</item>
       </txtLinhMucRuaToi>
       <txtNoiRuaToi caption="Nơi rửa tội">
         <item>Vinh An</item>
@@ -144,6 +145,8 @@
         <item>Maria Phạm Quỳnh Quế Anh</item>
         <item>Giuse Phạm Văn Thịnh</item>
         <item>Maria Mới</item>
+        <item>Đaminh Sáng</item>
+        <item>Gioan Đoan</item>
       </txtNguoiDoDauRuaToi>
       <txtTenMe caption="Tên Mẹ">
         <item>Maria Phạm Thị Đình</item>
@@ -224,6 +227,8 @@
         <item>Maria Trần Thị Triều</item>
         <item>Maria Đỗ Thị Thêu</item>
         <item>Maria Nguyễn Thị Mai</item>
+        <item>Maria Phan Thị The</item>
+        <item>Maria Phạm Thị Chuộng</item>
       </txtTenMe>
       <txtTenCha caption="Tên Cha">
         <item>Gb Nguyễn Văn Niệm</item>
@@ -308,6 +313,8 @@
         <item>Phêrô Đỗ Văn Thực</item>
         <item>Giuse Vũ Văn Thanh</item>
         <item>Giuse Nguyễn Văn Thu</item>
+        <item>Đaminh Phan Văn Luật</item>
+        <item>Giuse Nguyễn Văn Hương</item>
       </txtTenCha>
       <txtHoTen caption="Họ tên">
         <item>Nguyễn Phạm Thiên Nhân</item>
@@ -473,6 +480,8 @@
         <item>Nguyễn Quý</item>
         <item>Vũ Văn Thủy</item>
         <item>Nguyễn Thị Nhạn</item>
+        <item>Phan Văn Thuần</item>
+        <item>Nguyễn Văn Hùng</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Đăk Nông</item>
@@ -506,6 +515,7 @@
         <item>Tân Mai</item>
         <item>Biên Hòa, Đồng Nai</item>
         <item>Tp Hố Chí Minh</item>
+        <item>Thạch Bi</item>
       </txtNoiSinh>
       <txtDiaChi caption="Địa chỉ">
         <item>123 Đỗ Xuân Hợp</item>
@@ -1283,6 +1293,7 @@
         <item>Trà Cổ 2</item>
         <item>Đại Lộ</item>
         <item>An Phú</item>
+        <item>Thạch Bi</item>
       </txtNoiBiTich>
       <txtMoTa caption="Mô tả">
         <item>Đợt bí tích ngày 25 tháng 07 năm 1923</item>
@@ -1316,6 +1327,7 @@
         <item>Đợt bí tích ngày 03 tháng 08 năm 2003</item>
         <item>Đợt bí tích Rửa tội ngày 24 tháng 06 năm 2019</item>
         <item>Đợt bí tích ngày 01 tháng 07 năm 1979</item>
+        <item>Đợt bí tích Rửa tội ngày 20 tháng 08 năm 1980</item>
       </txtMoTa>
     </frmBiTichChiTiet>
     <frmHonPhoi xmlns="">
