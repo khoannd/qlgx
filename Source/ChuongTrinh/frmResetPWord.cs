@@ -111,7 +111,7 @@ namespace GiaoXu
             if (!CheckInput()) return;
 
             // đổi pass
-            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_PASSWORD, Memory.EnCodePassword(txtPassword.Text), txtUserName.Text);
+            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_PASSWORD, Memory.Instance.GetServerDateTime().ToString(), Memory.EnCodePassword(txtPassword.Text), txtUserName.Text);
             if (!Memory.ShowError())
             {
                 MessageBox.Show("Cập nhật mật khẩu thành công", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);

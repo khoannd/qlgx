@@ -39,6 +39,10 @@ namespace DongBoDuLieu
                                     dic.Add(header[i], data[i].Trim('`'));
                                     continue;
                                 }
+                                if (header[i] == "MaGiaoXuRieng")
+                                {
+                                    continue;
+                                }    
                                 dic.Add(header[i], processTypeValue(data[i].Trim('`'), tbl.Columns[header[i]].DataType));
                             }
                             this.Data.Add(dic);

@@ -8,15 +8,12 @@ namespace DongBoDuLieu
 {
     public class CauHinhCompare : CompareKeyStringTable
     {
-        private DataTable tblCauHinh;
-        public CauHinhCompare(string dir, string nameCSV, DataTable tblCauHinh) : base(dir, nameCSV)
+        public CauHinhCompare(string dir, string nameCSV) : base(dir, nameCSV)
         {
-            this.tblCauHinh = tblCauHinh;
         }
 
         public override void ExProcessData()
         {
-            Tbl = tblCauHinh;
             KhoaChinh = CauHinhConst.MaCauHinh;
             ProcessData();
         }

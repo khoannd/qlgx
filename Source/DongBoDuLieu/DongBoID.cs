@@ -9,7 +9,6 @@ namespace DongBoDuLieu
     public class DongBoID
     {
         private List<Dictionary<string, object>> data = new List<Dictionary<string, object>>();
-        private string MaGiaoXuRieng=Memory.getMaGiaoXuServer();
         private DataTable tblDongBo;
         public List<Dictionary<string, object>> Data
         {
@@ -55,7 +54,6 @@ namespace DongBoDuLieu
             newRow[DongBoConst.MaIDMayChu] = item[DongBoConst.MaIDMayChu];
             newRow[DongBoConst.MaIDMayKhach] = item[DongBoConst.MaIDMayKhach];
             newRow[DongBoConst.UpdateDate] = item[DongBoConst.UpdateDate];
-            newRow[GxSyn.MaGiaoXuRieng] = MaGiaoXuRieng;
         }
     }
 }

@@ -12,14 +12,18 @@ namespace DongBoDuLieu
         private List<Dictionary<string, object>> data = new List<Dictionary<string, object>>();
         private DataTable tblDongBo;
         private DataTable tbl;
-        private string MaGiaoXuRieng= Memory.getMaGiaoXuServer();
         public Compare(string dir, string nameCSV)
         {
             ReadFileCSV readFile = new ReadFileCSV(dir + nameCSV);    
             this.Data = readFile.Data;
         }
         public abstract void ProcessData();
-
+        public bool CheckData()
+        {
+            if (Data!=null && Data.Count > 0)
+                return true;
+            return false;
+        }
         public DataRow findRowDongBo(int IDServer,string tableName)
         {
             string query = String.Format("{0} = '{1}' and {2} = {3} ",DongBoConst.TenBang,tableName,DongBoConst.MaIDMayChu,IDServer);
@@ -46,7 +50,6 @@ namespace DongBoDuLieu
             newRow[DongBoConst.MaIDMayChu] = MaIDMayChu;
             newRow[DongBoConst.MaIDMayKhach] = MaIDMayKhach;
             newRow[DongBoConst.UpdateDate] = Memory.Instance.GetServerDateTime().ToString();
-            newRow[GxSyn.MaGiaoXuRieng] = MaGiaoXuRieng;
             tblDongBo.Rows.Add(newRow);
         }
         public void assignDataAdd(DataTable tbl, Dictionary<string, object> objectCSV, string fieldID1, object ID1, string fieldID2 = null, object ID2 = null)

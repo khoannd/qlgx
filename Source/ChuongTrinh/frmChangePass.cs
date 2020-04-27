@@ -45,7 +45,7 @@ namespace GiaoXu
             var dtb = Memory.GetData(SqlConstants.CHECK_LOGIN, userName, Memory.EnCodePassword(txtOldPass.Text));
             if (dtb != null && dtb.Rows.Count > 0)
             {
-                Memory.ExecuteSqlCommand(SqlConstants.UPDATE_PASSWORD, Memory.EnCodePassword(txtNewPass.Text), userName);
+                Memory.ExecuteSqlCommand(SqlConstants.UPDATE_PASSWORD,Memory.Instance.GetServerDateTime().ToString(), Memory.EnCodePassword(txtNewPass.Text), userName);
                 if (!Memory.ShowError())
                 {
                     MessageBox.Show("Đổi mật khẩu thành công", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);

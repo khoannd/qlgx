@@ -18,6 +18,7 @@ namespace DongBoDuLieu
         {
         }
         public abstract void ExProcessData();
+       
         public override void ProcessData()
         {
             if (Data.Count > 0)
@@ -66,6 +67,18 @@ namespace DongBoDuLieu
                                     continue;
                             }
                         }
+                        if(NewIDMayKhach==-1)
+                        {
+                            assignDataAdd(Tbl, item, khoaChinh, newIDMayKhach);
+                            DataSet ds = new DataSet();
+                            ds.Tables.Add(Tbl);
+                            Memory.UpdateDataSet(ds,false);
+                            ds.Tables.Remove(Tbl);
+                            newIDMayKhach = Memory.Instance.GetNextId(ChiTietHoiDoanConst.TableName, ChiTietHoiDoanConst.ID, true);
+                            int idTemp = newIDMayKhach - 1;
+                            insertDongBoID(idTemp, Convert.ToInt32(item[khoaChinh]), Tbl.TableName);
+                            continue;
+                        }    
                         assignDataAdd(Tbl, item, khoaChinh, newIDMayKhach);
                         insertDongBoID(newIDMayKhach++, Convert.ToInt32(item[khoaChinh]), Tbl.TableName);
                     }

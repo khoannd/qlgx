@@ -284,11 +284,11 @@ namespace GiaoXu
 
                         if (txtPassword.Text != "")
                         {
-                            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_TAIKHOAN, new object[] { txtFullName.Text, Memory.EnCodePassword(txtPassword.Text), txtEmail.Text, txtPhone.Text, cbPhanQuyen.SelectedIndex, txtQuestion.Text, txtAnswer.Text, txtUserName.Text });
+                            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_TAIKHOAN, new object[] {Memory.Instance.GetServerDateTime().ToString(), txtFullName.Text, Memory.EnCodePassword(txtPassword.Text), txtEmail.Text, txtPhone.Text, cbPhanQuyen.SelectedIndex, txtQuestion.Text, txtAnswer.Text, txtUserName.Text });
                         }
                         else
                         {
-                            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_TAIKHOAN_NOTPASSWORD, new object[] { txtFullName.Text, txtEmail.Text, txtPhone.Text, cbPhanQuyen.SelectedIndex, txtQuestion.Text, txtAnswer.Text, txtUserName.Text });
+                            Memory.ExecuteSqlCommand(SqlConstants.UPDATE_TAIKHOAN_NOTPASSWORD, new object[] { Memory.Instance.GetServerDateTime().ToString(), txtFullName.Text, txtEmail.Text, txtPhone.Text, cbPhanQuyen.SelectedIndex, txtQuestion.Text, txtAnswer.Text, txtUserName.Text });
                         }
                         if (!Memory.ShowError())
                         {

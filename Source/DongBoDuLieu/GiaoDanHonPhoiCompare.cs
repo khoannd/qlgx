@@ -8,15 +8,12 @@ namespace DongBoDuLieu
 {
     class GiaoDanHonPhoiCompare:CompareRelationTable
     {
-        DataTable tblGDHP;
-        public GiaoDanHonPhoiCompare(string dir, string nameCSV,DataTable tblGDHP):base(dir,nameCSV)
+        public GiaoDanHonPhoiCompare(string dir, string nameCSV ):base(dir,nameCSV)
         {
-            this.tblGDHP = tblGDHP;
         }
 
         public override void ExProcessData()
         {
-            Tbl = tblGDHP;
             KhoaChinh1 = GiaoDanConst.MaGiaoDan;
             TableNameKhoaChinh1 = GiaoDanConst.TableName;
             KhoaChinh2 = HonPhoiConst.MaHonPhoi;

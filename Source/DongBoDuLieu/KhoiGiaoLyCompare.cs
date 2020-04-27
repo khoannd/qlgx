@@ -8,16 +8,13 @@ namespace DongBoDuLieu
 {
     class KhoiGiaoLyCompare:CompareMasterTable
     {
-        private DataTable tblKhoiGiaoLy;
         private int newIDMayKhach = Memory.Instance.GetNextId(KhoiGiaoLyConst.TableName, KhoiGiaoLyConst.MaKhoi, true);
-        public KhoiGiaoLyCompare(string dir, string nameCSV,DataTable tblKhoiGiaoLy):base(dir,nameCSV)
+        public KhoiGiaoLyCompare(string dir, string nameCSV):base(dir,nameCSV)
         {
-            this.tblKhoiGiaoLy = tblKhoiGiaoLy;
         }
 
         public override void ExProcessData()
         {
-            Tbl = tblKhoiGiaoLy;
             KhoaChinh = KhoiGiaoLyConst.MaKhoi;
             NewIDMayKhach = newIDMayKhach;
             KhoaNgoai = KhoiGiaoLyConst.NguoiQuanLy;

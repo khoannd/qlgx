@@ -217,7 +217,8 @@ namespace GxControl
                 }
                 //Kiểm tra trong database
                 // Lấy danh sách các hội viên đã ra khỏi hội đoàn.
-                DataTable tblcthdLichSu = Memory.GetData(String.Concat(SqlConstants.SELECT_CHITIETHOIDOAN_BY_MAHOIDOAN, " and NgayRaHoiDoan is not null order by NgayRaHoiDoan is null"), MaHoiDoan);
+                DataTable tblcthdLichSu = Memory.GetData(String.Concat(SqlConstants.SELECT_CHITIETHOIDOAN_BY_MAHOIDOAN,
+                    " and NgayRaHoiDoan <>''  order by NgayRaHoiDoan =''"), MaHoiDoan);
 
                 //Kiểm tra ngày vào ngày ra của hội viên trong hội đoàn
                 foreach (DataRow row in tblCTHDGrid.Rows)
@@ -382,7 +383,7 @@ namespace GxControl
                     {
                         if(row["Deleted"].ToString()!="0")
                         {
-                            DataRow[] rows = tblcthd.Select(String.Concat("MaGiaoDan = ", row[GiaoDanConst.MaGiaoDan] + " and NgayRaHoiDoan is null"));
+                            DataRow[] rows = tblcthd.Select(String.Concat("MaGiaoDan = ", row[GiaoDanConst.MaGiaoDan] + " and NgayRaHoiDoan =''"));
                             UpdateHoiVien(rows[0], row);
                         }
                     }
@@ -441,9 +442,9 @@ namespace GxControl
             {
                 r1[HoiDoanConst.MaHoiDoan] = MaHoiDoan;
                 r1[GiaoDanConst.MaGiaoDan] = r2[GiaoDanConst.MaGiaoDan];
-                r1[ChiTietHoiDoanConst.NgayVaoHoiDoan] = r2[ChiTietHoiDoanConst.NgayVaoHoiDoan];
-                r1[ChiTietHoiDoanConst.NgayRaHoiDoan] = r2[ChiTietHoiDoanConst.NgayRaHoiDoan];
-                r1[ChiTietHoiDoanConst.VaiTro] = r2[ChiTietHoiDoanConst.VaiTro];
+                r1[ChiTietHoiDoanConst.NgayVaoHoiDoan] = r2[ChiTietHoiDoanConst.NgayVaoHoiDoan].ToString();
+                r1[ChiTietHoiDoanConst.NgayRaHoiDoan] = r2[ChiTietHoiDoanConst.NgayRaHoiDoan].ToString();
+                r1[ChiTietHoiDoanConst.VaiTro] = r2[ChiTietHoiDoanConst.VaiTro].ToString();
             }
             catch (Exception)
             {
@@ -515,7 +516,7 @@ namespace GxControl
            DataTable tbl = (DataTable)gxGiaoDanList1.DataSource;
            if(tbl != null && tbl.Rows.Count > 0)
             {
-                DataRow[] rows = tbl.Select(String.Concat("VaiTro='", HoiDoanConst.TruongHoiDoan, "' and NgayRaHoiDoan is null"));
+                DataRow[] rows = tbl.Select(String.Concat("VaiTro='", HoiDoanConst.TruongHoiDoan, "' and NgayRaHoiDoan =''"));
                 if (rows != null && rows.Length > 0)
                 {
                     if (rows.Length > 1)

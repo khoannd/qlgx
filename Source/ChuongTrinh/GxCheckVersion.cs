@@ -305,12 +305,12 @@ namespace GiaoXu
                 if (Memory.SendMaDinhDanhTenMayLenServer(MaDinhDanh, TenMay, GiaoXuDoi[0].MaGiaoXuRieng))
                 {
                     //Update Giáo Phận
-                    Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOPHAN, GiaoXuDoi[0].TenGiaoPhan, GiaoXuDoi[0].MaGiaoPhanRieng);
+                    Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOPHAN, GiaoXuDoi[0].TenGiaoPhan, GiaoXuDoi[0].MaGiaoPhanRieng,Memory.Instance.GetServerDateTime().ToString());
                     //Update Giáo Hạt
-                    Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOHAT, GiaoXuDoi[0].TenGiaoHat, GiaoXuDoi[0].MaGiaoHatRieng);
+                    Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOHAT, GiaoXuDoi[0].TenGiaoHat, GiaoXuDoi[0].MaGiaoHatRieng, Memory.Instance.GetServerDateTime().ToString());
                     //Update Giáo Xứ
                     Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOXU, GiaoXuDoi[0].TenGiaoXu, GiaoXuDoi[0].DiaChi, GiaoXuDoi[0].DienThoai,
-                                                GiaoXuDoi[0].Email, GiaoXuDoi[0].Website, GiaoXuDoi[0].Hinh, GiaoXuDoi[0].GhiChu, GiaoXuDoi[0].MaGiaoXuRieng);
+                                                GiaoXuDoi[0].Email, GiaoXuDoi[0].Website, GiaoXuDoi[0].Hinh, GiaoXuDoi[0].GhiChu, GiaoXuDoi[0].MaGiaoXuRieng, Memory.Instance.GetServerDateTime().ToString());
                 }
                 //Memory.SetMaGiaoXuRiengAllTable(GiaoXuDoi[0].MaGiaoXuRieng);
                 return true;
@@ -779,7 +779,7 @@ namespace GiaoXu
                             check = DateTime.TryParse(temp, out lastUpload);
                             if (check)
                             {
-                                Memory.ExecuteSqlCommand(SqlConstants.UPDATE_LASTUPLOAD, new object[] { lastUpload });
+                                Memory.ExecuteSqlCommand(SqlConstants.UPDATE_LASTUPLOAD, new object[] { lastUpload,Memory.Instance.GetServerDateTime().ToString() });
                             }
                         }
                     }

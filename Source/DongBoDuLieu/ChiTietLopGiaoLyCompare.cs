@@ -8,15 +8,12 @@ namespace DongBoDuLieu
 {
     class ChiTietLopGiaoLyCompare:CompareRelationTable 
     {
-        private DataTable tblCTLGL;
-        public ChiTietLopGiaoLyCompare(string dir, string nameCSV, DataTable tblCTLGL) :base(dir,nameCSV)
+        public ChiTietLopGiaoLyCompare(string dir, string nameCSV) :base(dir,nameCSV)
         {
-            this.tblCTLGL = tblCTLGL;
         }
 
         public override void ExProcessData()
         {
-            Tbl = tblCTLGL;
             KhoaChinh1 = GiaoDanConst.MaGiaoDan;
             TableNameKhoaChinh1 = GiaoDanConst.TableName;
             KhoaChinh2 = LopGiaoLyConst.MaLop;
