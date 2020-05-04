@@ -76,7 +76,7 @@ namespace GxControl
             if (maxRow > ROW_MAX_TEMPLATE)
             {
                 //Tiến hành add thêm row. số row cần add = maxrow - row_holder
-                word.AddRowColumnFirstSTT(maxRow - ROW_MAX_TEMPLATE, 1,5);
+                word.AddRowColumnFirstSTT(maxRow - ROW_MAX_TEMPLATE, 1);
                 //word.FormatTable(1, Microsoft.Office.Interop.Word.WdPaperSize.wdPaperA4);
             }
             //hiepdv end add

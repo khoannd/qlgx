@@ -147,6 +147,7 @@
         <item>Maria Mới</item>
         <item>Đaminh Sáng</item>
         <item>Gioan Đoan</item>
+        <item>Gioakim Phạm Sơn Khương</item>
       </txtNguoiDoDauRuaToi>
       <txtTenMe caption="Tên Mẹ">
         <item>Maria Phạm Thị Đình</item>
@@ -229,6 +230,8 @@
         <item>Maria Nguyễn Thị Mai</item>
         <item>Maria Phan Thị The</item>
         <item>Maria Phạm Thị Chuộng</item>
+        <item>Maria Hoàng Thị Ơn</item>
+        <item>Maria Nguyễn Thị Tiến</item>
       </txtTenMe>
       <txtTenCha caption="Tên Cha">
         <item>Gb Nguyễn Văn Niệm</item>
@@ -315,6 +318,8 @@
         <item>Giuse Nguyễn Văn Thu</item>
         <item>Đaminh Phan Văn Luật</item>
         <item>Giuse Nguyễn Văn Hương</item>
+        <item>Giuse Nguyễn Đắc Pháp</item>
+        <item>Phê-rô Hà Duy Điền</item>
       </txtTenCha>
       <txtHoTen caption="Họ tên">
         <item>Nguyễn Phạm Thiên Nhân</item>
@@ -482,6 +487,9 @@
         <item>Nguyễn Thị Nhạn</item>
         <item>Phan Văn Thuần</item>
         <item>Nguyễn Văn Hùng</item>
+        <item>Nguyễn Văn Lộc</item>
+        <item>Hà Đại Lộc</item>
+        <item>Hà Trung Hiếu</item>
       </txtHoTen>
       <txtNoiSinh caption="Nơi sinh">
         <item>Đăk Nông</item>
@@ -568,6 +576,7 @@
         <item>005/MT</item>
         <item>008/MC</item>
         <item>006/MC</item>
+        <item>032/G</item>
       </txtGhiChu>
       <txtNoiThemSuc caption="Nơi thêm sức">
         <item>Gx Tân Hòa, Tgp Sài Gòn</item>
@@ -585,6 +594,7 @@
         <item>Maria Trần Thị Mai Anh</item>
         <item>Maria Nguyễn Thị Chín</item>
         <item>Maria Trần Ngọc Xuân Quy</item>
+        <item>Alphongsô Nguyễn Thị Hảo</item>
       </txtNguoiVo>
       <txtNguoiChong caption="Người nam">
         <item>Vinh-sơn Trần Đức Đạt</item>
@@ -592,6 +602,7 @@
         <item>Phanxicô Xavie Phan Quốc Anh</item>
         <item>Giuse Vũ Văn Khiết</item>
         <item>Giuse Vũ Quốc Lưỡng</item>
+        <item>Alphongsô Nguyễn Hồng Thiên</item>
       </txtNguoiChong>
       <txtLinhMuc caption="Linh mục chứng">
         <item>Gioan Phạm Quang Tự</item>
@@ -626,6 +637,7 @@
         <item>Anh - Anh</item>
         <item>Khiết - Chín</item>
         <item>Lưỡng - Quy</item>
+        <item>Thiên - Hảo</item>
       </txtTenHonPhoi>
       <txtLinhMucThemSuc caption="Người ban bí tích">
         <item>Đaminh Nguyễn Chu Trinh</item>
@@ -670,6 +682,7 @@
         <item>Đaminh Đàm Công Khánh</item>
         <item>Giuse Phạm Văn Thịnh</item>
         <item>Maria Nguyễn Thị Hoa</item>
+        <item>Hà Thị Lệ Thu</item>
       </txtNguoiDoDauThemSuc>
       <txtLinhMucRuocLe caption="Người ban bí tích">
         <item>Đamih Đặng Duy Hòa</item>
@@ -748,6 +761,10 @@
         <item>23</item>
         <item>2</item>
         <item>839</item>
+        <item>11</item>
+        <item>96</item>
+        <item>29</item>
+        <item>126</item>
       </txtMaGiaDinh>
       <txtNguoiChong caption="Người nam">
         <item>Phêrô Nguyễn Văn Hòa</item>
@@ -808,6 +825,11 @@
         <item>Phêrô Nguyễn Ngọc Tuấn Khoát</item>
         <item>Giuse Vũ Văn Thủy</item>
         <item>Giuse Nguyễn Văn Thu</item>
+        <item>Phanxicô Vũ Văn Mười</item>
+        <item>Giuse Trịnh Xuân Đĩnh</item>
+        <item>Đaminh Nguyễn Văn Tuất</item>
+        <item>Giuse Nguyễn Văn Lộc</item>
+        <item>Phêrô Hà Duy Điền</item>
       </txtNguoiChong>
       <txtNguoiVo caption="Người nữ">
         <item>Maria Nguyễn Thị Hương</item>
@@ -869,6 +891,11 @@
         <item>Maria Nguyễn Kim Tình</item>
         <item>Maria Nguyễn Thị Nhạn</item>
         <item>Maria Nguyễn Thị Mai</item>
+        <item>Maria Phan Thị Tin</item>
+        <item>Maria Nguyễn Thị Huyền</item>
+        <item>Maria Nguyễn Thị Sáng</item>
+        <item>Maria Nguyễn Thị Nga</item>
+        <item>Maria Nguyễn Thị Tiến</item>
       </txtNguoiVo>
       <txtDiaChi caption="Địa chỉ">
         <item>123 Đỗ Xuân Hợp</item>
@@ -926,6 +953,8 @@
         <item>006/G</item>
         <item>1-002/G</item>
         <item>002/G</item>
+        <item>2-032/G</item>
+        <item>032/G</item>
       </txtGhiChu>
       <txtLinhMuc caption="Linh mục chứng">
         <item>Giuse Nguyễn Văn Uy</item>
@@ -979,6 +1008,10 @@
         <item>Teresa Nguyễn Thị Kím Ánh</item>
         <item>Maria Nguyễn Thị Trạch</item>
         <item>Maria</item>
+        <item>Maria Tinh</item>
+        <item>Maria Nguyễn Thị Lan</item>
+        <item>Maria Rỹ</item>
+        <item>Maria Tặng</item>
       </txtNguoiChung2>
       <txtNoiHonPhoi caption="Nơi hôn phối">
         <item>Tiên Chu</item>
@@ -1000,6 +1033,7 @@
         <item>Nam Trực</item>
         <item>Bùi Đức</item>
         <item>Tương Nam</item>
+        <item>Thạch Bi</item>
       </txtNoiHonPhoi>
       <txtNguoiChung1 caption="Người chứng 1">
         <item>Giuse Trương Đức Tân</item>
@@ -1031,6 +1065,10 @@
         <item>Phê-rô Lê Trọng Hợp</item>
         <item>Gioakim Phạm Văn Tiếp</item>
         <item>Micae Nguyễn Văn Tính</item>
+        <item>Đaminh Khẩn</item>
+        <item>Giuse Nguyễn Tiến Rỹ</item>
+        <item>Đaminh Dũng</item>
+        <item>Đaminh Biên</item>
       </txtNguoiChung1>
     </frmGiaDinh>
     <frmTimGiaDinh xmlns="">

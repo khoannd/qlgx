@@ -1323,13 +1323,13 @@ namespace GxGlobal
         /// </summary>
         /// <param name="numrow">số lượng row cần add</param>
         /// <param name="index">index của bảng</param>
-        /// <param name="numcell">Số cột trong table</param>
-        public void AddRowColumnFirstSTT(int numrow,int index,int numcell)
+        public void AddRowColumnFirstSTT(int numrow,int index)
         {
             object missing = System.Type.Missing;
             Table tbl =GetTable(index);
             if (tbl == null)
                 return;
+            int numcell = tbl.Rows[1].Cells.Count; //Số cột trong table
             Range range = tbl.Range; 
 
             for (int i = 0; i < numrow; i++)
@@ -1365,16 +1365,14 @@ namespace GxGlobal
         /// <summary>
         /// Format table 
         /// </summary>
-        public void FormatTable(int indextable, WdPaperSize ppz= WdPaperSize.wdPaperA4, WdOrientation orientation= WdOrientation.wdOrientPortrait)
+        public void FormatTable(int indextable)
         {
             Table table = GetTable(indextable);
             if(table!=null)
             {
                 table.AllowAutoFit = true;
-                table.AutoFitBehavior(WdAutoFitBehavior.wdAutoFitContent);
+                table.AutoFitBehavior(WdAutoFitBehavior.wdAutoFitWindow);
                 table.Borders.Enable = 1;
-                SetupPage.PaperSize = ppz;
-                SetupPage.Orientation = orientation;
             }
         }
         //hiepdv end add
