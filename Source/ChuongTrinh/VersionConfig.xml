@@ -2,13 +2,14 @@
 <application value="GiaoXu" xmlns="urn:newversion-schema">
   <version-info value="3.3.3.4" display="3.3.3" exename="GiaoXu.exe">
     <info>
-      Ngày 02-05-2020: cập nhật lên phiên bản 3.3.3
-      - Các cải tiến
+      Ngày 04-05-2020: cập nhật lên phiên bản 3.3.3
+      - Các cải tiến:
       + Cho phép xem gia đình từ màn hình cá nhân giáo dân.
       + Đánh dấu những thành viên trong gia đình ở ngoài xứ và không tính trong số lượng thành viên gia đình.
       + Cho phép xóa hình ảnh gia đình, cá nhân.
       + Khi thêm một hôn phối, nếu cặp hôn phối đó chưa có gia đình, chương trình sẽ hỏi có muốn thêm gia đình mới cho cặp hôn phôi mới hay không.
-      + Sửa mẫu in Phiếu Gia Đình bằng EXCEL và WORD
+      + Sửa mẫu in Phiếu Gia Đình bằng EXCEL và WORD.
+      + Khi đánh dấu một người qua đời, chương trình sẽ tìm người vợ/chồng của người đó để đánh dấu người vợ/chồng đó trở về tình trạng độc thân.
 
       - Sửa các lỗi:
       + Khi in phiếu gia đình, nếu chọn mục in người chứng hôn phối sẽ xuất hiện báo lỗi.
@@ -16,7 +17,8 @@
       + Thống kê hôn phối không hiện được thông tin giáo họ, tên vợ chồng bị thay thế bằng mã giáo dân.
       + Thêm giáo dân bị lỗi khi đang lọc trên lưới giáo dân trong màn hình danh sách giáo dân.
       + Với gia đình có nhiều hơn 8 thành viên, in phiếu gia đình sẽ không in ra đủ 8 thành viên.
-      - Và một số lỗi khác.
+      + Thống kê người đã lập gia đình không chính xác. Có trường hợp cá nhân đã có hôn phối nhưng chương trình vẫn không chọn mục "Có gia đình"
+      - Cùng một số sửa lỗi và cải tiến khác.
 
       Ngày 30-03-2020: cập nhật lên phiên bản 3.3.2
       - Sửa lỗi khi in phiếu gia đình, nếu chọn mục in người chứng hôn phối sẽ xuất hiện báo lỗi.
@@ -121,7 +123,7 @@
       - Cho phép in phiếu lý gia đình hàng loạt
     </info>
     <downloadpath value="download.asp?opt=update">http://quanlygiaoxu.net/</downloadpath>
-    <dateupdate>2020-03-30</dateupdate>
+    <dateupdate>2020-05-04</dateupdate>
     <size>8.67</size>
   </version-info>
 </application>

@@ -339,11 +339,11 @@ namespace GiaoXu
                 else
                 {
                     Program.frmMain.Enabled = true;
-                    frmHelp frm = new frmHelp();
-                    frm.SetHelp("thong_tin_cap_nhat");
-                    frm.WindowState = FormWindowState.Normal;
-                    frm.Show();
-                    Program.frmMain.ShowHelp("thong_tin_cap_nhat");
+                    //frmHelp frm = new frmHelp();
+                    //frm.SetHelp("thong_tin_cap_nhat");
+                    //frm.WindowState = FormWindowState.Normal;
+                    //frm.Show();
+                    //Program.frmMain.ShowHelp("thong_tin_cap_nhat");
                 }
             }
             catch
