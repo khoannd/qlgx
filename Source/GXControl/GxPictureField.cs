@@ -35,9 +35,9 @@ namespace GxControl
         private void GetContext(ContextMenuStrip context)
         {
             context.BackColor = Color.FromArgb(240, 240, 240);
-            context.Items.Add("Xem ảnh").Click += SeePictureField_Click; ;
-            context.Items.Add("Thay đổi ảnh đại diện").Click += ChangeGxPictureField_Click;
-            context.Items.Add("Đặt ảnh về mặc định").Click += ResetPictureField_Click;
+            context.Items.Add("Xem hình").Click += SeePictureField_Click; ;
+            context.Items.Add("Thay đổi hình đại diện").Click += ChangeGxPictureField_Click;
+            context.Items.Add("Xóa hình").Click += ResetPictureField_Click;
         }
 
         private void ResetPictureField_Click(object sender, EventArgs e)
@@ -85,7 +85,7 @@ namespace GxControl
         {
             frmAvatar avatar = new frmAvatar();
             avatar.Source = picAvatar.Image;
-            avatar.ShowDialog();           
+            avatar.Show();           
         }
 
         public Image ImagePicture
@@ -97,6 +97,7 @@ namespace GxControl
 
             set
             {
+                this.picAvatar.SizeMode = PictureBoxSizeMode.Zoom;
                 picAvatar.Image = value;
             }
         }

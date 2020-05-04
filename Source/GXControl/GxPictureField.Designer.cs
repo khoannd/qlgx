@@ -46,6 +46,7 @@
             this.picAvatar.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
             this.picAvatar.TabIndex = 1;
             this.picAvatar.TabStop = false;
+            this.picAvatar.DoubleClick += new System.EventHandler(this.SeePictureField_Click);
             // 
             // GxPictureField
             // 
