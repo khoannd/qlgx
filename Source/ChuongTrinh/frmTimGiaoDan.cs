@@ -55,6 +55,16 @@ namespace GiaoXu
                 where += "  AND CMND LIKE ? ";
                 args.Add("%" + txtCmnd.Text.Replace("\"", "") + "%");
             }
+            if (txtNgaySinh.Text != "")
+            {
+                where += "  AND NgaySinh LIKE ? ";
+                args.Add("%" + txtNgaySinh.Text.Replace("\"", "") + "%");
+            }
+            if (txtDiaChi.Text != "")
+            {
+                where += "  AND DiaChi LIKE ? ";
+                args.Add("%" + txtDiaChi.Text.Replace("\"", "") + "%");
+            }
             frmGiaoDanList frm = new frmGiaoDanList();
             //frm.LoadGiaoDanList(string.Format(SqlConstants.SELECT_GIAODAN_LIST_CO_GIAOHO, where), new object[] { "%" + txtTuKhoa.Text.Replace("\"", "") + "%" });
             frm.QueryString = string.Concat(SqlConstants.SELECT_GIAODAN_LIST_CO_GIAOHO, where);

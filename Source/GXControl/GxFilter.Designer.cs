@@ -38,11 +38,13 @@ namespace GxControl
             this.filterEditor1.AutoApply = true;
             this.filterEditor1.BackColor = System.Drawing.Color.Transparent;
             this.filterEditor1.BuiltInTextsData = resources.GetString("filterEditor1.BuiltInTextsData");
+            this.filterEditor1.DefaultConditionOperator = Janus.Data.ConditionOperator.Equal;
             this.filterEditor1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.filterEditor1.InnerAreaStyle = Janus.Windows.UI.Dock.PanelInnerAreaStyle.UseFormatStyle;
             this.filterEditor1.Location = new System.Drawing.Point(0, 0);
             this.filterEditor1.MinSize = new System.Drawing.Size(0, 0);
             this.filterEditor1.Name = "filterEditor1";
+            this.filterEditor1.Office2007ColorScheme = Janus.Windows.Common.Office2007ColorScheme.Default;
             this.filterEditor1.ScrollMode = Janus.Windows.UI.Dock.ScrollMode.Both;
             this.filterEditor1.ScrollStep = 15;
             this.filterEditor1.Size = new System.Drawing.Size(408, 30);

@@ -26,6 +26,11 @@ namespace GxControl
                 word.Replace(GiaoDanConst.HoTenCha, rowGiaoDan[GiaoDanConst.HoTenCha]);
                 word.Replace(GiaoDanConst.HoTenMe, rowGiaoDan[GiaoDanConst.HoTenMe]);
                 word.Replace("HoTenLinhMuc", TenLinhMuc);
+                if (string.IsNullOrEmpty(rowGiaoDan[GiaoDanConst.NgayRuaToi].ToString().Trim()))
+                {
+                    word.Replace(GiaoDanConst.NgayRuaToi, "...................");
+                }
+                else
                 word.Replace(GiaoDanConst.NgayRuaToi, rowGiaoDan[GiaoDanConst.NgayRuaToi]);
                 word.Replace(GiaoDanConst.NoiRuaToi, rowGiaoDan[GiaoDanConst.NoiRuaToi]);
             }
