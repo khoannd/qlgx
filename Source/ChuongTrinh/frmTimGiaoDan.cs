@@ -55,10 +55,10 @@ namespace GiaoXu
                 where += "  AND CMND LIKE ? ";
                 args.Add("%" + txtCmnd.Text.Replace("\"", "") + "%");
             }
-            if (txtNgaySinh.Text != "")
+            if (txtNgaySinh.Value.ToString().Trim() != "")
             {
                 where += "  AND NgaySinh LIKE ? ";
-                args.Add("%" + txtNgaySinh.Text.Replace("\"", "") + "%");
+                args.Add("%" + txtNgaySinh.Value.ToString().Trim().Replace("\"", "") + "%");
             }
             if (txtDiaChi.Text != "")
             {
