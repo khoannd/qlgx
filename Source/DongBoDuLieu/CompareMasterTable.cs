@@ -81,6 +81,7 @@ namespace DongBoDuLieu
                         }    
                         assignDataAdd(Tbl, item, khoaChinh, newIDMayKhach);
                         insertDongBoID(newIDMayKhach++, Convert.ToInt32(item[khoaChinh]), Tbl.TableName);
+                        continue;
                     }
                 }
             }

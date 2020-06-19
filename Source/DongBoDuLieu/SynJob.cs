@@ -79,7 +79,7 @@ namespace DongBoDuLieu
                     else
                     {
                         MessageBox.Show("Quá trình xử lý dữ liệu dữ liệu khi đưa lên server bị lỗi (" + rs + ").\r\n" +
-                                        "Vui lòng liên hệ quản trị hệ thông qlgx.net để được hỗ trợ.\r\n" +
+                                        "Vui lòng liên hệ quản trị hệ thống qlgx.net để được hỗ trợ.\r\n" +
                                         "Xin cảm ơn.\r\n", "Lỗi đồng bộ", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         errorState = true;
                         return;
@@ -89,7 +89,7 @@ namespace DongBoDuLieu
             catch (System.Exception ex)
             {
                 MessageBox.Show("Quá trình đưa dữ liệu lên server bị lỗi.\r\n" +
-                    "Vui lòng liên hệ quản trị hệ thông qlgx.net để được hỗ trợ.\r\n" +
+                    "Vui lòng liên hệ quản trị hệ thống qlgx.net để được hỗ trợ.\r\n" +
                     "Xin cảm ơn.\r\n" + ex.Message, "Lỗi đồng bộ", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 errorState = true;
                 return;
@@ -105,10 +105,19 @@ namespace DongBoDuLieu
             }
             string messageRe = e.Result.ToString();
             MessageBox.Show(e.Result.ToString());
+            //Xóa folder DBSV
+            string directoryPath = Memory.AppPath + "DBSV\\";
+            if (Directory.Exists(directoryPath))
+            {
+                string[] filePaths = Directory.GetFiles(directoryPath);
+                foreach (string filePath in filePaths)
+                    File.Delete(filePath);
+            }
+
             Pull();
             return;
         }
-        
+
         public void Pull()
         {
             try
@@ -117,7 +126,8 @@ namespace DongBoDuLieu
                 cl.Encoding = System.Text.Encoding.UTF8;
                 string maGiaoXuRieng = Memory.getMaGiaoXuServer();
                 cl.DownloadStringCompleted += new DownloadStringCompletedEventHandler(handlerDowloadStringPull);
-                cl.DownloadStringAsync(new Uri(ConfigurationManager.AppSettings["SERVER"] + @"SynToClientCL/createrFileSyn/" + maGiaoXuRieng+"/"+GenerateUniqueCode.GetUniqueCode()));
+                long pulldatetamp = Memory.getTimespanBeginPullDate();
+                cl.DownloadStringAsync(new Uri(string.Format(ConfigurationManager.AppSettings["SERVER"] + @"SynToClientCL/createrFileSyn/{0}/{1}/{2}", maGiaoXuRieng, GenerateUniqueCode.GetUniqueCode(), pulldatetamp)));
             }
             catch (System.Exception ex)
             {
@@ -136,8 +146,19 @@ namespace DongBoDuLieu
                 return;
             }
             //string messageRe = e.Result.ToString();
-            //MessageBox.Show(e.Result.ToString());
-            ProcessPull();
+            MessageBox.Show(e.Result.ToString());
+            if (e.Result.ToString() != "-1")
+            {
+                DateTime beginPullDate = (DateTime)Convert.ChangeType(e.Result.ToString(), TypeCode.DateTime);
+                Memory.ExecuteSqlCommand(SqlConstants.UPDATE_BEGINPULLDATE, new object[] { beginPullDate.ToString(), Memory.Instance.GetServerDateTime().ToString() });
+
+                ProcessPull();
+            }
+            else
+            {
+                MessageBox.Show("Không thể đồng bộ (pull) vui lòng liên hệ quản trị viên của qlgx để được hỗ trợ", "Thông báo lỗi!",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
             return;
         }
         private void ProcessPull()
@@ -150,13 +171,17 @@ namespace DongBoDuLieu
             }
             string maGiaoXuRieng = Memory.getMaGiaoXuServer();
             cl.DownloadFile(ConfigurationManager.AppSettings["SERVER_File"] + maGiaoXuRieng + "/" + maGiaoXuRieng + ".zip", pathDB + maGiaoXuRieng + ".zip");
-            FastZip zip = new FastZip();
-            zip.ExtractZip(pathDB + maGiaoXuRieng + ".zip", pathDB, null);
-            Thread pullProcess = new Thread(() => {
-                compareGiaoXu(pathDB);
-            });
-            pullProcess.IsBackground = false;
-            pullProcess.Start();
+            if (File.Exists(pathDB + maGiaoXuRieng + ".zip"))
+            {
+                FastZip zip = new FastZip();
+                zip.ExtractZip(pathDB + maGiaoXuRieng + ".zip", pathDB, null);
+                Thread pullProcess = new Thread(() =>
+                {
+                    compareGiaoXu(pathDB);
+                });
+                pullProcess.IsBackground = false;
+                pullProcess.Start();
+            }
         }
 
         public void compareGiaoXu(string dir)
@@ -169,292 +194,363 @@ namespace DongBoDuLieu
             dbid.import();
             tblDongBo.Columns.Add(new DataColumn("DaXoa", typeof(int)));
             ds.Tables.Add(tblDongBo);
-
             //Giáo họ
-            GiaoHoCompare giaoho = new GiaoHoCompare(dir, "GiaoHo.csv");
-            if(giaoho.CheckData())
+            if (File.Exists(dir + "GiaoHo.csv"))
             {
-                DataTable tblGiaoHo = Memory.GetData(SqlConstants.SELECT_ALLGiaoHo);
-                tblGiaoHo.TableName = GiaoHoConst.TableName;
-                giaoho.Tbl =tblGiaoHo;
-                giaoho.TblDongBo = tblDongBo;
-                giaoho.ExProcessData();
-                ds.Tables.Add(tblGiaoHo);
-            }    
+                GiaoHoCompare giaoho = new GiaoHoCompare(dir, "GiaoHo.csv");
+                if (giaoho.CheckData())
+                {
+                    DataTable tblGiaoHo = Memory.GetData(SqlConstants.SELECT_ALLGiaoHo);
+                    tblGiaoHo.TableName = GiaoHoConst.TableName;
+                    giaoho.Tbl = tblGiaoHo;
+                    giaoho.TblDongBo = tblDongBo;
+                    giaoho.ExProcessData();
+                    ds.Tables.Add(tblGiaoHo);
+                }
+            }
             //Giáo dân
-            GiaoDanCompare giaodan = new GiaoDanCompare(dir, "GiaoDan.csv");
-            if(giaodan.CheckData())
+            if (File.Exists(dir + "GiaoDan.csv"))
             {
-                DataTable tblGiaoDan = Memory.GetData(SqlConstants.SELECT_ALLGiaoDan);
-                tblGiaoDan.TableName = GiaoDanConst.TableName;
-                giaodan.Tbl = tblGiaoDan;
-                giaodan.TblDongBo = tblDongBo;
-                giaodan.ExProcessData();
-                ds.Tables.Add(tblGiaoDan);
-            }    
-           
+                GiaoDanCompare giaodan = new GiaoDanCompare(dir, "GiaoDan.csv");
+                if (giaodan.CheckData())
+                {
+                    DataTable tblGiaoDan = Memory.GetData(SqlConstants.SELECT_ALLGiaoDan);
+                    tblGiaoDan.TableName = GiaoDanConst.TableName;
+                    giaodan.Tbl = tblGiaoDan;
+                    giaodan.TblDongBo = tblDongBo;
+                    giaodan.ExProcessData();
+                    ds.Tables.Add(tblGiaoDan);
+                }
+            }
 
             //Gia đình
-            GiaDinhCompare giadinh = new GiaDinhCompare(dir, "GiaDinh.csv");
-            if(giadinh.CheckData())
+            if (File.Exists(dir + "GiaDinh.csv"))
             {
-                DataTable tblGiaDinh = Memory.GetData(SqlConstants.SELECT_ALLGiaDinh);
-                tblGiaDinh.TableName = GiaDinhConst.TableName;
-                giadinh.Tbl = tblGiaDinh;
-                giadinh.TblDongBo = tblDongBo;
-                giadinh.ExProcessData();
-                ds.Tables.Add(tblGiaDinh);
-            }    
+                GiaDinhCompare giadinh = new GiaDinhCompare(dir, "GiaDinh.csv");
+                if (giadinh.CheckData())
+                {
+                    DataTable tblGiaDinh = Memory.GetData(SqlConstants.SELECT_ALLGiaDinh);
+                    tblGiaDinh.TableName = GiaDinhConst.TableName;
+                    giadinh.Tbl = tblGiaDinh;
+                    giadinh.TblDongBo = tblDongBo;
+                    giadinh.ExProcessData();
+                    ds.Tables.Add(tblGiaDinh);
+                }
+            }
 
             //Thành viên Gia đình
-            ThanhVienGiaDinhCompare thanhviengiadinh = new ThanhVienGiaDinhCompare(dir, "ThanhVienGiaDinh.csv");
-            if(thanhviengiadinh.CheckData())
+            if (File.Exists(dir + "ThanhVienGiaDinh.csv"))
             {
-                DataTable tblTVGD = Memory.GetData(SqlConstants.SELECT_ALLThanhVienGiaDinh);
-                tblTVGD.TableName = ThanhVienGiaDinhConst.TableName;
-                thanhviengiadinh.Tbl = tblTVGD;
-                thanhviengiadinh.TblDongBo = tblDongBo;
-                thanhviengiadinh.ExProcessData();
-                ds.Tables.Add(tblTVGD);
-            }    
+                ThanhVienGiaDinhCompare thanhviengiadinh = new ThanhVienGiaDinhCompare(dir, "ThanhVienGiaDinh.csv");
+                if (thanhviengiadinh.CheckData())
+                {
+                    DataTable tblTVGD = Memory.GetData(SqlConstants.SELECT_ALLThanhVienGiaDinh);
+                    tblTVGD.TableName = ThanhVienGiaDinhConst.TableName;
+                    thanhviengiadinh.Tbl = tblTVGD;
+                    thanhviengiadinh.TblDongBo = tblDongBo;
+                    thanhviengiadinh.ExProcessData();
+                    ds.Tables.Add(tblTVGD);
+                }
+            }
 
             //Đợt bí tích
-            DotBiTichCompare dotbitich = new DotBiTichCompare(dir, "DotBiTich.csv");
-            if(dotbitich.CheckData())
+            if (File.Exists(dir + "DotBiTich.csv"))
             {
-                DataTable tblDotBiTich = Memory.GetData(SqlConstants.SELECT_ALLDotBiTich);
-                tblDotBiTich.TableName = DotBiTichConst.TableName;
-                dotbitich.Tbl = tblDotBiTich;
-                dotbitich.TblDongBo = tblDongBo;
-                dotbitich.ExProcessData();
-                ds.Tables.Add(tblDotBiTich);
-            }    
+                DotBiTichCompare dotbitich = new DotBiTichCompare(dir, "DotBiTich.csv");
+                if (dotbitich.CheckData())
+                {
+                    DataTable tblDotBiTich = Memory.GetData(SqlConstants.SELECT_ALLDotBiTich);
+                    tblDotBiTich.TableName = DotBiTichConst.TableName;
+                    dotbitich.Tbl = tblDotBiTich;
+                    dotbitich.TblDongBo = tblDongBo;
+                    dotbitich.ExProcessData();
+                    ds.Tables.Add(tblDotBiTich);
+                }
+            }
 
             //Bí tích chi tiết
-            BiTichChiTietCompare bitichchitiet = new BiTichChiTietCompare(dir, "BiTichChiTiet.csv");
-            if(bitichchitiet.CheckData())
+            if (File.Exists(dir + "BiTichChiTiet.csv"))
             {
-                DataTable tblBiTichChiTiet = Memory.GetData(SqlConstants.SELECT_ALLBiTichChiTiet);
-                tblBiTichChiTiet.TableName = BiTichChiTietConst.TableName;
-                bitichchitiet.Tbl = tblBiTichChiTiet;
-                bitichchitiet.TblDongBo = tblDongBo;
-                bitichchitiet.ExProcessData();
-                ds.Tables.Add(tblBiTichChiTiet);
-            }    
+                BiTichChiTietCompare bitichchitiet = new BiTichChiTietCompare(dir, "BiTichChiTiet.csv");
+                if (bitichchitiet.CheckData())
+                {
+                    DataTable tblBiTichChiTiet = Memory.GetData(SqlConstants.SELECT_ALLBiTichChiTiet);
+                    tblBiTichChiTiet.TableName = BiTichChiTietConst.TableName;
+                    bitichchitiet.Tbl = tblBiTichChiTiet;
+                    bitichchitiet.TblDongBo = tblDongBo;
+                    bitichchitiet.ExProcessData();
+                    ds.Tables.Add(tblBiTichChiTiet);
+                }
+            }
 
 
             //Hôn phối
-            HonPhoiCompare honphoi = new HonPhoiCompare(dir, "HonPhoi.csv");
-            if(honphoi.CheckData())
+            if (File.Exists(dir + "HonPhoi.csv"))
             {
-                DataTable tblHonPhoi = Memory.GetData(SqlConstants.SELECT_ALLHonPhoi);
-                tblHonPhoi.TableName = HonPhoiConst.TableName;
-                honphoi.Tbl = tblHonPhoi;
-                honphoi.TblDongBo = tblDongBo;
-                honphoi.ExProcessData();
-                ds.Tables.Add(tblHonPhoi);
-            }    
+                HonPhoiCompare honphoi = new HonPhoiCompare(dir, "HonPhoi.csv");
+                if (honphoi.CheckData())
+                {
+                    DataTable tblHonPhoi = Memory.GetData(SqlConstants.SELECT_ALLHonPhoi);
+                    tblHonPhoi.TableName = HonPhoiConst.TableName;
+                    honphoi.Tbl = tblHonPhoi;
+                    honphoi.TblDongBo = tblDongBo;
+                    honphoi.ExProcessData();
+                    ds.Tables.Add(tblHonPhoi);
+                }
+            }
 
             //Giáo dân hôn phối
-            GiaoDanHonPhoiCompare giaodanhonphoi = new GiaoDanHonPhoiCompare(dir, "GiaoDanHonPhoi.csv");
-            if(giaodanhonphoi.CheckData())
+            if (File.Exists(dir + "GiaoDanHonPhoi.csv"))
             {
-                DataTable tblGDHP = Memory.GetData(SqlConstants.SELECT_ALLGiaoDanHonPhoi);
-                tblGDHP.TableName = GiaoDanHonPhoiConst.TableName;
-                giaodanhonphoi.Tbl = tblGDHP;
-                giaodanhonphoi.TblDongBo = tblDongBo;
-                giaodanhonphoi.ExProcessData();
-                ds.Tables.Add(tblGDHP);
-            }    
+                GiaoDanHonPhoiCompare giaodanhonphoi = new GiaoDanHonPhoiCompare(dir, "GiaoDanHonPhoi.csv");
+                if (giaodanhonphoi.CheckData())
+                {
+                    DataTable tblGDHP = Memory.GetData(SqlConstants.SELECT_ALLGiaoDanHonPhoi);
+                    tblGDHP.TableName = GiaoDanHonPhoiConst.TableName;
+                    giaodanhonphoi.Tbl = tblGDHP;
+                    giaodanhonphoi.TblDongBo = tblDongBo;
+                    giaodanhonphoi.ExProcessData();
+                    ds.Tables.Add(tblGDHP);
+                }
+            }
 
             //Khối giáo lý
-            KhoiGiaoLyCompare khoigiaoly = new KhoiGiaoLyCompare(dir, "KhoiGiaoLy.csv");
-            if(khoigiaoly.CheckData())
+            if (File.Exists(dir + "KhoiGiaoLy.csv"))
             {
-                DataTable tblKhoiGiaoLy = Memory.GetData(SqlConstants.SELECT_ALLKhoiGiaoLy);
-                tblKhoiGiaoLy.TableName = KhoiGiaoLyConst.TableName;
-                khoigiaoly.Tbl = tblKhoiGiaoLy;
-                khoigiaoly.TblDongBo = tblDongBo;
-                khoigiaoly.ExProcessData();
-                ds.Tables.Add(tblKhoiGiaoLy);
-            }    
+                KhoiGiaoLyCompare khoigiaoly = new KhoiGiaoLyCompare(dir, "KhoiGiaoLy.csv");
+                if (khoigiaoly.CheckData())
+                {
+                    DataTable tblKhoiGiaoLy = Memory.GetData(SqlConstants.SELECT_ALLKhoiGiaoLy);
+                    tblKhoiGiaoLy.TableName = KhoiGiaoLyConst.TableName;
+                    khoigiaoly.Tbl = tblKhoiGiaoLy;
+                    khoigiaoly.TblDongBo = tblDongBo;
+                    khoigiaoly.ExProcessData();
+                    ds.Tables.Add(tblKhoiGiaoLy);
+                }
+            }
 
             //Lớp giáo lý
-            LopGiaoLyCompare lopgiaoly = new LopGiaoLyCompare(dir, "LopGiaoLy.csv");
-            if(lopgiaoly.CheckData())
+            if (File.Exists(dir + "LopGiaoLy.csv"))
             {
-                DataTable tblLopGiaoLy = Memory.GetData(SqlConstants.SELECT_ALLLopGiaoLy);
-                tblLopGiaoLy.TableName = LopGiaoLyConst.TableName;
-                khoigiaoly.Tbl = tblLopGiaoLy;
-                lopgiaoly.TblDongBo = tblDongBo;
-                lopgiaoly.ExProcessData();
-                ds.Tables.Add(tblLopGiaoLy);
-            }  
+                LopGiaoLyCompare lopgiaoly = new LopGiaoLyCompare(dir, "LopGiaoLy.csv");
+                if (lopgiaoly.CheckData())
+                {
+                    DataTable tblLopGiaoLy = Memory.GetData(SqlConstants.SELECT_ALLLopGiaoLy);
+                    tblLopGiaoLy.TableName = LopGiaoLyConst.TableName;
+                    lopgiaoly.Tbl = tblLopGiaoLy;
+                    lopgiaoly.TblDongBo = tblDongBo;
+                    lopgiaoly.ExProcessData();
+                    ds.Tables.Add(tblLopGiaoLy);
+                }
+            }
 
             //Giáo lý viên
-            GiaoLyVienCompare giaolyvien = new GiaoLyVienCompare(dir, "GiaoLyVien.csv");
-            if(giaolyvien.CheckData())
+            if (File.Exists(dir + "GiaoLyVien.csv"))
             {
-                DataTable tblGiaoLyVien = Memory.GetData(SqlConstants.SELECT_ALLGiaoLyVien);
-                tblGiaoLyVien.TableName = GiaoLyVienConst.TableName;
-                giaolyvien.Tbl = tblGiaoLyVien;
-                giaolyvien.TblDongBo = tblDongBo;
-                giaolyvien.ExProcessData();
-                ds.Tables.Add(tblGiaoLyVien);
-            }  
+                GiaoLyVienCompare giaolyvien = new GiaoLyVienCompare(dir, "GiaoLyVien.csv");
+                if (giaolyvien.CheckData())
+                {
+                    DataTable tblGiaoLyVien = Memory.GetData(SqlConstants.SELECT_ALLGiaoLyVien);
+                    tblGiaoLyVien.TableName = GiaoLyVienConst.TableName;
+                    giaolyvien.Tbl = tblGiaoLyVien;
+                    giaolyvien.TblDongBo = tblDongBo;
+                    giaolyvien.ExProcessData();
+                    ds.Tables.Add(tblGiaoLyVien);
+                }
+            }
+
 
             //Chi tiết lớp giáo lý
-            ChiTietLopGiaoLyCompare chitietlopgiaoly = new ChiTietLopGiaoLyCompare(dir, "ChiTietLopGiaoLy.csv");
-            if(chitietlopgiaoly.CheckData())
+            if (File.Exists(dir + "ChiTietLopGiaoLy.csv"))
             {
-                DataTable tblCTLGL = Memory.GetData(SqlConstants.SELECT_ALLChiTietLopGiaoLy);
-                tblCTLGL.TableName = ChiTietLopGiaoLyConst.TableName;
-                chitietlopgiaoly.Tbl = tblCTLGL;
-                chitietlopgiaoly.TblDongBo = tblDongBo;
-                chitietlopgiaoly.ExProcessData();
-                ds.Tables.Add(tblCTLGL);
-            } 
+                ChiTietLopGiaoLyCompare chitietlopgiaoly = new ChiTietLopGiaoLyCompare(dir, "ChiTietLopGiaoLy.csv");
+                if (chitietlopgiaoly.CheckData())
+                {
+                    DataTable tblCTLGL = Memory.GetData(SqlConstants.SELECT_ALLChiTietLopGiaoLy);
+                    tblCTLGL.TableName = ChiTietLopGiaoLyConst.TableName;
+                    chitietlopgiaoly.Tbl = tblCTLGL;
+                    chitietlopgiaoly.TblDongBo = tblDongBo;
+                    chitietlopgiaoly.ExProcessData();
+                    ds.Tables.Add(tblCTLGL);
+                }
+            }
+
 
             //Hội đoàn
-            HoiDoanCompare hoidoan = new HoiDoanCompare(dir, "HoiDoan.csv");
-            if(hoidoan.CheckData())
+            if (File.Exists(dir + "HoiDoan.csv"))
             {
-                DataTable tblHoiDoan = Memory.GetData(SqlConstants.SELECT_ALLHoiDoan);
-                tblHoiDoan.TableName = HoiDoanConst.TableName;
-                hoidoan.Tbl = tblHoiDoan;
-                hoidoan.TblDongBo = tblDongBo;
-                hoidoan.ExProcessData();
-                ds.Tables.Add(tblHoiDoan);
-            }    
+                HoiDoanCompare hoidoan = new HoiDoanCompare(dir, "HoiDoan.csv");
+                if (hoidoan.CheckData())
+                {
+                    DataTable tblHoiDoan = Memory.GetData(SqlConstants.SELECT_ALLHoiDoan);
+                    tblHoiDoan.TableName = HoiDoanConst.TableName;
+                    hoidoan.Tbl = tblHoiDoan;
+                    hoidoan.TblDongBo = tblDongBo;
+                    hoidoan.ExProcessData();
+                    ds.Tables.Add(tblHoiDoan);
+                }
+            }
 
             //Chi tiết hội đoàn
-            ChiTietHoiDoanCompare chitiethoidoan = new ChiTietHoiDoanCompare(dir,"ChiTietHoiDoan.csv");
-            if(chitiethoidoan.CheckData())
+            if (File.Exists(dir + "ChiTietHoiDoan.csv"))
             {
-                DataTable tblCTHD = Memory.GetData(SqlConstants.SELECT_ALLChiTietHoiDoan);
-                tblCTHD.TableName = ChiTietHoiDoanConst.TableName;
-                chitiethoidoan.Tbl = tblCTHD;
-                chitiethoidoan.TblDongBo = tblDongBo;
-                chitiethoidoan.ExProcessData();
-                ds.Tables.Add(tblCTHD);
-            }   
+                ChiTietHoiDoanCompare chitiethoidoan = new ChiTietHoiDoanCompare(dir, "ChiTietHoiDoan.csv");
+                if (chitiethoidoan.CheckData())
+                {
+                    DataTable tblCTHD = Memory.GetData(SqlConstants.SELECT_ALLChiTietHoiDoan);
+                    tblCTHD.TableName = ChiTietHoiDoanConst.TableName;
+                    chitiethoidoan.Tbl = tblCTHD;
+                    chitiethoidoan.TblDongBo = tblDongBo;
+                    chitiethoidoan.ExProcessData();
+                    ds.Tables.Add(tblCTHD);
+                }
+            }
 
             //Rao hôn phối
-            RaoHonPhoiCompare raohonphoi = new RaoHonPhoiCompare(dir, "RaoHonPhoi.csv");
-            if(raohonphoi.CheckData())
+            if (File.Exists(dir + "RaoHonPhoi.csv"))
             {
-                DataTable tblRaoHonPhoi = Memory.GetData(SqlConstants.SELECT_ALLRaoHonPhoi);
-                tblRaoHonPhoi.TableName = RaoHonPhoiConst.TableName;
-                raohonphoi.Tbl = tblRaoHonPhoi;
-                raohonphoi.TblDongBo = tblDongBo;
-                raohonphoi.ExProcessData();
-                ds.Tables.Add(tblRaoHonPhoi);
-            }    
+                RaoHonPhoiCompare raohonphoi = new RaoHonPhoiCompare(dir, "RaoHonPhoi.csv");
+                if (raohonphoi.CheckData())
+                {
+                    DataTable tblRaoHonPhoi = Memory.GetData(SqlConstants.SELECT_ALLRaoHonPhoi);
+                    tblRaoHonPhoi.TableName = RaoHonPhoiConst.TableName;
+                    raohonphoi.Tbl = tblRaoHonPhoi;
+                    raohonphoi.TblDongBo = tblDongBo;
+                    raohonphoi.ExProcessData();
+                    ds.Tables.Add(tblRaoHonPhoi);
+                }
+            }
 
             //Chuyển xứ
-            ChuyenXuCompare chuyenxu = new ChuyenXuCompare(dir, "ChuyenXu.csv");
-            if(chuyenxu.CheckData())
+            if (File.Exists(dir + "ChuyenXu.csv"))
             {
-                DataTable tblChuyenXu = Memory.GetData(SqlConstants.SELECT_ALLChuyenXu);
-                tblChuyenXu.TableName = ChuyenXuConst.TableName;
-                chuyenxu.Tbl = tblChuyenXu;
-                chuyenxu.TblDongBo = tblDongBo;
-                chuyenxu.ExProcessData();
-                ds.Tables.Add(tblChuyenXu);
-
+                ChuyenXuCompare chuyenxu = new ChuyenXuCompare(dir, "ChuyenXu.csv");
+                if (chuyenxu.CheckData())
+                {
+                    DataTable tblChuyenXu = Memory.GetData(SqlConstants.SELECT_ALLChuyenXu);
+                    tblChuyenXu.TableName = ChuyenXuConst.TableName;
+                    chuyenxu.Tbl = tblChuyenXu;
+                    chuyenxu.TblDongBo = tblDongBo;
+                    chuyenxu.ExProcessData();
+                    ds.Tables.Add(tblChuyenXu);
+                }
             }
             //Tận hiến
-            TanHienCompare tanhien = new TanHienCompare(dir, "TanHien.csv");
-            if(tanhien.CheckData())
+            if (File.Exists(dir + "TanHien.csv"))
             {
-                DataTable tblTanHien = Memory.GetData(SqlConstants.SELECT_ALLTanHien);
-                tblTanHien.TableName = TanHienConst.TableName;
-                tanhien.Tbl = tblTanHien;
-                tanhien.TblDongBo = tblDongBo;
-                tanhien.ExProcessData();
-                ds.Tables.Add(tblTanHien);
-            }    
-
-            //Linh mục
-            LinhMucCompare linhmuc = new LinhMucCompare(dir, "LinhMuc.csv");
-            if (linhmuc.CheckData())
-            {
-                DataTable tblLinhMuc = Memory.GetData(SqlConstants.SELECT_ALLLinhMuc);
-                tblLinhMuc.TableName = LinhMucConst.TableName;
-                linhmuc.Tbl = tblLinhMuc;
-                linhmuc.TblDongBo = tblDongBo;
-                linhmuc.ExProcessData();
-                ds.Tables.Add(tblLinhMuc);
+                TanHienCompare tanhien = new TanHienCompare(dir, "TanHien.csv");
+                if (tanhien.CheckData())
+                {
+                    DataTable tblTanHien = Memory.GetData(SqlConstants.SELECT_ALLTanHien);
+                    tblTanHien.TableName = TanHienConst.TableName;
+                    tanhien.Tbl = tblTanHien;
+                    tanhien.TblDongBo = tblDongBo;
+                    tanhien.ExProcessData();
+                    ds.Tables.Add(tblTanHien);
+                }
             }
 
-            //Cấu hình
-            CauHinhCompare cauhinh = new CauHinhCompare(dir, "CauHinh.csv");
-            if(cauhinh.CheckData())
+            //Linh mục
+            if (File.Exists(dir + "LinhMuc.csv"))
             {
-                DataTable tblCauHinh = Memory.GetData(SqlConstants.SELECT_ALLCauHinh);
-                tblCauHinh.TableName = CauHinhConst.TableName;
-                cauhinh.Tbl = tblCauHinh;
-                cauhinh.ExProcessData();
-                ds.Tables.Add(tblCauHinh);
-            } 
+                LinhMucCompare linhmuc = new LinhMucCompare(dir, "LinhMuc.csv");
+                if (linhmuc.CheckData())
+                {
+                    DataTable tblLinhMuc = Memory.GetData(SqlConstants.SELECT_ALLLinhMuc);
+                    tblLinhMuc.TableName = LinhMucConst.TableName;
+                    linhmuc.Tbl = tblLinhMuc;
+                    linhmuc.TblDongBo = tblDongBo;
+                    linhmuc.ExProcessData();
+                    ds.Tables.Add(tblLinhMuc);
+                }
+            }
+            //Cấu hình
+            if (File.Exists(dir + "CauHinh.csv"))
+            {
+                CauHinhCompare cauhinh = new CauHinhCompare(dir, "CauHinh.csv");
+                if (cauhinh.CheckData())
+                {
+                    DataTable tblCauHinh = Memory.GetData(SqlConstants.SELECT_ALLCauHinh);
+                    tblCauHinh.TableName = CauHinhConst.TableName;
+                    cauhinh.Tbl = tblCauHinh;
+                    cauhinh.ExProcessData();
+                    ds.Tables.Add(tblCauHinh);
+                }
+            }
             //xóa row trong bảng đồng bộ
             dbid.deleteRow();
             DataTable tblGiaoXu = Memory.GetData("Select * from GiaoXu");
-            if(tblGiaoXu!=null && tblGiaoXu.Rows.Count>0)
+            if (tblGiaoXu != null && tblGiaoXu.Rows.Count > 0)
             {
                 tblGiaoXu.Rows[0][GiaoXuConst.PullDate] = Memory.Instance.GetServerDateTime();
                 tblGiaoXu.TableName = GiaoXuConst.TableName;
                 ds.Tables.Add(tblGiaoXu);
-            }   
-            Memory.UpdateDataSet(ds,false);
+            }
+            Memory.UpdateDataSet(ds, false);
+            if (Memory.HasError())
+                Memory.ShowError();
+            Memory.LoadConfig();
             MessageBox.Show("Thành Công");
         }
         //gán tên cho table
         public DataSet ListTable(string[,] stringListTable)
         {
-            int CountTbl = (int)stringListTable.GetLongLength(0);  //Số table
-            DataSet ds = new DataSet();
-            DataTable tblex;
-            string dieukien = " where UpdateDate >= ? ";
-            DateTime? pulldate = Memory.getPullDate();
-            for (int i = 0; i < CountTbl; i++)
+            try
             {
-                if (pulldate != null)
+                int CountTbl = (int)stringListTable.GetLongLength(0);  //Số table
+                DataSet ds = new DataSet();
+                DataTable tblex;
+                string dieukien = " where UpdateDate >= ? ";
+                DateTime? pulldate = Memory.getPullDate();
+                for (int i = 0; i < CountTbl; i++)
                 {
-                    if (stringListTable[i, 1] == "GiaoDan")
+                    if (pulldate != null)
                     {
-                        tblex = Memory.GetData(stringListTable[i, 0] + dieukien + " order by MaGiaoDan ASC", new object[] { pulldate.ToString() });
+                        if (stringListTable[i, 1] == "GiaoDan")
+                        {
+                            tblex = Memory.GetData(stringListTable[i, 0] + dieukien + " order by MaGiaoDan ASC", new object[] { pulldate.ToString() });
+                        }
+                        else
+                        {
+                            tblex = Memory.GetData(stringListTable[i, 0] + dieukien, new object[] { pulldate.ToString() });
+                        }
                     }
                     else
                     {
-                        tblex = Memory.GetData(stringListTable[i, 0] + dieukien, new object[] { pulldate.ToString() });
+                        if (stringListTable[i, 1] == "GiaoDan")
+                        {
+                            tblex = Memory.GetData(stringListTable[i, 0] + " order by MaGiaoDan ASC");
+                        }
+                        else
+                        {
+                            tblex = Memory.GetData(stringListTable[i, 0]);
+                        }
                     }
+                    tblex.TableName = stringListTable[i, 1];
+                    ds.Tables.Add(tblex);
                 }
-                else
-                {
-                    if (stringListTable[i, 1] == "GiaoDan")
-                    {
-                        tblex = Memory.GetData(stringListTable[i, 0] + " order by MaGiaoDan ASC");
-                    }
-                    else
-                    {
-                        tblex = Memory.GetData(stringListTable[i, 0]);
-                    }
-                }
-                tblex.TableName = stringListTable[i, 1];
-                ds.Tables.Add(tblex);
+                return ds;
             }
-            return ds;
+            catch (Exception ex)
+            {
+                MessageBox.Show("Quá trình lấy dữ liệu từ db bị lỗi.\r\n" +
+                    "Vui lòng liên hệ quản trị hệ thông qlgx.net để được hỗ trợ.\r\n" +
+                    "Xin cảm ơn.\r\n" + ex.Message, "Lỗi đồng bộ", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                errorState = true;
+                return null;
+            }
         }
         private string createrFileSyn()
         {
-            string giaoxusynPath = Memory.AppPath + "sync\\";
-            if (!Directory.Exists(giaoxusynPath))
+            try
             {
-                Directory.CreateDirectory(giaoxusynPath);
-            }
-            string[,] stringListTable = new string[,]
-            {
+                string giaoxusynPath = Memory.AppPath + "sync\\";
+                if (!Directory.Exists(giaoxusynPath))
+                {
+                    Directory.CreateDirectory(giaoxusynPath);
+                }
+                string[,] stringListTable = new string[,]
+                {
                 {SqlConstants.SELECT_ALLBiTichChiTiet,BiTichChiTietConst.TableName },
                 {SqlConstants.SELECT_ALLCauHinh,CauHinhConst.TableName },
                 {SqlConstants.SELECT_ALLChiTietHoiDoan,ChiTietHoiDoanConst.TableName },
@@ -474,28 +570,36 @@ namespace DongBoDuLieu
                 {SqlConstants.SELECT_ALLRaoHonPhoi,RaoHonPhoiConst.TableName },
                 {SqlConstants.SELECT_ALLTanHien,TanHienConst.TableName },
                 {SqlConstants.SELECT_ALLThanhVienGiaDinh,ThanhVienGiaDinhConst.TableName }
-            };
-            DataSet ds = ListTable(stringListTable);
+                };
+                DataSet ds = ListTable(stringListTable);
 
-            DataTable tblDongBo = Memory.GetData(String.Format("Select * from {0} ", DongBoConst.TableName));
-            if (ds.Tables.Count > 0)
-            {
-                foreach (DataTable tbl in ds.Tables)
+                DataTable tblDongBo = Memory.GetData(String.Format("Select * from {0} ", DongBoConst.TableName));
+                if (ds.Tables.Count > 0)
                 {
-                    Memory.WriteFileCSV(tbl, 0, tblDongBo);
+                    foreach (DataTable tbl in ds.Tables)
+                    {
+                        Memory.WriteFileCSV(tbl, 0, tblDongBo);
+                    }
+                    string fileName = "gxsyn" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".zip";
+                    FastZip fzip = new FastZip();
+                    fzip.CreateZip(giaoxusynPath + fileName, giaoxusynPath, false, @"\.csv$");
+                    foreach (string sFile in System.IO.Directory.GetFiles(giaoxusynPath, "*.csv"))
+                    {
+                        System.IO.File.Delete(sFile);
+                    }
+                    return giaoxusynPath + fileName;
                 }
-                string fileName = "gxsyn" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".zip";
-                FastZip fzip = new FastZip();
-                fzip.CreateZip(giaoxusynPath + fileName, giaoxusynPath, false, @"\.csv$");
-                foreach (string sFile in System.IO.Directory.GetFiles(giaoxusynPath, "*.csv"))
-                {
-                    System.IO.File.Delete(sFile);
-                }
-                return giaoxusynPath + fileName;
+                return null;
             }
-            return null;
+            catch (Exception ex)
+            {
+                MessageBox.Show("Tạo tệp tin đồng bộ dữ liệu bị lỗi.\r\n" +
+                    "Vui lòng liên hệ quản trị hệ thống qlgx.net để được hỗ trợ.\r\n" +
+                    "Xin cảm ơn.\r\n" + ex.Message, "Lỗi đồng bộ", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return null;
+            }
         }
-        
+
         private string ToCSV(DataTable table, bool fileExist)
         {
             var result = new StringBuilder();

@@ -87,6 +87,11 @@ namespace DongBoDuLieu
         
         public bool changeValueKey(Dictionary<string, object> objectCSV, string fieldID1,string tableNameObject1, string fieldID2 = null,string tableNameObject2=null)
         {
+            if (Convert.ToInt32(objectCSV[fieldID1]) == 0 && tableNameObject1 == GiaoHoConst.TableName)
+            {
+                objectCSV[fieldID1] = 0;
+                return true;
+            }    
             int maFieldID1 = findValueDongBoClient(Convert.ToInt32(objectCSV[fieldID1]), tableNameObject1);
             if (maFieldID1 == -1)
                 return false;

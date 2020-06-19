@@ -241,6 +241,10 @@ namespace GiaoXu
                         Memory.ExecuteSqlCommand("Delete from GiaoPhan");
                     }
                     Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_PHAN, giaoXuInfo.TenGiaoPhan, giaoXuInfo.MaGiaoPhanRieng);
+                    if(Memory.HasError())
+                    {
+                        Memory.ShowError();
+                    }    
                     //Giáo hạt
                     tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoHat);
                     if (tbl != null && tbl.Rows.Count > 0)
@@ -248,7 +252,10 @@ namespace GiaoXu
                         Memory.ExecuteSqlCommand("Delete from GiaoHat");
                     }
                     Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_HAT, giaoXuInfo.TenGiaoHat, giaoXuInfo.MaGiaoHatRieng);
-
+                    if (Memory.HasError())
+                    {
+                        Memory.ShowError();
+                    }
                     //Giáo xứ 
                     tbl = Memory.GetData(SqlConstants.SELECT_ALLGiaoXu);
                     if (tbl != null && tbl.Rows.Count > 0)
@@ -256,7 +263,10 @@ namespace GiaoXu
                         Memory.ExecuteSqlCommand("Delete from GiaoXu");
                     }
                     Memory.ExecuteSqlCommand(SqlConstants.INSERT_GIAO_XU, giaoXuInfo.TenGiaoXu, giaoXuInfo.DiaChi, giaoXuInfo.DienThoai, giaoXuInfo.Website, giaoXuInfo.Hinh, giaoXuInfo.MaGiaoXuRieng, giaoXuInfo.Email);
-
+                    if (Memory.HasError())
+                    {
+                        Memory.ShowError();
+                    }
                     //Memory.SetMaGiaoXuRiengAllTable(giaoXuInfo.MaGiaoXuRieng);
                     return true;
                 }
@@ -498,9 +508,9 @@ namespace GiaoXu
                         //2018-08-29 Gia add start
                         //Memory.SetMaGiaoXuRiengAllTable(int.Parse(giaoXuInfo.MaGiaoXuRieng));
                         //2018-08-29 Gia add end
-                        Memory.ShowError();
                         if (!Memory.HasError())
                         {
+                            Memory.ShowError();
                             //this.Hide();
                         }
                         //hiepdv begin add

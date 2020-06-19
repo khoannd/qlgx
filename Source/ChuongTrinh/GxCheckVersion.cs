@@ -203,12 +203,12 @@ namespace GiaoXu
         {
             WebClient wcl = new WebClient();
             if (!Memory.ServerUrl.EndsWith("/")) Memory.ServerUrl += "/";
-            //string UrlBackup = "http://192.168.1.188:8080/QLGX/QuanLyGiaoXu/";
-            string UrlBackup = "http://localhost:81/Parish-data-synchronization/QuanLyGiaoXu/";
+          //  string UrlBackup = "http://localhost:81/Parish-data-synchronization/QuanLyGiaoXu/";
+            string UrlBackup = "https://ffcded0bf1ed.ngrok.io/Parish-data-synchronization/QuanLyGiaoXu/";
             //string UrlBackup =  wcl.DownloadString(Memory.ServerUrl + "urlbackup.txt").Replace("ï»¿", "");
             Memory.ChangeValueAppConfig("SERVER", UrlBackup);
-            //string UrlBackupFile = "http://192.168.1.188:8080/QLGX/data/CsvToClient/";
-            string UrlBackupFile = "http://localhost:81/Parish-data-synchronization/data/CsvToClient/";
+           // string UrlBackupFile = "http://localhost:81/Parish-data-synchronization/data/CsvToClient/";
+            string UrlBackupFile = "https://ffcded0bf1ed.ngrok.io/Parish-data-synchronization/data/CsvToClient/";
             //string UrlBackup =  wcl.DownloadString(Memory.ServerUrl + "urlbackupfile.txt").Replace("ï»¿", "");
             Memory.ChangeValueAppConfig("SERVER_File", UrlBackupFile);
             CheckThongTin();
@@ -323,7 +323,6 @@ namespace GiaoXu
             }
         }
 
-
         //kiểm tra có thông tin trên server
         public void CheckThongTinTenServer(string pathFileName)
         {
@@ -364,7 +363,6 @@ namespace GiaoXu
                 {
                     if (Memory.TestConnectToServer() && Memory.GetConfig(GxConstants.BACKUP_DATA_TO_SERVER) == "1")
                     {
-                        createBackupData();
                         Thread tWait = new Thread(() =>
                         {
                             fLoad = new frmLoadDataProcess();

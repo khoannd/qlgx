@@ -18,10 +18,10 @@ namespace DongBoDuLieu
                 string line = "";
                 using (StreamReader sr = new StreamReader(fileName))
                 {
-                    string[] header = sr.ReadLine().Split(';');
+                    string[] header = sr.ReadLine().Trim('`').Split(new string[] { "`;`"},StringSplitOptions.None);
                     for (int i = 0; i < header.Length; i++)
                     {
-                        header[i] = header[i].Trim('`');
+                        //header[i] = header[i].Trim('`');
                     }
                     string[] path = fileName.Split('\\');
                     string nameTable = path[path.Length - 1].Split('.')[0];
@@ -30,20 +30,20 @@ namespace DongBoDuLieu
                     {
                         while ((line = sr.ReadLine()) != null)
                         {
-                            string[] data = line.Split(';');
+                            string[] data = line.Trim('`').Split(new string[] { "`;`" }, StringSplitOptions.None);
                             Dictionary<string, object> dic = new Dictionary<string, object>();
                             for (int i = 0; i < header.Length; i++)
                             {
                                 if (header[i]=="DeleteSV")
                                 {
-                                    dic.Add(header[i], data[i].Trim('`'));
+                                    dic.Add(header[i], data[i]);
                                     continue;
                                 }
                                 if (header[i] == "MaGiaoXuRieng")
                                 {
                                     continue;
                                 }    
-                                dic.Add(header[i], processTypeValue(data[i].Trim('`'), tbl.Columns[header[i]].DataType));
+                                dic.Add(header[i], processTypeValue(data[i], tbl.Columns[header[i]].DataType));
                             }
                             this.Data.Add(dic);
                         }
