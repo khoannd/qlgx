@@ -31,6 +31,7 @@
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmCreateGiaoXu));
             this.panel2 = new System.Windows.Forms.Panel();
+            this.lblInfo = new System.Windows.Forms.Label();
             this.listView1 = new System.Windows.Forms.ListView();
             this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
@@ -58,6 +59,7 @@
             // 
             // panel2
             // 
+            this.panel2.Controls.Add(this.lblInfo);
             this.panel2.Controls.Add(this.listView1);
             this.panel2.Controls.Add(this.panel4);
             this.panel2.Controls.Add(this.panel3);
@@ -66,6 +68,16 @@
             this.panel2.Name = "panel2";
             this.panel2.Size = new System.Drawing.Size(1244, 514);
             this.panel2.TabIndex = 1;
+            // 
+            // lblInfo
+            // 
+            this.lblInfo.AutoSize = true;
+            this.lblInfo.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblInfo.Location = new System.Drawing.Point(351, 58);
+            this.lblInfo.Name = "lblInfo";
+            this.lblInfo.Size = new System.Drawing.Size(592, 144);
+            this.lblInfo.TabIndex = 4;
+            this.lblInfo.Text = resources.GetString("lblInfo.Text");
             // 
             // listView1
             // 
@@ -274,6 +286,7 @@
             this.Text = "Chọn giáo xứ";
             this.Shown += new System.EventHandler(this.frmCreateGiaoXu_Shown);
             this.panel2.ResumeLayout(false);
+            this.panel2.PerformLayout();
             this.panel3.ResumeLayout(false);
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
@@ -303,5 +316,6 @@
         private System.Windows.Forms.Label label3;
         private GxControl.GxCheckBox chkSearchAll;
         private GxControl.GxButton btnSelectGiaoXu;
+        private System.Windows.Forms.Label lblInfo;
     }
 }
