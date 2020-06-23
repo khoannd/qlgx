@@ -1,7 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <application value="GiaoXu" xmlns="urn:newversion-schema">
-  <version-info value="3.3.3.4" display="3.3.3" exename="GiaoXu.exe">
+  <version-info value="3.3.4.0" display="3.3.4" exename="GiaoXu.exe">
     <info>
+      Ngày 23-06-2020: cập nhật lên phiên bản 3.3.4
+      - Các cải tiến và sửa lỗi:
+      + Màn hình chọn giáo dân (vào gia đình, sổ bí tích hoặc lớp giáo lý...) mặc định sẽ không hiển thị hết tất cả các giáo dân trong giáo họ được chọn mà cho phép người dùng nhập tên giáo dân cần tìm kiếm, chương trình sẽ tìm kiếm trong cả hồ sơ lưu trữ.
+      + Màn hình bí tích chi tiết mặc định được sắp xếp theo số bí tích
+      + Cải tiến chức năng nhập dữ liệu từ chương trình MGC để nhập được dữ liệu cho nhiều trường hợp hơn.
+      + Màn hình tìm kiếm giáo dân được thêm mục "Ngày sinh" và "Địa chỉ".
+      + Thêm địa chỉ và số điện thoại vào một số mẫu báo cáo.
+      + Thống kê hôn phối bị báo lỗi trong một số trường hợp.
+      + Một số trường hợp thống kê không in được danh sách kết quả sau khi thống kê.
+      + Và một số sửa lỗi cùng cải tiến khác
+      
       Ngày 04-05-2020: cập nhật lên phiên bản 3.3.3
       - Các cải tiến:
       + Cho phép xem gia đình từ màn hình cá nhân giáo dân.
