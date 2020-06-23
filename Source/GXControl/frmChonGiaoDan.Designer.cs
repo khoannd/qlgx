@@ -51,7 +51,7 @@
             this.gxGroupBox1.Dock = System.Windows.Forms.DockStyle.Top;
             this.gxGroupBox1.Location = new System.Drawing.Point(0, 0);
             this.gxGroupBox1.Name = "gxGroupBox1";
-            this.gxGroupBox1.Size = new System.Drawing.Size(728, 77);
+            this.gxGroupBox1.Size = new System.Drawing.Size(728, 59);
             this.gxGroupBox1.TabIndex = 0;
             this.gxGroupBox1.Text = "Tìm giáo dân";
             // 
@@ -62,7 +62,7 @@
             this.gxAddEdit1.CaptionDisplayMode = GxGlobal.CaptionDisplayMode.Full;
             this.gxAddEdit1.DisplayMode = GxGlobal.DisplayMode.Mode2;
             this.gxAddEdit1.GridData = null;
-            this.gxAddEdit1.Location = new System.Drawing.Point(578, 20);
+            this.gxAddEdit1.Location = new System.Drawing.Point(586, 22);
             this.gxAddEdit1.Name = "gxAddEdit1";
             this.gxAddEdit1.Size = new System.Drawing.Size(391, 23);
             this.gxAddEdit1.TabIndex = 2;
@@ -86,9 +86,9 @@
             this.gxButton1.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkOrange;
             this.gxButton1.FlatAppearance.MouseOverBackColor = System.Drawing.Color.SkyBlue;
             this.gxButton1.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this.gxButton1.Location = new System.Drawing.Point(374, 20);
+            this.gxButton1.Location = new System.Drawing.Point(427, 19);
             this.gxButton1.Name = "gxButton1";
-            this.gxButton1.Size = new System.Drawing.Size(37, 23);
+            this.gxButton1.Size = new System.Drawing.Size(57, 23);
             this.gxButton1.TabIndex = 1;
             this.gxButton1.Text = "Tìm";
             this.gxButton1.UseVisualStyleBackColor = true;
@@ -98,9 +98,9 @@
             // 
             this.txtHoTen.AutoCompleteEnabled = false;
             this.txtHoTen.AutoUpperFirstChar = false;
-            this.txtHoTen.BoxLeft = 0;
+            this.txtHoTen.BoxLeft = 140;
             this.txtHoTen.EditEnabled = true;
-            this.txtHoTen.Label = "Tên giáo dân";
+            this.txtHoTen.Label = "Nhập tên giáo dân cần tìm";
             this.txtHoTen.Location = new System.Drawing.Point(20, 19);
             this.txtHoTen.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.txtHoTen.MaxLength = 32767;
@@ -109,16 +109,16 @@
             this.txtHoTen.NumberInputRequired = false;
             this.txtHoTen.NumberMode = false;
             this.txtHoTen.ReadOnly = false;
-            this.txtHoTen.Size = new System.Drawing.Size(347, 26);
+            this.txtHoTen.Size = new System.Drawing.Size(401, 26);
             this.txtHoTen.TabIndex = 0;
             // 
             // gxGroupBox2
             // 
             this.gxGroupBox2.Controls.Add(this.gxGiaoDanList1);
             this.gxGroupBox2.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gxGroupBox2.Location = new System.Drawing.Point(0, 77);
+            this.gxGroupBox2.Location = new System.Drawing.Point(0, 59);
             this.gxGroupBox2.Name = "gxGroupBox2";
-            this.gxGroupBox2.Size = new System.Drawing.Size(728, 354);
+            this.gxGroupBox2.Size = new System.Drawing.Size(728, 372);
             this.gxGroupBox2.TabIndex = 0;
             this.gxGroupBox2.Text = "Danh sách tìm kiếm";
             // 
@@ -145,7 +145,7 @@
             this.gxGiaoDanList1.RowHeaderContent = Janus.Windows.GridEX.RowHeaderContent.RowPosition;
             this.gxGiaoDanList1.RowHeaders = Janus.Windows.GridEX.InheritableBoolean.Default;
             this.gxGiaoDanList1.SelectionMode = Janus.Windows.GridEX.SelectionMode.MultipleSelection;
-            this.gxGiaoDanList1.Size = new System.Drawing.Size(722, 335);
+            this.gxGiaoDanList1.Size = new System.Drawing.Size(722, 353);
             this.gxGiaoDanList1.TabIndex = 0;
             this.gxGiaoDanList1.VisualStyle = Janus.Windows.GridEX.VisualStyle.Office2003;
             this.gxGiaoDanList1.WhereSQL = "";
