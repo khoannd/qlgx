@@ -1,7 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <application value="GiaoXu" xmlns="urn:newversion-schema">
-  <version-info value="3.3.4.0" display="3.3.4" exename="GiaoXu.exe">
+  <version-info value="3.3.5.0" display="3.3.5" exename="GiaoXu.exe">
     <info>
+      Ngày 26-06-2020: cập nhật lên phiên bản 3.3.5
+      - Sửa lỗi không hiển thị được tên vợ chồng trong màn hình thống kê hôn phối.
+      
       Ngày 23-06-2020: cập nhật lên phiên bản 3.3.4
       - Các cải tiến và sửa lỗi:
       + Màn hình chọn giáo dân (vào gia đình, sổ bí tích hoặc lớp giáo lý...) mặc định sẽ không hiển thị hết tất cả các giáo dân trong giáo họ được chọn mà cho phép người dùng nhập tên giáo dân cần tìm kiếm, chương trình sẽ tìm kiếm trong cả hồ sơ lưu trữ.
