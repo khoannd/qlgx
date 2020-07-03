@@ -51,6 +51,7 @@
             this.cbGiaoPhan = new GxControl.GxComboBox();
             this.label2 = new System.Windows.Forms.Label();
             this.txtSearch = new System.Windows.Forms.TextBox();
+            this.lblInfo = new System.Windows.Forms.Label();
             this.panel2.SuspendLayout();
             this.panel3.SuspendLayout();
             this.panel1.SuspendLayout();
@@ -58,6 +59,7 @@
             // 
             // panel2
             // 
+            this.panel2.Controls.Add(this.lblInfo);
             this.panel2.Controls.Add(this.listView1);
             this.panel2.Controls.Add(this.panel4);
             this.panel2.Controls.Add(this.panel3);
@@ -262,6 +264,16 @@
             this.txtSearch.Visible = false;
             this.txtSearch.TextChanged += new System.EventHandler(this.txtSearch_TextChanged);
             // 
+            // lblInfo
+            // 
+            this.lblInfo.AutoSize = true;
+            this.lblInfo.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblInfo.Location = new System.Drawing.Point(323, 40);
+            this.lblInfo.Name = "lblInfo";
+            this.lblInfo.Size = new System.Drawing.Size(592, 144);
+            this.lblInfo.TabIndex = 5;
+            this.lblInfo.Text = resources.GetString("lblInfo.Text");
+            // 
             // frmCreateGiaoXu
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -274,6 +286,7 @@
             this.Text = "Chọn giáo xứ";
             this.Shown += new System.EventHandler(this.frmCreateGiaoXu_Shown);
             this.panel2.ResumeLayout(false);
+            this.panel2.PerformLayout();
             this.panel3.ResumeLayout(false);
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
@@ -303,5 +316,6 @@
         private System.Windows.Forms.Label label3;
         private GxControl.GxCheckBox chkSearchAll;
         private GxControl.GxButton btnSelectGiaoXu;
+        private System.Windows.Forms.Label lblInfo;
     }
 }
