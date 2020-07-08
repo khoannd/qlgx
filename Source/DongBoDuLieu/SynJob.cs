@@ -43,7 +43,7 @@ namespace DongBoDuLieu
                 System.IO.File.Delete(sFile);
             }
         }
-         
+
         public void Push()
         {
             try
@@ -128,76 +128,83 @@ namespace DongBoDuLieu
                 string maGiaoXuRieng = Memory.getMaGiaoXuServer();
                 long pulldatetamp = Memory.getTimespanBeginPullDate();
                 //Download ds máy nhập để get điều kiện
-                string getdsMayNhap=cl.DownloadString(new Uri(string.Format(ConfigurationManager.AppSettings["SERVER"] + @"SynToClientCL/downloadMayNhap/{0}/{1}/{2}", maGiaoXuRieng, GenerateUniqueCode.GetUniqueCode(), pulldatetamp)));
-                if(getdsMayNhap.Length<=19)
-                {
-                    DateTime beginPullDate = (DateTime)Convert.ChangeType(getdsMayNhap, TypeCode.DateTime);
-                    //update thời gian pull
-                    Memory.ExecuteSqlCommand("Update GiaoXu set BeginPullDate=?,PullDate=?,UpdateDate=?", new object[] { beginPullDate.ToString(), Memory.Instance.GetServerDateTime().ToString(), Memory.Instance.GetServerDateTime().ToString() });
-                   if(Memory.HasError())
-                    {
-                        Memory.ShowError();
-                    }    
-                    MessageBox.Show("Đồng bộ thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-                string[] dsMayNhap = getdsMayNhap.Split('&');
+                string getdsMayNhap = cl.DownloadString(new Uri(string.Format(ConfigurationManager.AppSettings["SERVER"] + @"SynToClientCL/downloadMayNhap/{0}/{1}/{2}", maGiaoXuRieng, GenerateUniqueCode.GetUniqueCode(), pulldatetamp)));
+                //if(getdsMayNhap.Length<=19)
+                //{
+                //    DateTime beginPullDate = (DateTime)Convert.ChangeType(getdsMayNhap, TypeCode.DateTime);
+                //    //update thời gian pull
+                //    Memory.ExecuteSqlCommand("Update GiaoXu set BeginPullDate=?,PullDate=?,UpdateDate=?", new object[] { beginPullDate.ToString(), Memory.Instance.GetServerDateTime().ToString(), Memory.Instance.GetServerDateTime().ToString() });
+                //   if(Memory.HasError())
+                //    {
+                //        Memory.ShowError();
+                //    }    
+                //    MessageBox.Show("Đồng bộ thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                //    return;
+                //}
+
                 string dieukien = "";
-                if (pulldatetamp!=0)
+                string[] dsMayNhap = null;
+                if (!string.IsNullOrEmpty(getdsMayNhap))
                 {
-                    dieukien = "1=1";
-                }    
-                else
+                    dsMayNhap = getdsMayNhap.Split('&');
+                    if (pulldatetamp == 0)
+                    {
+                        dieukien = "1=1";
+                    }
+                    else
+                    {
+                        dieukien = "(false";
+                        for (int i = 0; i < dsMayNhap.Length; i++)
+                        {
+                            string[] rowMayNhap = dsMayNhap[i].Split('/');
+                            DataRow[] temp = tblMayNhap.Select("MaDinhDanh='" + rowMayNhap[1] + "'");
+                            if (temp != null && temp.Length > 0)
+                            {
+                                dieukien += " or (MaDinhDanh = '" + rowMayNhap[1] + "' and UpdateDate >= '" + temp[0]["PushDate"] + "')";
+                            }
+                            else
+                            {
+                                dieukien += " or (MaDinhDanh = '" + rowMayNhap[1] + "' and UpdateDate >= '1970-01-01 00:00:00')";
+                            }
+                        }
+                        dieukien += ")";
+                    }
+                }
+                //Ghi file điều kiện Vi điều kiện có kí tự đặc biệt và dài nên cần ghi file gửi lên server để đọc lấy điều kiện
+                StreamWriter sw = new StreamWriter(Memory.AppPath + "dieukien.txt");
+                sw.WriteLine(dieukien);
+                sw.Close();
+
+                cl.UploadFileCompleted += Cl_UploadFileCompleted;
+                cl.UploadFileAsync(new Uri(string.Format(ConfigurationManager.AppSettings["SERVER"] + @"SynToClientCL/createrFileSyn/{0}/{1}", maGiaoXuRieng, GenerateUniqueCode.GetUniqueCode())), Memory.AppPath + "dieukien.txt");
+                //updateMayNhap
+                if(dsMayNhap != null)
                 {
-                   
-                    dieukien = "(false";
                     for (int i = 0; i < dsMayNhap.Length; i++)
                     {
                         string[] rowMayNhap = dsMayNhap[i].Split('/');
                         DataRow[] temp = tblMayNhap.Select("MaDinhDanh='" + rowMayNhap[1] + "'");
                         if (temp != null && temp.Length > 0)
                         {
-                            dieukien += " or (MaDinhDanh = '"+ rowMayNhap[1]+"' and UpdateDate >= '"+ temp[0]["PushDate"]+ "')";
+                            temp[0]["PushDate"] = rowMayNhap[2];
+                            temp[0]["UpdateDate"] = Memory.Instance.GetServerDateTime();
                         }
                         else
                         {
-                            dieukien += " or (MaDinhDanh = '" + rowMayNhap[1] + "' and UpdateDate >= '1970-01-01 00:00:00')";
+                            // Chưa có máy nhập
+                            DataRow newMayNhap = tblMayNhap.NewRow();
+                            newMayNhap["TenMay"] = rowMayNhap[0];
+                            newMayNhap["MaDinhDanh"] = rowMayNhap[1];
+                            newMayNhap["PushDate"] = rowMayNhap[2];
+                            newMayNhap["UpdateDate"] = Memory.Instance.GetServerDateTime();
+                            tblMayNhap.Rows.Add(newMayNhap);
                         }
                     }
-                    dieukien += ")";
-                }
-                //Ghi file điều kiện Vi điều kiện có kí tự đặc biệt và dài nên cần ghi file gửi lên server để đọc lấy điều kiện
-                StreamWriter sw = new StreamWriter(Memory.AppPath + "dieukien.txt");
-                sw.WriteLine(dieukien);
-                sw.Close();
-                cl.UploadFileCompleted += Cl_UploadFileCompleted;
-                cl.UploadFileAsync(new Uri(string.Format(ConfigurationManager.AppSettings["SERVER"] + @"SynToClientCL/createrFileSyn/{0}/{1}", maGiaoXuRieng, GenerateUniqueCode.GetUniqueCode())), Memory.AppPath + "dieukien.txt");
-                //updateMayNhap
-                for (int i = 0; i < dsMayNhap.Length; i++)
-                {
-                    string[] rowMayNhap = dsMayNhap[i].Split('/');
-                    DataRow[] temp = tblMayNhap.Select("MaDinhDanh='" + rowMayNhap[1] + "'");
-                    if (temp != null && temp.Length > 0)
-                    {
-                        temp[0]["PushDate"] = rowMayNhap[2];
-                        temp[0]["UpdateDate"] = Memory.Instance.GetServerDateTime();
-                    }
-                    else
-                    {
-                        // Chưa có máy nhập
-                        DataRow newMayNhap = tblMayNhap.NewRow();
-                        newMayNhap["TenMay"] = rowMayNhap[0];
-                        newMayNhap["MaDinhDanh"] = rowMayNhap[1];
-                        newMayNhap["PushDate"] = rowMayNhap[2];
-                        newMayNhap["UpdateDate"] = Memory.Instance.GetServerDateTime();
-                        tblMayNhap.Rows.Add(newMayNhap);
-                    }
-                }
-                tblMayNhap.TableName = "MayNhap";
-                DataSet ds = new DataSet();
-                ds.Tables.Add(tblMayNhap);
-                Memory.UpdateDataSet(ds);
-                File.Delete(Memory.AppPath + "dieukien.txt");
+                    tblMayNhap.TableName = "MayNhap";
+                    DataSet ds = new DataSet();
+                    ds.Tables.Add(tblMayNhap);
+                    Memory.UpdateDataSet(ds);
+                }    
             }
             catch (System.Exception ex)
             {
@@ -211,6 +218,7 @@ namespace DongBoDuLieu
 
         private void Cl_UploadFileCompleted(object sender, UploadFileCompletedEventArgs e)
         {
+            File.Delete(Memory.AppPath + "dieukien.txt");
             if (e.Error != null)
             {
                 MessageBox.Show(e.Error.Message.ToString());
