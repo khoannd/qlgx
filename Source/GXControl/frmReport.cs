@@ -119,6 +119,9 @@ namespace GxControl
         }
         public void SetGiaoDanForHonPhoi(DataTable tblGiaoDan)
         {
+
+            DataTable tblGiaoHo = Memory.GetData("Select * from GiaoHo where MaGiaoHo= "+Convert.ToInt32(RowInfor[GiaoDanConst.MaGiaoHo].ToString()));
+
             tblGiaoDan.TableName = GiaoDanConst.TableName;
             tblGiaoDan.Columns.Add(GiaoDanConst.HoTen);
             tblGiaoDan.Columns.Add(GiaoDanConst.NgaySinh);
@@ -129,6 +132,9 @@ namespace GxControl
             tblGiaoDan.Columns.Add(GiaoDanConst.NoiThemSuc);
             tblGiaoDan.Columns.Add(GiaoDanConst.NoiRuaToi);
             tblGiaoDan.Columns.Add(GiaoDanConst.NgayRuaToi);
+            tblGiaoDan.Columns.Add(GiaoDanConst.DiaChi);
+            tblGiaoDan.Columns.Add(GiaoDanConst.DienThoai);
+            tblGiaoDan.Columns.Add("GiaoHo");
             var rowGiaoDan = tblGiaoDan.NewRow();
 
             rowGiaoDan[GiaoDanConst.HoTen] = string.Concat(RowInfor[GiaoDanConst.TenThanh]," ",RowInfor[GiaoDanConst.HoTen]);
@@ -140,6 +146,18 @@ namespace GxControl
             rowGiaoDan[GiaoDanConst.NgayThemSuc] = RowInfor[GiaoDanConst.NgayThemSuc];
             rowGiaoDan[GiaoDanConst.NoiRuaToi] = RowInfor[GiaoDanConst.NoiRuaToi];
             rowGiaoDan[GiaoDanConst.NgayRuaToi] = RowInfor[GiaoDanConst.NgayRuaToi];
+            rowGiaoDan[GiaoDanConst.DiaChi] = RowInfor[GiaoDanConst.DiaChi];
+            rowGiaoDan[GiaoDanConst.DienThoai] = RowInfor[GiaoDanConst.DienThoai];
+            if(tblGiaoHo==null || tblGiaoHo.Rows.Count <= 0)
+            {
+                rowGiaoDan["GiaoHo"] ="Ngoài xứ";
+            }
+            else
+            {
+                rowGiaoDan["GiaoHo"] = tblGiaoHo.Rows[0][GiaoHoConst.TenGiaoHo];
+            }
+                
+            
             tblGiaoDan.Rows.Add(rowGiaoDan);
             if (dataObj.Tables.Contains(tblGiaoDan.TableName)) dataObj.Tables.Remove(GiaoDanConst.TableName);
             DataObj.Tables.Add(tblGiaoDan);
