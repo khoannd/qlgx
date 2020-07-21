@@ -14,7 +14,7 @@ using System.Configuration;
 using System.Net;
 using System.Collections.Specialized;
 using Newtonsoft.Json;
-using System.Text; 
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace GiaoXu
@@ -195,7 +195,7 @@ namespace GiaoXu
             //    createBackupData();
             //}
 
-            
+
         }
         public void BackupFile()
         {
@@ -214,7 +214,7 @@ namespace GiaoXu
         }
         public void CheckThongTin()
         {
-             //create file backup and save to local
+            //create file backup and save to local
             string pathFileName = createBackupData();
 
             //check info giáo xứ
@@ -241,7 +241,7 @@ namespace GiaoXu
                     });
                 }
             }
-           
+
             //Check info to server
             CheckThongTinTenServer(pathFileName);
         }
@@ -311,7 +311,7 @@ namespace GiaoXu
                 }
                 //Memory.SetMaGiaoXuRiengAllTable(GiaoXuDoi[0].MaGiaoXuRieng);
                 return true;
-                  
+
             }
             catch (Exception ex)
             {
@@ -354,18 +354,12 @@ namespace GiaoXu
                     {
                         Thread tWait = new Thread(() =>
                         {
-                            fLoad = new frmLoadDataProcess();
-                            fLoad.ShowDialog();
+                            
                         });
                         tWait.IsBackground = true;
                         tWait.Start();
-                        //Backupfile
-                        if(pathFileName!="")
-                        uploadFile(pathFileName);
-                        fLoad.Invoke((MethodInvoker)delegate
-                        {
-                            fLoad.Close();
-                        });
+                        if (pathFileName != "")
+                            uploadFile(pathFileName);
                     }
                 }
             }
@@ -404,7 +398,7 @@ namespace GiaoXu
                 {
                     if (ShowFormCreateGiaoXuOnline != null)
                     {
-                        ShowFormCreateGiaoXuOnline(this,EventArgs.Empty);
+                        ShowFormCreateGiaoXuOnline(this, EventArgs.Empty);
                         return;
                     }
                 }
@@ -640,15 +634,20 @@ namespace GiaoXu
                 //2018/09/30 gnguyen end add 
 
 
-                if (!File.Exists(backupPath + fileName))
+                if (File.Exists(backupPath + fileName))
                 {
-                    FastZip fzip = new FastZip();
-                    //string path = Memory.GetTempPath(filePath);
-                    fzip.CreateZip(backupPath + fileName, Memory.AppPath, false, "giaoxu.mdb");
+                    File.Delete(backupPath + fileName);
                 }
+                string tongGiaoHo = Memory.GetData("select count(*) as TongGiaoHo from GiaoHo").Rows[0]["TongGiaoHo"].ToString();
+                string tongGiaoDan = Memory.GetData("select count(*) as TongGiaoDan from GiaoDan").Rows[0]["TongGiaoDan"].ToString();
+                string tongGiaDinh = Memory.GetData("select count(*) as TongGiaDinh from GiaDinh").Rows[0]["TongGiaDinh"].ToString();
+                string tongHonPhoi = Memory.GetData("select count(*) as TongHonPhoi from HonPhoi").Rows[0]["TongHonPhoi"].ToString();
                 //2018-08-08 Gia add start
                 //uploadFile(fileName, backupPath);
-                return backupPath + fileName;
+                FastZip fzip = new FastZip();
+                //string path = Memory.GetTempPath(filePath);
+                fzip.CreateZip(backupPath + fileName, Memory.AppPath, false, "giaoxu.mdb");
+                return backupPath + fileName + "@" + tongGiaoHo + "@" + tongGiaoDan + "@" + tongGiaDinh + "@" + tongHonPhoi;
                 //2018-08-08 Gia add end
             }
             catch (Exception ex)
@@ -737,33 +736,26 @@ namespace GiaoXu
                 DataTable tblGiaoXu = Memory.GetData(SqlConstants.SELECT_GIAOXU);
                 if (tblGiaoXu != null && tblGiaoXu.Rows.Count > 0)
                 {
-                    string maGiaoXuRieng = tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString().Trim();
-                    string maDinhDanh = GenerateUniqueCode.GetUniqueCode().ToString();
-                    string tenMay = GenerateUniqueCode.GetComputerName().ToString();
-                    if (maGiaoXuRieng != "" && maDinhDanh != "")
-                    {
-                        // bool check = int.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString(), out maGiaoXuRieng);
-                        //if (!check)//Giao xu chưa có thông tin trên server
-                        //{
-                        //    maGiaoXuRieng = insertInfoGXInFirstTime();
-                        //}
-                        //check Last Upload
-                        DateTime lastUpload;
-                        bool check = DateTime.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.LastUpload].ToString(), out lastUpload);
-                        if (!check || DateTime.Now.Subtract(lastUpload).TotalDays > 1.0)//last > 1 ngày
-                        {
-                            // upload file backup to server//lay ve time upload server
-                            byte[] rs = cl.UploadFile(ConfigurationManager.AppSettings["SERVER"] + String.Format("BackupCL/uploadFile/{0}/{1}/{2}", 
-                                maGiaoXuRieng, maDinhDanh, tenMay), pathFileName);
-
-                            string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
-                            check = DateTime.TryParse(temp, out lastUpload);
-                            if (check)
-                            {
-                                Memory.ExecuteSqlCommand(SqlConstants.UPDATE_LASTUPLOAD, new object[] { lastUpload });
-                            }
-                        }
-                    }
+                    Thread tUpload = new Thread(() =>
+                      {
+                          string maGiaoXuRieng = tblGiaoXu.Rows[0][GiaoXuConst.MaGiaoXuRieng].ToString().Trim();
+                          string maDinhDanh = GenerateUniqueCode.GetUniqueCode().ToString();
+                          string tenMay = GenerateUniqueCode.GetComputerName().ToString();
+                          string[] inforFileBackup = pathFileName.Split('@');
+                          if (maGiaoXuRieng != "" && maDinhDanh != "")
+                          {
+                              DateTime lastUpload;
+                              bool check = DateTime.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.LastUpload].ToString(), out lastUpload);
+                              if (string.IsNullOrEmpty(tblGiaoXu.Rows[0][GiaoXuConst.LastUpload].ToString()) || (check && DateTime.Now.Subtract(lastUpload).TotalDays > 1.0))//last > 1 ngày
+                              {
+                                  cl.UploadFileCompleted += Cl_UploadFileCompleted;
+                                  // upload file backup to server//lay ve time upload server
+                                  cl.UploadFileAsync(new Uri(ConfigurationManager.AppSettings["SERVER"] + String.Format("BackupCL/uploadFile/{0}/{1}/{2}/{3}/{4}/{5}/{6}",
+                                  maGiaoXuRieng, maDinhDanh, tenMay, inforFileBackup[1], inforFileBackup[2], inforFileBackup[3], inforFileBackup[4])), inforFileBackup[0]);
+                              }
+                          }
+                      });
+                    tUpload.Start();
                 }
             }
             catch (Exception ex)
@@ -772,6 +764,15 @@ namespace GiaoXu
             }
 
             //2018-08-01 Gia add end
+        }
+
+        private void Cl_UploadFileCompleted(object sender, UploadFileCompletedEventArgs e)
+        {
+            string temp = System.Text.Encoding.UTF8.GetString(e.Result, 0, e.Result.Length);
+            DateTime lastUpload;
+            bool check = DateTime.TryParse(temp, out lastUpload);
+            if (check)
+                Memory.ExecuteSqlCommand(SqlConstants.UPDATE_LASTUPLOAD, new object[] { lastUpload });
         }
 
         //2018/09/30 gnguyen start add

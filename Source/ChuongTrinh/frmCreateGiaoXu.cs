@@ -32,6 +32,8 @@ namespace GiaoXu
         }
         public void Set()
         {
+            SetGiaoPhan();
+            return;
             Thread threadset = new Thread(() =>
             {
                 SetGiaoPhan();
