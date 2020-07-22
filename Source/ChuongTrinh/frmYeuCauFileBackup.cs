@@ -81,9 +81,7 @@ namespace GiaoXu
                 infoYeuCau.Add("TenMayNhap", tenMayNhap);
                 byte[] rs = cl.UploadValues(ConfigurationManager.AppSettings["SERVER"] + @"GiaoXuCL/sendMailYeuCauNhanFile", "POST", infoYeuCau);
                 string temp = System.Text.Encoding.UTF8.GetString(rs, 0, rs.Length);
-                fLoad.Invoke((MethodInvoker)delegate {
-                    fLoad.Close();
-                });
+                t.Abort();
                 if (Int32.Parse(temp)==1)
                 {
                     MessageBox.Show("Yêu cầu nhận tập tin thành công. Vui lòng đợi hệ thống xử lý.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -97,6 +95,7 @@ namespace GiaoXu
             }
             catch (Exception)
             {
+                t.Abort();
                 MessageBox.Show("Yêu cầu nhận tập tin thất bại.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 this.Close();
             }

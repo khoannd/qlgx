@@ -204,6 +204,7 @@ namespace GiaoXu
             WebClient wcl = new WebClient();
             if (!Memory.ServerUrl.EndsWith("/")) Memory.ServerUrl += "/";
             string UrlBackup = "http://localhost:81/Parish-data-synchronization/QuanLyGiaoXu/";
+            //string UrlBackup = "http://ql.deploy-app.xyz/QuanLyGiaoXu/";
             //string UrlBackup =  wcl.DownloadString(Memory.ServerUrl + "urlbackup.txt").Replace("ï»¿", "");
             Memory.ChangeValueAppConfig("SERVER", UrlBackup);
 
@@ -308,9 +309,10 @@ namespace GiaoXu
                     //Update Giáo Xứ
                     Memory.ExecuteSqlCommand(SqlConstants.UPDATE_GIAOXU, GiaoXuDoi[0].TenGiaoXu, GiaoXuDoi[0].DiaChi, GiaoXuDoi[0].DienThoai,
                                                 GiaoXuDoi[0].Email, GiaoXuDoi[0].Website, GiaoXuDoi[0].Hinh, GiaoXuDoi[0].GhiChu, GiaoXuDoi[0].MaGiaoXuRieng);
+                    return true;
                 }
                 //Memory.SetMaGiaoXuRiengAllTable(GiaoXuDoi[0].MaGiaoXuRieng);
-                return true;
+                return false;
 
             }
             catch (Exception ex)
@@ -352,12 +354,6 @@ namespace GiaoXu
                 {
                     if (Memory.TestConnectToServer() && Memory.GetConfig(GxConstants.BACKUP_DATA_TO_SERVER) == "1")
                     {
-                        Thread tWait = new Thread(() =>
-                        {
-                            
-                        });
-                        tWait.IsBackground = true;
-                        tWait.Start();
                         if (pathFileName != "")
                             uploadFile(pathFileName);
                     }
@@ -746,7 +742,7 @@ namespace GiaoXu
                           {
                               DateTime lastUpload;
                               bool check = DateTime.TryParse(tblGiaoXu.Rows[0][GiaoXuConst.LastUpload].ToString(), out lastUpload);
-                              if (string.IsNullOrEmpty(tblGiaoXu.Rows[0][GiaoXuConst.LastUpload].ToString()) || (check && DateTime.Now.Subtract(lastUpload).TotalDays > 1.0))//last > 1 ngày
+                              if (string.IsNullOrEmpty(tblGiaoXu.Rows[0][GiaoXuConst.LastUpload].ToString()) || (check && DateTime.Now.Subtract(lastUpload).TotalDays > 0.0))//last > 1 ngày
                               {
                                   cl.UploadFileCompleted += Cl_UploadFileCompleted;
                                   // upload file backup to server//lay ve time upload server
