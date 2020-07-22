@@ -26,7 +26,6 @@ namespace GxControl
         {
             combo.Focus();
         }
-
         private void Combo_VisibleChanged(object sender, EventArgs e)
         {
             combo.SelectedIndex = -1;

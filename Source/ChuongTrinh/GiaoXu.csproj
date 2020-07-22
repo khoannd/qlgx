@@ -29,7 +29,6 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>x86</PlatformTarget>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -39,7 +38,6 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>x86</PlatformTarget>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="AutoComplete, Version=1.0.4094.32818, Culture=neutral, processorArchitecture=MSIL">
@@ -47,6 +45,7 @@
     </Reference>
     <Reference Include="ICSharpCode.SharpZipLib, Version=0.85.5.452, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\BIN\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
     <Reference Include="Janus.Data.v3, Version=3.5.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -90,7 +89,7 @@
     </Reference>
     <Reference Include="Janus.Windows.UI.v3, Version=3.5.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\BIN\Janus.Windows.UI.v3.dll</HintPath>
+      <HintPath>..\..\BIN\Janus.Windows.UI.v3.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.11.0.2\lib\net20\Newtonsoft.Json.dll</HintPath>
@@ -132,11 +131,23 @@
     <Compile Include="frmHoiDoanList.Designer.cs">
       <DependentUpon>frmHoiDoanList.cs</DependentUpon>
     </Compile>
+    <Compile Include="frmCreateGiaoXu.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmCreateGiaoXu.Designer.cs">
+      <DependentUpon>frmCreateGiaoXu.cs</DependentUpon>
+    </Compile>
     <Compile Include="frmLogin.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="frmLogin.Designer.cs">
       <DependentUpon>frmLogin.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmProcessSyn.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmProcessSyn.Designer.cs">
+      <DependentUpon>frmProcessSyn.cs</DependentUpon>
     </Compile>
     <Compile Include="frmResetPWord.cs">
       <SubType>Form</SubType>
@@ -185,6 +196,12 @@
     </Compile>
     <Compile Include="frmTaoDotBiTich.Designer.cs">
       <DependentUpon>frmTaoDotBiTich.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmYeuCauFileBackup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmYeuCauFileBackup.Designer.cs">
+      <DependentUpon>frmYeuCauFileBackup.cs</DependentUpon>
     </Compile>
     <Compile Include="GxCheckVersion.cs" />
     <Compile Include="ReviewGiaDinhProcess.cs" />
@@ -317,6 +334,9 @@
     <EmbeddedResource Include="frmAccoutList.resx">
       <DependentUpon>frmAccoutList.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="frmCreateGiaoXu.resx">
+      <DependentUpon>frmCreateGiaoXu.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="frmGopY.resx">
       <SubType>Designer</SubType>
       <DependentUpon>frmGopY.cs</DependentUpon>
@@ -334,6 +354,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="frmLogin.resx">
       <DependentUpon>frmLogin.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmProcessSyn.resx">
+      <DependentUpon>frmProcessSyn.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="frmResetPWord.resx">
       <DependentUpon>frmResetPWord.cs</DependentUpon>
@@ -410,6 +433,9 @@
       <SubType>Designer</SubType>
       <DependentUpon>frmProcess.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="frmYeuCauFileBackup.resx">
+      <DependentUpon>frmYeuCauFileBackup.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -451,6 +477,10 @@
       <Project>{9712914B-5500-4833-887B-2733F2B3FE97}</Project>
       <Name>GXGlobal</Name>
     </ProjectReference>
+    <ProjectReference Include="..\DongBoDuLieu\DongBoDuLieu.csproj">
+      <Project>{2ea639a3-1101-46f5-90a5-93a0e6f933a0}</Project>
+      <Name>DongBoDuLieu</Name>
+    </ProjectReference>
     <ProjectReference Include="..\ExcelReport\ExcelReport.csproj">
       <Project>{410FD24C-6FB4-4277-9D48-2415BF92D612}</Project>
       <Name>ExcelReport</Name>
@@ -465,7 +495,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="Resources\church_icon.jpg" />
   </ItemGroup>
   <ItemGroup>

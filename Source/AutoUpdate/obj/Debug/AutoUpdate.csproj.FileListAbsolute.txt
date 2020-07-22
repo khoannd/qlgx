@@ -1,0 +1,5 @@
+G:\Primas\SrcMergeBackup\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.csprojAssemblyReference.cache
+G:\Primas\SrcMergeBackup\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.frmProcess.resources
+G:\Primas\SrcMergeBackup\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.Properties.Resources.resources
+G:\Primas\SrcMergeBackup\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.csproj.GenerateResource.cache
+G:\Primas\SrcMergeBackup\qlgx\Source\AutoUpdate\obj\Debug\AutoUpdate.csproj.CoreCompileInputs.cache

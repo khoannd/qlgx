@@ -9,6 +9,9 @@ using System.Data;
 using System.Collections.Generic;
 using System.Xml;
 using System.Data.OleDb;
+using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace GxGlobal
 {
@@ -164,10 +167,10 @@ namespace GxGlobal
             return result;
         }
 
-        public DataTable GetData(string commandText)
+        public DataTable GetData(string commandText, string tableName = "Table1")
         {
             m_commText = commandText;
-            return GetData();
+            return GetData(tableName);
         }
 
         public DataTable GetData(string commandText, object[] lstParameters)
@@ -176,8 +179,44 @@ namespace GxGlobal
             m_Parameters = lstParameters;
             return GetData();
         }
+       
+        //2018-08-26 Gia add start
+        public DataTable GetTable()
+        {
+            DataTable tbl = null;
+            try
+            {
+                if (Conn == null)
+                {
+                    Conn = new OleDbConnection(m_connString);
+                }
 
-        private DataTable GetData()
+
+                try
+                {
+                    Conn.Open();
+                    string[] restrictions = new string[4];
+                    restrictions[3] = "Table";
+                    tbl = Conn.GetSchema("Tables", restrictions);
+                }
+                catch (OleDbException ex)
+                {
+                    Memory.Instance.Error = ex;
+                }
+                finally
+                {
+                    Conn.Close();
+                }
+            }
+            catch (Exception e)
+            {
+                Memory.Instance.Error = e;
+            }
+
+            return tbl;
+        }
+        //2018-08-26 Gia add end
+        private DataTable GetData(string tableName = "Table1")
         {
             DataSet ds = null;
             DataTable tbl = null;
@@ -205,7 +244,7 @@ namespace GxGlobal
                     adapter.SelectCommand = command;
 
                     ds = new DataSet();
-                    adapter.Fill(ds, "Table1");
+                    adapter.Fill(ds, tableName);
                     tbl = ds.Tables[0];
                     ds.Tables.Clear();
                     //trans.Commit();
@@ -267,7 +306,15 @@ namespace GxGlobal
                     da = new OleDbDataAdapter();
                     foreach (DataTable tbl in ds.Tables)
                     {
-                        da.SelectCommand = new OleDbCommand(string.Format("SELECT * FROM {0}", tbl.TableName), Conn, transaction);
+                        if (tbl.TableName == CauHinhConst.TableName)
+                        {
+                            da.SelectCommand = new OleDbCommand(string.Format("SELECT MaCauHinh,GiaTri,Mota,UpdateDate FROM {0}", tbl.TableName), Conn, transaction);
+                        }
+                        else
+                        {
+                            da.SelectCommand = new OleDbCommand(string.Format("SELECT * FROM {0}", tbl.TableName), Conn, transaction);
+
+                        }
                         OleDbCommandBuilder cmdBd = new OleDbCommandBuilder(da);
                         cmdBd.ConflictOption = ConflictOption.OverwriteChanges;
                         cmdBd.QuotePrefix = "[";
@@ -329,6 +376,7 @@ namespace GxGlobal
                 OleDbCommand command = null;
                 try
                 {
+
                     command = CreateCommand(m_Parameters);
                     command.CommandText = m_commText;
                     command.Connection = Conn;
@@ -390,6 +438,7 @@ namespace GxGlobal
                 {
                     for (int i = 0; i < lstData.Length; i++)
                     {
+
                         OleDbParameter param = new OleDbParameter();
                         param.Value = lstData[i];
                         param.ParameterName = string.Format("Param{0}", i + 1);

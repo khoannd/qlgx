@@ -61,6 +61,10 @@
       <HintPath>..\..\BIN\Microsoft.Vbe.Interop.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\BIN\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="Office, Version=14.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <EmbedInteropTypes>True</EmbedInteropTypes>
@@ -85,6 +89,7 @@
     <Compile Include="Dispatcher.cs" />
     <Compile Include="ExcelDataProvider.cs" />
     <Compile Include="ExcelEngine.cs" />
+    <Compile Include="GenerateUniqueCode.cs" />
     <Compile Include="GiaoXuDTO.cs" />
     <Compile Include="GxConstants.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

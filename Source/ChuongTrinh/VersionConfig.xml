@@ -1,6 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <application value="GiaoXu" xmlns="urn:newversion-schema">
+<<<<<<< HEAD
   <version-info value="3.3.5.0" display="3.3.5" exename="GiaoXu.exe">
+=======
+  <version-info value="3.3.0.0" display="3.2.2" exename="GiaoXu.exe">
+>>>>>>> BackupBranch
     <info>
       Ngày 26-06-2020: cập nhật lên phiên bản 3.3.5
       - Sửa lỗi không hiển thị được tên vợ chồng trong màn hình thống kê hôn phối.
@@ -139,5 +143,35 @@
     <downloadpath value="download.asp?opt=update">http://quanlygiaoxu.net/</downloadpath>
     <dateupdate>2020-05-04</dateupdate>
     <size>8.67</size>
+  </version-info>
+  <version-info value="2.1.3.0" display="3.1" exename="GiaoXu.exe">
+    <info>
+      <!--2018-07-18 Gia del start-->
+      <!--Phiên bản 3.0:
+     -Cập nhật tính năng hiển thị ảnh cho cá nhân và gia đình.
+     -Sửa lỗi đếm số thành viên trong gia đình (loại bỏ những thành viên đã có gia đình hoặc đã mất)
+     -Cập nhật thêm một số loại thống kê : 
+          + Danh sách chủ hộ
+          + Dan sách gia trưởng
+          + Danh sách hiền mẫu
+          + Danh sách cao niên
+          + Danh sách giới trẻ
+          + Danh sách thiếu nhi
+          + Danh sách gia đình theo từn tình trạng hôn phối
+     -Cập nhật tính năng : quản lý tài khoản người dùng,bảo mật
+     -Bổ xung cho chức năng "Giới thiệu hôn phối" => khi làm giấy giới thiệu hôn phối,đối tượng được giới thiệu sẽ trở thành một 
+     thành viên mới của giáo xứ-->
+       <!--2018-07-18 Gia del end-->
+      
+      <!--2018-07-18 Gia add start-->
+      Phiên bản 3.1:
+      -Chỉnh sửa "Trình độ văn hóa".
+      -Bổ sung "Trình độ chuyên môn", "Ngoại ngữ".
+      -Chỉnh sửa hôn phối giáo dân.
+      <!--2018-07-18 Gia add end-->
+    </info>
+    <downloadpath value="download.asp?opt=update">http://quanlygiaoxu.net/</downloadpath>
+    <dateupdate>2018-07-19</dateupdate>
+    <size>6.28</size>
   </version-info>
 </application>

@@ -1,0 +1,7 @@
+G:\Primas\SrcMergeBackup\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.csprojAssemblyReference.cache
+G:\Primas\SrcMergeBackup\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.csproj.CoreCompileInputs.cache
+G:\Primas\SrcMergeBackup\qlgx\BIN\ExcelReport.dll
+G:\Primas\SrcMergeBackup\qlgx\BIN\ExcelReport.pdb
+G:\Primas\SrcMergeBackup\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.csproj.CopyComplete
+G:\Primas\SrcMergeBackup\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.dll
+G:\Primas\SrcMergeBackup\qlgx\Source\ExcelReport\obj\Debug\ExcelReport.pdb

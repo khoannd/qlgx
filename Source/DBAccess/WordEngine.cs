@@ -12,6 +12,7 @@ using System.Drawing.Design;
 using System.Drawing;
 using Microsoft.Office.Interop.Word;
 
+
 namespace GxGlobal
 {
     /// <summary>
@@ -34,6 +35,7 @@ namespace GxGlobal
         private PageSetup SetupPage = null;
         //hiepdv end add
         //private Selection CurrentSelection;
+   
         public Selection CurrentSelection
         {
             get { return WordApp.Application.Selection; }
