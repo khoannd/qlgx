@@ -612,11 +612,13 @@ namespace GiaoXu
                 //check and delete old file, only keep last 40 files in backup
                 DirectoryInfo dir = new DirectoryInfo(backupPath);
                 FileInfo[] files = dir.GetFiles("*.zip");
-                if (files.Length > max)
+                if (files.Length >= max)
                 {
+                    Array.Sort(files, (f1, f2) => f1.Name.CompareTo(f2.Name)*(-1));
                     for (int i = files.Length - 1; i >= 0; i--)
                     {
-                        if (i > max) files[i].Delete();
+                        if (i >= max-1) files[i].Delete();
+                        else break;
                     }
                     //foreach (FileInfo file in files)
                     //{
