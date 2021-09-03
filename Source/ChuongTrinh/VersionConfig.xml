@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <application value="GiaoXu" xmlns="urn:newversion-schema">
-  <version-info value="3.3.5.0" display="3.3.5" exename="GiaoXu.exe">
+  <version-info value="3.3.6.0" display="3.3.6" exename="GiaoXu.exe">
     <info>
       Ngày 26-06-2020: cập nhật lên phiên bản 3.3.5
       - Sửa lỗi không hiển thị được tên vợ chồng trong màn hình thống kê hôn phối.

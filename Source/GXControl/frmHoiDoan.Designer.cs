@@ -242,7 +242,7 @@
             this.dtNgayThanhLap.Name = "dtNgayThanhLap";
             this.dtNgayThanhLap.Size = new System.Drawing.Size(210, 26);
             this.dtNgayThanhLap.TabIndex = 2;
-            this.dtNgayThanhLap.Value = "05/04/2009";
+            this.dtNgayThanhLap.Value = "";
             // 
             // txtThanhBonMang
             // 
