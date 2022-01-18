@@ -195,6 +195,18 @@ namespace GxControl
                 GetGridControlsCollection(child, ref AllControls);
             }
         }
+
+        public void GetControlsCollection<T>(Control root, ref List<Control> AllControls)
+        {
+            foreach (Control child in root.Controls)
+            {
+                if (child is T)
+                {
+                    AllControls.Add(child);
+                }
+                GetControlsCollection<T>(child, ref AllControls);
+            }
+        }
         
         private void frmBase_FormClosing(object sender, FormClosingEventArgs e)
         {
@@ -207,6 +219,103 @@ namespace GxControl
                     ((GxGrid)grd).UpdateColumnWidthToMemory();
                 }
             }
+        }
+
+        public void setMinDate(GxDateField[] setForDateFields, string dateString, string dateLabel)
+        {
+            if (string.IsNullOrEmpty(dateString) || !Memory.IsValidDateString(dateString))
+            {
+                return;
+            }
+            foreach (var field in setForDateFields)
+            {
+                field.MinDate = dateString;
+                field.MinDateName = dateLabel;
+            }
+        }
+
+        public void setMinDate(GxDateField setForDateField, GxDateField dateFieldCheckMin, string dateLabel = null)
+        {
+            if (dateFieldCheckMin.IsNullDate || !dateFieldCheckMin.IsValidDate)
+            {
+                return;
+            }
+            setForDateField.MinDate = dateFieldCheckMin.DateString;
+            setForDateField.MinDateName = dateLabel != null ? dateLabel : dateFieldCheckMin.Label;
+        }
+
+        public void setMinDate(GxDateField setForDateField, string dateString, string dateLabel)
+        {
+            if (string.IsNullOrEmpty(dateString) || !Memory.IsValidDateString(dateString))
+            {
+                return;
+            }
+            setForDateField.MinDate = dateString;
+            setForDateField.MinDateName = dateLabel;
+        }
+
+        public void setMaxDate(GxDateField[] setForDateFields, string dateString, string dateLabel)
+        {
+            if (string.IsNullOrEmpty(dateString) || !Memory.IsValidDateString(dateString))
+            {
+                return;
+            }
+            foreach (var field in setForDateFields)
+            {
+                field.MaxDate = dateString;
+                field.MaxDateName = dateLabel;
+            }
+        }
+
+        public void setMaxDate(GxDateField setForDateField, string dateString, string dateLabel)
+        {
+            if (string.IsNullOrEmpty(dateString) || !Memory.IsValidDateString(dateString))
+            {
+                return;
+            }
+            setForDateField.MaxDate = dateString;
+            setForDateField.MaxDateName = dateLabel;
+        }
+
+        public void setMaxDate(GxDateField setForDateField, GxDateField dateFieldCheckMax, string dateLabel = null)
+        {
+            if (dateFieldCheckMax.IsNullDate || !dateFieldCheckMax.IsValidDate)
+            {
+                return;
+            }
+            setForDateField.MaxDate = dateFieldCheckMax.DateString;
+            setForDateField.MaxDateName = dateLabel != null ? dateLabel : dateFieldCheckMax.Label;
+        }
+
+        public bool checkDateConstraint(List<Control> dateFields)
+        {
+            foreach (var field in dateFields)
+            {
+                if (field is GxDateField dateField && !dateField.CheckDateConstraint())
+                {
+                    Control parent = findParentTab(field);
+                    if (parent != null && parent.Parent is TabControl control)
+                    {
+                        control.SelectedTab = (TabPage)parent;
+                    }
+                    dateField.Focus();
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public TabPage findParentTab(Control ctl)
+        {
+            if(ctl == null || ctl.Parent == null) return null;
+            
+            if (ctl.Parent is TabPage page)
+            {
+                return page;
+            }
+
+            return findParentTab(ctl.Parent);
         }
     }
 }

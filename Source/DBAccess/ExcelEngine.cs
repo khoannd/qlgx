@@ -265,8 +265,9 @@ namespace GxGlobal
 
                 Thread.CurrentThread.CurrentCulture = m_CurrentCulture;
             }
-            catch
+            catch(Exception ex)
             {
+                Memory.Instance.Error = ex;
                 return false;
             }
             return true;

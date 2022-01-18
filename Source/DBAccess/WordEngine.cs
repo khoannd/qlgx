@@ -159,8 +159,9 @@ namespace GxGlobal
 
                 Thread.CurrentThread.CurrentCulture = cultureinfo;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Memory.Instance.Error = ex;
                 Quit(false);
                 return false;
             }

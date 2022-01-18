@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -65,6 +65,15 @@ namespace GxControl
             }
         }
 
+        public string DateString
+        {
+            get
+            {
+                return Value.ToString();
+            }
+        }
+
+
         public DateTime Date
         {
             get {
@@ -78,6 +87,66 @@ namespace GxControl
         {
             get { return gxDateInput1.FullInputRequired; }
             set { gxDateInput1.FullInputRequired = value; }
+        }
+
+        public string MinDate
+        {
+            get;
+            set;
+        }
+
+        public string MaxDate
+        {
+            get;
+            set;
+        }
+
+        public string MinDateName
+        {
+            get;
+            set;
+        }
+
+        public string MaxDateName
+        {
+            get;
+            set;
+        }
+
+        public bool IsValidDate
+        {
+            get
+            {
+                return CheckInput(false);
+            }
+        }
+
+        public bool CheckDateConstraint()
+        {
+            if (!CheckInput(false))
+            {
+                MessageBox.Show($"Hãy nhập {this.Label} hợp lệ", "Thông báo lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            if (this.Value == null || string.IsNullOrEmpty(this.Value.ToString())) return true;
+
+            string label = "";
+            if (!string.IsNullOrEmpty(MinDate) && Memory.CompareTwoStringDate(this.Value.ToString(), MinDate) == -1)
+            {
+                label = !string.IsNullOrEmpty(MinDateName) ? MinDateName : "ngày " + MinDate;
+                MessageBox.Show($"{Label} không thể trước {label}", "Thông báo lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            if (!string.IsNullOrEmpty(MaxDate) && Memory.CompareTwoStringDate(this.Value.ToString(), MaxDate) == 1)
+            {
+                label = !string.IsNullOrEmpty(MaxDateName) ? MaxDateName : "ngày " + MaxDate;
+                MessageBox.Show($"{Label} không thể sau {label}", "Thông báo lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            return true;
         }
 
         public bool CheckInput()
