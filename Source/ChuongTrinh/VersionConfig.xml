@@ -2,6 +2,11 @@
 <application value="GiaoXu" xmlns="urn:newversion-schema">
   <version-info value="3.3.6.0" display="3.3.6" exename="GiaoXu.exe">
     <info>
+      Ngày 28-02-2022: cập nhật lên phiên bản 3.3.6
+      - Thêm thông tin bao đồng, GL Hôn nhân vào trong chi tiết giáo dân.
+      - Sửa một số lỗi khi import dữ liệu từ Excel.
+      - Và một số sửa lỗi cùng cải tiến khác.
+      
       Ngày 26-06-2020: cập nhật lên phiên bản 3.3.5
       - Sửa lỗi không hiển thị được tên vợ chồng trong màn hình thống kê hôn phối.
       
@@ -137,7 +142,7 @@
       - Cho phép in phiếu lý gia đình hàng loạt
     </info>
     <downloadpath value="download.asp?opt=update">http://quanlygiaoxu.net/</downloadpath>
-    <dateupdate>2020-05-04</dateupdate>
+    <dateupdate>2022-02-28</dateupdate>
     <size>8.67</size>
   </version-info>
 </application>

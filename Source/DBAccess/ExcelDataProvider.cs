@@ -14,12 +14,20 @@ namespace GxGlobal
         }
         public static DataSet GetDataSet(string path, string tableName, string sql)
         {
+            string[] conns = new string[]{ 
+                "provider=Microsoft.ACE.OLEDB.12.0;Data Source='" + path + "';Extended Properties='Excel 8.0;HDR=YES;IMEX=1'",
+                "provider=Microsoft.ACE.OLEDB.12.0;Data Source='" + path + "';Extended Properties='Excel 12.0 Xml;HDR=YES;IMEX=1'",
+                "provider=Microsoft.Jet.OLEDB.4.0;Data Source='" + path + "';Extended Properties='Excel 8.0 Xml;HDR=YES;IMEX=1'"
+                };
+            int i = 0;
+            retry:
+            OleDbConnection connect = null;
             try
             {
-                OleDbConnection connect = new OleDbConnection();
+                connect = new OleDbConnection();
                 OleDbDataAdapter adapter = new OleDbDataAdapter();
 
-                connect = new OleDbConnection("provider=Microsoft.ACE.OLEDB.12.0;Data Source='" + path + "';Extended Properties='Excel 8.0;HDR=YES;IMEX=1'");
+                connect = new OleDbConnection(conns[i]);
                 if (string.IsNullOrEmpty(sql))
                 {
                     sql = string.Format("select * from [{0}$]", tableName);
@@ -37,7 +45,25 @@ namespace GxGlobal
             {
                 //Write log
                 //Temporary solution
-                Memory.Instance.Error = ex;
+                if(i == 0) Memory.Instance.Error = ex; 
+
+                if(connect != null && connect.State != ConnectionState.Closed)
+                {
+                    try
+                    {
+                        connect.Close();
+                    }
+                    catch 
+                    {
+                    }
+                }
+
+                if(i < conns.Length - 1)
+                {
+                    i++;
+                    goto retry;
+                }
+                
                 return null;
             }
         }
