@@ -60,6 +60,7 @@
     <Compile Include="ChartDoTuoi.cs" />
     <Compile Include="ChartGiaoHo.cs" />
     <Compile Include="ChartTongHonPhoi.cs" />
+    <Compile Include="ReportCaoPho.cs" />
     <Compile Include="ReportLyLichCaNhan.cs" />
     <Compile Include="ReportRaoHP.cs" />
     <Compile Include="ReportSoGiaDinh.cs" />
