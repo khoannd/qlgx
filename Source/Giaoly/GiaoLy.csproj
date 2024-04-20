@@ -198,7 +198,6 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\giaoxu.mdb" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\Tick1.gif" />
