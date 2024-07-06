@@ -120,32 +120,56 @@ namespace GxControl
                 return CheckInput(false);
             }
         }
-
         public bool CheckDateConstraint()
+        {
+            return CheckDateConstraint(true);
+        }
+        public bool CheckDateConstraint(bool required = true)
         {
             if (!CheckInput(false))
             {
-                MessageBox.Show($"Hãy nhập {this.Label} hợp lệ", "Thông báo lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Hãy nhập [{this.Label}] hợp lệ", "Thông báo lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
 
             if (this.Value == null || string.IsNullOrEmpty(this.Value.ToString())) return true;
 
             string label = "";
+            string msg = "";
             if (!string.IsNullOrEmpty(MinDate) && Memory.CompareTwoStringDate(this.Value.ToString(), MinDate) == -1)
             {
                 label = !string.IsNullOrEmpty(MinDateName) ? MinDateName : "ngày " + MinDate;
-                MessageBox.Show($"{Label} không thể trước {label}", "Thông báo lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return false;
+                if(required)
+                    msg = $"[{Label}] không thể trước {label}";
+                else
+                    msg = $"[{Label}] đang nhập trước {label}. Bạn có chắc muốn tiếp tục không?\r\nChọn [Yes] để tiếp tục. Chọn [No] để xem lại.";
+
             }
 
             if (!string.IsNullOrEmpty(MaxDate) && Memory.CompareTwoStringDate(this.Value.ToString(), MaxDate) == 1)
             {
                 label = !string.IsNullOrEmpty(MaxDateName) ? MaxDateName : "ngày " + MaxDate;
-                MessageBox.Show($"{Label} không thể sau {label}", "Thông báo lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return false;
+                if (required)
+                    msg = $"[{Label}] không thể sau {label}";
+                else
+                    msg = $"[{Label}] đang nhập sau {label}. Bạn có chắc muốn tiếp tục không?\r\nChọn [Yes] để tiếp tục. Chọn [No] để xem lại.";
             }
-
+            if(!string.IsNullOrEmpty(msg))
+            {
+                if (required)
+                {
+                    MessageBox.Show(msg, "Thông báo lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return false;
+                }
+                else
+                {
+                    if (MessageBox.Show(msg, "Chú ý", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                    {
+                        return true;
+                    }
+                    return false;
+                }
+            }
             return true;
         }
 

@@ -287,11 +287,11 @@ namespace GxControl
             setForDateField.MaxDateName = dateLabel != null ? dateLabel : dateFieldCheckMax.Label;
         }
 
-        public bool checkDateConstraint(List<Control> dateFields)
+        public bool checkDateConstraint(List<Control> dateFields, bool IsStrict = true)
         {
             foreach (var field in dateFields)
             {
-                if (field is GxDateField dateField && !dateField.CheckDateConstraint())
+                if (field is GxDateField dateField && !dateField.CheckDateConstraint(IsStrict))
                 {
                     Control parent = findParentTab(field);
                     if (parent != null && parent.Parent is TabControl control)
