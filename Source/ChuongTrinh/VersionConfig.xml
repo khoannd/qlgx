@@ -1,15 +1,24 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <application value="GiaoXu" xmlns="urn:newversion-schema">
-  <version-info value="3.3.6.0" display="3.3.6" exename="GiaoXu.exe">
+  <version-info value="3.3.7.0" display="3.3.7" exename="GiaoXu.exe">
     <info>
+      Ngày 07-07-2024: cập nhật lên phiên bản 3.3.7
+      - Hiển thị thêm thông tin qua đời trong màn hình danh sách giáo dân.
+      - Hiển thị Tên Cha, Tên Mẹ, Ngày XTRL vào danh sách học sinh giáo lý.
+      - Sửa một số lỗi khi import dữ liệu.
+      - Cho phép chọn giáo xứ khi import từ phần mềm MGC nếu trong DataGx.accdb có nhiều hơn một giáo xứ.
+      - Thêm thông tin tên người vợ/chồng vào mẫu in Lý lịch cá nhân.
+      - Cho phép nhập ngày bí tích sau ngày hiện tại trong màn hình nhập giáo dân. Chỉ hiện cảnh báo khi lưu dữ liệu giáo dân.
+      - Một số sửa lỗi và cập nhật khác.
+
       Ngày 28-02-2022: cập nhật lên phiên bản 3.3.6
       - Thêm thông tin bao đồng, GL Hôn nhân vào trong chi tiết giáo dân.
       - Sửa một số lỗi khi import dữ liệu từ Excel.
       - Và một số sửa lỗi cùng cải tiến khác.
-      
+
       Ngày 26-06-2020: cập nhật lên phiên bản 3.3.5
       - Sửa lỗi không hiển thị được tên vợ chồng trong màn hình thống kê hôn phối.
-      
+
       Ngày 23-06-2020: cập nhật lên phiên bản 3.3.4
       - Các cải tiến và sửa lỗi:
       + Màn hình chọn giáo dân (vào gia đình, sổ bí tích hoặc lớp giáo lý...) mặc định sẽ không hiển thị hết tất cả các giáo dân trong giáo họ được chọn mà cho phép người dùng nhập tên giáo dân cần tìm kiếm, chương trình sẽ tìm kiếm trong cả hồ sơ lưu trữ.
@@ -20,7 +29,7 @@
       + Thống kê hôn phối bị báo lỗi trong một số trường hợp.
       + Một số trường hợp thống kê không in được danh sách kết quả sau khi thống kê.
       + Và một số sửa lỗi cùng cải tiến khác
-      
+
       Ngày 04-05-2020: cập nhật lên phiên bản 3.3.3
       - Các cải tiến:
       + Cho phép xem gia đình từ màn hình cá nhân giáo dân.
@@ -141,8 +150,8 @@
       - Cho phép in phiếu lý lịch cá nhân hàng loạt
       - Cho phép in phiếu lý gia đình hàng loạt
     </info>
-    <downloadpath value="download.asp?opt=update">http://quanlygiaoxu.net/</downloadpath>
-    <dateupdate>2022-02-28</dateupdate>
+    <downloadpath value="download-update">http://quanlygiaoxu.net/</downloadpath>
+    <dateupdate>2024-07-07</dateupdate>
     <size>8.67</size>
   </version-info>
 </application>
