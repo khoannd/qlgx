@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <application value="GiaoXu" xmlns="urn:newversion-schema">
-  <version-info value="3.3.7.0" display="3.3.7" exename="GiaoXu.exe">
+  <version-info value="4.0.0.0" display="4.0.0" exename="GiaoXu.exe">
     <info>
       Ngày 07-07-2024: cập nhật lên phiên bản 3.3.7
       - Hiển thị thêm thông tin qua đời trong màn hình danh sách giáo dân.
@@ -150,8 +150,8 @@
       - Cho phép in phiếu lý lịch cá nhân hàng loạt
       - Cho phép in phiếu lý gia đình hàng loạt
     </info>
-    <downloadpath value="download-update">http://quanlygiaoxu.net/</downloadpath>
-    <dateupdate>2024-07-07</dateupdate>
+    <downloadpath value="download-update">http://quanlygiaoxu.net/4.0/</downloadpath>
+    <dateupdate>2024-11-15</dateupdate>
     <size>8.67</size>
   </version-info>
 </application>

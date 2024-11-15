@@ -27,7 +27,7 @@ namespace GxGlobal
         #endregion
         //2010.05.15 Khoan add end
         private object oMissing = Missing.Value;
-        private ApplicationClass WordApp = null;
+        private Application WordApp = null;
         private Documents WordDocs = null;
         private Document WordDoc = null;
         //hiepdv begin add 
@@ -90,15 +90,18 @@ namespace GxGlobal
                 _filedestination_temp = fileNameTemp;
 
 
-                WordApp = new ApplicationClass();
+                WordApp = new Application();
                 WordDocs = WordApp.Documents;
                 cultureinfo = Thread.CurrentThread.CurrentCulture;
                 Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
 
                 //2010.05.15 Khoan add start
-                WordApp.ApplicationEvents2_Event_DocumentBeforeSave += new ApplicationEvents2_DocumentBeforeSaveEventHandler(WordApp_ApplicationEvents2_Event_DocumentBeforeSave);
-                WordApp.ApplicationEvents2_Event_Quit += new ApplicationEvents2_QuitEventHandler(WordApp_ApplicationEvents2_Event_Quit);
-                WordApp.ApplicationEvents2_Event_DocumentOpen += new ApplicationEvents2_DocumentOpenEventHandler(WordApp_ApplicationEvents2_Event_DocumentOpen);
+                //WordApp.ApplicationEvents2_Event_DocumentBeforeSave += new ApplicationEvents2_DocumentBeforeSaveEventHandler(WordApp_ApplicationEvents2_Event_DocumentBeforeSave);
+                WordApp.DocumentBeforeSave += new ApplicationEvents4_DocumentBeforeSaveEventHandler(WordApp_DocumentBeforeSave);
+                //WordApp.ApplicationEvents2_Event_Quit += new ApplicationEvents2_QuitEventHandler(WordApp_ApplicationEvents2_Event_Quit);
+                WordApp.DocumentBeforeClose += new ApplicationEvents4_DocumentBeforeCloseEventHandler(WordApp_DocumentBeforeClose);
+                //WordApp.ApplicationEvents2_Event_DocumentOpen += new ApplicationEvents2_DocumentOpenEventHandler(WordApp_ApplicationEvents2_Event_DocumentOpen);
+                WordApp.DocumentOpen += new ApplicationEvents4_DocumentOpenEventHandler(WordApp_DocumentOpen);
                 //WordApp.Visible = allowVisible;
                 //2010.05.15 Khoan add end
 
@@ -123,6 +126,21 @@ namespace GxGlobal
             return true;
         }
 
+        private void WordApp_DocumentOpen(Document Doc)
+        {
+            if (OnOpen != null) OnOpen(Doc, EventArgs.Empty);
+        }
+
+        private void WordApp_DocumentBeforeClose(Document Doc, ref bool Cancel)
+        {
+            if (OnQuit != null) OnQuit(WordApp, EventArgs.Empty);
+        }
+
+        private void WordApp_DocumentBeforeSave(Document Doc, ref bool SaveAsUI, ref bool Cancel)
+        {
+            if (OnBeforeSave != null) OnBeforeSave(Doc, EventArgs.Empty);
+        }
+
         /// <summary>
         /// Create new word object from template file
         /// </summary>
@@ -135,15 +153,18 @@ namespace GxGlobal
             {
                 _fileName = fileName;
 
-                WordApp = new ApplicationClass();
+                WordApp = new Application();
                 WordDocs = WordApp.Documents;
                 cultureinfo = Thread.CurrentThread.CurrentCulture;
                 Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
 
                 //2010.05.15 Khoan add start
-                WordApp.ApplicationEvents2_Event_DocumentBeforeSave += new ApplicationEvents2_DocumentBeforeSaveEventHandler(WordApp_ApplicationEvents2_Event_DocumentBeforeSave);
-                WordApp.ApplicationEvents2_Event_Quit += new ApplicationEvents2_QuitEventHandler(WordApp_ApplicationEvents2_Event_Quit);
-                WordApp.ApplicationEvents2_Event_DocumentOpen += new ApplicationEvents2_DocumentOpenEventHandler(WordApp_ApplicationEvents2_Event_DocumentOpen);
+                //WordApp.ApplicationEvents2_Event_DocumentBeforeSave += new ApplicationEvents2_DocumentBeforeSaveEventHandler(WordApp_ApplicationEvents2_Event_DocumentBeforeSave);
+                WordApp.DocumentBeforeSave += new ApplicationEvents4_DocumentBeforeSaveEventHandler(WordApp_DocumentBeforeSave);
+                //WordApp.ApplicationEvents2_Event_Quit += new ApplicationEvents2_QuitEventHandler(WordApp_ApplicationEvents2_Event_Quit);
+                WordApp.DocumentBeforeClose += new ApplicationEvents4_DocumentBeforeCloseEventHandler(WordApp_DocumentBeforeClose);
+                //WordApp.ApplicationEvents2_Event_DocumentOpen += new ApplicationEvents2_DocumentOpenEventHandler(WordApp_ApplicationEvents2_Event_DocumentOpen);
+                WordApp.DocumentOpen += new ApplicationEvents4_DocumentOpenEventHandler(WordApp_DocumentOpen);
                 //WordApp.Visible = allowVisible;
                 //2010.05.15 Khoan add end
 
@@ -1077,10 +1098,10 @@ namespace GxGlobal
 
         public static int ConvertDocToPDF(object Source, object Target)
         {
-            Microsoft.Office.Interop.Word.ApplicationClass MSdoc;
+            Microsoft.Office.Interop.Word.Application MSdoc;
             object Unknown = Type.Missing;
             //Creating the instance of Word Application          
-            MSdoc = new Microsoft.Office.Interop.Word.ApplicationClass();
+            MSdoc = new Microsoft.Office.Interop.Word.Application();
 
             try
             {

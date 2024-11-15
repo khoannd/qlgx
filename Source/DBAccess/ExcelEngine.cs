@@ -16,7 +16,7 @@ namespace GxGlobal
     public class ExcelEngine
     {
         private object oMissing = System.Reflection.Missing.Value;
-        private ApplicationClass ExcelAp = null;
+        private Application ExcelAp = null;
         private Workbooks ExcelWkbks = null;
         private Workbook Excelbk = null;
         public Worksheet ActiveSheet = null;
@@ -190,7 +190,7 @@ namespace GxGlobal
         {
             try
             {
-                return (Range)ActiveSheet.Cells[rowIndex, colIndex];
+                return ActiveSheet.Cells[rowIndex, colIndex] as Range;
             }
             catch
             {
@@ -242,7 +242,7 @@ namespace GxGlobal
                 _filedestination = fileName;
                 _filedestination_temp = fileNameTemp;
 
-                ExcelAp = new ApplicationClass();
+                ExcelAp = new Application();
                 ExcelWkbks = ExcelAp.Workbooks;
 
                 m_CurrentCulture = Thread.CurrentThread.CurrentCulture;
@@ -251,7 +251,7 @@ namespace GxGlobal
                 Excelbk = ExcelWkbks.Open(fileNameTemp, 3, false, 3, Type.Missing, Type.Missing, Type.Missing, Type.Missing,
                                                     ";", false, Type.Missing, Type.Missing, Type.Missing, Type.Missing, Type.Missing);
 
-                ActiveSheet = (Worksheet)Excelbk.ActiveSheet;
+                ActiveSheet = Excelbk.ActiveSheet as Worksheet;
 
                 ExcelAp.ScreenUpdating = true;
                 Excelbk.Saved = true;
@@ -281,7 +281,7 @@ namespace GxGlobal
             _filedestination = filePath;
             object misValue = System.Reflection.Missing.Value;
 
-            ExcelAp = new ApplicationClass();
+            ExcelAp = new Application();
             ExcelWkbks = ExcelAp.Workbooks;
 
             m_CurrentCulture = Thread.CurrentThread.CurrentCulture;
@@ -289,7 +289,7 @@ namespace GxGlobal
 
             Excelbk = ExcelAp.Workbooks.Add(misValue);
 
-            ActiveSheet = (Worksheet)Excelbk.Worksheets.get_Item(1);
+            ActiveSheet = Excelbk.Worksheets.get_Item(1) as Worksheet;
 
             //Excelbk.SaveAs(_filedestination, XlFileFormat.xlWorkbookNormal, misValue, misValue, misValue, misValue, XlSaveAsAccessMode.xlExclusive, misValue, misValue, misValue, misValue, misValue);
 
@@ -366,7 +366,7 @@ namespace GxGlobal
             {
                 try
                 {
-                    ((Range)ActiveSheet.Rows[i, Type.Missing]).AutoFit();
+                    (ActiveSheet.Rows[i, Type.Missing] as Range).AutoFit();
                 }
                 catch
                 {
@@ -380,7 +380,7 @@ namespace GxGlobal
             {
                 try
                 {
-                    ((Range)ActiveSheet.Columns[i, Type.Missing]).AutoFit();
+                    (ActiveSheet.Columns[i, Type.Missing] as Range).AutoFit();
                 }
                 catch
                 {
@@ -463,7 +463,7 @@ namespace GxGlobal
 
         public Range FindRange(string key)
         {
-            Range cells = (Range)usedRange.Cells[1, 1];
+            Range cells = usedRange.Cells[1, 1] as Range;
             if (cells == null) return null;
             return Find(usedRange, cells, key);
         }
@@ -629,7 +629,7 @@ namespace GxGlobal
                 m_CurrentCulture = Thread.CurrentThread.CurrentCulture;
                 Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
 
-                Range objRange = (Range)ActiveSheet.Rows[rowIndex, Type.Missing];
+                Range objRange = ActiveSheet.Rows[rowIndex, Type.Missing] as Range;
                 objRange.Insert(Type.Missing, countRow);
 
                 Thread.CurrentThread.CurrentCulture = m_CurrentCulture;
@@ -652,8 +652,8 @@ namespace GxGlobal
         {
             Range chartRange;
 
-            ChartObjects xlCharts = (ChartObjects)ActiveSheet.ChartObjects(Type.Missing);
-            ChartObject myChart = (ChartObject)xlCharts.Add(chartData.left, chartData.top, chartData.width, chartData.height);
+            ChartObjects xlCharts = ActiveSheet.ChartObjects(Type.Missing) as ChartObjects;
+            ChartObject myChart = xlCharts.Add(chartData.left, chartData.top, chartData.width, chartData.height) as ChartObject;
             Chart chartPage = myChart.Chart;
             chartPage.HasTitle = true;
             chartPage.ChartTitle.Text = chartData.title;
@@ -689,8 +689,8 @@ namespace GxGlobal
                 chartPage.HasLegend = false;
             }
 
-            Axis Xaxis = (Axis)chartPage.Axes(XlAxisType.xlValue,
-                          XlAxisGroup.xlPrimary);
+            Axis Xaxis = chartPage.Axes(XlAxisType.xlValue,
+                          XlAxisGroup.xlPrimary) as Axis;
             try
             {
                 Xaxis.MinimumScale = 0;
