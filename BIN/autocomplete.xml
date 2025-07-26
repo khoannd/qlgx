@@ -1,0 +1,772 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<application value="GiaoXu" xmlns="urn:autocomplete-schema">
+  <forms>
+    <frmMain>
+      <controls>
+      </controls>
+    </frmMain>
+    <frmImport xmlns="">
+      <txtDB caption="Chọn tập tin">
+        <item>D:\Working\QLGX\Data\DataGx_GiuseTranVanManh.Mdb</item>
+        <item>D:\Khoan\Desktop\MauNhapLieu_2.xls</item>
+        <item>D:\Khoan\Desktop\import_giaodan-giadinh (Gx Phuc Dien).xls</item>
+        <item>D:\Khoan\Desktop\Phuc Thien.xls</item>
+        <item>D:\Khoan\Desktop\Phuc Thien - Sua Format ngay thang 07-09.xls</item>
+        <item>D:\Khoan\Desktop\Phuc An.xls</item>
+        <item>D:\Khoan\Desktop\TIN MUNG\Phuc Lac.xls</item>
+        <item>D:\Khoan\Desktop\TIN MUNG\Tat ca.xls</item>
+        <item>D:\Khoan\Desktop\CleanMe3\mau-excel-giaodan.xls</item>
+        <item>D:\Khoan\Desktop\CleanMe3\mau-excel-giao-dan2.xlsx</item>
+        <item>D:\Khoan\Desktop\GX anh Thuan\mau-excel-giaodan-giadinh 1 (1).xls</item>
+        <item>D:\Khoan\Desktop\GX anh Thuan\mau-excel-giaodan-giadinh - da chinh sua.xls</item>
+        <item>D:\Khoan\Desktop\GX Anh Thuan 2\mau-excel-giaodan-giadinh.xls.xlsx</item>
+        <item>D:\Khoan\Desktop\GX Anh Thuan 2\mau-excel-giaodan-giadinh - da chinh sua.xlsx</item>
+        <item>D:\Working\QLGX\Data\Lao Cai - Cha Thai\DataGx.accdb</item>
+      </txtDB>
+    </frmImport>
+    <frmHonPhoi xmlns="">
+      <txtMaHonPhoi caption="Mã hôn phối">
+        <item>779</item>
+        <item>349</item>
+        <item>212</item>
+        <item>167</item>
+        <item>13</item>
+      </txtMaHonPhoi>
+      <txtNguoiChong caption="Người nam">
+        <item>Gioan Lương Văn Chiến</item>
+        <item>Phaolô Nguyễn Phi Hùng</item>
+        <item>Tần</item>
+        <item>Phaolô Đỗ Văn Dư</item>
+        <item>Lorensô Nguyễn Hoàng Hải Âu</item>
+      </txtNguoiChong>
+      <txtNguoiVo caption="Người nữ">
+        <item>Maria Lưu Thị Hải</item>
+        <item>Maria Mađalêna Nguyễn Thị Ngọc Lan</item>
+        <item>Maria Nguyễn Thị Như</item>
+        <item>Maria Trần Phương Linh</item>
+        <item>Maria Mạc Thị Minh Thư</item>
+      </txtNguoiVo>
+      <txtSoHonPhoi caption="Số hôn phối">
+        <item>130/90/Q7</item>
+        <item>347/85/Q6</item>
+        <item>12/2010</item>
+      </txtSoHonPhoi>
+      <txtNguoiChung2 caption="Người chứng 2">
+        <item>Maria Nguyễn Thị Ngát</item>
+        <item>Agnes Ngô Thị Lợi</item>
+        <item>Bà NGự</item>
+        <item>Maria Trịnh Thị Tuyết Minh</item>
+      </txtNguoiChung2>
+      <txtNguoiChung1 caption="Người chứng 1">
+        <item>Giuse Nguyễn Văn Thế</item>
+        <item>Giuse Mai Công Tiến</item>
+        <item>Ông Tính</item>
+        <item>Giuse Hoàng Văn Minh</item>
+      </txtNguoiChung1>
+      <txtTenHonPhoi caption="Đôi hôn phối">
+        <item>Tần - Như</item>
+        <item>Âu - Thư</item>
+      </txtTenHonPhoi>
+      <txtNoiHonPhoi caption="Nơi hôn phối">
+        <item>Kim Mỹ, Phát Diệm</item>
+        <item>Giáo Xứ Plei Rơngol Khop</item>
+      </txtNoiHonPhoi>
+      <txtLinhMuc caption="Linh mục chứng">
+        <item>Giuse Trần Minh Chính</item>
+      </txtLinhMuc>
+    </frmHonPhoi>
+    <frmGiaDinh xmlns="">
+      <txtLinhMuc caption="Linh mục chứng">
+        <item>Gioan Baotixita Nguyễn Huy Bắc</item>
+        <item>Giuse Nguyễn Đức Giang</item>
+        <item>Giuse Lê Ngọc Hoàn</item>
+        <item>Ông Quản Giuse Lương Viết Xướng</item>
+      </txtLinhMuc>
+      <txtNguoiChung2 caption="Người chứng 2">
+        <item>Anna Nguyễn Thị Mừng</item>
+        <item>Maria Rỹ</item>
+        <item>Rosa Vũ Thị Yêu</item>
+        <item>Maria Mới</item>
+        <item>Maria Trình</item>
+        <item>Maria Rần</item>
+        <item>Maria Nguyễn Thị Hòa</item>
+      </txtNguoiChung2>
+      <txtNoiHonPhoi caption="Nơi hôn phối">
+        <item>Gx. Nhơn Hòa</item>
+        <item>Nam Trực</item>
+        <item>Thạch Bi</item>
+        <item>Trung Lao</item>
+        <item>Phú Thọ</item>
+        <item>Vợ sống ở Mỹ (Rối)</item>
+        <item>Tam Hà</item>
+        <item>Vị Hưng</item>
+        <item>Thủ Đức</item>
+        <item>Bắc Cường - Lào Cai - Hưng Hóa</item>
+        <item>Bình Hải</item>
+        <item>Thới Hòa</item>
+      </txtNoiHonPhoi>
+      <txtNguoiChung1 caption="Người chứng 1">
+        <item>Phaolô Hồ Ngọc Anh</item>
+        <item>Đaminh Dũng</item>
+        <item>Đaminh Nguyễn Văn Quyến</item>
+        <item>Giuse Nam</item>
+        <item>Giuse Vũ Văn Học</item>
+        <item>Giuse Tuấn</item>
+        <item>Giuse Phạm Hồng Quang</item>
+      </txtNguoiChung1>
+      <txtMaGiaDinh caption="Mã gia đình">
+        <item>1</item>
+        <item>2</item>
+        <item>4</item>
+        <item>3</item>
+        <item>1048</item>
+        <item>1065</item>
+        <item>48</item>
+        <item>1099</item>
+        <item>1130</item>
+        <item>1164</item>
+        <item>359</item>
+        <item>384</item>
+        <item>389</item>
+        <item>423</item>
+        <item>646</item>
+        <item>484</item>
+        <item>1155</item>
+        <item>1158</item>
+        <item>1188</item>
+        <item>1191</item>
+        <item>1193</item>
+        <item>96</item>
+        <item>9</item>
+        <item>28</item>
+        <item>14</item>
+        <item>31</item>
+        <item>34</item>
+        <item>713</item>
+        <item>714</item>
+        <item>902</item>
+        <item>901</item>
+        <item>716</item>
+        <item>746</item>
+        <item>656</item>
+        <item>723</item>
+        <item>776</item>
+        <item>782</item>
+        <item>785</item>
+        <item>1006</item>
+        <item>794</item>
+      </txtMaGiaDinh>
+      <txtNguoiChong caption="Người nam">
+        <item>Phaolô Nguyễn Văn Vinh</item>
+        <item>Đaminh Nguyễn Văn Tuất</item>
+        <item>Đaminh Trịnh Văn Chi</item>
+        <item>Giuse Vũ Văn Thủy</item>
+        <item>Giuse Vũ Văn Ngọ</item>
+        <item>Giuse Vũ Văn Bảng</item>
+        <item>Phêrô Nguyễn Văn A</item>
+        <item>Đaminh Nguyễn Văn Thiện</item>
+        <item>Maria Goretti Đặng Vũ Du My</item>
+        <item>Giuse Bùi Văn Phong</item>
+        <item>Đaminh Hoàng Văn Dự</item>
+        <item>Giuse Nguyễn Văn Thọ</item>
+        <item>Vinhsơn Phạm Văn Phương</item>
+        <item>Vinhsơn Nguyễn Văn Tùng</item>
+        <item>Gioan Nguyễn Văn Hoan</item>
+        <item>Giuse Phạm Văn Thường</item>
+        <item>Antôn Trần Văn Chiến</item>
+        <item>Stanilao Đoàn Minh Vượng</item>
+        <item>Đa Minh Võ Đình Thanh</item>
+        <item>Giuse Lâm Quốc Hùng</item>
+        <item>Giuse Hoàng Quốc Vương</item>
+        <item>Đaminh Bùi Văn Đốc</item>
+        <item>Đôminicô Lại Hoàng Thanh</item>
+        <item>Phêrô Vũ Quốc Hưng</item>
+        <item>Gioan Nguyễn Mộng Hùng</item>
+        <item>Micae Lê Kim Thịnh</item>
+        <item>Phabianô Nguyen Van Moi</item>
+      </txtNguoiChong>
+      <txtNguoiVo caption="Người nữ">
+        <item>Anna Trịnh Thị Điệp</item>
+        <item>Maria Nguyễn Thị Sáng</item>
+        <item>Maria Nguyễn Thị Thơm</item>
+        <item>Maria Nguyễn Thị Nhạn</item>
+        <item>Maria Sen</item>
+        <item>Maria Hoàng Thị Đào</item>
+        <item>Maria Nguyễn Thị Ngát</item>
+        <item>Maria Quy</item>
+        <item>Maria Nguyễn Thị Hoài Thương</item>
+        <item>Maria Phạm Thị Thoa</item>
+        <item>Anna Cao Thị Hoa</item>
+        <item>Maria Nguyễn Thị Thảo</item>
+        <item>Anna Nguyễn Thị Quất</item>
+        <item>Anna Nguyễn Thị Hương</item>
+        <item>Maria Vũ Thị Thoa</item>
+        <item>Maria Nguyễn Thị Soi</item>
+        <item>Maria Đỗ Thị Nga</item>
+        <item>Maria Trần Thị Ngọc</item>
+        <item>Maria Hồng Nguyệt Ánh</item>
+        <item>Maria Nguyễn Thị Loan</item>
+        <item>Cecilia Lữ Thị Tố Loan</item>
+        <item>Têrêsa Võ Thị Nhung</item>
+        <item>Maria Nguyễn Thị Bích Chi</item>
+        <item>Anna Trần Thị Bạch Tuyết</item>
+        <item>Maria Lương Thị Huệ</item>
+        <item>Maria Bùi Thị Hồng Thắm</item>
+        <item>Maria Nguyễn Thị Ngọc Thảo</item>
+        <item>Maria Đặng Thị Thùy Linh</item>
+        <item>Maria Lê Thị Thủy</item>
+        <item>Inê Trương Thị Mỹ Hạnh</item>
+        <item>Cêcilia Lê Thị Xuân Trang</item>
+      </txtNguoiVo>
+      <txtNoiChuyen caption="Nơi chuyển">
+        <item>Thanh Tin</item>
+      </txtNoiChuyen>
+      <txtDiaChi caption="Địa chỉ">
+        <item>222 Hoàng Trường Minh, Tổ 7 - Bắc Cường - Lào Cai</item>
+      </txtDiaChi>
+    </frmGiaDinh>
+    <frmKhoiGiaoLy xmlns="">
+      <txtTenKhoi caption="Tên khối">
+        <item>test</item>
+        <item>Chien Con</item>
+      </txtTenKhoi>
+      <txtNguoiQuanLy caption="Người quản lý">
+        <item>Phaolô Nguyễn Văn Vinh</item>
+        <item>Anrê Nguyễn Đăng Khoa</item>
+        <item>Vinhsơn Phan Văn Dũng</item>
+      </txtNguoiQuanLy>
+    </frmKhoiGiaoLy>
+    <frmChonDuLieu xmlns="">
+      <txtFind caption="Tên giáo dân">
+        <item>vinh</item>
+        <item>hoa</item>
+      </txtFind>
+    </frmChonDuLieu>
+    <frmGiaoDan xmlns="">
+      <txtHoTen caption="Họ tên">
+        <item>Hoang Ngoc Minh</item>
+        <item>Hoang Van Minh</item>
+        <item>Nguyen Hoang Nhan</item>
+        <item>An Đức Khoan</item>
+        <item>Phan Thị Khuy</item>
+        <item>Duyên</item>
+        <item>Trương Đức Hải</item>
+        <item>Vũ Văn Ngọ</item>
+        <item>Nguyễn Thị Ngát</item>
+        <item>Nguyễn Văn Tuất</item>
+        <item>Nguyễn Văn A</item>
+        <item>Nguyễn Văn B</item>
+        <item>Nguyen Thi Tham</item>
+        <item>Nguyễn Văn Khiết</item>
+        <item>Bùi Thị Thúy</item>
+        <item>Bùi Thị Minh Thư</item>
+        <item>Nguyễn Thị Luyến</item>
+        <item>Cao Văn Nam</item>
+        <item>Đặng Thị Khoản</item>
+        <item>Hồng Nguyệt Ánh</item>
+        <item>Lâm Diễm My</item>
+        <item>Võ Thị Nhung</item>
+        <item>Phạm Thị Phương Trinh</item>
+        <item>Võ Đình Thanh</item>
+        <item>Nguyễn Huy Hiệu (giử Lại)</item>
+        <item>Vũ Hoàng Minh</item>
+        <item>Trần Thị Thoa</item>
+        <item>Nguyễn Thị Mai</item>
+        <item>Nguyễn Thị Bích</item>
+        <item>Nguyễn Đức Long</item>
+        <item>Bùi Văn Đốc</item>
+        <item>Tạ Văn Bằng</item>
+        <item>Nguyễn Văn Duy</item>
+        <item>Tạ Thị Xuân</item>
+        <item>Nguyễn Minh Hiếu</item>
+        <item>Nguyễn Hoàng Gia</item>
+        <item>Đỗ Minh Định</item>
+        <item>Nguyễn Thị Út Liễu</item>
+        <item>Lê Khánh Linh</item>
+        <item>Phạm Văn Nguyện</item>
+        <item>Nguyễn Mộng Hùng</item>
+        <item>Lê Thị Thủy</item>
+        <item>Lê Kim Thịnh</item>
+        <item>Nguyen Van Moi</item>
+        <item>Vũ Quốc Hưng</item>
+      </txtHoTen>
+      <txtDiaChi caption="Địa chỉ">
+        <item>Ecclesia Saint Nicolas</item>
+        <item>523a Đỗ Xuân Hợp</item>
+        <item>Giáp 4_phúc Thiện</item>
+        <item>Giáp 1_phúc Thiện</item>
+        <item>Khu 12, Tu Vũ, Thanh Thủy, Phú Thọ</item>
+        <item>Số 43/6a Đường 7 Khu Phố 5 Phường Linh Tây</item>
+        <item>Số 58/9/10 Đường 9 Tổ 8 Khu Phố 1 Phường Linh Tây</item>
+        <item>Số 102/1c Đường 9 Tổ 10 Khu Phố 1 Phường Linh Tây</item>
+        <item>Giáp 1_nx</item>
+        <item>Giáp 2_phúc Thiện</item>
+        <item>222 Hoàng Trường Minh, Tổ 7 - Bắc Cường - Lào Cai</item>
+        <item>Thôn 9, Xã Bản Xen - Mường Khương - Lào Cai</item>
+        <item>Thôn 9 Xã Bản Xen - Mường Khương - Lào Cai</item>
+        <item>102/4 Đường Đặng Văn Bi Tổ 1 Khu Phố 2 Phường Bình Thọ Tp. Thủ Đức</item>
+        <item>Số 21 Đường 8 Tổ 23 Khu Phố 2 Phường Linh Tây</item>
+        <item>99/1/3 Đường Hồ Văn Tư Tổ 2 Khu Phố 3 Phường Trường Thọ Tp. Thủ Đức</item>
+      </txtDiaChi>
+      <txtLinhMucRuaToi caption="Người ban bí tích">
+        <item>LM Bửu Dương</item>
+        <item>Giuse Nguyễn Đức Giang</item>
+        <item>Lm.Gioan Bt Bùi Bá Tam Quan</item>
+        <item>Lm.Giuse Nguyễn Tấn Lộc</item>
+        <item>LM Giuse Đỗ Diệu Kỳ</item>
+        <item>LM Gioan Nguyễn Huy Tụng</item>
+        <item>Lm: Fx. Bùi Văn Minh</item>
+        <item>Lm.Aloisio Lê Văn Liêu</item>
+      </txtLinhMucRuaToi>
+      <txtNguoiDoDauRuaToi caption="Người đỡ đầu">
+        <item>Giuse Trần Văn Nghị</item>
+        <item>Rosa Thêu</item>
+        <item>Đaminh Tự</item>
+        <item>Vinhsơn Tiền</item>
+        <item>Maria Tình</item>
+        <item>Mađalêna Nguyễn Thị Kim Cúc</item>
+        <item>Giuse Phạm Thành Long</item>
+        <item>Phêrô Tạ Văn Bằng</item>
+        <item>Alphongsô Trương Ngọc Đức</item>
+        <item>Phanxicô Vũ Văn Khôi</item>
+      </txtNguoiDoDauRuaToi>
+      <txtTenMe caption="Tên Mẹ">
+        <item>VI THỊ MINH</item>
+        <item>Maria Vũ Thị Hoa</item>
+        <item>Maria</item>
+        <item>Maria Vũ Thị Hương</item>
+        <item>Maria Hoàng Thị Đào</item>
+        <item>Maria Trần Thị Thoa</item>
+        <item>Maria Nguyễn Thị Mùa</item>
+        <item>Maria Trần Thị Yêu</item>
+        <item>Maria Trần Thị Lan</item>
+        <item>Maria Phạm Thị Mong</item>
+        <item>Anna Nguyễn Thị Dĩ</item>
+        <item>Têrêsa Võ Thị Nhung</item>
+        <item>Maria Hồng Nguyệt Ánh</item>
+        <item>Phạm Thị Tuyết Mai</item>
+        <item>Têrêsa Nguyễn Thị Phương Trúc</item>
+        <item>Maria Bùi Thị Thơm</item>
+        <item>Giuse Nguyễn Đức Thụ</item>
+        <item>Anna Lương Thị Hải</item>
+        <item>Maria Tạ Thị Cẩn</item>
+        <item>Maria Lương Thị Thủy</item>
+        <item>Maria Trần Thị Ngân</item>
+        <item>Maria Nguyễn Thúy Hồng</item>
+        <item>Maria Vũ Thị Kim Lương</item>
+        <item>Isave Nguyễn Thị Út Liễu</item>
+      </txtTenMe>
+      <txtTenCha caption="Tên Cha">
+        <item>An Đức Ban</item>
+        <item>Đaminh Phan Văn Tốt</item>
+        <item>Phêrô Cường</item>
+        <item>Phêrô Trương Đức Giới</item>
+        <item>Giuse Vũ Văn Bảng</item>
+        <item>Vinhsơn Nguyễn Văn Vọng</item>
+        <item>Đaminh Nguyễn Văn Giáp</item>
+        <item>Giuse Bùi Văn Phong</item>
+        <item>Đaminh Bùi Văn Thái</item>
+        <item>Gioan Cao Văn Bảo</item>
+        <item>Giuse Đặng Văn Cần</item>
+        <item>Trương Ngọc Châu</item>
+        <item>Phaolô Vũ Thành An</item>
+        <item>Giuse Trần Văn Qúy</item>
+        <item>Giuse Nguyễn Đức Thụ</item>
+        <item>Đaminh Bùi Văn Gia</item>
+        <item>Phêrô Tạ Văn Dậu</item>
+        <item>Giuse Nguyễn Văn Tám</item>
+        <item>Phêrô Tạ Văn Bằng</item>
+        <item>Nguyễn Văn Thắng</item>
+        <item>Gioan Đỗ Kim Cúc</item>
+        <item>Stanilao Đoàn Minh Vượng</item>
+      </txtTenCha>
+      <txtNoiSinh caption="Nơi sinh">
+        <item>Phú Thọ</item>
+        <item>Lộng Điền</item>
+        <item>Túc Thành</item>
+        <item>Nhà Xứ</item>
+        <item>Thạch Bi</item>
+        <item>Giáo Xứ Tam Bình</item>
+        <item>Ninh Thuan</item>
+        <item>Ba Đông, Hoàng Xá, Thanh Thủy, Phú Thọ</item>
+        <item>Hậu Giang</item>
+        <item>Bv Từ Dũ</item>
+        <item>Nghệ An</item>
+        <item>Tphcm</item>
+        <item>Nam Hà</item>
+        <item>Tây Ninh</item>
+        <item>Lào Cai</item>
+        <item>Mường Khương Lào Cai</item>
+        <item>Mường Khương, Lào Cai</item>
+        <item>Ninh Thuận</item>
+        <item>Cà Mau</item>
+        <item>Ninh Bình</item>
+        <item>Thủ Đức</item>
+        <item>Hà Tỉnh</item>
+        <item>Tiền Giang</item>
+        <item>Đồng Nai</item>
+      </txtNoiSinh>
+      <txtNoiRuaToi caption="Nơi rửa tội">
+        <item>Thạch Bi</item>
+        <item>Gx Đức Tin</item>
+        <item>Ninh Thuan</item>
+        <item>Nhà Thờ Giáo Xứ Hoàng Xá</item>
+        <item>Vị Hưng</item>
+        <item>Phú Long</item>
+        <item>Thủ Đức</item>
+        <item>Xóm Chiếu</item>
+        <item>Lào Cai</item>
+        <item>Từ Đức</item>
+        <item>Ninh Bình</item>
+        <item>Hiển Linh
+ Thủ Đức</item>
+        <item>Chánh Tòa
+phú Cường</item>
+        <item>Bình Hải</item>
+      </txtNoiRuaToi>
+      <cbChuyenMon caption="Trình độ ch.môn">
+        <item>CNTT</item>
+      </cbChuyenMon>
+      <txtLinhMucThemSuc caption="Người ban bí tích">
+        <item>Giuse Nguyễn Giám Mục</item>
+        <item>Giuse Hoàng Văn Tiệm</item>
+        <item>Phêrô Hoàng Thanh Nam</item>
+        <item>Lm.Gioan Bt Bùi Bá Tam Quan</item>
+        <item>LM Phanxicô Kiều Ngọc Viên</item>
+        <item>Gioan Maria Vũ Tất</item>
+      </txtLinhMucThemSuc>
+      <txtNoiThemSuc caption="Nơi thêm sức">
+        <item>Gx Đức Tin</item>
+        <item>Thạch Bi</item>
+        <item>Ninh Thuận</item>
+        <item>Nhà Thờ Giáo Xứ Hoàng Xá</item>
+        <item>Vị Hưng</item>
+        <item>Phú Long</item>
+        <item>Thủ Đức</item>
+        <item>Châu Bình</item>
+        <item>Lào Cai -  Hưng Hóa</item>
+        <item>Đông Hòa
+ Xuân Lộc
+ Đồng Nai</item>
+        <item>Hiển Linh
+ Thủ Đức</item>
+        <item>Chánh Tòa
+phú Cường</item>
+        <item>Bình Hải</item>
+      </txtNoiThemSuc>
+      <txtNguoiDoDauThemSuc caption="Người đỡ đầu">
+        <item>Phêrô Trần Đình Hoàng</item>
+        <item>Maria Tình</item>
+        <item>Matta Lê Thị Sang</item>
+        <item>Mađalêna Nguyễn Thị Kim Cúc</item>
+        <item>Maria Đỗ Thị Hà</item>
+      </txtNguoiDoDauThemSuc>
+      <txtLinhMucRuocLe caption="Người ban bí tích">
+        <item>Giuse Nguyễn Đức Giang</item>
+        <item>Phêrô Nguyễn Hoàng Minh</item>
+        <item>Lm.Gioan Bt Bùi Bá Tam Quan</item>
+      </txtLinhMucRuocLe>
+      <txtNoiRuocLe caption="Nơi rước lễ">
+        <item>Gx Đức Tin</item>
+        <item>Ninh Thuan</item>
+        <item>Giáo Sứ Hoàng Xá</item>
+        <item>Thủ Đức</item>
+        <item>Lào Cai -  Hưng Hóa</item>
+      </txtNoiRuocLe>
+      <gxTextCmnd caption="CMND">
+        <item>236523652</item>
+      </gxTextCmnd>
+      <txtGhiChu caption="Ghi chú chung">
+        <item>Sống một mình</item>
+      </txtGhiChu>
+      <txtNguoiVo caption="Người nữ">
+        <item>Maria Sen</item>
+        <item>Maria Phạm Thị Phương</item>
+        <item>Maria Nguyễn Thị Ngát</item>
+        <item>Maria Lương Thị Huệ</item>
+      </txtNguoiVo>
+      <txtNguoiChong caption="Người nam">
+        <item>Giuse Vũ Văn Ngọ</item>
+        <item>Phêrô Trương Đức Hải</item>
+        <item>Phêrô Nguyễn Văn A</item>
+        <item>Đaminh Bùi Văn Đốc</item>
+      </txtNguoiChong>
+      <txtLinhMuc caption="Linh mục chứng">
+        <item>Giuse Lê Ngọc Hoàn</item>
+        <item>Gioan Baotixita Nguyễn Huy Bắc</item>
+        <item>Ông Quản Giuse Lương Viết Xướng</item>
+      </txtLinhMuc>
+      <txtNguoiChung2 caption="Người chứng 2">
+        <item>Maria Trình</item>
+        <item>Maria Nguyễn Thị Hòa</item>
+      </txtNguoiChung2>
+      <txtNguoiChung1 caption="Người chứng 1">
+        <item>Giuse Vũ Văn Học</item>
+        <item>Đaminh Dũng</item>
+        <item>Giuse Phạm Hồng Quang</item>
+      </txtNguoiChung1>
+      <txtNoiHonPhoi caption="Nơi hôn phối">
+        <item>Trung Lao</item>
+        <item>Gx. Nhơn Hòa</item>
+        <item>Bắc Cường - Lào Cai - Hưng Hóa</item>
+      </txtNoiHonPhoi>
+      <txtTenHonPhoi caption="Đôi hôn phối">
+        <item>Ngọ - Sen</item>
+        <item>Hải - Phương</item>
+        <item>A - Ngát</item>
+      </txtTenHonPhoi>
+      <txtDongTu caption="Dòng tu/chủng viện">
+        <item>Dòng Đaminh Quần Cống</item>
+      </txtDongTu>
+      <txtGhiChuXucDau caption="Ghi chú">
+        <item>Bệnh Nặng</item>
+        <item>Bệnh Thận</item>
+      </txtGhiChuXucDau>
+      <txtNguoiXucDau caption="Người ban bí tích">
+        <item>Giuse Nguyễn Mạnh Hùng</item>
+        <item>Giuse Nguyễn Văn Hùng</item>
+      </txtNguoiXucDau>
+      <txtGLHNNguoiCap caption="Người cấp chứng nhận">
+        <item>Giuse Hoàng Minh Phát</item>
+      </txtGLHNNguoiCap>
+      <txtGLHNNoiHoc caption="Tại giáo xứ">
+        <item>Ninh Thuan</item>
+      </txtGLHNNoiHoc>
+      <txtNoiVaoDoi caption="Tại giáo xứ">
+        <item>Ninh Thuận</item>
+      </txtNoiVaoDoi>
+      <txtNoiBD1 caption="Tại giáo xứ">
+        <item>Ninh Thuan</item>
+      </txtNoiBD1>
+      <txtNoiBD2 caption="Tại giáo xứ">
+        <item>Hòa Thanh</item>
+      </txtNoiBD2>
+      <txtGiaoPhan caption="Giáo phận">
+        <item>Sài Gòn</item>
+      </txtGiaoPhan>
+      <txtGiaoXu caption="Giáo xứ">
+        <item>Thủ Đức</item>
+      </txtGiaoXu>
+    </frmGiaoDan>
+    <frmGiaoXu xmlns="">
+      <txtDiaChi caption="Địa chỉ">
+        <item>asdqwead</item>
+        <item>53/7 QUANG TRUNG P11 GV</item>
+        <item>Xã Nam Thái, Nam Trực, Nam Định</item>
+        <item>Đồng Trung - Thanh Thủy - Phú Thọ</item>
+        <item>02, Sơn Tùng - Cốc Lếu - Lào Cai</item>
+      </txtDiaChi>
+      <txtTenGiaoPhan caption="Tên giáo phận">
+        <item>Be Tra</item>
+        <item>THÀNH PHỐ HỒ CHÍ MINH</item>
+        <item>Bùi Chu</item>
+        <item>Hưng Hóa</item>
+      </txtTenGiaoPhan>
+      <txtTenGiaoHat caption="Tên giáo hạt">
+        <item>Te Ben</item>
+        <item>GÒ VẤP</item>
+        <item>Liễu Đề</item>
+        <item>Tây Nam Phú Thọ</item>
+        <item>Lào Cai - Lai Châu</item>
+      </txtTenGiaoHat>
+      <txtTenGiaoXu caption="Tên giáo xứ">
+        <item>abc</item>
+        <item>GIÁO XỨ HẠNH THÔNG TÂY</item>
+        <item>Thạch Bi</item>
+        <item>Đức Tin</item>
+        <item>Phú Sơn</item>
+        <item>Lào Cai</item>
+        <item>Cam Đường</item>
+        <item>Phong Niên</item>
+        <item>Phố Lu</item>
+        <item>Văn Bàn</item>
+        <item>Bảo Yên</item>
+      </txtTenGiaoXu>
+      <txtEmail caption="Email">
+        <item>PHAMDUCTUAN@YAHOO.COM</item>
+        <item>gxphuson2021@gmail.com</item>
+      </txtEmail>
+      <txtHinh caption="Hình giáo xứ">
+        <item>5344061.jpg</item>
+        <item>Gx ThachBi.jpg</item>
+        <item>goc nhin 10.jpg</item>
+      </txtHinh>
+      <txtDienThoai caption="Điện thoại">
+        <item>0948382858</item>
+        <item>0912345678</item>
+      </txtDienThoai>
+      <txtWebsite caption="Website">
+        <item>www.giaoxuphuson.com</item>
+      </txtWebsite>
+    </frmGiaoXu>
+    <frmTimGiaoDan xmlns="">
+      <txtTuKhoa caption="Tên giáo dân">
+        <item>khoan</item>
+        <item>trương đức hải</item>
+        <item>Nguyễn Văn Khiết</item>
+        <item>Gia</item>
+        <item>Nguyễn Hoàng Gia</item>
+      </txtTuKhoa>
+    </frmTimGiaoDan>
+    <frmOption xmlns="">
+      <txtFontSize caption="Cỡ chữ">
+        <item>8.25</item>
+      </txtFontSize>
+      <txtMaxBackup caption="Số lượng tập tin sao lưu tối đa được giữ lại trong thư mục backup">
+        <item>40</item>
+      </txtMaxBackup>
+    </frmOption>
+    <frmLinhMuc xmlns="">
+      <txtMaLinhMuc caption="Mã Linh mục">
+        <item>5</item>
+        <item>6</item>
+        <item>1</item>
+      </txtMaLinhMuc>
+      <txtHoTen caption="Họ tên">
+        <item>Đỗ Văn Cường</item>
+        <item>Nguyen Chanh Xu</item>
+      </txtHoTen>
+      <txtTenThanh caption="Tên thánh">
+        <item>Giuse</item>
+        <item>Phanxico</item>
+      </txtTenThanh>
+    </frmLinhMuc>
+    <frmReportGioiThieuHP xmlns="">
+      <txtTenThanh caption="Tên thánh">
+        <item>Maria</item>
+      </txtTenThanh>
+      <txtNoiHocGiaoLy caption="Nơi học GLHN:">
+        <item>Giáo Xứ Đức Tin</item>
+      </txtNoiHocGiaoLy>
+      <txtNguoi1 caption="Giới thiệu cho:">
+        <item>Phêrô Trương Đức Hải</item>
+      </txtNguoi1>
+      <txtGiaoXu2 caption="Giáo xứ:">
+        <item>Đức Mến</item>
+      </txtGiaoXu2>
+      <txtGiaoPhan2 caption="Giáo phận:">
+        <item>Vinh</item>
+      </txtGiaoPhan2>
+      <txtTenMe2 caption="và bà:">
+        <item>Maria Trương Thị Hồng</item>
+      </txtTenMe2>
+      <txtHoten caption="Họ tên">
+        <item>Nguyễn Thị Lan</item>
+      </txtHoten>
+      <txtTenCha2 caption="Con ông:">
+        <item>Matthêu Nguyễn Mạnh Đạt</item>
+      </txtTenCha2>
+      <txtGiaoXuNhan caption="Giáo phận:">
+        <item>Vinh</item>
+      </txtGiaoXuNhan>
+      <txtChaNhan caption="Kính gửi cha xứ:">
+        <item>Giuse Nguyễn Văn An</item>
+      </txtChaNhan>
+    </frmReportGioiThieuHP>
+    <frmHoiDoan xmlns="">
+      <txtThanhBonMang caption="Thánh bổn mạng">
+        <item>Thánh Đaminh</item>
+      </txtThanhBonMang>
+      <txtTenHoiDoan caption="Tên hội đoàn">
+        <item>HĐ Đm Nhà Xứ</item>
+      </txtTenHoiDoan>
+      <txtMaHoiDoan caption="Mã hội đoàn">
+        <item>1</item>
+      </txtMaHoiDoan>
+    </frmHoiDoan>
+    <frmReport xmlns="">
+      <txtGiaoPhan caption="Giáo phận : ">
+        <item>Vinh</item>
+      </txtGiaoPhan>
+      <txtGiaoXu caption="Giáo xứ nhận : ">
+        <item>Thành Tín</item>
+      </txtGiaoXu>
+    </frmReport>
+    <frmTimGiaDinh xmlns="">
+      <txtTuKhoa caption="Tên giáo dân">
+        <item>vũ văn ngọ</item>
+      </txtTuKhoa>
+    </frmTimGiaDinh>
+    <frmBiTichChiTiet xmlns="">
+      <txtNoiBiTich caption="Nơi nhận bí tích">
+        <item>Đức Tin</item>
+        <item>Thạch Bi</item>
+        <item>Lào Cai</item>
+      </txtNoiBiTich>
+      <txtLinhMuc caption="Người ban bí tích">
+        <item>Giuse Nguyễn Đức Giang</item>
+      </txtLinhMuc>
+      <txtMoTa caption="Mô tả">
+        <item>Đợt bí tích Rửa tội ngày 09 tháng 01 năm 1982</item>
+        <item>Đợt bí tích Rửa tội ngày 12 tháng 05 năm 1982</item>
+        <item>Đợt bí tích Rửa tội ngày 21 tháng 07 năm 2024</item>
+      </txtMoTa>
+    </frmBiTichChiTiet>
+    <frmGoiChungNhan xmlns="">
+      <txtGiaoPhanNhan caption="Thuộc giáo phận">
+        <item>VINH</item>
+        <item>test</item>
+      </txtGiaoPhanNhan>
+      <txtGiaoXuNhan caption="Tên giáo xứ nhận">
+        <item>VI DU</item>
+        <item>Test</item>
+      </txtGiaoXuNhan>
+    </frmGoiChungNhan>
+    <frmRaoHonPhoi xmlns="">
+      <txtNguoi1 caption="Người thứ nhất:">
+        <item>Phaolô Nguyễn Đăng Khoa</item>
+      </txtNguoi1>
+      <txtDoiRao caption="Đôi rao:">
+        <item>Khoa - Hoa</item>
+      </txtDoiRao>
+      <txtGiaoXuNQ1 caption="Nguyên quán xứ">
+        <item>Thu Duc</item>
+      </txtGiaoXuNQ1>
+      <txtGiaoXu1 caption="Hiện ở giáo xứ:">
+        <item>Thủ Đức</item>
+      </txtGiaoXu1>
+      <txtGiaoPhanNQ1 caption="Giáo phận:">
+        <item>Sai Gon</item>
+      </txtGiaoPhanNQ1>
+      <txtGiaoPhan1 caption="Giáo phận:">
+        <item>Sài Gòn</item>
+      </txtGiaoPhan1>
+      <txtNguoi2 caption="Người thứ 2:">
+        <item>Maria Lê Thị Hoa</item>
+      </txtNguoi2>
+      <txtGiaoXuNQ2 caption="Nguyên quán xứ">
+        <item>Phan Rang</item>
+      </txtGiaoXuNQ2>
+      <txtGiaoXu2 caption="Hiện ở giáo xứ:">
+        <item>Thủ Đức</item>
+      </txtGiaoXu2>
+      <txtGiaoXuTruoc1 caption="Trước đã ở xứ:">
+        <item>Tam Ha</item>
+      </txtGiaoXuTruoc1>
+      <txtGiaoPhanNQ2 caption="Giáo phận:">
+        <item>Nha Trang</item>
+      </txtGiaoPhanNQ2>
+      <txtGiaoPhan2 caption="Giáo phận:">
+        <item>Sài Gòn</item>
+      </txtGiaoPhan2>
+      <txtGiaoPhanTruoc2 caption="Giáo phận:">
+        <item>Nha Trang</item>
+      </txtGiaoPhanTruoc2>
+      <txtGiaoXuTruoc2 caption="Trước đã ở xứ:">
+        <item>Tan Hoi</item>
+      </txtGiaoXuTruoc2>
+      <txtGiaoPhanTruoc1 caption="Giáo phận:">
+        <item>Sai Gon2</item>
+      </txtGiaoPhanTruoc1>
+      <txtGhiChu caption="Ghi chú:">
+        <item>Toi Ghi Chu O Day</item>
+      </txtGhiChu>
+      <txtGiaoXuNhan caption="Giáo phận:">
+        <item>Sài Gòn</item>
+      </txtGiaoXuNhan>
+      <txtChaNhan caption="Kính gửi cha xứ:">
+        <item>Mattheu Nguyen Van An</item>
+      </txtChaNhan>
+    </frmRaoHonPhoi>
+  </forms>
+</application>
