@@ -33,7 +33,7 @@
   <tblColumnWidth>
     <key>frmThongKeChung_gxHonPhoiList1</key>
     <columns>MaHonPhoi,Nam,Nữ,SoHonPhoi,NoiHonPhoi,NgayHonPhoi,SoNamHonPhoi,CachThucHonPhoi,LinhMucChung,NguoiChung1,NguoiChung2,GhiChu,QuaDoi,TenGiaoHo</columns>
-    <widths>60,100,100,80,100,80,80,100,100,100,100,200,50,80</widths>
+    <widths>60,100,100,80,100,80,80,100,100,100,102,200,50,80</widths>
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmThongKeChung_gxGiaDinhList1</key>
@@ -88,7 +88,7 @@
   <tblColumnWidth>
     <key>frmGiaoHo_gxGiaoHoList1</key>
     <columns>TenGiaoHo</columns>
-    <widths>1638</widths>
+    <widths>2278</widths>
   </tblColumnWidth>
   <tblColumnWidth>
     <key>frmXemGiaDinhGiaoDan_gxGiaDinhList1</key>

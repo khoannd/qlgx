@@ -2,7 +2,7 @@
 /BIN/*.zip
 /BIN/*.mdb
 *.rar
-/Release
+
 /Source/.vs/*
 /Source/AutoUpdate/obj/*
 /Source/AutoUpdate/bin/*
@@ -16,7 +16,7 @@
 /Source/ExcelReport/obj/Debug
 /Source/ExcelReport/obj/Release
 /Source/GXControl/.vs
-Release
+
 Debug
 .vs
 /BIN/ImportLog.txt
