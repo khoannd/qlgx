@@ -2,7 +2,7 @@
 /BIN/*.zip
 /BIN/*.mdb
 *.rar
-/Release
+
 /Source/.vs/*
 /Source/AutoUpdate/obj/*
 /Source/AutoUpdate/bin/*
@@ -16,7 +16,7 @@
 /Source/ExcelReport/obj/Debug
 /Source/ExcelReport/obj/Release
 /Source/GXControl/.vs
-Release
+
 Debug
 .vs
 /BIN/ImportLog.txt
@@ -25,3 +25,11 @@ Debug
 *.bak_*
 *.mdb.bak
 desktop.ini
+
+# Thu muc build tam va goi NuGet duoc khoi phuc - khong dua vao repo.
+# Luu y: thu muc BIN/ o goc repo VAN duoc theo doi co y (chua ban phat hanh).
+/Source/**/obj/
+/Source/**/bin/
+/Source/packages/
+/Source/GXInstaller/Debug/
+/Source/GXInstaller/Release/
