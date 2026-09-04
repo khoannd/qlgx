@@ -1617,7 +1617,7 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:QLGX - Quan Ly Giao Xu"
-        "ProductCode" = "8:{6A9B07BD-1E83-41E7-9793-98981A1B79ED}"
+        "ProductCode" = "8:{3964763B-4766-4AE0-BA1A-C683890FD052}"
         "PackageCode" = "8:{7BA01111-45CF-481B-B3AE-742BB57FBF8A}"
         "UpgradeCode" = "8:{E09DA5C1-9121-453D-80FC-0E9B83B030CF}"
         "AspNetVersion" = "8:4.0.30319.0"

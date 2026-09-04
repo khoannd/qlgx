@@ -527,18 +527,30 @@ else {
 Write-Buoc '9. Gom san pham phat hanh'
 if ($DryRun) { Write-Canh 'DryRun: bo qua' }
 else {
-    # setup.exe va file MSI PHAI di cung nhau va giu dung ten, vi setup.exe
-    # tham chieu ten MSI ben trong no.
-    $srcExe = Join-Path $InstOutDir 'setup.exe'
-    $srcMsi = Join-Path $InstOutDir $msiFileName
-    if (Test-Path $srcExe) {
-        Copy-Item $srcExe (Join-Path $ReleaseDir "qlgx_$slug.exe") -Force
-        Write-Ok "qlgx_$slug.exe   (chay file nay de cai; tu cai .NET 4.8 neu may thieu)"
-    } elseif (-not $SkipInstaller) { Write-Canh 'Khong tim thay setup.exe' }
+    # Gộp setup.exe và file .msi thành MỘT file .exe duy nhất.
+    #
+    # Bắt buộc phải gộp: setup.exe chỉ là vỏ mỏng, nó tham chiếu cứng tên file
+    # .msi và tìm trong cùng thư mục. Nếu phát hành hai file riêng thì người
+    # dùng (phần lớn là các cha xứ, không rành máy tính) rất dễ chỉ tải mỗi
+    # file .exe rồi chạy và gặp lỗi không tìm thấy bộ cài.
+    # Bản Inno Setup cũ cũng chỉ có một file, nên giữ đúng như vậy.
+    $fileGop   = Join-Path $ReleaseDir "qlgx_$slug.exe"
+    $scriptGop = Join-Path $Root 'gop_bo_cai_thanh_1_file.ps1'
+    if (-not (Test-Path $scriptGop)) { Write-Loi "Khong tim thay $scriptGop"; exit 1 }
 
-    if (Test-Path $srcMsi) {
-        Copy-Item $srcMsi (Join-Path $ReleaseDir $msiFileName) -Force
-        Write-Ok "$msiFileName   (phai nam CUNG THU MUC voi file .exe o tren)"
+    if ($SkipInstaller) { Write-Canh 'Bo qua gop file vi -SkipInstaller' }
+    else {
+        $kqGop = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptGop `
+                     -ThuMucNguon $InstOutDir -TenFileMsi $msiFileName -FileDich $fileGop `
+                     -TenHienThi $TenSanPhamAscii 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Write-Loi 'Gop bo cai thanh 1 file that bai:'
+            $kqGop | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+            exit 1
+        }
+        $dungLuong = ($kqGop | Where-Object { $_ -like 'DA_GOP_XONG*' }) -replace 'DA_GOP_XONG ', ''
+        Write-Ok "qlgx_$slug.exe   ($dungLuong MB) - MOT file duy nhat, nguoi dung chi can tai file nay"
+        Write-Ok '  (da giai nen thu de kiem chung ben trong co du setup.exe va file .msi)'
     }
 
     Copy-Item $vcBin (Join-Path $ReleaseDir 'VersionConfig.xml') -Force
@@ -558,10 +570,10 @@ elseif (-not (Test-Path $BinRepo)) { Write-Canh "Khong tim thay $BinRepo - bo qu
 else {
     if (-not (Test-Path $BinRepoUpdate)) { New-Item -ItemType Directory -Path $BinRepoUpdate -Force | Out-Null }
 
-    foreach ($ten in @("qlgx_$slug.exe", $msiFileName)) {
-        $nguon = Join-Path $ReleaseDir $ten
-        if (Test-Path $nguon) { Copy-Item $nguon $BinRepoCai -Force; Write-Ok "Release\$ten" }
-    }
+    # Chỉ chép file .exe đã gộp. Không chép file .msi riêng nữa vì nó đã nằm
+    # bên trong file .exe rồi, để riêng chỉ làm người dùng phân vân tải cái nào.
+    $nguonExe = Join-Path $ReleaseDir "qlgx_$slug.exe"
+    if (Test-Path $nguonExe) { Copy-Item $nguonExe $BinRepoCai -Force; Write-Ok "Release\qlgx_$slug.exe" }
     $nguonZip = Join-Path $ReleaseDir $zipName
     if (Test-Path $nguonZip) { Copy-Item $nguonZip $BinRepoUpdate -Force; Write-Ok "Release\update\$zipName" }
     Write-Ok "Da chep sang $BinRepo"
@@ -583,6 +595,7 @@ Write-Host @"
       2. thong_tin_cap_nhat.htm   ->  /help/
 
       3. qlgx_$slug.exe           ->  /download/
+         (MOT file duy nhat, da chua san bo cai ben trong)
 
       4. VersionConfig.xml        ->  thu muc goc  <<< LAM CUOI CUNG
 
