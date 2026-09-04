@@ -2,6 +2,34 @@
 <application value="GiaoXu" xmlns="urn:newversion-schema">
   <version-info value="4.0.0.0" display="4.0.0" exename="GiaoXu.exe">
     <info>
+      Ngày 04-09-2026: cập nhật lên phiên bản 4.0.0
+
+      - Nâng cấp nền tảng:
+      + Nâng cấp chương trình từ .NET Framework 2.0 lên 4.8 để chạy ổn định hơn trên Windows 10 và Windows 11.
+      + Cập nhật lại cách kết nối với Microsoft Word và Microsoft Excel cho phù hợp với các phiên bản Office đời mới.
+
+      - Nhập dữ liệu từ phần mềm MGC:
+      + Sửa lỗi chỉ nhập được một phần giáo dân. Trước đây, nếu số người trong phần Lý lịch ít hơn số người trong Sổ Rửa tội thì chương trình bỏ qua toàn bộ những người chỉ có tên trong Sổ Rửa tội. Nay chương trình nhập đầy đủ tất cả.
+      + Giữ nguyên thông tin lý lịch (ngày qua đời, số điện thoại, dân tộc, địa chỉ) cho những người đã có sẵn lý lịch.
+      + Bổ sung số rửa tội cho những giáo dân được nhập từ Sổ Rửa tội.
+      + Khi máy thiếu Microsoft Access Database Engine, chương trình báo đúng nguyên nhân thay vì báo nhầm là "Không tìm thấy thông tin giáo xứ".
+
+      - Tự động cài thành phần bắt buộc để đọc file Access và Excel:
+      + Khi mở chức năng nhập dữ liệu từ MGC hoặc từ Excel, chương trình tự kiểm tra máy đã có Microsoft Access Database Engine bản 32-bit hay chưa.
+      + Nếu chưa có, chương trình giải thích rõ nguyên nhân và đề nghị tự tải về cài đặt giúp. File tải về được kiểm tra chữ ký số của Microsoft trước khi cài.
+      + Nếu máy không vào được Internet, chương trình hướng dẫn cách tải và cài bằng tay.
+
+      - Sửa lỗi không xuất được file WORD và EXCEL:
+      + Chương trình tự nhận ra lỗi kết nối với Microsoft Office và mời sửa ngay tại chỗ báo lỗi, không phải tự tìm vào menu.
+      + Chức năng sửa nay chỉ xóa thông tin thừa của bản Office cũ và giữ nguyên bản Office đang dùng. Bản trước có thể xóa nhầm, gây hỏng trên máy dùng Office 2010 hoặc Office 2013.
+      + Sao lưu registry ra file trước khi sửa để có thể khôi phục.
+      + Sửa được cho cả Microsoft Word lẫn Microsoft Excel.
+      + Báo đúng kết quả đã làm, không còn báo "Đã sửa xong" trong khi thực tế không có gì cần sửa.
+
+      - Gia đình:
+      + Khi chọn người vợ hoặc người chồng, nếu người còn lại đã qua đời thì chương trình không tự đưa người đó vào gia đình nữa.
+
+      - Cập nhật các mẫu in.
       Ngày 07-07-2024: cập nhật lên phiên bản 3.3.7
       - Hiển thị thêm thông tin qua đời trong màn hình danh sách giáo dân.
       - Hiển thị Tên Cha, Tên Mẹ, Ngày XTRL vào danh sách học sinh giáo lý.
@@ -151,7 +179,7 @@
       - Cho phép in phiếu lý gia đình hàng loạt
     </info>
     <downloadpath value="download-update">http://quanlygiaoxu.net/4.0/</downloadpath>
-    <dateupdate>2024-11-15</dateupdate>
+    <dateupdate>2026-09-04</dateupdate>
     <size>8.67</size>
   </version-info>
 </application>

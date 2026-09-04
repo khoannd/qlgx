@@ -20,3 +20,8 @@ Release
 Debug
 .vs
 /BIN/ImportLog.txt
+
+# Ban sao luu tu dong khi chay release.ps1
+*.bak_*
+*.mdb.bak
+desktop.ini

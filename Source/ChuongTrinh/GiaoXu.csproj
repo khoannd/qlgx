@@ -243,6 +243,9 @@
     <Compile Include="frmMergeData.Designer.cs">
       <DependentUpon>frmMergeData.cs</DependentUpon>
     </Compile>
+    <Compile Include="frmCaiDatAce.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="frmImport.cs">
       <SubType>Form</SubType>
     </Compile>

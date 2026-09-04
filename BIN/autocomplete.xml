@@ -555,12 +555,14 @@ phú Cường</item>
         <item>Xã Nam Thái, Nam Trực, Nam Định</item>
         <item>Đồng Trung - Thanh Thủy - Phú Thọ</item>
         <item>02, Sơn Tùng - Cốc Lếu - Lào Cai</item>
+        <item>Thôn 3, - Xã Trà Tân - Tỉnh Lâm Đồng</item>
       </txtDiaChi>
       <txtTenGiaoPhan caption="Tên giáo phận">
         <item>Be Tra</item>
         <item>THÀNH PHỐ HỒ CHÍ MINH</item>
         <item>Bùi Chu</item>
         <item>Hưng Hóa</item>
+        <item>Phan Thiết</item>
       </txtTenGiaoPhan>
       <txtTenGiaoHat caption="Tên giáo hạt">
         <item>Te Ben</item>
@@ -568,6 +570,7 @@ phú Cường</item>
         <item>Liễu Đề</item>
         <item>Tây Nam Phú Thọ</item>
         <item>Lào Cai - Lai Châu</item>
+        <item>Đức Tánh</item>
       </txtTenGiaoHat>
       <txtTenGiaoXu caption="Tên giáo xứ">
         <item>abc</item>
@@ -581,10 +584,12 @@ phú Cường</item>
         <item>Phố Lu</item>
         <item>Văn Bàn</item>
         <item>Bảo Yên</item>
+        <item>Vô Nhiễm</item>
       </txtTenGiaoXu>
       <txtEmail caption="Email">
         <item>PHAMDUCTUAN@YAHOO.COM</item>
         <item>gxphuson2021@gmail.com</item>
+        <item>gioanthaiquoc@gmail.com</item>
       </txtEmail>
       <txtHinh caption="Hình giáo xứ">
         <item>5344061.jpg</item>
@@ -594,6 +599,7 @@ phú Cường</item>
       <txtDienThoai caption="Điện thoại">
         <item>0948382858</item>
         <item>0912345678</item>
+        <item>093 3388 980</item>
       </txtDienThoai>
       <txtWebsite caption="Website">
         <item>www.giaoxuphuson.com</item>
