@@ -476,6 +476,35 @@ else {
     Write-Ok 'Da kiem chung lai bang tien trinh rieng: tieng Viet trong MSI dung'
 }
 
+# ---------------------------------------------------------- 6c. Dò thư mục đã cài trước đó
+Write-Buoc '6c. Them kha nang tu do thu muc da cai truoc do'
+if ($SkipInstaller -or $DryRun) { Write-Canh 'Bo qua' }
+else {
+    # Tu ban 4.0.0 thu muc mac dinh doi tu D: sang C: (nhieu may khong co o D:).
+    # Nhung may DANG DUNG thi phai cai de len dung thu muc cu, neu khong nguoi dung
+    # se thay du lieu trong tron. Buoc nay them vao MSI kha nang tu do thu muc cu.
+    $scriptDo = Join-Path $Root 'them_do_tim_thu_muc_cu.ps1'
+    if (-not (Test-Path $scriptDo)) { Write-Loi "Khong tim thay $scriptDo"; exit 1 }
+
+    $kqDo = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptDo -Msi $msiPath 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Loi 'Them phan do thu muc cu that bai:'
+        $kqDo | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        exit 1
+    }
+    $kqDo2 = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptDo -Msi $msiPath -ChiKiemChung 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Loi 'Kiem chung phan do thu muc cu that bai:'
+        $kqDo2 | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        exit 1
+    }
+    Write-Ok 'Uu tien 1: thu muc trong registry cua ban Inno cu (ke ca khi user tu chon)'
+    Write-Ok 'Uu tien 2: cung khoa do o nhanh registry 64-bit'
+    Write-Ok 'Uu tien 3: D:\QuanLyGiaoXu neu con ton tai'
+    Write-Ok 'Neu khong thay gi: dung mac dinh C:\QuanLyGiaoXu'
+    Write-Ok 'Da ghi ARPINSTALLLOCATION de cac ban sau tu do duoc chinh minh'
+}
+
 # ---------------------------------------------------------- 7. Gom file (staging)
 Write-Buoc '7. Gom file cho goi cap nhat'
 if ($DryRun) { Write-Canh 'DryRun: bo qua' }

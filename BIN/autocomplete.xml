@@ -22,6 +22,7 @@
         <item>D:\Khoan\Desktop\GX Anh Thuan 2\mau-excel-giaodan-giadinh.xls.xlsx</item>
         <item>D:\Khoan\Desktop\GX Anh Thuan 2\mau-excel-giaodan-giadinh - da chinh sua.xlsx</item>
         <item>D:\Working\QLGX\Data\Lao Cai - Cha Thai\DataGx.accdb</item>
+        <item>D:\Working\QLGX\Data\A Giap\DataGx.accdb</item>
       </txtDB>
     </frmImport>
     <frmHonPhoi xmlns="">
@@ -571,6 +572,7 @@ phú Cường</item>
         <item>Tây Nam Phú Thọ</item>
         <item>Lào Cai - Lai Châu</item>
         <item>Đức Tánh</item>
+        <item>Ðức Tánh</item>
       </txtTenGiaoHat>
       <txtTenGiaoXu caption="Tên giáo xứ">
         <item>abc</item>
