@@ -26,6 +26,8 @@
       + Sửa được cho cả Microsoft Word lẫn Microsoft Excel.
       + Báo đúng kết quả đã làm, không còn báo "Đã sửa xong" trong khi thực tế không có gì cần sửa.
 
+      - Sổ bí tích:
+      + Sửa lỗi màn hình Sổ bí tích, mục Hôn phối chỉ hiện mã số thay vì tên của người chồng và người vợ.
       - Gia đình:
       + Khi chọn người vợ hoặc người chồng, nếu người còn lại đã qua đời thì chương trình không tự đưa người đó vào gia đình nữa.
 
