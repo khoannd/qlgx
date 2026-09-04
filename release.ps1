@@ -60,9 +60,17 @@ $TenSanPham  = 'QLGX - Quản Lý Giáo Xứ'
 $NhaSanXuat  = 'Nguyễn Đức Khoan'
 $TrangChu    = 'https://quanlygiaoxu.net'
 
-# Bảng mã của gói MSI. BẮT BUỘC là 65001 (UTF-8) thì tiếng Việt có dấu mới hiện
-# đúng. Giá trị mặc định 1252 (Tây Âu) sẽ làm hỏng dấu tiếng Việt.
-$MaBangMaUTF8 = '65001'
+# Bản KHÔNG DẤU, chỉ dùng lúc build.
+#
+# Vì sao phải có hai bản: Visual Studio Installer Projects không xử lý được
+# tiếng Việt có dấu trong file .vdproj. Đã thử cả ba bảng mã và đều hỏng:
+#     1252  (Tây Âu)   -> nuốt mất chữ ả, ứ  => "Qun Ly Giao X"
+#     1258  (Việt Nam) -> biến thành ký tự rác U+007F
+#     65001 (UTF-8)    -> build thất bại hoàn toàn
+# Nên cách làm là: build bằng tên không dấu cho chắc chắn, rồi ghi đè tiếng Việt
+# có dấu thẳng vào file MSI sau khi build (xem hàm Ghi-TiengViet-VaoMSI).
+$TenSanPhamAscii = 'QLGX - Quan Ly Giao Xu'
+$NhaSanXuatAscii = 'Nguyen Duc Khoan'
 
 # --------------------------------------------- Thư mục kho nhị phân (repo qlgx_bin)
 # File cài và gói cập nhật được chép sang đây để đưa lên GitHub.
@@ -171,6 +179,56 @@ function Invoke-Dte {
             Start-Sleep -Milliseconds 400
         }
     }
+}
+
+# Sau khi build, ép bảng mã của file MSI về UTF-8 rồi ghi lại tên sản phẩm và
+# nhà sản xuất bằng tiếng Việt có dấu. Đây là cách duy nhất chạy được, vì bản
+# thân Visual Studio Installer Projects không ghi được tiếng Việt (xem ghi chú
+# ở phần khai báo $TenSanPhamAscii).
+function Ghi-TiengViet-VaoMSI ($duongDanMsi, $tenSanPham, $nhaSanXuat) {
+    $MSIMODIFY_UPDATE = 2
+    $MSITRANSACT      = 1
+    $installer = New-Object -ComObject WindowsInstaller.Installer
+    $db = $installer.GetType().InvokeMember('OpenDatabase','InvokeMethod',$null,$installer,@($duongDanMsi, $MSITRANSACT))
+
+    # Ép bảng mã sang UTF-8 bằng file .idt có chỉ thị _ForceCodepage
+    $idtDir  = [IO.Path]::GetTempPath()
+    $idtName = 'qlgx_forcecp.idt'
+    $noiDung = "`r`n`r`n65001`t_ForceCodepage`r`n"
+    [IO.File]::WriteAllText((Join-Path $idtDir $idtName), $noiDung, (New-Object Text.ASCIIEncoding))
+    $db.GetType().InvokeMember('Import','InvokeMethod',$null,$db,@($idtDir, $idtName)) | Out-Null
+
+    foreach ($cap in @(@('ProductName',$tenSanPham), @('Manufacturer',$nhaSanXuat))) {
+        $view = $db.GetType().InvokeMember('OpenView','InvokeMethod',$null,$db,
+                @("SELECT Property, Value FROM Property WHERE Property='$($cap[0])'"))
+        $view.GetType().InvokeMember('Execute','InvokeMethod',$null,$view,$null) | Out-Null
+        $rec = $view.GetType().InvokeMember('Fetch','InvokeMethod',$null,$view,$null)
+        if ($null -ne $rec) {
+            $rec.GetType().InvokeMember('StringData','SetProperty',$null,$rec,@(2, $cap[1])) | Out-Null
+            $view.GetType().InvokeMember('Modify','InvokeMethod',$null,$view,@($MSIMODIFY_UPDATE, $rec)) | Out-Null
+        }
+        $view.GetType().InvokeMember('Close','InvokeMethod',$null,$view,$null) | Out-Null
+    }
+    $db.GetType().InvokeMember('Commit','InvokeMethod',$null,$db,$null) | Out-Null
+    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($db) | Out-Null
+    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($installer) | Out-Null
+    [GC]::Collect(); [GC]::WaitForPendingFinalizers()
+}
+
+# Đọc ngược một thuộc tính từ file MSI (dùng để kiểm chứng sau khi ghi)
+function Doc-ThuocTinhMSI ($duongDanMsi, $ten) {
+    $i = New-Object -ComObject WindowsInstaller.Installer
+    $db = $i.GetType().InvokeMember('OpenDatabase','InvokeMethod',$null,$i,@($duongDanMsi, 0))
+    $v = $db.GetType().InvokeMember('OpenView','InvokeMethod',$null,$db,
+         @("SELECT Value FROM Property WHERE Property='$ten'"))
+    $v.GetType().InvokeMember('Execute','InvokeMethod',$null,$v,$null) | Out-Null
+    $r = $v.GetType().InvokeMember('Fetch','InvokeMethod',$null,$v,$null)
+    $kq = if ($null -ne $r) { [string]$r.GetType().InvokeMember('StringData','GetProperty',$null,$r,@(1)) } else { '' }
+    $v.GetType().InvokeMember('Close','InvokeMethod',$null,$v,$null) | Out-Null
+    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($db) | Out-Null
+    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($i) | Out-Null
+    [GC]::Collect(); [GC]::WaitForPendingFinalizers()
+    return $kq
 }
 
 function Doc-FileGiuBom ($path) {
@@ -296,13 +354,15 @@ if (-not $DryRun) {
 
     # Ghi thông tin nhà phát hành. Nếu không có, Windows hiện "Unknown publisher"
     # và mục gỡ cài đặt không có tên nhà sản xuất.
-    $moi = [regex]::Replace($moi, '("ProductName"\s*=\s*"8:)[^"]*(")',  "`${1}$TenSanPham`${2}")
-    $moi = [regex]::Replace($moi, '("Title"\s*=\s*"8:)[^"]*(")',        "`${1}$TenSanPham`${2}")
-    $moi = [regex]::Replace($moi, '("Manufacturer"\s*=\s*"8:)[^"]*(")', "`${1}$NhaSanXuat`${2}")
-    $moi = [regex]::Replace($moi, '("ARPCONTACT"\s*=\s*"8:)[^"]*(")',   "`${1}$NhaSanXuat`${2}")
+    $moi = [regex]::Replace($moi, '("ProductName"\s*=\s*"8:)[^"]*(")',  "`${1}$TenSanPhamAscii`${2}")
+    $moi = [regex]::Replace($moi, '("Title"\s*=\s*"8:)[^"]*(")',        "`${1}$TenSanPhamAscii`${2}")
+    $moi = [regex]::Replace($moi, '("Manufacturer"\s*=\s*"8:)[^"]*(")', "`${1}$NhaSanXuatAscii`${2}")
+    $moi = [regex]::Replace($moi, '("ARPCONTACT"\s*=\s*"8:)[^"]*(")',   "`${1}$NhaSanXuatAscii`${2}")
 
-    # Đổi bảng mã sang UTF-8 để tiếng Việt có dấu không bị hỏng
-    $moi = [regex]::Replace($moi, '("CodePage"\s*=\s*"3:)[^"]*(")', "`${1}$MaBangMaUTF8`${2}")
+    # Giữ bảng mã 1252 / tiếng Anh cho phần build. Tiếng Việt được ghi vào MSI
+    # sau khi build xong (bước 6b).
+    $moi = [regex]::Replace($moi, '("CodePage"\s*=\s*"3:)[^"]*(")',   "`${1}1252`${2}")
+    $moi = [regex]::Replace($moi, '("LanguageId"\s*=\s*"3:)[^"]*(")', "`${1}1033`${2}")
 
     # Dat ten file MSI co kem version NGAY TU TRONG vdproj.
     # Bat buoc phai lam truoc khi build: bootstrapper setup.exe duoc sinh ra co
@@ -328,13 +388,11 @@ if (-not $DryRun) {
 
     $ktTen = [regex]::Match($kt.Text, '"ProductName"\s*=\s*"8:([^"]*)"').Groups[1].Value
     $ktNsx = [regex]::Match($kt.Text, '"Manufacturer"\s*=\s*"8:([^"]*)"').Groups[1].Value
-    $ktCp  = [regex]::Match($kt.Text, '"CodePage"\s*=\s*"3:([^"]*)"').Groups[1].Value
-    if ($ktTen -ne $TenSanPham)   { Write-Loi "Ghi ProductName that bai"; exit 1 }
-    if ($ktNsx -ne $NhaSanXuat)   { Write-Loi "Ghi Manufacturer that bai"; exit 1 }
-    if ($ktCp  -ne $MaBangMaUTF8) { Write-Loi "Ghi CodePage that bai"; exit 1 }
-    Write-Ok "Ten san pham   = $ktTen"
-    Write-Ok "Nha san xuat   = $ktNsx  (dong thoi la Author cua goi MSI)"
-    Write-Ok "Bang ma MSI    = $ktCp (UTF-8, de tieng Viet co dau khong bi hong)"
+    if ($ktTen -ne $TenSanPhamAscii) { Write-Loi "Ghi ProductName that bai"; exit 1 }
+    if ($ktNsx -ne $NhaSanXuatAscii) { Write-Loi "Ghi Manufacturer that bai"; exit 1 }
+    Write-Ok "Ten san pham (luc build) = $ktTen"
+    Write-Ok "Nha san xuat (luc build) = $ktNsx"
+    Write-Ok "Tieng Viet co dau se duoc ghi vao MSI o buoc 6b"
     Write-Ok "Ten file MSI se tao = $msiFileName"
     Write-Ok 'Da kiem tra lai: ProductVersion/ProductCode moi, UpgradeCode nguyen ven'
 }
@@ -375,30 +433,47 @@ else {
         if ($sau -le $truoc) { Write-Loi 'MSI khong duoc tao moi - build co the da khong chay'; exit 1 }
         Write-Ok "Da tao bo cai luc $sau"
 
-        # Doc nguoc tu chinh file MSI vua tao de chac chan thong tin ghi dung,
-        # dac biet la tieng Viet co dau khong bi hong boi bang ma.
-        try {
-            $inst = New-Object -ComObject WindowsInstaller.Installer
-            $db = $inst.GetType().InvokeMember('OpenDatabase','InvokeMethod',$null,$inst,@($msiPath,0))
-            $view = $db.GetType().InvokeMember('OpenView','InvokeMethod',$null,$db,
-                    @("SELECT Property, Value FROM Property WHERE Property='ProductName' OR Property='Manufacturer' OR Property='ProductVersion'"))
-            $view.GetType().InvokeMember('Execute','InvokeMethod',$null,$view,$null) | Out-Null
-            Write-Host '        --- Doc nguoc tu file MSI ---'
-            while ($true) {
-                $rec = $view.GetType().InvokeMember('Fetch','InvokeMethod',$null,$view,$null)
-                if ($null -eq $rec) { break }
-                $ten = [string]$rec.GetType().InvokeMember('StringData','GetProperty',$null,$rec,@(1))
-                $gt  = [string]$rec.GetType().InvokeMember('StringData','GetProperty',$null,$rec,@(2))
-                Write-Host ("            {0,-15} {1}" -f $ten, $gt)
-            }
-            $view.GetType().InvokeMember('Close','InvokeMethod',$null,$view,$null) | Out-Null
-        } catch { Write-Canh "Khong doc nguoc duoc MSI de kiem tra: $($_.Exception.Message)" }
     }
     finally {
         try { Invoke-Dte { $dte.Solution.Close($false) } -RetrySeconds 30 } catch {}
         try { Invoke-Dte { $dte.Quit() } -RetrySeconds 30 } catch {}
         [System.Runtime.InteropServices.Marshal]::ReleaseComObject($dte) | Out-Null
     }
+}
+
+# ---------------------------------------------------------- 6b. Ghi tiếng Việt vào MSI
+Write-Buoc '6b. Ghi ten tieng Viet co dau vao file MSI'
+if ($SkipInstaller -or $DryRun) { Write-Canh 'Bo qua' }
+else {
+    $msiPath = Join-Path $InstOutDir $msiFileName
+
+    # Gọi bằng TIẾN TRÌNH RIÊNG. Nếu gọi trong cùng tiến trình, COM của Windows
+    # Installer báo lỗi "Type mismatch" do tiến trình này vừa dùng COM của
+    # Visual Studio để build xong.
+    $scriptGhi = Join-Path $Root 'ghi_ten_tieng_viet_vao_msi.ps1'
+    if (-not (Test-Path $scriptGhi)) { Write-Loi "Khong tim thay $scriptGhi"; exit 1 }
+
+    $kq = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptGhi `
+              -Msi $msiPath -TenSanPham $TenSanPham -NhaSanXuat $NhaSanXuat 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Loi 'Ghi tieng Viet vao MSI that bai:'
+        $kq | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        exit 1
+    }
+    Write-Ok "ProductName  = $TenSanPham"
+    Write-Ok "Manufacturer = $NhaSanXuat  (dong thoi la Author cua goi MSI)"
+    Write-Ok 'Da ghi tieng Viet vao MSI'
+
+    # Kiem chung bang TIEN TRINH THU BA. Khong dung lai tien trinh vua ghi vi
+    # sau khi Commit thi khong mo lai duoc file MSI trong cung tien trinh do.
+    $kq2 = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptGhi `
+               -Msi $msiPath -TenSanPham $TenSanPham -NhaSanXuat $NhaSanXuat -ChiKiemChung 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Loi 'Kiem chung tieng Viet trong MSI that bai:'
+        $kq2 | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        exit 1
+    }
+    Write-Ok 'Da kiem chung lai bang tien trinh rieng: tieng Viet trong MSI dung'
 }
 
 # ---------------------------------------------------------- 7. Gom file (staging)
