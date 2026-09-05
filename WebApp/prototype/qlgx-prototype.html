@@ -840,6 +840,9 @@ tbody tr[aria-selected="true"] .rowhead {
   padding-right: 4px;
 }
 .cols > * { min-width: 0; }
+/* Hai cột bằng nhau — dùng khi bên dưới còn hàng .card-row 50/50, để mép các
+   tấm thẳng cột với nhau theo chiều dọc suốt cả trang. */
+.cols-even { grid-template-columns: 1fr 1fr; }
 .col-stack {
   display: grid;
   gap: 12px;
@@ -1695,8 +1698,8 @@ tbody tr[aria-selected="true"] .rowhead {
     cot("noiThemSuc",  "Nơi thêm sức", 140)
   ];
 
-  /* Lưới thành viên trong form gia đình: thêm cột "Quan hệ GĐ" sửa được ở đầu,
-     và ẩn cột Điện thoại — đúng như frmGiaDinh_Load của bản desktop. */
+  /* Cột "Quan hệ GĐ" sửa được — chỉ có khi lưới giáo dân được nhúng trong form
+     gia đình, đúng như frmGiaDinh_Load chèn thêm cột ở vị trí 0. */
   var COT_QUAN_HE = {
     key:"quanHe", cap:"Quan hệ GĐ", w:126, noStrike:true,
     render:function (r) {
@@ -1711,6 +1714,80 @@ tbody tr[aria-selected="true"] .rowhead {
   var COLS_THANH_VIEN = [COT_QUAN_HE].concat(
     COLS_GIAO_DAN.filter(function (c) { return c.key !== "dienThoai"; })
   );
+
+  /* ==========================================================================
+     4b. LƯỚI NGHIỆP VỤ — mỗi loại một component hoàn chỉnh
+     Tương đương GxGiaoDanList : GxGrid và GxGiaDinhList : GxGrid của GXControl.
+     Component tự sở hữu bộ cột, menu chuột phải, quy tắc tô đỏ và hành vi nhấp
+     đúp; nơi nhúng chỉ truyền dữ liệu và thanh nút. Nhờ vậy lưới thành viên
+     trong form gia đình và danh sách giáo dân là CÙNG một lưới — test xong một
+     nơi thì nơi kia chỉ cần kiểm lại dữ liệu.
+     ========================================================================== */
+
+  function GxGiaoDanList(opts) {
+    opts = opts || {};
+    var cfg = {
+      /* Nhúng trong form gia đình: thêm cột Quan hệ GĐ, bỏ cột Điện thoại */
+      columns: opts.quanHeGiaDinh ? COLS_THANH_VIEN : COLS_GIAO_DAN,
+      keyField: "ma",
+      sortKey: "ma",
+      contextMenu: CTX_GIAO_DAN,
+      ctxTitle: function (p) { return (p.tenThanh ? p.tenThanh + " " : "") + p.hoTen; },
+      onOpen: moChiTietGiaoDan,
+      rowStrike: laNguoiGachDo,
+      footNote: "Gạch ngang đỏ: đã qua đời, chuyển xứ hoặc lập gia đình riêng"
+    };
+    Object.keys(opts).forEach(function (k) { if (k !== "quanHeGiaDinh") cfg[k] = opts[k]; });
+    return GxGrid(cfg);
+  }
+
+  /* Tương đương GxHonPhoiList — cột tên bạn đời đổi caption theo giới tính của
+     giáo dân đang mở, đúng như ListMode = 1 của bản desktop. */
+  function GxHonPhoiList(opts) {
+    opts = opts || {};
+    var cfg = {
+      columns: colHonPhoi(opts.phai === "Nam" ? "Vợ" : "Chồng"),
+      keyField: "maHp",
+      sortKey: "stt",
+      filterRow: false,
+      pager: false,
+      emptyText: "Giáo dân này chưa có thông tin hôn phối.",
+      footNote: "Cột " + (opts.phai === "Nam" ? "Vợ" : "Chồng") + " đổi tên theo giới tính của giáo dân đang mở"
+    };
+    Object.keys(opts).forEach(function (k) { if (k !== "phai") cfg[k] = opts[k]; });
+    return GxGrid(cfg);
+  }
+
+  /* Tương đương GxListHistoryHoiDoan */
+  function GxHoiDoanList(opts) {
+    opts = opts || {};
+    var cfg = {
+      columns: COLS_HOI_DOAN,
+      keyField: "tenHoiDoan",
+      sortKey: "ngayVao",
+      filterRow: false,
+      pager: false,
+      emptyText: "Giáo dân này chưa tham gia hội đoàn nào.",
+      footNote: "Bỏ trống Ngày ra nghĩa là còn đang sinh hoạt"
+    };
+    Object.keys(opts).forEach(function (k) { cfg[k] = opts[k]; });
+    return GxGrid(cfg);
+  }
+
+  function GxGiaDinhList(opts) {
+    opts = opts || {};
+    var cfg = {
+      columns: COLS_GIA_DINH,
+      keyField: "ma",
+      sortKey: "ma",
+      contextMenu: CTX_GIA_DINH,
+      ctxTitle: function (f) { return "Gia đình " + f.ten; },
+      onOpen: moChiTietGiaDinh,
+      footNote: "Gạch ngang đỏ: người nam / người nữ đã qua đời hoặc chuyển xứ"
+    };
+    Object.keys(opts).forEach(function (k) { cfg[k] = opts[k]; });
+    return GxGrid(cfg);
+  }
 
   /* ==========================================================================
      5. MÀN HÌNH
@@ -1780,18 +1857,11 @@ tbody tr[aria-selected="true"] .rowhead {
       { label:"Tải lại", kind:"quiet" }
     ] });
 
-    var grid = GxGrid({
-      columns: COLS_GIA_DINH,
+    var grid = GxGiaDinhList({
       rows: FAMILIES,
-      keyField: "ma",
-      sortKey: "ma",
       toolbar: toolbar.root,
       toolbarApi: toolbar,
-      contextMenu: CTX_GIA_DINH,
-      ctxTitle: function (f) { return "Gia đình " + f.ten; },
-      onOpen: moChiTietGiaDinh,
       onCount: function (n) { pill.querySelector("b").textContent = n; },
-      footNote: "Gạch ngang đỏ: người nam / người nữ đã qua đời hoặc chuyển xứ",
       filterFn: function (f) {
         if (loc.chiGiaDinhAo && !f.ao) return false;
         if (loc.giaoHo === "0") return f.giaoho === "Ngoài xứ";
@@ -1881,21 +1951,16 @@ tbody tr[aria-selected="true"] .rowhead {
       { id:"tvXoa", label:"Loại bỏ", kind:"quiet", needSel:true }
     ] });
 
-    var gridTv = GxGrid({
-      columns: COLS_THANH_VIEN,
+    /* Cùng một lưới giáo dân, chỉ khác: có cột Quan hệ GĐ và không có hàng lọc */
+    var gridTv = GxGiaoDanList({
+      quanHeGiaDinh: true,
       rows: thanhVien,
-      keyField: "ma",
       sortKey: "ngaySinh",
       filterRow: false,
       pager: false,
       toolbar: toolbarTv.root,
       toolbarApi: toolbarTv,
-      contextMenu: CTX_GIAO_DAN,
-      ctxTitle: function (p) { return p.tenThanh + " " + p.hoTen; },
-      onOpen: moChiTietGiaoDan,
-      rowStrike: laNguoiGachDo,
       emptyText: "Chưa có thành viên nào. Dùng Thêm mới hoặc Chọn từ danh sách để bổ sung.",
-      footNote: "Gạch ngang: đã qua đời, chuyển xứ hoặc lập gia đình riêng",
       footRight: "Cột <b>Quan hệ GĐ</b> sửa trực tiếp trên lưới, các cột khác chỉ đọc"
     });
     gridTv.root.classList.add("members-card");
@@ -1943,19 +2008,11 @@ tbody tr[aria-selected="true"] .rowhead {
       { label:"Tải lại", kind:"quiet" }
     ] });
 
-    var grid = GxGrid({
-      columns: COLS_GIAO_DAN,
+    var grid = GxGiaoDanList({
       rows: PEOPLE,
-      keyField: "ma",
-      sortKey: "ma",
       toolbar: toolbar.root,
       toolbarApi: toolbar,
-      contextMenu: CTX_GIAO_DAN,
-      ctxTitle: function (p) { return p.tenThanh + " " + p.hoTen; },
-      onOpen: moChiTietGiaoDan,
       onCount: function (n) { pill.querySelector("b").textContent = n; },
-      rowStrike: function (p) { return p.quaDoi || p.daChuyenDi; },
-      footNote: "Gạch ngang đỏ: đã qua đời hoặc đã chuyển đi xứ khác",
       filterFn: function (p) {
         if (loc.chiGiaoDanAo && !p.giaoDanAo) return false;
         if (loc.giaoHo === "0") return p.giaoHo === "Ngoài xứ";
@@ -2087,8 +2144,7 @@ tbody tr[aria-selected="true"] .rowhead {
       GxField("Tên Mẹ", GxPicker({ value:p.me })),
       GxField("Giáo họ", cbGiaoHo),
       rowGiaoXu,
-      GxField("CMND / CCCD", GxText({ value:"", width:"210px" })),
-      GxField("", chkGiaoDanAo));
+      GxField("CMND / CCCD", GxText({ value:"", width:"210px" }), chkGiaoDanAo));
 
     var rowNgayQuaDoi = GxField("Ngày qua đời",
       GxDate({ width:"180px" }),
@@ -2154,7 +2210,7 @@ tbody tr[aria-selected="true"] .rowhead {
 
     var tabCaNhan = function () {
       return [
-        h("div", { class:"cols" }, theCaNhan,
+        h("div", { class:"cols cols-even" }, theCaNhan,
           h("div", { class:"col-stack" },
             GxCard({ title:"Ảnh đại diện (ảnh 3x4)" }, GxPhoto()),
             theChuyenXu)),
@@ -2210,17 +2266,11 @@ tbody tr[aria-selected="true"] .rowhead {
         ">",
         { label:"Lưu", kind:"primary" }
       ] });
-      var gridHp = GxGrid({
-        columns: p.phai === "Nam" ? COLS_HON_PHOI_NAM : COLS_HON_PHOI_NU,
+      var gridHp = GxHonPhoiList({
+        phai: p.phai,
         rows: dsHonPhoi,
-        keyField:"maHp",
-        sortKey:"stt",
-        filterRow:false,
-        pager:false,
         toolbar: tbHp.root,
-        toolbarApi: tbHp,
-        emptyText:"Giáo dân này chưa có thông tin hôn phối.",
-        footNote:"Cột " + (p.phai === "Nam" ? "Vợ" : "Chồng") + " đổi tên theo giới tính của giáo dân đang mở"
+        toolbarApi: tbHp
       });
       var hp = dsHonPhoi[0];
       return [
@@ -2286,17 +2336,10 @@ tbody tr[aria-selected="true"] .rowhead {
         { label:"In danh sách", kind:"quiet" },
         { label:"Tải lại", kind:"quiet" }
       ] });
-      var gridHd = GxGrid({
-        columns: COLS_HOI_DOAN,
+      var gridHd = GxHoiDoanList({
         rows: ds,
-        keyField:"tenHoiDoan",
-        sortKey:"ngayVao",
-        filterRow:false,
-        pager:false,
         toolbar: tbHd.root,
-        toolbarApi: tbHd,
-        emptyText:"Giáo dân này chưa tham gia hội đoàn nào.",
-        footNote:"Bỏ trống Ngày ra nghĩa là còn đang sinh hoạt"
+        toolbarApi: tbHd
       });
       return [
         GxCard({ title:"Thêm vào hội đoàn" },
