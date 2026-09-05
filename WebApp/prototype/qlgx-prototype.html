@@ -1,0 +1,1796 @@
+<title>QLGX Bản Web</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* ============================================================================
+   Kế thừa hệ thiết kế KÍNH MỜ của landing page (landing/src/app/globals.css):
+   nền chuyển sắc cố định + tấm kính viền trắng bán trong, không viền đen.
+   Khác biệt duy nhất: đây là ứng dụng nghiệp vụ nên mật độ dày hơn trang giới
+   thiệu — cỡ chữ nền 14px thay vì 17px, bán kính trong nhỏ hơn, dòng lưới 34px.
+   ============================================================================ */
+:root {
+  --brand:       #1d5ddb;
+  --brand-deep:  #143f98;
+  --brand-ink:   #0f2f6e;
+  --brand-soft:  #dce8fd;
+  --brand-mist:  #eff5ff;
+
+  --sky:         #38bdf8;
+  --violet:      #7c6bf0;
+  --violet-ink:  #5b4bc4;
+  --mint:        #14b8a6;
+  --mint-ink:    #0f766e;
+  --amber:       #d97706;
+  --amber-ink:   #8a4b00;
+  --rose:        #e11d48;
+  --rose-ink:    #a3203c;
+
+  /* Ba mức chữ. So với landing page, hai mức phụ được kéo đậm thêm một nấc:
+     trang giới thiệu đọc lướt ở cỡ 17px, còn màn hình nghiệp vụ đọc ở 13px
+     suốt ngày — cùng một màu xám ở cỡ nhỏ hơn sẽ tụt độ tương phản thấy rõ. */
+  --ink:         #0e1729;
+  --ink-soft:    #33405c; /* nhãn trường, mục điều hướng */
+  --ink-faint:   #48566f; /* chữ phụ, tiêu đề cột */
+  --canvas:      #dfe8f8;
+
+  --glass-line:  rgba(255, 255, 255, 0.85);
+  --hair:        rgba(14, 32, 76, 0.10);
+  --hair-soft:   rgba(14, 32, 76, 0.06);
+
+  --r-panel:     18px;
+  --r-card:      12px;
+  --r-field:     9px;
+
+  /* Tiêu đề dùng Be Vietnam Pro — chữ không chân, thiết kế riêng cho dấu tiếng
+     Việt nên dấu không bị dính vào chữ hoa ở cỡ lớn; thân bài dùng Inter. */
+  --font-display: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --font-sans:    "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+/* Nhiều phần tử ở đây được bật/tắt bằng thuộc tính `hidden` nhưng lại có
+   `display: grid/flex` riêng — mà display bao giờ cũng thắng `hidden`. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Lớp nền chuyển sắc — thứ mà các tấm kính làm nhoè */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(1100px 720px at 8% -8%, rgba(29, 93, 219, .42), transparent 64%),
+    radial-gradient(900px 640px at 92% 4%, rgba(124, 107, 240, .34), transparent 62%),
+    radial-gradient(900px 700px at 74% 88%, rgba(13, 148, 136, .26), transparent 64%),
+    radial-gradient(760px 620px at 16% 82%, rgba(56, 189, 248, .28), transparent 62%);
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-variant-numeric: lining-nums;
+  letter-spacing: -.015em;
+  text-wrap: balance;
+  margin: 0;
+}
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* --- Tấm kính --- */
+.glass {
+  background: linear-gradient(145deg, rgba(255,255,255,.82), rgba(255,255,255,.58));
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-panel);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.95),
+    inset 0 -1px 0 rgba(255,255,255,.4),
+    0 1px 2px rgba(14,32,76,.04),
+    0 10px 24px -10px rgba(14,32,76,.16),
+    0 28px 56px -28px rgba(14,32,76,.26);
+}
+.glass-solid {
+  background: linear-gradient(145deg, rgba(255,255,255,.985), rgba(255,255,255,.94));
+}
+
+/* --- Nhãn nhỏ in hoa --- */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ============================ Khung ứng dụng ============================ */
+.app {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  padding: 12px;
+  gap: 12px;
+}
+
+/* --- Thanh trên cùng --- */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 14px;
+  position: relative;
+  z-index: 40;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: none;
+}
+.brand .mark {
+  width: 34px; height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: linear-gradient(145deg, var(--brand), var(--brand-deep));
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 8px 18px -8px rgba(20,63,152,.7);
+}
+.brand .mark svg { width: 19px; height: 19px; }
+.brand .name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: -.01em;
+  line-height: 1.1;
+}
+.brand .sub { font-size: 11.5px; color: var(--ink-faint); }
+
+.parish-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 9px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.62);
+  border: 1px solid rgba(255,255,255,.9);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+  font-size: 13px;
+  cursor: pointer;
+}
+.parish-chip .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 0 3px rgba(20,184,166,.18);
+  flex: none;
+}
+.parish-chip b { font-weight: 600; }
+.parish-chip .caret { color: var(--ink-faint); font-size: 10px; }
+
+.searchbox {
+  flex: 1;
+  max-width: 380px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(255,255,255,.85);
+  color: var(--ink-faint);
+}
+.searchbox input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  outline: none;
+  color: var(--ink);
+  font-size: 13.5px;
+}
+.searchbox kbd {
+  font: 600 10.5px var(--font-sans);
+  color: var(--ink-faint);
+  background: rgba(14,32,76,.06);
+  border-radius: 5px;
+  padding: 2px 5px;
+}
+.topbar .spacer { flex: 1; }
+
+.demo-chip {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--amber-ink);
+  background: rgba(217,119,6,.12);
+  border: 1px solid rgba(217,119,6,.22);
+}
+.avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: linear-gradient(145deg, var(--violet), var(--brand));
+  color: #fff;
+  font-weight: 600;
+  font-size: 12.5px;
+  flex: none;
+  box-shadow: 0 6px 14px -6px rgba(20,63,152,.6);
+}
+
+/* --- Nút menu chữ (Hệ thống / Công cụ / Trợ giúp) --- */
+.menubtn {
+  appearance: none;
+  border: 1px solid transparent;
+  background: none;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.menubtn:hover { background: rgba(255,255,255,.62); color: var(--brand-ink); }
+.menubtn[aria-expanded="true"] {
+  background: var(--brand-soft);
+  border-color: rgba(29,93,219,.28);
+  color: var(--brand-ink);
+  font-weight: 600;
+}
+.menu-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  min-width: 290px;
+  padding: 6px;
+  z-index: 60;
+  border-radius: var(--r-card);
+  background: rgba(255,255,255,.97);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255,255,255,.9);
+  box-shadow: 0 18px 40px -18px rgba(14,32,76,.42), 0 2px 6px rgba(14,32,76,.08);
+}
+.menu-pop[hidden] { display: none !important; }
+.menu-pop button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  border: 0;
+  background: none;
+  border-radius: 8px;
+  padding: 7px 11px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.menu-pop button:hover:not(:disabled) { background: var(--brand-mist); color: var(--brand-ink); }
+.menu-pop button:disabled { color: var(--ink-faint); opacity: .6; cursor: default; }
+.menu-pop hr { border: 0; border-top: 1px solid var(--hair-soft); margin: 5px 8px; }
+
+/* ============================ Thân ============================ */
+.body {
+  display: grid;
+  grid-template-columns: 252px 1fr;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* --- Điều hướng trái --- */
+.sidenav {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 12px 10px;
+  overflow: hidden;
+}
+.sidenav .nav-scroll {
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 3px;
+}
+.nav-scroll::-webkit-scrollbar { width: 8px; }
+.nav-scroll::-webkit-scrollbar-thumb { background: rgba(14,32,76,.14); border-radius: 99px; }
+/* Nhãn nhóm và mục điều hướng phải khác nhau ở BA chiều cùng lúc — cỡ chữ,
+   độ đậm và màu — chứ không chỉ ở chữ hoa: khi chỉ khác mỗi kiểu chữ hoa,
+   mắt vẫn đọc cả hai như một danh sách phẳng. Thêm một nét kẻ ngăn giữa các
+   nhóm để mắt bắt được ranh giới mà không cần đọc chữ. */
+.nav-group { display: flex; flex-direction: column; gap: 1px; }
+.nav-group + .nav-group {
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(14, 32, 76, .09);
+}
+.nav-group > .eyebrow {
+  padding: 0 11px 7px;
+  font-size: 9.8px;
+  letter-spacing: .15em;
+  color: var(--brand-ink);
+  opacity: .62;
+}
+.nav-group button {
+  appearance: none;
+  border: 0;
+  background: none;
+  text-align: left;
+  border-radius: 9px;
+  padding: 7px 11px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.nav-group button:hover { background: rgba(255,255,255,.85); color: var(--brand-ink); }
+.nav-group button .ico {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .26;
+  flex: none;
+}
+.nav-group button.on {
+  background: linear-gradient(145deg, var(--brand), var(--brand-deep));
+  color: #fff;
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 8px 18px -10px rgba(20,63,152,.8);
+}
+.nav-group button.on .ico { opacity: .9; background: #fff; }
+
+.nav-foot {
+  flex: none;
+  margin-top: 12px;
+  padding: 10px 11px;
+  border-radius: var(--r-card);
+  background: rgba(255,255,255,.5);
+  border: 1px solid rgba(255,255,255,.8);
+  font-size: 12px;
+  color: var(--ink-faint);
+  line-height: 1.45;
+}
+.nav-foot b { color: var(--ink-soft); font-weight: 600; }
+
+/* --- Vùng làm việc --- */
+/* Vùng làm việc là NỀN chứ không phải mặt kính: nó được nhuộm xanh nhạt để
+   các thẻ trắng bên trong nổi lên. Nếu để nó trắng như thẻ thì thẻ chìm vào
+   nền và cả màn hình đọc thành một mảng phẳng. */
+.work {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  background: linear-gradient(150deg, rgba(222, 233, 250, .74), rgba(205, 221, 246, .64));
+  border-color: rgba(255, 255, 255, .72);
+}
+.tabstrip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 12px 0;
+  overflow-x: auto;
+  flex: none;
+}
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  max-width: 270px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.tab:hover { background: rgba(255,255,255,.6); }
+.tab[aria-selected="true"] {
+  background: rgba(255,255,255,.95);
+  border-color: rgba(255,255,255,.95);
+  color: var(--brand-ink);
+  font-weight: 600;
+  box-shadow: 0 6px 16px -10px rgba(14,32,76,.5);
+}
+.tab .lbl { overflow: hidden; text-overflow: ellipsis; }
+.tab .x {
+  appearance: none; border: 0; background: none;
+  color: var(--ink-faint); cursor: pointer;
+  font-size: 15px; line-height: 1;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+}
+.tab .x:hover { background: rgba(225,29,72,.14); color: var(--rose-ink); }
+
+.tabpages { min-height: 0; overflow: hidden; padding: 10px 12px 12px; }
+.page { height: 100%; min-height: 0; }
+.page[hidden] { display: none !important; }
+
+/* ============================ Nút ============================ */
+.btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.9);
+  background: linear-gradient(145deg, rgba(255,255,255,.9), rgba(255,255,255,.66));
+  color: var(--brand-ink);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.95), 0 4px 12px -8px rgba(14,32,76,.34);
+  transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s ease, background-color .18s ease;
+}
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 #fff, 0 10px 20px -10px rgba(14,32,76,.4);
+}
+.btn:active:not(:disabled) { transform: translateY(0); }
+.btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+.btn svg { width: 15px; height: 15px; flex: none; opacity: .85; }
+.btn-primary {
+  background: linear-gradient(145deg, var(--brand), var(--brand-deep));
+  color: #fff;
+  border-color: rgba(255,255,255,.35);
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 8px 20px -10px rgba(20,63,152,.75);
+}
+.btn-primary:hover:not(:disabled) { box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 14px 28px -12px rgba(20,63,152,.85); }
+.btn-quiet {
+  background: none;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--ink-soft);
+}
+.btn-quiet:hover:not(:disabled) { background: rgba(255,255,255,.7); box-shadow: none; }
+.btn-sm { min-height: 30px; padding: 0 11px; font-size: 12.5px; }
+
+/* ============================ Trang danh sách ============================ */
+.list-page {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 12px;
+  min-height: 0;
+}
+.page-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.page-head h1 { font-size: 18px; font-weight: 600; letter-spacing: -.012em; }
+.page-head .sub { color: var(--ink-faint); font-size: 12.5px; margin-top: 1px; }
+.page-head .spacer { flex: 1; }
+.count-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 13px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  border: 1px solid rgba(29,93,219,.2);
+  font-size: 12.5px;
+}
+.count-pill b { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px 14px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-radius: var(--r-card);
+}
+.field {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+select, input[type="text"], input[type="date"], textarea {
+  border-radius: var(--r-field);
+  border: 1px solid rgba(14,32,76,.13);
+  background: rgba(255,255,255,.9);
+  padding: 6px 10px;
+  font-size: 13.5px;
+  color: var(--ink);
+  min-height: 34px;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+select:hover, input[type="text"]:hover, input[type="date"]:hover, textarea:hover { border-color: rgba(29,93,219,.35); }
+select:focus, input[type="text"]:focus, input[type="date"]:focus, textarea:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(29,93,219,.16);
+}
+input:disabled, textarea:disabled {
+  background: rgba(14,32,76,.045);
+  color: var(--ink-faint);
+  border-color: transparent;
+}
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 13px 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(14,32,76,.12);
+  background: rgba(255,255,255,.7);
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--ink-soft);
+}
+.toggle:hover { border-color: rgba(29,93,219,.35); }
+.toggle input { accent-color: var(--brand); width: 15px; height: 15px; }
+.toggle:has(input:checked) {
+  background: var(--brand-soft);
+  border-color: rgba(29,93,219,.3);
+  color: var(--brand-ink);
+  font-weight: 500;
+}
+.filters-bar .spacer { flex: 1; }
+
+/* --- Bảng dữ liệu --- */
+.table-card {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--hair-soft);
+}
+.table-toolbar .sep {
+  width: 1px; height: 20px;
+  background: var(--hair);
+  margin: 0 4px;
+}
+.table-toolbar .spacer { flex: 1; }
+
+.grid-wrap { min-height: 0; overflow: auto; }
+.grid-wrap::-webkit-scrollbar { width: 10px; height: 10px; }
+.grid-wrap::-webkit-scrollbar-thumb { background: rgba(14,32,76,.16); border-radius: 99px; }
+
+table.grid {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: max-content;
+  min-width: 100%;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+table.grid th, table.grid td {
+  padding: 0 12px;
+  height: 36px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 280px;
+  border-bottom: 1px solid var(--hair-soft);
+}
+table.grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: rgba(247,250,254,.97);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--hair);
+}
+table.grid thead th:hover { color: var(--brand-ink); background: var(--brand-mist); }
+table.grid thead tr.filters th {
+  top: 36px;
+  height: 40px;
+  padding: 0 6px;
+  cursor: auto;
+  text-transform: none;
+  background: rgba(250,252,255,.97);
+}
+table.grid thead tr.filters th:hover { background: rgba(250,252,255,.97); }
+table.grid thead tr.filters input {
+  width: 100%;
+  min-width: 46px;
+  min-height: 28px;
+  padding: 3px 9px;
+  font-size: 12.5px;
+  /* Không kế thừa chữ đậm/hoa của tiêu đề cột: đây là ô nhập, không phải nhãn */
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--ink);
+  border-radius: 7px;
+  background: rgba(255,255,255,.95);
+}
+table.grid thead tr.filters input::placeholder {
+  color: var(--ink-faint);
+  opacity: .55;
+  font-weight: 400;
+}
+th .sortmark { display: inline-block; width: 0; margin-left: 5px; color: var(--brand); }
+th.sorted .sortmark::after { content: "\25B2"; font-size: 8px; }
+th.sorted.desc .sortmark::after { content: "\25BC"; }
+
+.rowhead {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 46px;
+  min-width: 46px;
+  padding: 0 8px !important;
+  text-align: right !important;
+  color: var(--ink-faint);
+  font-size: 11.5px;
+  background: rgba(248,250,254,.97);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+thead .rowhead { z-index: 4; }
+
+tbody tr { background: rgba(255,255,255,.44); cursor: default; transition: background-color .12s ease; }
+tbody tr:hover { background: rgba(239,245,255,.9); }
+tbody tr:hover .rowhead { background: rgba(239,245,255,.98); }
+tbody tr[aria-selected="true"] { background: var(--brand-soft); }
+tbody tr[aria-selected="true"] td { border-bottom-color: rgba(29,93,219,.18); }
+tbody tr[aria-selected="true"] .rowhead {
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 var(--brand);
+}
+.cell-strong { font-weight: 600; color: var(--ink); }
+.cell-code {
+  font-variant-numeric: tabular-nums;
+  color: var(--brand-ink);
+  font-weight: 600;
+}
+.num { text-align: right; }
+.struck { color: var(--rose-ink); text-decoration: line-through; text-decoration-thickness: 1px; }
+.muted { color: var(--ink-faint); }
+.tag {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.tag-amber { background: rgba(217,119,6,.13); color: var(--amber-ink); }
+.tag-mint  { background: rgba(20,184,166,.15); color: var(--mint-ink); }
+.tag-violet{ background: rgba(124,107,240,.14); color: var(--violet-ink); }
+.empty-note { padding: 34px; text-align: center; color: var(--ink-faint); }
+
+.table-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-top: 1px solid var(--hair-soft);
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+.pager { display: flex; align-items: center; gap: 4px; }
+.pager button {
+  appearance: none;
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(14,32,76,.1);
+  background: rgba(255,255,255,.8);
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+}
+.pager button:hover { background: var(--brand-soft); color: var(--brand-ink); }
+.table-foot .spacer { flex: 1; }
+.legend { display: inline-flex; align-items: center; gap: 6px; }
+.legend i {
+  width: 14px; height: 2px;
+  background: var(--rose-ink);
+  display: inline-block;
+}
+
+/* --- Menu chuột phải --- */
+#ctxmenu {
+  position: fixed;
+  z-index: 100;
+  min-width: 244px;
+  padding: 6px;
+  border-radius: var(--r-card);
+  background: rgba(255,255,255,.98);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255,255,255,.9);
+  box-shadow: 0 20px 44px -20px rgba(14,32,76,.5), 0 2px 8px rgba(14,32,76,.1);
+}
+#ctxmenu[hidden] { display: none !important; }
+#ctxmenu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  border: 0;
+  background: none;
+  border-radius: 8px;
+  padding: 7px 11px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--ink);
+  white-space: nowrap;
+}
+#ctxmenu button:hover { background: var(--brand-mist); color: var(--brand-ink); }
+#ctxmenu .ctx-title {
+  padding: 4px 11px 7px;
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--hair-soft);
+  margin-bottom: 5px;
+}
+
+/* ============================ Trang chi tiết ============================ */
+/* Bố cục neo, mô phỏng `Dock` của form desktop: đầu trang và thanh nút cố
+   định, khối thông tin gia đình lấy chiều cao tự nhiên, còn lưới thành viên
+   chiếm hết phần còn lại và tự cuộn bên trong — nên nó luôn nhìn thấy được
+   mà không phải cuộn cả trang xuống tìm. */
+.detail-page {
+  display: grid;
+  grid-template-rows: auto minmax(0, auto) minmax(200px, 1fr) auto;
+  gap: 10px;
+  min-height: 0;
+}
+/* Đầu trang chi tiết: một dòng duy nhất, tên gia đình cỡ vừa — mỗi 10px tiết
+   kiệm ở đây là 10px thêm cho lưới thành viên bên dưới. */
+.detail-head { align-items: center; gap: 10px; flex-wrap: nowrap; }
+.detail-head h1 { font-size: 18px; font-weight: 600; }
+.detail-head .head-sub {
+  color: var(--ink-faint);
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.detail-head .head-sub::before { content: "·"; padding-right: 8px; opacity: .55; }
+/* Màn hình hẹp: hai cột xếp chồng nên khối trên quá cao để neo — trả về
+   chế độ cuộn cả trang. */
+@media (max-width: 1120px) {
+  .detail-page { grid-template-rows: auto auto auto auto; overflow-y: auto; }
+}
+.detail-scroll::-webkit-scrollbar { width: 10px; }
+.detail-scroll::-webkit-scrollbar-thumb { background: rgba(14,32,76,.16); border-radius: 99px; }
+
+.card { padding: 13px 16px; }
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 11px;
+}
+.card-head h2 { font-size: 15.5px; font-weight: 600; }
+.card-head .spacer { flex: 1; }
+
+/* Các tấm cùng một hàng luôn cao bằng nhau: mép dưới thẳng hàng nhau thay vì
+   so le theo lượng nội dung. `stretch` là mặc định của grid — chỗ hay hỏng là
+   cột phải chứa nhiều tấm chồng nhau: nó phải là grid con có một hàng `1fr`
+   để tấm cuối nở ra lấp phần thừa, nếu không cả cột giãn mà tấm thì không. */
+.cols {
+  display: grid;
+  grid-template-columns: minmax(430px, 1.15fr) minmax(360px, .85fr);
+  gap: 12px;
+  align-items: stretch;
+  /* Khối thông tin nhường chỗ cho lưới thành viên: khi màn hình thấp, chính
+     nó cuộn bên trong chứ không đẩy lưới ra khỏi tầm nhìn. */
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.cols > * { min-width: 0; }
+.col-stack {
+  display: grid;
+  gap: 12px;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+}
+.col-stack > .card { display: flex; flex-direction: column; }
+.col-stack > .card > .photo-slot { flex: 1; }
+@media (max-width: 1120px) {
+  .cols { grid-template-columns: 1fr; }
+  .col-stack { grid-template-rows: auto auto; }
+}
+
+.frow {
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.frow:last-child { margin-bottom: 0; }
+.frow > label { color: var(--ink-soft); font-size: 13px; font-weight: 500; }
+.frow .val { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.frow .val > input[type="text"],
+.frow .val > input[type="date"],
+.frow .val > select,
+.frow .val > textarea { flex: 1; min-width: 0; }
+.frow textarea { resize: vertical; min-height: 50px; line-height: 1.5; }
+.frow .inline-label { color: var(--ink-soft); font-size: 13px; padding-left: 4px; white-space: nowrap; }
+
+/* Ô chọn giáo dân (thay cho GxGiaoDan) */
+.picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  padding: 5px 6px 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(14,32,76,.13);
+  background: rgba(255,255,255,.92);
+}
+.picker:hover { border-color: rgba(29,93,219,.35); }
+.picker .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.picker .who.empty { color: var(--ink-faint); font-weight: 400; }
+.picker .mini {
+  appearance: none;
+  border: 0;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: rgba(29,93,219,.1);
+  color: var(--brand-ink);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  flex: none;
+}
+.picker .mini:hover { background: var(--brand); color: #fff; }
+
+.seg {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 999px;
+  background: rgba(14,32,76,.06);
+  flex: none;
+}
+.seg label {
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label:has(input:checked) {
+  background: #fff;
+  color: var(--brand-ink);
+  font-weight: 600;
+  box-shadow: 0 2px 6px -2px rgba(14,32,76,.28);
+}
+
+.photo-slot {
+  border-radius: var(--r-card);
+  border: 1px dashed rgba(29,93,219,.3);
+  background: rgba(255,255,255,.5);
+  min-height: 64px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: 12.5px;
+  cursor: pointer;
+  line-height: 1.6;
+}
+.photo-slot:hover { background: var(--brand-mist); border-color: var(--brand); color: var(--brand-ink); }
+.photo-slot svg { width: 26px; height: 26px; opacity: .5; display: block; margin: 0 auto 6px; }
+
+.members-card {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: 0;
+  overflow: hidden;
+  min-height: 0;
+}
+.members-card .grid-wrap { min-height: 0; }
+
+/* Thanh nút là chân của chính vùng làm việc, không phải một tấm nổi riêng:
+   một tấm kính lồng trong tấm kính tạo ra hai đường viền chồng nhau và một
+   khoảng hở thừa. Ở đây chỉ còn một nét kẻ mảnh phân tách. */
+.cmdbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 2px 0;
+  border-top: 1px solid var(--hair);
+  flex: none;
+}
+.cmdbar .spacer { flex: 1; }
+.cmdbar .hint { font-size: 12.5px; color: var(--ink-faint); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+/* Người dùng bật "giảm độ trong suốt": bỏ nhoè, dùng nền đặc */
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .glass-solid, .menu-pop, #ctxmenu {
+    background: #fff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  body::before { opacity: .3; }
+}
+</style>
+
+<div class="app">
+
+  <!-- ======================= Thanh trên ======================= -->
+  <header class="topbar glass glass-solid" id="topbar">
+    <div class="brand">
+      <span class="mark">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M11 2h2v3h3v2h-3v3.2l6 3.4V22h-6.5v-4a2.5 2.5 0 0 0-5 0v4H1v-8.4l6-3.4V7H4V5h3V2h4z"/>
+        </svg>
+      </span>
+      <span>
+        <span class="name">QLGX</span>
+        <span class="sub">Quản lý giáo xứ</span>
+      </span>
+    </div>
+
+    <button class="parish-chip" type="button">
+      <span class="dot"></span>
+      <b>Giáo xứ Thánh Tâm</b>
+      <span class="caret">&#9660;</span>
+    </button>
+
+    <label class="searchbox">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6" stroke-linecap="round"/>
+      </svg>
+      <input type="text" placeholder="Tìm giáo dân, gia đình, sổ bí tích…" aria-label="Tìm kiếm toàn hệ thống">
+      <kbd>Ctrl K</kbd>
+    </label>
+
+    <div class="spacer"></div>
+
+    <button class="menubtn" type="button" data-menu="m1" aria-expanded="false">Hệ thống</button>
+    <button class="menubtn" type="button" data-menu="m2" aria-expanded="false">Công cụ</button>
+    <button class="menubtn" type="button" data-menu="m3" aria-expanded="false">Trợ giúp</button>
+
+    <span class="demo-chip">Bản mẫu · dữ liệu minh hoạ</span>
+    <span class="avatar" title="Quản trị viên: vanphong">VP</span>
+
+    <div class="menu-pop" id="m1" hidden>
+      <button type="button">Nhập dữ liệu từ cùng chương trình</button>
+      <button type="button">Nhập dữ liệu từ MS Excel</button>
+      <button type="button">Nhập dữ liệu từ chương trình MGC</button>
+      <hr>
+      <button type="button">Sao lưu dữ liệu chương trình</button>
+      <button type="button">Xuất dữ liệu ra Excel</button>
+      <button type="button">Khôi phục dữ liệu</button>
+      <hr>
+      <button type="button">Đổi mật khẩu</button>
+      <button type="button">Đăng xuất</button>
+    </div>
+    <div class="menu-pop" id="m2" hidden>
+      <button type="button">Tìm giáo dân</button>
+      <button type="button">Tìm gia đình của một giáo dân</button>
+      <button type="button">Tìm và thay thế</button>
+      <hr>
+      <button type="button">Tùy chọn</button>
+    </div>
+    <div class="menu-pop" id="m3" hidden>
+      <button type="button">Kiểm tra phiên bản mới</button>
+      <button type="button">Hướng dẫn sử dụng &nbsp;<span class="muted">F1</span></button>
+      <hr>
+      <button type="button">Thông tin phần mềm</button>
+    </div>
+  </header>
+
+  <div class="body">
+
+    <!-- ======================= Điều hướng ======================= -->
+    <nav class="sidenav glass" id="sidenav">
+      <div class="nav-scroll">
+        <div class="nav-group">
+          <span class="eyebrow">Giáo dân &amp; gia đình</span>
+          <button type="button"><span class="ico"></span>Danh sách giáo dân</button>
+          <button type="button" class="on" data-open="list"><span class="ico"></span>Danh sách gia đình</button>
+          <button type="button"><span class="ico"></span>Danh sách hội đoàn</button>
+        </div>
+        <div class="nav-group">
+          <span class="eyebrow">Bí tích</span>
+          <button type="button"><span class="ico"></span>Danh sách sổ bí tích</button>
+          <button type="button"><span class="ico"></span>Danh sách rao hôn phối</button>
+        </div>
+        <div class="nav-group">
+          <span class="eyebrow">Thông tin giáo xứ</span>
+          <button type="button"><span class="ico"></span>Giáo xứ</button>
+          <button type="button"><span class="ico"></span>Giáo họ</button>
+          <button type="button"><span class="ico"></span>Quản lý giáo lý</button>
+        </div>
+        <div class="nav-group">
+          <span class="eyebrow">Thống kê</span>
+          <button type="button"><span class="ico"></span>Thống kê chung</button>
+          <button type="button"><span class="ico"></span>Biểu đồ</button>
+        </div>
+        <div class="nav-group">
+          <span class="eyebrow">Công cụ dữ liệu</span>
+          <button type="button"><span class="ico"></span>Kiểm tra dữ liệu</button>
+          <button type="button"><span class="ico"></span>Chuẩn hoá dữ liệu</button>
+          <button type="button"><span class="ico"></span>Chuyển họ hàng loạt</button>
+          <button type="button"><span class="ico"></span>Tạo danh sách bí tích tự động</button>
+        </div>
+        <div class="nav-group">
+          <span class="eyebrow">Hồ sơ lưu trữ</span>
+          <button type="button"><span class="ico"></span>Hồ sơ lưu trữ giáo dân</button>
+          <button type="button"><span class="ico"></span>Hồ sơ lưu trữ gia đình</button>
+        </div>
+      </div>
+
+      <div class="nav-foot">
+        <b>Bản 4.0.0 · dữ liệu cục bộ</b><br>
+        Sao lưu gần nhất: hôm nay 06:15
+      </div>
+    </nav>
+
+    <!-- ======================= Vùng làm việc ======================= -->
+    <main class="work glass">
+      <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-tab="home" role="tab" aria-selected="false" tabindex="0">
+          <span class="lbl">Tổng quan</span>
+        </div>
+        <div class="tab" data-tab="list" role="tab" aria-selected="true" tabindex="0">
+          <span class="lbl">Danh sách gia đình</span>
+          <button class="x" type="button" data-close="list" title="Đóng thẻ">&times;</button>
+        </div>
+      </div>
+
+      <div class="tabpages">
+
+        <!-- ---------------- Tổng quan ---------------- -->
+        <section class="page" id="page-home" hidden>
+          <div style="height:100%;display:grid;place-items:center;text-align:center;padding:20px">
+            <div style="max-width:560px">
+              <svg viewBox="0 0 120 92" fill="none" stroke="var(--brand)" stroke-width="2" style="width:150px" aria-hidden="true">
+                <path d="M60 6v13M53 12.5h14" stroke-linecap="round"/>
+                <path d="M60 21 45 34v48h30V34L60 21z" fill="rgba(29,93,219,.10)"/>
+                <path d="M45 40 27 52v30h18M75 40l18 12v30H75" fill="rgba(124,107,240,.09)"/>
+                <path d="M60 82V66c0-3.2 2.7-5.6 6-5.6s6 2.4 6 5.6v16" opacity=".45"/>
+                <circle cx="60" cy="43" r="5" opacity=".5"/>
+                <path d="M18 82h84" stroke-linecap="round" opacity=".5"/>
+              </svg>
+              <h1 style="font-size:30px;font-weight:600;margin:16px 0 6px">Giáo xứ Thánh Tâm</h1>
+              <p style="margin:0;color:var(--ink-faint)">Giáo hạt Xóm Mới · Giáo phận Sài Gòn</p>
+              <div style="display:flex;justify-content:center;gap:10px;margin-top:22px;flex-wrap:wrap">
+                <span class="count-pill"><b>1.284</b> giáo dân</span>
+                <span class="count-pill"><b>312</b> gia đình</span>
+                <span class="count-pill"><b>7</b> giáo họ</span>
+                <span class="count-pill"><b>18</b> bí tích tháng này</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ---------------- Danh sách gia đình ---------------- -->
+        <section class="page list-page" id="page-list">
+
+          <div class="page-head">
+            <h1>Danh sách gia đình</h1>
+            <div class="spacer"></div>
+            <span class="count-pill"><b id="lblTotal">0</b> gia đình</span>
+            <button class="btn btn-primary" type="button" id="btnThem">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+              Thêm gia đình
+            </button>
+          </div>
+
+          <div class="filters-bar glass">
+            <div class="field">
+              <label for="cbGiaoHo">Giáo họ</label>
+              <select id="cbGiaoHo">
+                <option value="-1">Tất cả</option>
+                <option value="0">Ngoài xứ</option>
+                <option>Giáo họ Antôn</option>
+                <option>Giáo họ Fatima</option>
+                <option>Giáo họ Lộ Đức</option>
+                <option>Giáo họ Mân Côi</option>
+                <option>Giáo họ Thánh Giuse</option>
+                <option>Giáo họ Thánh Tâm</option>
+              </select>
+            </div>
+            <label class="toggle" title="Gia đình không được thống kê là gia đình ngoài xứ, không được tính trong các mục thống kê">
+              <input type="checkbox" id="chkGiaDinhAo">
+              Chỉ xem gia đình không được thống kê
+            </label>
+            <div class="spacer"></div>
+            <span class="muted" style="font-size:12.5px">Nhấp đúp một dòng để mở chi tiết · chuột phải để xem thao tác in ấn</span>
+          </div>
+
+          <div class="table-card glass">
+            <div class="table-toolbar">
+              <button class="btn btn-sm" type="button" id="btnXemSua" disabled>Xem &amp; sửa</button>
+              <button class="btn btn-sm" type="button" id="btnLoaiBo" disabled>Loại bỏ</button>
+              <span class="sep"></span>
+              <button class="btn btn-sm" type="button" id="btnCnhp" disabled>In chứng nhận hôn phối</button>
+              <button class="btn btn-sm" type="button" id="btnPhieu" disabled>In phiếu gia đình</button>
+              <button class="btn btn-sm" type="button" id="btnMap" disabled>Xem vị trí</button>
+              <span class="spacer"></span>
+              <button class="btn btn-sm btn-quiet" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Xuất Excel
+              </button>
+              <button class="btn btn-sm btn-quiet" type="button">Tải lại</button>
+            </div>
+
+            <div class="grid-wrap" id="gridWrap">
+              <table class="grid" id="gridGiaDinh">
+                <thead>
+                  <tr id="gridHead"></tr>
+                  <tr class="filters" id="gridFilters"></tr>
+                </thead>
+                <tbody id="gridBody"></tbody>
+              </table>
+            </div>
+
+            <div class="table-foot">
+              <div class="pager">
+                <button type="button" title="Trang đầu">&#9664;&#9664;</button>
+                <button type="button" title="Trang trước">&#9664;</button>
+                <button type="button" title="Trang sau">&#9654;</button>
+                <button type="button" title="Trang cuối">&#9654;&#9654;</button>
+              </div>
+              <span id="recPos">1 – 14 trên 14</span>
+              <span class="spacer"></span>
+              <span class="legend"><i></i> Gạch ngang đỏ: người nam / người nữ đã qua đời hoặc chuyển xứ</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ---------------- Chi tiết gia đình ---------------- -->
+        <section class="page detail-page" id="page-detail" hidden>
+
+          <div class="page-head detail-head">
+            <button class="btn btn-sm btn-quiet" type="button" id="btnBack">&#8592; Danh sách</button>
+            <h1 id="dTitle">Gia đình</h1>
+            <span class="head-sub" id="dSub">Giáo họ Thánh Tâm · 5 nhân khẩu</span>
+            <div class="spacer"></div>
+            <span class="tag tag-mint" id="dStatus">Đang hoạt động</span>
+          </div>
+
+          <div class="cols">
+              <!-- Cột trái -->
+              <div class="card glass">
+                <div class="card-head">
+                  <h2>Thông tin gia đình</h2>
+                  <div class="spacer"></div>
+                  <span class="eyebrow">Sổ gia đình</span>
+                </div>
+
+                <div class="frow">
+                  <label for="fMa">Mã gia đình</label>
+                  <div class="val">
+                    <input type="text" id="fMa" disabled style="max-width:150px">
+                    <span class="inline-label">Số hộ khẩu</span>
+                    <input type="text" id="fHoKhau">
+                  </div>
+                </div>
+                <div class="frow">
+                  <label>Người nam</label>
+                  <div class="val">
+                    <span class="picker">
+                      <span class="who" id="fChong">—</span>
+                      <button class="mini" type="button" title="Chọn từ danh sách giáo dân">&#9678;</button>
+                      <button class="mini" type="button" title="Thêm giáo dân mới">+</button>
+                      <button class="mini" type="button" title="Bỏ chọn">&times;</button>
+                    </span>
+                    <span class="seg">
+                      <label><input type="radio" name="chuho" checked> Chủ hộ</label>
+                    </span>
+                  </div>
+                </div>
+                <div class="frow">
+                  <label>Người nữ</label>
+                  <div class="val">
+                    <span class="picker">
+                      <span class="who" id="fVo">—</span>
+                      <button class="mini" type="button" title="Chọn từ danh sách giáo dân">&#9678;</button>
+                      <button class="mini" type="button" title="Thêm giáo dân mới">+</button>
+                      <button class="mini" type="button" title="Bỏ chọn">&times;</button>
+                    </span>
+                    <span class="seg">
+                      <label><input type="radio" name="chuho"> Chủ hộ</label>
+                    </span>
+                  </div>
+                </div>
+                <div class="frow">
+                  <label for="fTen">Tên gia đình</label>
+                  <div class="val"><input type="text" id="fTen"></div>
+                </div>
+                <div class="frow">
+                  <label for="fGiaoHo">Giáo họ</label>
+                  <div class="val">
+                    <select id="fGiaoHo">
+                      <option>Ngoài xứ</option>
+                      <option>Giáo họ Antôn</option>
+                      <option>Giáo họ Fatima</option>
+                      <option>Giáo họ Lộ Đức</option>
+                      <option>Giáo họ Mân Côi</option>
+                      <option>Giáo họ Thánh Giuse</option>
+                      <option>Giáo họ Thánh Tâm</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="frow">
+                  <label for="fDT">Điện thoại</label>
+                  <div class="val">
+                    <input type="text" id="fDT" style="max-width:150px">
+                    <span class="inline-label">Diện</span>
+                    <select id="fDien">
+                      <option value="">Không thuộc diện nào</option>
+                      <option>Nghèo</option>
+                      <option>Cận nghèo</option>
+                      <option>Neo đơn</option>
+                      <option>Khuyết tật</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="frow">
+                  <label for="fDiaChi">Địa chỉ</label>
+                  <div class="val">
+                    <input type="text" id="fDiaChi">
+                    <button class="btn btn-sm btn-quiet" type="button" title="Xem trên bản đồ">Bản đồ</button>
+                  </div>
+                </div>
+                <div class="frow">
+                  <label for="fGhiChu">Ghi chú</label>
+                  <div class="val"><textarea id="fGhiChu" placeholder="Ghi chú nội bộ về gia đình…"></textarea></div>
+                </div>
+                <div class="frow">
+                  <label></label>
+                  <div class="val" style="flex-wrap:wrap;gap:8px">
+                    <label class="toggle"><input type="checkbox" id="chkChuyenXu"> Đã chuyển đi xứ khác</label>
+                    <label class="toggle"><input type="checkbox"> Không tính vào thống kê</label>
+                  </div>
+                </div>
+                <div class="frow" id="rowNgayChuyen" hidden>
+                  <label for="fNgayChuyen">Ngày chuyển</label>
+                  <div class="val"><input type="date" id="fNgayChuyen" style="max-width:190px"></div>
+                </div>
+                <div class="frow" id="rowNoiChuyen" hidden>
+                  <label for="fNoiChuyen">Nơi chuyển</label>
+                  <div class="val"><input type="text" id="fNoiChuyen" placeholder="Giáo xứ / địa phương chuyển đến"></div>
+                </div>
+              </div>
+
+              <!-- Cột phải -->
+              <div class="col-stack">
+                <div class="card glass">
+                  <div class="card-head">
+                    <h2>Hôn phối</h2>
+                    <div class="spacer"></div>
+                    <span class="tag tag-violet" id="hTag">Hợp pháp</span>
+                  </div>
+                  <!-- Số và ngày hôn phối nằm chung một dòng, đúng như khối
+                       GxHonPhoiGiaDinh của form desktop -->
+                  <div class="frow">
+                    <label for="hSo">Số hôn phối</label>
+                    <div class="val">
+                      <input type="text" id="hSo" style="max-width:110px">
+                      <span class="inline-label">Ngày</span>
+                      <input type="date" id="hNgay">
+                    </div>
+                  </div>
+                  <div class="frow">
+                    <label for="hNoi">Nơi hôn phối</label>
+                    <div class="val"><input type="text" id="hNoi"></div>
+                  </div>
+                  <div class="frow">
+                    <label for="hLM">Linh mục chứng</label>
+                    <div class="val">
+                      <select id="hLM">
+                        <option>Lm. Giuse Nguyễn Văn Tâm</option>
+                        <option>Lm. Phêrô Trần Đình Khoa</option>
+                        <option>Lm. Antôn Lê Quang Huy</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="frow">
+                    <label for="hC1">Người chứng 1</label>
+                    <div class="val"><input type="text" id="hC1"></div>
+                  </div>
+                  <div class="frow">
+                    <label for="hC2">Người chứng 2</label>
+                    <div class="val"><input type="text" id="hC2"></div>
+                  </div>
+                  <div class="frow">
+                    <label for="hTT">Tình trạng</label>
+                    <div class="val">
+                      <select id="hTT">
+                        <option value="">Chưa xác định</option>
+                        <option>Hợp pháp</option>
+                        <option>Hợp thức hóa</option>
+                        <option>Chuẩn</option>
+                        <option>Không theo phép đạo</option>
+                        <option>Ly thân</option>
+                        <option>Ly dị</option>
+                        <option>Đã được tháo gỡ</option>
+                        <option>Không xác định</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="frow">
+                    <label for="hGC">Ghi chú</label>
+                    <div class="val"><input type="text" id="hGC" placeholder="Ghi chú hôn phối…"></div>
+                  </div>
+                </div>
+
+                <div class="card glass">
+                  <div class="card-head"><h2>Hình gia đình</h2></div>
+                  <div class="photo-slot">
+                    <div>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <rect x="3" y="5" width="18" height="14" rx="2.5"/>
+                        <circle cx="8.5" cy="10.5" r="1.8"/>
+                        <path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5" stroke-linejoin="round"/>
+                      </svg>
+                      Chưa có hình<br>Nhấp để tải ảnh lên
+                    </div>
+                  </div>
+                </div>
+              </div>
+          </div>
+
+          <div class="card glass members-card">
+            <div class="table-toolbar">
+              <h2 style="font-size:15px;font-weight:600;margin-right:6px">Thành viên khác trong gia đình</h2>
+              <span class="count-pill"><b id="tvCount">0</b> người</span>
+              <span class="spacer"></span>
+              <button class="btn btn-sm" type="button">Thêm mới</button>
+              <button class="btn btn-sm" type="button">Chọn từ danh sách</button>
+              <button class="btn btn-sm btn-quiet" type="button">Xem &amp; sửa</button>
+              <button class="btn btn-sm btn-quiet" type="button">Loại bỏ</button>
+            </div>
+            <div class="grid-wrap">
+              <table class="grid" id="gridThanhVien">
+                <thead><tr id="tvHead"></tr></thead>
+                <tbody id="tvBody"></tbody>
+              </table>
+            </div>
+            <div class="table-foot">
+              <span class="legend"><i></i> Gạch ngang: đã qua đời, chuyển xứ hoặc lập gia đình riêng</span>
+              <span class="spacer"></span>
+              <span>Cột <b>Quan hệ GĐ</b> sửa trực tiếp trên lưới, các cột khác chỉ đọc</span>
+            </div>
+          </div>
+
+          <div class="cmdbar">
+            <span class="hint">Thay đổi chưa được lưu</span>
+            <div class="spacer"></div>
+            <button class="btn" type="button">In lý lịch cá nhân</button>
+            <button class="btn" type="button">In phiếu gia đình</button>
+            <button class="btn btn-quiet" type="button" id="btnQuayVe">Quay về</button>
+            <button class="btn btn-primary" type="button" id="btnCapNhat">Cập nhật</button>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="ctxmenu" hidden>
+  <div class="ctx-title" id="ctxTitle">Gia đình</div>
+  <button type="button">In chứng nhận hôn phối</button>
+  <button type="button">In phiếu gia đình</button>
+  <button type="button">In lý lịch cá nhân</button>
+  <button type="button">In giới thiệu chuyển xứ</button>
+  <button type="button">Xem vị trí trên bản đồ</button>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* =================== Dữ liệu minh hoạ =================== */
+  /* gach: 0 = người nam đã qua đời/chuyển · 1 = người nữ · 2 = cả hai */
+  const FAMILIES = [
+    { ma:"00012", ten:"Bình - Lan", chong:"Giuse Trần Văn Bình", vo:"Maria Nguyễn Thị Lan", so:5, dt:"028 3891 4472", dtc:"0912 345 678", dtv:"0987 114 220", diachi:"12/4 Nguyễn Trãi, KP 3", giaoho:"Giáo họ Thánh Tâm", dien:"", ghichu:"", gach:null },
+    { ma:"00027", ten:"Chính - Hạnh", chong:"Phêrô Lê Văn Chính", vo:"Anna Phạm Thị Hạnh", so:4, dt:"", dtc:"0908 221 774", dtv:"", diachi:"55 Lê Lợi", giaoho:"Giáo họ Mân Côi", dien:"Cận nghèo", ghichu:"", gach:null },
+    { ma:"00035", ten:"Dũng - Thu", chong:"Đaminh Vũ Tiến Dũng", vo:"Têrêsa Ngô Thị Thu", so:6, dt:"028 3775 1120", dtc:"0933 561 908", dtv:"0902 447 511", diachi:"7 Hẻm 24 Trần Phú", giaoho:"Giáo họ Fatima", dien:"", ghichu:"Có con đi tu", gach:null },
+    { ma:"00048", ten:"Hoà - Mai", chong:"Gioan B. Nguyễn Văn Hoà", vo:"Maria Đỗ Thị Mai", so:3, dt:"", dtc:"", dtv:"0973 882 145", diachi:"118 Cách Mạng Tháng 8", giaoho:"Giáo họ Lộ Đức", dien:"", ghichu:"", gach:0 },
+    { ma:"00051", ten:"Khanh - Nhung", chong:"Antôn Bùi Đức Khanh", vo:"Maria Trịnh Thị Nhung", so:5, dt:"028 3812 6640", dtc:"0919 003 214", dtv:"0938 771 002", diachi:"3B Hoàng Văn Thụ", giaoho:"Giáo họ Thánh Giuse", dien:"", ghichu:"", gach:null },
+    { ma:"00063", ten:"Long - Phượng", chong:"Giuse Phan Thành Long", vo:"Anna Lý Thị Phượng", so:2, dt:"", dtc:"0906 554 118", dtv:"", diachi:"29 Nguyễn Huệ", giaoho:"Giáo họ Antôn", dien:"Neo đơn", ghichu:"Ông bà lớn tuổi", gach:null },
+    { ma:"00074", ten:"Minh - Quyên", chong:"Phêrô Hoàng Nhật Minh", vo:"Maria Trần Thị Quyên", so:4, dt:"028 3990 2277", dtc:"0977 123 456", dtv:"0911 664 730", diachi:"210 Phan Đình Phùng", giaoho:"Giáo họ Thánh Tâm", dien:"", ghichu:"", gach:null },
+    { ma:"00082", ten:"Nam - Sương", chong:"Giuse Đặng Hoài Nam", vo:"Têrêsa Lâm Thị Sương", so:5, dt:"", dtc:"", dtv:"0965 220 887", diachi:"66 Lý Thường Kiệt", giaoho:"Giáo họ Mân Côi", dien:"Nghèo", ghichu:"", gach:2 },
+    { ma:"00095", ten:"Phúc - Trâm", chong:"Đaminh Trương Hữu Phúc", vo:"Maria Cao Thị Trâm", so:7, dt:"028 3663 8890", dtc:"0944 512 663", dtv:"0988 342 116", diachi:"14 Nguyễn Đình Chiểu", giaoho:"Giáo họ Fatima", dien:"", ghichu:"Gia đình đông con", gach:null },
+    { ma:"00108", ten:"Quang - Uyên", chong:"Gioan Nguyễn Đăng Quang", vo:"Anna Vũ Thị Uyên", so:3, dt:"", dtc:"0902 887 431", dtv:"", diachi:"81 Trường Chinh", giaoho:"Giáo họ Lộ Đức", dien:"", ghichu:"", gach:1 },
+    { ma:"00117", ten:"Sơn - Vân", chong:"Phêrô Tạ Ngọc Sơn", vo:"Maria Hồ Thị Vân", so:4, dt:"028 3554 7712", dtc:"0913 776 220", dtv:"0906 118 553", diachi:"9 Bà Huyện Thanh Quan", giaoho:"Giáo họ Thánh Giuse", dien:"", ghichu:"", gach:null },
+    { ma:"00126", ten:"Thắng - Xuân", chong:"Giuse Mai Quang Thắng", vo:"Têrêsa Đinh Thị Xuân", so:6, dt:"", dtc:"0935 004 771", dtv:"0972 663 118", diachi:"47 Võ Thị Sáu", giaoho:"Giáo họ Antôn", dien:"", ghichu:"", gach:null },
+    { ma:"00134", ten:"Tuấn - Yến", chong:"Antôn Dương Anh Tuấn", vo:"Maria Nguyễn Thị Yến", so:5, dt:"028 3221 9008", dtc:"0908 664 220", dtv:"0917 553 884", diachi:"92 Hai Bà Trưng", giaoho:"Giáo họ Thánh Tâm", dien:"", ghichu:"", gach:null },
+    { ma:"00142", ten:"Vinh - Diễm", chong:"Giuse Ngô Quốc Vinh", vo:"Anna Bùi Thị Diễm", so:2, dt:"", dtc:"", dtv:"0983 117 664", diachi:"25 Điện Biên Phủ", giaoho:"Ngoài xứ", dien:"", ghichu:"Tạm trú, không thống kê", gach:null, ao:true }
+  ];
+
+  const COLS = [
+    { key:"ma",     cap:"Mã GĐ",           w:92,  cls:"cell-code" },
+    { key:"ten",    cap:"Tên gia đình",    w:132, cls:"cell-strong" },
+    { key:"chong",  cap:"Người nam",       w:196 },
+    { key:"vo",     cap:"Người nữ",        w:196 },
+    { key:"so",     cap:"Số người",        w:84,  num:true },
+    { key:"dt",     cap:"Điện thoại",      w:126 },
+    { key:"dtc",    cap:"ĐT chồng",        w:120 },
+    { key:"dtv",    cap:"ĐT vợ",           w:120 },
+    { key:"diachi", cap:"Địa chỉ",         w:200 },
+    { key:"giaoho", cap:"Giáo họ",         w:150 },
+    { key:"dien",   cap:"Diện gia đình",   w:124, tag:true },
+    { key:"ghichu", cap:"Ghi chú",         w:180, cls:"muted" }
+  ];
+
+  const TV_COLS = [
+    "Quan hệ GĐ","Mã GD","Tên thánh","Họ tên","Phái","Ngày sinh","Ngày rửa tội","Ngày XTRL",
+    "Ngày Th.Sức","Lập GĐ","Cha","Mẹ","Tân tòng","Còn học","Nghề nghiệp","Ghi chú","Địa chỉ",
+    "Giáo họ","Đã chuyển đi","Văn hóa","Chuyên môn","Ngoại ngữ","Qua đời","Ngày qua đời",
+    "Nơi an táng","Nơi sinh","Nơi rửa tội","Nơi XTRL","Nơi thêm sức"
+  ];
+
+  const MEMBERS = [
+    { qh:"Con",       ma:"04412", ts:"Maria", ten:"Trần Thị Khánh Ngọc", phai:"Nữ", ns:"14/03/2005", nrt:"02/04/2005", nxtrl:"18/05/2013", nts:"21/11/2018", lapgd:false, cha:"Trần Văn Bình", me:"Nguyễn Thị Lan", tantong:false, conhoc:true,  nghe:"Sinh viên", gc:"", diachi:"12/4 Nguyễn Trãi, KP 3", gh:"Giáo họ Thánh Tâm", chuyen:false, qd:false, ngayqd:"", red:false },
+    { qh:"Con",       ma:"04413", ts:"Giuse", ten:"Trần Minh Khôi",      phai:"Nam", ns:"09/09/2008", nrt:"28/09/2008", nxtrl:"12/05/2016", nts:"", lapgd:false, cha:"Trần Văn Bình", me:"Nguyễn Thị Lan", tantong:false, conhoc:true,  nghe:"Học sinh", gc:"Giúp lễ", diachi:"12/4 Nguyễn Trãi, KP 3", gh:"Giáo họ Thánh Tâm", chuyen:false, qd:false, ngayqd:"", red:false },
+    { qh:"Con",       ma:"04414", ts:"Anna",  ten:"Trần Thị Thanh Hương", phai:"Nữ", ns:"22/07/1999", nrt:"15/08/1999", nxtrl:"04/06/2008", nts:"19/10/2013", lapgd:true, cha:"Trần Văn Bình", me:"Nguyễn Thị Lan", tantong:false, conhoc:false, nghe:"Kế toán", gc:"Đã lập gia đình riêng", diachi:"33 Lê Văn Sỹ", gh:"Giáo họ Mân Côi", chuyen:false, qd:false, ngayqd:"", red:true },
+    { qh:"Mẹ chồng",  ma:"04398", ts:"Maria", ten:"Phạm Thị Tần",        phai:"Nữ", ns:"11/02/1941", nrt:"03/03/1941", nxtrl:"", nts:"", lapgd:false, cha:"", me:"", tantong:false, conhoc:false, nghe:"Nội trợ", gc:"Đã qua đời", diachi:"12/4 Nguyễn Trãi, KP 3", gh:"Giáo họ Thánh Tâm", chuyen:false, qd:true, ngayqd:"08/06/2023", red:true },
+    { qh:"Cháu",      ma:"04455", ts:"Phêrô", ten:"Trần Gia Bảo",        phai:"Nam", ns:"30/12/2019", nrt:"19/01/2020", nxtrl:"", nts:"", lapgd:false, cha:"Trần Minh Khôi", me:"", tantong:false, conhoc:false, nghe:"", gc:"", diachi:"12/4 Nguyễn Trãi, KP 3", gh:"Giáo họ Thánh Tâm", chuyen:false, qd:false, ngayqd:"", red:false }
+  ];
+
+  const $ = function (s) { return document.querySelector(s); };
+  const esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+    return ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" })[c];
+  }); };
+
+  /* =================== Menu trên thanh tiêu đề =================== */
+  const topbar = $("#topbar");
+  function closeMenus() {
+    topbar.querySelectorAll("[data-menu]").forEach(function (b) { b.setAttribute("aria-expanded", "false"); });
+    topbar.querySelectorAll(".menu-pop").forEach(function (p) { p.hidden = true; });
+  }
+  topbar.querySelectorAll("[data-menu]").forEach(function (btn) {
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      const pop = document.getElementById(btn.dataset.menu);
+      const wasOpen = btn.getAttribute("aria-expanded") === "true";
+      closeMenus();
+      if (!wasOpen) {
+        btn.setAttribute("aria-expanded", "true");
+        pop.hidden = false;
+        pop.style.right = (topbar.offsetWidth - btn.offsetLeft - btn.offsetWidth) + "px";
+      }
+    });
+  });
+  document.addEventListener("click", function () { closeMenus(); hideCtx(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { closeMenus(); hideCtx(); }
+  });
+
+  /* =================== Điều hướng trái =================== */
+  $("#sidenav").addEventListener("click", function (e) {
+    const item = e.target.closest(".nav-group button");
+    if (!item) return;
+    $("#sidenav").querySelectorAll(".nav-group button").forEach(function (b) { b.classList.remove("on"); });
+    item.classList.add("on");
+    if (item.dataset.open === "list") openTab("list", "Danh sách gia đình");
+  });
+
+  /* =================== Thẻ tài liệu =================== */
+  const tabstrip = $("#tabstrip");
+  const PAGES = { home:"#page-home", list:"#page-list", detail:"#page-detail" };
+
+  function selectTab(id) {
+    tabstrip.querySelectorAll(".tab").forEach(function (t) {
+      t.setAttribute("aria-selected", String(t.dataset.tab === id));
+    });
+    Object.keys(PAGES).forEach(function (k) { $(PAGES[k]).hidden = k !== id; });
+  }
+  function openTab(id, label) {
+    let tab = tabstrip.querySelector('.tab[data-tab="' + id + '"]');
+    if (!tab) {
+      tab = document.createElement("div");
+      tab.className = "tab";
+      tab.dataset.tab = id;
+      tab.setAttribute("role", "tab");
+      tab.tabIndex = 0;
+      tab.innerHTML = '<span class="lbl"></span><button class="x" type="button" data-close="' + id + '" title="Đóng thẻ">&times;</button>';
+      tabstrip.appendChild(tab);
+    }
+    if (label) tab.querySelector(".lbl").textContent = label;
+    selectTab(id);
+  }
+  function closeTab(id) {
+    const tab = tabstrip.querySelector('.tab[data-tab="' + id + '"]');
+    if (tab) tab.remove();
+    const rest = tabstrip.querySelector(".tab");
+    selectTab(rest ? rest.dataset.tab : "home");
+  }
+  tabstrip.addEventListener("click", function (e) {
+    const x = e.target.closest("[data-close]");
+    if (x) { e.stopPropagation(); closeTab(x.dataset.close); return; }
+    const tab = e.target.closest(".tab");
+    if (tab) selectTab(tab.dataset.tab);
+  });
+
+  /* =================== Lưới danh sách gia đình =================== */
+  const head = $("#gridHead"), filterRow = $("#gridFilters"), tbody = $("#gridBody");
+  let sortKey = "ma", sortDir = 1, selected = null;
+  const colFilters = {};
+
+  (function buildHeader() {
+    head.innerHTML = '<th class="rowhead">#</th>';
+    filterRow.innerHTML = '<th class="rowhead"></th>';
+    COLS.forEach(function (c) {
+      const th = document.createElement("th");
+      th.innerHTML = esc(c.cap) + '<span class="sortmark"></span>';
+      th.style.minWidth = c.w + "px";
+      th.dataset.key = c.key;
+      th.title = "Nhấp để sắp xếp theo " + c.cap;
+      th.addEventListener("click", function () {
+        if (sortKey === c.key) sortDir = -sortDir; else { sortKey = c.key; sortDir = 1; }
+        render();
+      });
+      head.appendChild(th);
+
+      const fth = document.createElement("th");
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.placeholder = "Lọc…";
+      inp.setAttribute("aria-label", "Lọc cột " + c.cap);
+      inp.addEventListener("input", function () {
+        colFilters[c.key] = inp.value.trim().toLowerCase();
+        render();
+      });
+      fth.appendChild(inp);
+      filterRow.appendChild(fth);
+    });
+  })();
+
+  function visibleRows() {
+    const gh = $("#cbGiaoHo").value;
+    const onlyAo = $("#chkGiaDinhAo").checked;
+    return FAMILIES.filter(function (f) {
+      if (onlyAo && !f.ao) return false;
+      if (gh === "0" && f.giaoho !== "Ngoài xứ") return false;
+      if (gh !== "-1" && gh !== "0" && f.giaoho !== gh) return false;
+      return COLS.every(function (c) {
+        const q = colFilters[c.key];
+        if (!q) return true;
+        return String(f[c.key] == null ? "" : f[c.key]).toLowerCase().indexOf(q) !== -1;
+      });
+    }).sort(function (a, b) {
+      const va = a[sortKey], vb = b[sortKey];
+      if (typeof va === "number" && typeof vb === "number") return (va - vb) * sortDir;
+      return String(va).localeCompare(String(vb), "vi") * sortDir;
+    });
+  }
+
+  function render() {
+    const rows = visibleRows();
+    tbody.innerHTML = "";
+
+    head.querySelectorAll("th[data-key]").forEach(function (th) {
+      th.classList.toggle("sorted", th.dataset.key === sortKey);
+      th.classList.toggle("desc", th.dataset.key === sortKey && sortDir === -1);
+    });
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td class="empty-note" colspan="' + (COLS.length + 1) +
+        '">Không có gia đình nào khớp điều kiện lọc.</td></tr>';
+    }
+
+    rows.forEach(function (f, i) {
+      const tr = document.createElement("tr");
+      tr.setAttribute("aria-selected", String(selected === f.ma));
+      let html = '<td class="rowhead">' + (i + 1) + "</td>";
+      COLS.forEach(function (c) {
+        let cls = [c.cls || "", c.num ? "num" : ""].join(" ").trim();
+        if ((c.key === "chong" && (f.gach === 0 || f.gach === 2)) ||
+            (c.key === "vo"    && (f.gach === 1 || f.gach === 2))) cls = "struck";
+        const raw = f[c.key] == null ? "" : String(f[c.key]);
+        let content = esc(raw);
+        if (c.tag && raw) content = '<span class="tag tag-amber">' + esc(raw) + "</span>";
+        if (!raw) content = '<span class="muted">—</span>';
+        html += '<td class="' + cls + '" title="' + esc(raw) + '">' + content + "</td>";
+      });
+      tr.innerHTML = html;
+      tr.addEventListener("click", function () { selected = f.ma; render(); });
+      tr.addEventListener("dblclick", function () { openDetail(f); });
+      tr.addEventListener("contextmenu", function (e) {
+        e.preventDefault();
+        selected = f.ma;
+        render();
+        $("#ctxTitle").textContent = "Gia đình " + f.ten;
+        showCtx(e.clientX, e.clientY);
+      });
+      tbody.appendChild(tr);
+    });
+
+    $("#lblTotal").textContent = rows.length;
+    $("#recPos").textContent = rows.length ? ("1 – " + rows.length + " trên " + rows.length) : "Không có bản ghi";
+
+    const has = rows.some(function (f) { return f.ma === selected; });
+    ["btnLoaiBo", "btnXemSua", "btnCnhp", "btnPhieu", "btnMap"].forEach(function (id) {
+      document.getElementById(id).disabled = !has;
+    });
+  }
+
+  $("#cbGiaoHo").addEventListener("change", render);
+  $("#chkGiaDinhAo").addEventListener("change", render);
+  $("#btnXemSua").addEventListener("click", function () {
+    const f = FAMILIES.find(function (x) { return x.ma === selected; });
+    if (f) openDetail(f);
+  });
+  $("#btnThem").addEventListener("click", function () {
+    openDetail({ ma:"", ten:"", chong:"", vo:"", so:0, dt:"", dtc:"", dtv:"", diachi:"",
+                 giaoho:"Giáo họ Thánh Tâm", dien:"", ghichu:"" }, true);
+  });
+
+  /* =================== Menu chuột phải =================== */
+  const ctx = $("#ctxmenu");
+  function showCtx(x, y) {
+    ctx.hidden = false;
+    const w = ctx.offsetWidth, h = ctx.offsetHeight;
+    ctx.style.left = Math.min(x, window.innerWidth - w - 8) + "px";
+    ctx.style.top = Math.min(y, window.innerHeight - h - 8) + "px";
+  }
+  function hideCtx() { ctx.hidden = true; }
+  ctx.addEventListener("click", function (e) { e.stopPropagation(); hideCtx(); });
+
+  /* =================== Form chi tiết =================== */
+  function openDetail(f, isNew) {
+    $("#dTitle").textContent = isNew ? "Gia đình mới" : "Gia đình " + f.ten;
+    $("#dSub").textContent = isNew
+      ? "Chưa lưu · nhập thông tin rồi bấm Cập nhật"
+      : f.giaoho + " · " + f.so + " nhân khẩu";
+    $("#dStatus").textContent = isNew ? "Bản nháp" : (f.ao ? "Không tính thống kê" : "Đang hoạt động");
+    $("#dStatus").className = "tag " + (isNew ? "tag-violet" : (f.ao ? "tag-amber" : "tag-mint"));
+
+    $("#fMa").value      = f.ma || "(tự sinh khi lưu)";
+    $("#fChong").textContent = f.chong || "—";
+    $("#fVo").textContent    = f.vo || "—";
+    $("#fChong").classList.toggle("empty", !f.chong);
+    $("#fVo").classList.toggle("empty", !f.vo);
+    $("#fTen").value     = f.ten || "";
+    $("#fGiaoHo").value  = f.giaoho || "Giáo họ Thánh Tâm";
+    $("#fHoKhau").value  = f.ma ? "HK-" + f.ma : "";
+    $("#fDien").value    = f.dien || "";
+    $("#fDT").value      = f.dt || "";
+    $("#fDiaChi").value  = f.diachi || "";
+    $("#fGhiChu").value  = f.ghichu || "";
+
+    $("#hSo").value   = f.ma ? "HP-" + f.ma : "";
+    $("#hNgay").value = f.ma ? "1998-10-24" : "";
+    $("#hNoi").value  = f.ma ? "Nhà thờ Giáo xứ Thánh Tâm" : "";
+    $("#hC1").value   = f.ma ? "Giuse Nguyễn Văn Tài" : "";
+    $("#hC2").value   = f.ma ? "Maria Lê Thị Hồng" : "";
+    $("#hTT").value   = f.ma ? "Hợp pháp" : "";
+    $("#hGC").value   = "";
+    $("#hTag").textContent = f.ma ? "Hợp pháp" : "Chưa có";
+
+    renderMembers(isNew ? [] : MEMBERS);
+    openTab("detail", isNew ? "Gia đình mới" : "Gia đình " + f.ten);
+  }
+
+  $("#chkChuyenXu").addEventListener("change", function (e) {
+    $("#rowNgayChuyen").hidden = !e.target.checked;
+    $("#rowNoiChuyen").hidden = !e.target.checked;
+  });
+  $("#btnQuayVe").addEventListener("click", function () { closeTab("detail"); });
+  $("#btnCapNhat").addEventListener("click", function () { closeTab("detail"); });
+  $("#btnBack").addEventListener("click", function () { closeTab("detail"); });
+
+  (function buildMemberHeader() {
+    const tr = $("#tvHead");
+    tr.innerHTML = '<th class="rowhead">#</th>';
+    TV_COLS.forEach(function (c) {
+      const th = document.createElement("th");
+      th.textContent = c;
+      th.style.minWidth = (c.length > 10 ? 128 : 96) + "px";
+      tr.appendChild(th);
+    });
+  })();
+
+  function renderMembers(list) {
+    const tb = $("#tvBody");
+    tb.innerHTML = "";
+    $("#tvCount").textContent = list.length;
+
+    if (!list.length) {
+      tb.innerHTML = '<tr><td class="empty-note" colspan="' + (TV_COLS.length + 1) +
+        '">Chưa có thành viên nào. Dùng <b>Thêm mới</b> hoặc <b>Chọn từ danh sách</b> để bổ sung.</td></tr>';
+      return;
+    }
+
+    list.forEach(function (m, i) {
+      const yes = function (v) { return v ? '<span class="tag tag-mint">✓</span>' : '<span class="muted">—</span>'; };
+      const txt = function (v) { return v ? esc(v) : '<span class="muted">—</span>'; };
+      const cells = [
+        '<select class="qh" aria-label="Quan hệ gia đình"><option>' + esc(m.qh) +
+          "</option><option>Con</option><option>Cháu</option><option>Cha</option><option>Mẹ</option><option>Anh/Chị/Em</option></select>",
+        '<span class="cell-code">' + esc(m.ma) + "</span>",
+        txt(m.ts), '<span class="cell-strong">' + esc(m.ten) + "</span>", txt(m.phai),
+        txt(m.ns), txt(m.nrt), txt(m.nxtrl), txt(m.nts), yes(m.lapgd),
+        txt(m.cha), txt(m.me), yes(m.tantong), yes(m.conhoc), txt(m.nghe), txt(m.gc),
+        txt(m.diachi), txt(m.gh), yes(m.chuyen), txt("12/12"), txt(""), txt(""),
+        yes(m.qd), txt(m.ngayqd), txt(""), txt("TP.HCM"),
+        txt("GX Thánh Tâm"), txt("GX Thánh Tâm"), txt("GX Thánh Tâm")
+      ];
+      const tr = document.createElement("tr");
+      let html = '<td class="rowhead">' + (i + 1) + "</td>";
+      cells.forEach(function (v, idx) {
+        html += "<td" + (idx > 0 && m.red ? ' class="struck"' : "") + ">" + v + "</td>";
+      });
+      tr.innerHTML = html;
+      tb.appendChild(tr);
+    });
+
+    tb.querySelectorAll("select.qh").forEach(function (s) {
+      s.style.minHeight = "26px";
+      s.style.padding = "2px 8px";
+      s.style.fontSize = "12.5px";
+      s.style.width = "100%";
+    });
+  }
+
+  render();
+})();
+</script>
