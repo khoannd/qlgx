@@ -961,6 +961,48 @@ tbody tr[aria-selected="true"] .rowhead {
 .cmdbar .spacer { flex: 1; }
 .cmdbar .hint { font-size: 12.5px; color: var(--ink-faint); }
 
+/* ---- Tab bên trong form (frmGiaoDan có 5 tab: Cá nhân, Giáo lý, Hôn phối,
+   Ơn gọi tận hiến, Hội đoàn). Khác với thẻ tài liệu ở trên: đây là tab nội
+   dung của một bản ghi, nên dùng dạng viên thuốc đặc thay vì thẻ hồ sơ. ---- */
+.form-tabs { display: flex; gap: 5px; flex: none; flex-wrap: wrap; }
+.form-tabs button {
+  appearance: none;
+  border: 1px solid rgba(14, 32, 76, .1);
+  background: rgba(255, 255, 255, .6);
+  border-radius: 999px;
+  padding: 6px 15px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.form-tabs button:hover { background: rgba(255, 255, 255, .92); color: var(--brand-ink); }
+.form-tabs button[aria-selected="true"] {
+  background: linear-gradient(145deg, var(--brand), var(--brand-deep));
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 8px 18px -10px rgba(20, 63, 152, .85);
+}
+.form-body {
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding-right: 4px;
+}
+.form-body::-webkit-scrollbar { width: 10px; }
+.form-body::-webkit-scrollbar-thumb { background: rgba(14, 32, 76, .16); border-radius: 99px; }
+/* Hai tấm cạnh nhau, mép dưới thẳng hàng (Rửa tội | Rước lễ lần đầu…) */
+.card-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
+@media (max-width: 1120px) { .card-row { grid-template-columns: 1fr; } }
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
@@ -1048,8 +1090,8 @@ tbody tr[aria-selected="true"] .rowhead {
       <div class="nav-scroll">
         <div class="nav-group">
           <span class="eyebrow">Giáo dân &amp; gia đình</span>
-          <button type="button"><span class="ico"></span>Danh sách giáo dân</button>
-          <button type="button" class="on" data-open="list"><span class="ico"></span>Danh sách gia đình</button>
+          <button type="button" data-open="giaoDanList"><span class="ico"></span>Danh sách giáo dân</button>
+          <button type="button" class="on" data-open="giaDinhList"><span class="ico"></span>Danh sách gia đình</button>
           <button type="button"><span class="ico"></span>Danh sách hội đoàn</button>
         </div>
         <div class="nav-group">
@@ -1090,365 +1132,451 @@ tbody tr[aria-selected="true"] .rowhead {
 
     <!-- ======================= Vùng làm việc ======================= -->
     <main class="work glass">
-      <div class="tabstrip" id="tabstrip">
-        <div class="tab" data-tab="home" role="tab" aria-selected="false" tabindex="0">
-          <span class="lbl">Tổng quan</span>
-        </div>
-        <div class="tab" data-tab="list" role="tab" aria-selected="true" tabindex="0">
-          <span class="lbl">Danh sách gia đình</span>
-          <button class="x" type="button" data-close="list" title="Đóng thẻ">&times;</button>
-        </div>
-      </div>
-
-      <div class="tabpages">
-
-        <!-- ---------------- Tổng quan ---------------- -->
-        <section class="page" id="page-home" hidden>
-          <div style="height:100%;display:grid;place-items:center;text-align:center;padding:20px">
-            <div style="max-width:560px">
-              <svg viewBox="0 0 120 92" fill="none" stroke="var(--brand)" stroke-width="2" style="width:150px" aria-hidden="true">
-                <path d="M60 6v13M53 12.5h14" stroke-linecap="round"/>
-                <path d="M60 21 45 34v48h30V34L60 21z" fill="rgba(29,93,219,.10)"/>
-                <path d="M45 40 27 52v30h18M75 40l18 12v30H75" fill="rgba(124,107,240,.09)"/>
-                <path d="M60 82V66c0-3.2 2.7-5.6 6-5.6s6 2.4 6 5.6v16" opacity=".45"/>
-                <circle cx="60" cy="43" r="5" opacity=".5"/>
-                <path d="M18 82h84" stroke-linecap="round" opacity=".5"/>
-              </svg>
-              <h1 style="font-size:30px;font-weight:600;margin:16px 0 6px">Giáo xứ Thánh Tâm</h1>
-              <p style="margin:0;color:var(--ink-faint)">Giáo hạt Xóm Mới · Giáo phận Sài Gòn</p>
-              <div style="display:flex;justify-content:center;gap:10px;margin-top:22px;flex-wrap:wrap">
-                <span class="count-pill"><b>1.284</b> giáo dân</span>
-                <span class="count-pill"><b>312</b> gia đình</span>
-                <span class="count-pill"><b>7</b> giáo họ</span>
-                <span class="count-pill"><b>18</b> bí tích tháng này</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- ---------------- Danh sách gia đình ---------------- -->
-        <section class="page list-page" id="page-list">
-
-          <div class="page-head">
-            <h1>Danh sách gia đình</h1>
-            <div class="spacer"></div>
-            <span class="count-pill"><b id="lblTotal">0</b> gia đình</span>
-            <button class="btn btn-primary" type="button" id="btnThem">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
-              Thêm gia đình
-            </button>
-          </div>
-
-          <div class="filters-bar glass">
-            <div class="field">
-              <label for="cbGiaoHo">Giáo họ</label>
-              <select id="cbGiaoHo">
-                <option value="-1">Tất cả</option>
-                <option value="0">Ngoài xứ</option>
-                <option>Giáo họ Antôn</option>
-                <option>Giáo họ Fatima</option>
-                <option>Giáo họ Lộ Đức</option>
-                <option>Giáo họ Mân Côi</option>
-                <option>Giáo họ Thánh Giuse</option>
-                <option>Giáo họ Thánh Tâm</option>
-              </select>
-            </div>
-            <label class="toggle" title="Gia đình không được thống kê là gia đình ngoài xứ, không được tính trong các mục thống kê">
-              <input type="checkbox" id="chkGiaDinhAo">
-              Chỉ xem gia đình không được thống kê
-            </label>
-            <div class="spacer"></div>
-            <span class="muted" style="font-size:12.5px">Nhấp đúp một dòng để mở chi tiết · chuột phải để xem thao tác in ấn</span>
-          </div>
-
-          <div class="table-card glass">
-            <div class="table-toolbar">
-              <button class="btn btn-sm" type="button" id="btnXemSua" disabled>Xem &amp; sửa</button>
-              <button class="btn btn-sm" type="button" id="btnLoaiBo" disabled>Loại bỏ</button>
-              <span class="sep"></span>
-              <button class="btn btn-sm" type="button" id="btnCnhp" disabled>In chứng nhận hôn phối</button>
-              <button class="btn btn-sm" type="button" id="btnPhieu" disabled>In phiếu gia đình</button>
-              <button class="btn btn-sm" type="button" id="btnMap" disabled>Xem vị trí</button>
-              <span class="spacer"></span>
-              <button class="btn btn-sm btn-quiet" type="button">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                Xuất Excel
-              </button>
-              <button class="btn btn-sm btn-quiet" type="button">Tải lại</button>
-            </div>
-
-            <div class="grid-wrap" id="gridWrap">
-              <table class="grid" id="gridGiaDinh">
-                <thead>
-                  <tr id="gridHead"></tr>
-                  <tr class="filters" id="gridFilters"></tr>
-                </thead>
-                <tbody id="gridBody"></tbody>
-              </table>
-            </div>
-
-            <div class="table-foot">
-              <div class="pager">
-                <button type="button" title="Trang đầu">&#9664;&#9664;</button>
-                <button type="button" title="Trang trước">&#9664;</button>
-                <button type="button" title="Trang sau">&#9654;</button>
-                <button type="button" title="Trang cuối">&#9654;&#9654;</button>
-              </div>
-              <span id="recPos">1 – 14 trên 14</span>
-              <span class="spacer"></span>
-              <span class="legend"><i></i> Gạch ngang đỏ: người nam / người nữ đã qua đời hoặc chuyển xứ</span>
-            </div>
-          </div>
-        </section>
-
-        <!-- ---------------- Chi tiết gia đình ---------------- -->
-        <section class="page detail-page" id="page-detail" hidden>
-
-          <div class="page-head detail-head">
-            <button class="btn btn-sm btn-quiet" type="button" id="btnBack">&#8592; Danh sách</button>
-            <h1 id="dTitle">Gia đình</h1>
-            <span class="head-sub" id="dSub">Giáo họ Thánh Tâm · 5 nhân khẩu</span>
-            <div class="spacer"></div>
-            <span class="tag tag-mint" id="dStatus">Đang hoạt động</span>
-          </div>
-
-          <div class="cols">
-              <!-- Cột trái -->
-              <div class="card glass">
-                <div class="card-head">
-                  <h2>Thông tin gia đình</h2>
-                  <div class="spacer"></div>
-                  <span class="eyebrow">Sổ gia đình</span>
-                </div>
-
-                <div class="frow">
-                  <label for="fMa">Mã gia đình</label>
-                  <div class="val">
-                    <input type="text" id="fMa" disabled style="max-width:150px">
-                    <span class="inline-label">Số hộ khẩu</span>
-                    <input type="text" id="fHoKhau">
-                  </div>
-                </div>
-                <div class="frow">
-                  <label>Người nam</label>
-                  <div class="val">
-                    <span class="picker">
-                      <span class="who" id="fChong">—</span>
-                      <button class="mini" type="button" title="Chọn từ danh sách giáo dân">&#9678;</button>
-                      <button class="mini" type="button" title="Thêm giáo dân mới">+</button>
-                      <button class="mini" type="button" title="Bỏ chọn">&times;</button>
-                    </span>
-                    <span class="seg">
-                      <label><input type="radio" name="chuho" checked> Chủ hộ</label>
-                    </span>
-                  </div>
-                </div>
-                <div class="frow">
-                  <label>Người nữ</label>
-                  <div class="val">
-                    <span class="picker">
-                      <span class="who" id="fVo">—</span>
-                      <button class="mini" type="button" title="Chọn từ danh sách giáo dân">&#9678;</button>
-                      <button class="mini" type="button" title="Thêm giáo dân mới">+</button>
-                      <button class="mini" type="button" title="Bỏ chọn">&times;</button>
-                    </span>
-                    <span class="seg">
-                      <label><input type="radio" name="chuho"> Chủ hộ</label>
-                    </span>
-                  </div>
-                </div>
-                <div class="frow">
-                  <label for="fTen">Tên gia đình</label>
-                  <div class="val"><input type="text" id="fTen"></div>
-                </div>
-                <div class="frow">
-                  <label for="fGiaoHo">Giáo họ</label>
-                  <div class="val">
-                    <select id="fGiaoHo">
-                      <option>Ngoài xứ</option>
-                      <option>Giáo họ Antôn</option>
-                      <option>Giáo họ Fatima</option>
-                      <option>Giáo họ Lộ Đức</option>
-                      <option>Giáo họ Mân Côi</option>
-                      <option>Giáo họ Thánh Giuse</option>
-                      <option>Giáo họ Thánh Tâm</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="frow">
-                  <label for="fDT">Điện thoại</label>
-                  <div class="val">
-                    <input type="text" id="fDT" style="max-width:150px">
-                    <span class="inline-label">Diện</span>
-                    <select id="fDien">
-                      <option value="">Không thuộc diện nào</option>
-                      <option>Nghèo</option>
-                      <option>Cận nghèo</option>
-                      <option>Neo đơn</option>
-                      <option>Khuyết tật</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="frow">
-                  <label for="fDiaChi">Địa chỉ</label>
-                  <div class="val">
-                    <input type="text" id="fDiaChi">
-                    <button class="btn btn-sm btn-quiet" type="button" title="Xem trên bản đồ">Bản đồ</button>
-                  </div>
-                </div>
-                <div class="frow">
-                  <label for="fGhiChu">Ghi chú</label>
-                  <div class="val"><textarea id="fGhiChu" placeholder="Ghi chú nội bộ về gia đình…"></textarea></div>
-                </div>
-                <div class="frow">
-                  <label></label>
-                  <div class="val" style="flex-wrap:wrap;gap:8px">
-                    <label class="toggle"><input type="checkbox" id="chkChuyenXu"> Đã chuyển đi xứ khác</label>
-                    <label class="toggle"><input type="checkbox"> Không tính vào thống kê</label>
-                  </div>
-                </div>
-                <div class="frow" id="rowNgayChuyen" hidden>
-                  <label for="fNgayChuyen">Ngày chuyển</label>
-                  <div class="val"><input type="date" id="fNgayChuyen" style="max-width:190px"></div>
-                </div>
-                <div class="frow" id="rowNoiChuyen" hidden>
-                  <label for="fNoiChuyen">Nơi chuyển</label>
-                  <div class="val"><input type="text" id="fNoiChuyen" placeholder="Giáo xứ / địa phương chuyển đến"></div>
-                </div>
-              </div>
-
-              <!-- Cột phải -->
-              <div class="col-stack">
-                <div class="card glass">
-                  <div class="card-head">
-                    <h2>Hôn phối</h2>
-                    <div class="spacer"></div>
-                    <span class="tag tag-violet" id="hTag">Hợp pháp</span>
-                  </div>
-                  <!-- Số và ngày hôn phối nằm chung một dòng, đúng như khối
-                       GxHonPhoiGiaDinh của form desktop -->
-                  <div class="frow">
-                    <label for="hSo">Số hôn phối</label>
-                    <div class="val">
-                      <input type="text" id="hSo" style="max-width:110px">
-                      <span class="inline-label">Ngày</span>
-                      <input type="date" id="hNgay">
-                    </div>
-                  </div>
-                  <div class="frow">
-                    <label for="hNoi">Nơi hôn phối</label>
-                    <div class="val"><input type="text" id="hNoi"></div>
-                  </div>
-                  <div class="frow">
-                    <label for="hLM">Linh mục chứng</label>
-                    <div class="val">
-                      <select id="hLM">
-                        <option>Lm. Giuse Nguyễn Văn Tâm</option>
-                        <option>Lm. Phêrô Trần Đình Khoa</option>
-                        <option>Lm. Antôn Lê Quang Huy</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div class="frow">
-                    <label for="hC1">Người chứng 1</label>
-                    <div class="val"><input type="text" id="hC1"></div>
-                  </div>
-                  <div class="frow">
-                    <label for="hC2">Người chứng 2</label>
-                    <div class="val"><input type="text" id="hC2"></div>
-                  </div>
-                  <div class="frow">
-                    <label for="hTT">Tình trạng</label>
-                    <div class="val">
-                      <select id="hTT">
-                        <option value="">Chưa xác định</option>
-                        <option>Hợp pháp</option>
-                        <option>Hợp thức hóa</option>
-                        <option>Chuẩn</option>
-                        <option>Không theo phép đạo</option>
-                        <option>Ly thân</option>
-                        <option>Ly dị</option>
-                        <option>Đã được tháo gỡ</option>
-                        <option>Không xác định</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div class="frow">
-                    <label for="hGC">Ghi chú</label>
-                    <div class="val"><input type="text" id="hGC" placeholder="Ghi chú hôn phối…"></div>
-                  </div>
-                </div>
-
-                <div class="card glass">
-                  <div class="card-head"><h2>Hình gia đình</h2></div>
-                  <div class="photo-slot">
-                    <div>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                        <rect x="3" y="5" width="18" height="14" rx="2.5"/>
-                        <circle cx="8.5" cy="10.5" r="1.8"/>
-                        <path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5" stroke-linejoin="round"/>
-                      </svg>
-                      Chưa có hình<br>Nhấp để tải ảnh lên
-                    </div>
-                  </div>
-                </div>
-              </div>
-          </div>
-
-          <div class="card glass members-card">
-            <div class="table-toolbar">
-              <h2 style="font-size:15px;font-weight:600;margin-right:6px">Thành viên khác trong gia đình</h2>
-              <span class="count-pill"><b id="tvCount">0</b> người</span>
-              <span class="spacer"></span>
-              <button class="btn btn-sm" type="button">Thêm mới</button>
-              <button class="btn btn-sm" type="button">Chọn từ danh sách</button>
-              <button class="btn btn-sm btn-quiet" type="button">Xem &amp; sửa</button>
-              <button class="btn btn-sm btn-quiet" type="button">Loại bỏ</button>
-            </div>
-            <div class="grid-wrap">
-              <table class="grid" id="gridThanhVien">
-                <thead><tr id="tvHead"></tr></thead>
-                <tbody id="tvBody"></tbody>
-              </table>
-            </div>
-            <div class="table-foot">
-              <span class="legend"><i></i> Gạch ngang: đã qua đời, chuyển xứ hoặc lập gia đình riêng</span>
-              <span class="spacer"></span>
-              <span>Cột <b>Quan hệ GĐ</b> sửa trực tiếp trên lưới, các cột khác chỉ đọc</span>
-            </div>
-          </div>
-
-          <div class="cmdbar">
-            <span class="hint">Thay đổi chưa được lưu</span>
-            <div class="spacer"></div>
-            <button class="btn" type="button">In lý lịch cá nhân</button>
-            <button class="btn" type="button">In phiếu gia đình</button>
-            <button class="btn btn-quiet" type="button" id="btnQuayVe">Quay về</button>
-            <button class="btn btn-primary" type="button" id="btnCapNhat">Cập nhật</button>
-          </div>
-        </section>
-
-      </div>
+      <div class="tabstrip" id="tabstrip"></div>
+      <div class="tabpages" id="tabpages"></div>
     </main>
   </div>
 </div>
 
-<div id="ctxmenu" hidden>
-  <div class="ctx-title" id="ctxTitle">Gia đình</div>
-  <button type="button">In chứng nhận hôn phối</button>
-  <button type="button">In phiếu gia đình</button>
-  <button type="button">In lý lịch cá nhân</button>
-  <button type="button">In giới thiệu chuyển xứ</button>
-  <button type="button">Xem vị trí trên bản đồ</button>
-</div>
+<div id="ctxmenu" hidden></div>
 
 <script>
 (function () {
   "use strict";
 
-  /* =================== Dữ liệu minh hoạ =================== */
+  /* ==========================================================================
+     1. HẠ TẦNG
+     ========================================================================== */
+
+  function h(tag, props) {
+    var e = document.createElement(tag), k, v;
+    if (props) for (k in props) {
+      v = props[k];
+      if (v == null || v === false) continue;
+      if (k === "class") e.className = v;
+      else if (k === "text") e.textContent = v;
+      else if (k === "html") e.innerHTML = v;
+      else if (k.slice(0, 2) === "on" && typeof v === "function") e.addEventListener(k.slice(2).toLowerCase(), v);
+      else if (v === true) e.setAttribute(k, "");
+      else e.setAttribute(k, v);
+    }
+    for (var i = 2; i < arguments.length; i++) add(e, arguments[i]);
+    return e;
+  }
+  function add(parent, kid) {
+    if (kid == null || kid === false) return;
+    if (Array.isArray(kid)) { kid.forEach(function (k) { add(parent, k); }); return; }
+    parent.appendChild(typeof kid === "object" ? kid : document.createTextNode(String(kid)));
+  }
+  function $(sel, root) { return (root || document).querySelector(sel); }
+
+  /* ==========================================================================
+     2. COMPONENT DÙNG LẠI
+     Tương đương vai trò của project GXControl trong bản desktop: mỗi màn hình
+     chỉ khai báo dữ liệu và cấu hình cột/nút, không tự dựng lại lưới hay form.
+     ========================================================================== */
+
+  /* ---- Menu chuột phải (một thể hiện dùng chung cho mọi lưới) ---- */
+  var CtxMenu = (function () {
+    var root = $("#ctxmenu");
+    function show(x, y, title, items, row) {
+      root.innerHTML = "";
+      if (title) add(root, h("div", { class: "ctx-title", text: title }));
+      items.forEach(function (it) {
+        add(root, h("button", {
+          type: "button", text: it.label,
+          onclick: function () { hide(); if (it.onClick) it.onClick(row); }
+        }));
+      });
+      root.hidden = false;
+      root.style.left = Math.min(x, window.innerWidth - root.offsetWidth - 8) + "px";
+      root.style.top = Math.min(y, window.innerHeight - root.offsetHeight - 8) + "px";
+    }
+    function hide() { root.hidden = true; }
+    root.addEventListener("click", function (e) { e.stopPropagation(); });
+    return { show: show, hide: hide };
+  })();
+
+  /* ---- GxToolbar: thanh nút thao tác (tương đương GXAddEdit) ----
+     Nút có needSel = true sẽ tự bật/tắt theo việc lưới có dòng đang chọn hay
+     không — logic này trước đây lặp lại ở từng màn hình. */
+  function GxToolbar(opts) {
+    var refs = {};
+    var root = h("div", { class: "table-toolbar" });
+    (opts.items || []).forEach(function (it) {
+      if (it === "|") { add(root, h("span", { class: "sep" })); return; }
+      if (it === ">") { add(root, h("span", { class: "spacer" })); return; }
+      if (it.node) { add(root, it.node); return; }
+      var cls = "btn btn-sm" + (it.kind === "primary" ? " btn-primary" : it.kind === "quiet" ? " btn-quiet" : "");
+      var b = h("button", { class: cls, type: "button", onclick: function () { if (it.onClick) it.onClick(); } });
+      if (it.icon) add(b, iconSvg(it.icon));
+      add(b, it.label);
+      if (it.needSel) b.disabled = true;
+      refs[it.id || it.label] = { btn: b, needSel: !!it.needSel };
+      add(root, b);
+    });
+    return {
+      root: root,
+      setSelection: function (has) {
+        Object.keys(refs).forEach(function (k) {
+          if (refs[k].needSel) refs[k].btn.disabled = !has;
+        });
+      }
+    };
+  }
+
+  function iconSvg(name) {
+    var paths = {
+      plus: '<path d="M12 5v14M5 12h14" stroke-linecap="round"/>',
+      excel: '<path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/>'
+    };
+    var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    s.setAttribute("viewBox", "0 0 24 24");
+    s.setAttribute("fill", "none");
+    s.setAttribute("stroke", "currentColor");
+    s.setAttribute("stroke-width", "2.2");
+    s.innerHTML = paths[name] || "";
+    return s;
+  }
+
+  /* ---- GxGrid: lưới dữ liệu (tương đương lớp GxGrid : GridEX) ----
+     Gói sẵn: hàng lọc từng cột, sắp xếp theo header, cột số thứ tự, chọn dòng,
+     mở bằng nhấp đúp, menu chuột phải, trạng thái rỗng, chân lưới đếm bản ghi.
+     Màn hình dùng lại chỉ cần truyền `columns` + `rows`. */
+  function GxGrid(opts) {
+    var cols = opts.columns;
+    var rows = opts.rows || [];
+    var keyOf = opts.keyField ? function (r) { return r[opts.keyField]; } : function (r) { return r; };
+    var sortKey = opts.sortKey || cols[0].key;
+    var sortDir = 1;
+    var filters = {};
+    var selected = null;
+
+    var headRow = h("tr");
+    var filterRow = h("tr", { class: "filters" });
+    var tbody = h("tbody");
+    var table = h("table", { class: "grid" }, h("thead", null, headRow, opts.filterRow === false ? null : filterRow), tbody);
+    var wrap = h("div", { class: "grid-wrap" }, table);
+
+    var countEl = h("span");
+    var foot = h("div", { class: "table-foot" },
+      opts.pager === false ? null : h("div", { class: "pager" },
+        h("button", { type: "button", title: "Trang đầu", html: "&#9664;&#9664;" }),
+        h("button", { type: "button", title: "Trang trước", html: "&#9664;" }),
+        h("button", { type: "button", title: "Trang sau", html: "&#9654;" }),
+        h("button", { type: "button", title: "Trang cuối", html: "&#9654;&#9654;" })),
+      countEl,
+      h("span", { class: "spacer" }),
+      opts.footNote ? h("span", { class: "legend" }, h("i"), opts.footNote) : null,
+      opts.footRight ? h("span", { html: opts.footRight }) : null);
+
+    var root = h("div", { class: "table-card glass" }, opts.toolbar || null, wrap, foot);
+
+    /* Header + hàng lọc */
+    add(headRow, h("th", { class: "rowhead", text: "#" }));
+    add(filterRow, h("th", { class: "rowhead" }));
+    cols.forEach(function (c) {
+      var th = h("th", { "data-key": c.key, title: "Nhấp để sắp xếp theo " + c.cap, style: "min-width:" + (c.w || 110) + "px" },
+        c.cap, h("span", { class: "sortmark" }));
+      th.addEventListener("click", function () {
+        if (sortKey === c.key) sortDir = -sortDir; else { sortKey = c.key; sortDir = 1; }
+        render();
+      });
+      add(headRow, th);
+
+      var inp = h("input", { type: "text", placeholder: "Lọc…", "aria-label": "Lọc cột " + c.cap });
+      inp.addEventListener("input", function () { filters[c.key] = inp.value.trim().toLowerCase(); render(); });
+      add(filterRow, h("th", null, inp));
+    });
+
+    function visible() {
+      var list = rows.filter(function (r) {
+        if (opts.filterFn && !opts.filterFn(r)) return false;
+        return cols.every(function (c) {
+          var q = filters[c.key];
+          if (!q) return true;
+          return String(value(r, c) == null ? "" : value(r, c)).toLowerCase().indexOf(q) !== -1;
+        });
+      });
+      var col = colByKey(sortKey);
+      return list.sort(function (a, b) {
+        var va = value(a, col), vb = value(b, col);
+        if (typeof va === "number" && typeof vb === "number") return (va - vb) * sortDir;
+        return String(va == null ? "" : va).localeCompare(String(vb == null ? "" : vb), "vi") * sortDir;
+      });
+    }
+    function colByKey(k) { return cols.filter(function (c) { return c.key === k; })[0] || cols[0]; }
+    function value(row, col) { return col.value ? col.value(row) : row[col.key]; }
+
+    function render() {
+      var list = visible();
+      tbody.innerHTML = "";
+
+      headRow.querySelectorAll("th[data-key]").forEach(function (th) {
+        th.classList.toggle("sorted", th.dataset.key === sortKey);
+        th.classList.toggle("desc", th.dataset.key === sortKey && sortDir === -1);
+      });
+
+      if (!list.length) {
+        add(tbody, h("tr", null, h("td", {
+          class: "empty-note", colspan: cols.length + 1,
+          text: opts.emptyText || "Không có dòng nào khớp điều kiện lọc."
+        })));
+      }
+
+      list.forEach(function (r, i) {
+        var tr = h("tr", { "aria-selected": String(selected != null && keyOf(r) === selected) });
+        add(tr, h("td", { class: "rowhead", text: String(i + 1) }));
+        cols.forEach(function (c) {
+          var raw = value(r, c);
+          var cls = [c.cls || "", c.align === "right" ? "num" : ""].join(" ").trim();
+          if (c.strike && c.strike(r)) cls = "struck";
+          else if (opts.rowStrike && opts.rowStrike(r) && !c.noStrike) cls = "struck";
+          var td = h("td", { class: cls, title: raw == null ? "" : String(raw) });
+          if (c.render) add(td, c.render(r, raw));
+          else if (raw === "" || raw == null) add(td, h("span", { class: "muted", text: "—" }));
+          else add(td, String(raw));
+          add(tr, td);
+        });
+        tr.addEventListener("click", function () { select(keyOf(r)); });
+        if (opts.onOpen) tr.addEventListener("dblclick", function () { opts.onOpen(r); });
+        if (opts.contextMenu) tr.addEventListener("contextmenu", function (e) {
+          e.preventDefault();
+          select(keyOf(r));
+          CtxMenu.show(e.clientX, e.clientY, opts.ctxTitle ? opts.ctxTitle(r) : null, opts.contextMenu, r);
+        });
+        add(tbody, tr);
+      });
+
+      countEl.textContent = list.length
+        ? "1 – " + list.length + " trên " + list.length
+        : "Không có bản ghi";
+      if (opts.onCount) opts.onCount(list.length);
+      if (opts.toolbarApi) opts.toolbarApi.setSelection(list.some(function (r) { return keyOf(r) === selected; }));
+    }
+
+    function select(key) {
+      selected = key;
+      render();
+      if (opts.onSelect) opts.onSelect(current());
+    }
+    function current() {
+      return rows.filter(function (r) { return keyOf(r) === selected; })[0] || null;
+    }
+
+    render();
+    return {
+      root: root,
+      refresh: render,
+      selected: current,
+      setRows: function (r) { rows = r; selected = null; render(); }
+    };
+  }
+
+  /* ---- Component form (tương đương GxTextField / GxDateField / GxGiaoDan…) ---- */
+  function GxField(label, control, extra) {
+    var val = h("div", { class: "val" });
+    add(val, control);
+    if (extra) add(val, extra);
+    return h("div", { class: "frow" }, h("label", { text: label || "" }), val);
+  }
+  function GxInline(label) { return h("span", { class: "inline-label", text: label }); }
+  function GxText(o) {
+    o = o || {};
+    return h("input", {
+      type: "text", value: o.value == null ? "" : o.value,
+      placeholder: o.placeholder, disabled: o.disabled, readonly: o.readonly,
+      style: o.width ? "max-width:" + o.width : null
+    });
+  }
+  function GxDate(o) {
+    o = o || {};
+    return h("input", { type: "date", value: o.value || "", style: o.width ? "max-width:" + o.width : null });
+  }
+  function GxSelect(o) {
+    var s = h("select", { style: o.width ? "max-width:" + o.width : null });
+    (o.options || []).forEach(function (op) {
+      var label = typeof op === "string" ? op : op.label;
+      var value = typeof op === "string" ? op : op.value;
+      add(s, h("option", { value: value, text: label, selected: value === o.value }));
+    });
+    return s;
+  }
+  function GxArea(o) {
+    o = o || {};
+    return h("textarea", { placeholder: o.placeholder, text: o.value || "" });
+  }
+  function GxCheck(o) {
+    var input = h("input", { type: "checkbox", checked: o.checked });
+    if (o.onChange) input.addEventListener("change", function () { o.onChange(input.checked); });
+    var lbl = h("label", { class: "toggle" }, input, o.label);
+    /* Giữ tham chiếu tới ô tick để form gọi được các liên động (ví dụ tick
+       "Qua đời" thì tự bỏ tick "Còn học", đúng như frmGiaoDan) */
+    lbl.input = input;
+    lbl.set = function (v) { input.checked = v; input.dispatchEvent(new Event("change")); };
+    return lbl;
+  }
+  /* Ô chọn giáo dân — tương đương UserControl GxGiaoDan (ô chỉ đọc + 3 nút) */
+  function GxPicker(o) {
+    o = o || {};
+    var who = h("span", { class: "who" + (o.value ? "" : " empty"), text: o.value || "—" });
+    return h("span", { class: "picker" }, who,
+      h("button", { class: "mini", type: "button", title: "Chọn từ danh sách giáo dân", html: "&#9678;" }),
+      h("button", { class: "mini", type: "button", title: "Thêm giáo dân mới", text: "+" }),
+      h("button", { class: "mini", type: "button", title: "Bỏ chọn", html: "&times;" }));
+  }
+  function GxSeg(label, name, checked) {
+    return h("span", { class: "seg" },
+      h("label", null, h("input", { type: "radio", name: name, checked: checked }), label));
+  }
+  function GxCard(o) {
+    var head = h("div", { class: "card-head" }, h("h2", { text: o.title }));
+    if (o.badge) { add(head, h("div", { class: "spacer" })); add(head, o.badge); }
+    else if (o.eyebrow) { add(head, h("div", { class: "spacer" })); add(head, h("span", { class: "eyebrow", text: o.eyebrow })); }
+    var card = h("div", { class: "card glass" + (o.className ? " " + o.className : "") }, o.title ? head : null);
+    for (var i = 1; i < arguments.length; i++) add(card, arguments[i]);
+    return card;
+  }
+  function GxPhoto(text) {
+    return h("div", { class: "photo-slot" }, h("div", {
+      html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">' +
+        '<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="10.5" r="1.8"/>' +
+        '<path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5" stroke-linejoin="round"/></svg>' +
+        (text || "Chưa có hình<br>Nhấp để tải ảnh lên")
+    }));
+  }
+  function GxTag(text, tone) { return h("span", { class: "tag tag-" + (tone || "mint"), text: text }); }
+  function GxCountPill(n, unit) {
+    return h("span", { class: "count-pill" }, h("b", { text: String(n) }), unit);
+  }
+  function GxCmdBar() {
+    var bar = h("div", { class: "cmdbar" });
+    for (var i = 0; i < arguments.length; i++) add(bar, arguments[i]);
+    return bar;
+  }
+  function GxBtn(label, kind, onClick) {
+    return h("button", {
+      class: "btn" + (kind === "primary" ? " btn-primary" : kind === "quiet" ? " btn-quiet" : "") + (kind === "sm" ? " btn-sm" : ""),
+      type: "button", text: label, onclick: onClick || null
+    });
+  }
+
+  /* ---- GxFormTabs: tab nội dung bên trong một form (tương đương tabControl1
+     của frmGiaoDan). Nội dung mỗi tab dựng sẵn một lần rồi chỉ ẩn/hiện, giống
+     hành vi của TabControl trên WinForms. ---- */
+  function GxFormTabs(tabs) {
+    var bar = h("div", { class: "form-tabs" });
+    var body = h("div", { class: "form-body" });
+    var buttons = [];
+    var panels = [];
+
+    tabs.forEach(function (t, i) {
+      var btn = h("button", { type: "button", text: t.title, "aria-selected": String(i === 0) });
+      var panel = h("div", { class: "form-body-panel" });
+      add(panel, t.build());
+      panel.hidden = i !== 0;
+      panel.style.display = i === 0 ? "grid" : "";
+      panel.style.gap = "12px";
+      btn.addEventListener("click", function () { chon(i); });
+      buttons.push(btn); panels.push(panel);
+      add(bar, btn); add(body, panel);
+    });
+
+    function chon(idx) {
+      buttons.forEach(function (b, i) { b.setAttribute("aria-selected", String(i === idx)); });
+      panels.forEach(function (p, i) {
+        p.hidden = i !== idx;
+        p.style.display = i === idx ? "grid" : "";
+      });
+      body.scrollTop = 0;
+    }
+    return { bar: bar, body: body, select: chon };
+  }
+
+  /* ---- Quản lý thẻ tài liệu (tương đương FATabStrip + dicShows của frmMain) ----
+     Mỗi bản ghi mở ra một thẻ riêng, khoá theo id. Mở lại đúng bản ghi đó thì
+     chuyển tiêu điểm sang thẻ đang mở thay vì tạo thẻ trùng. */
+  var Tabs = (function () {
+    var strip = $("#tabstrip"), host = $("#tabpages");
+    var pages = {};
+    var order = [];
+
+    function open(id, title, build, opts) {
+      opts = opts || {};
+      if (pages[id]) { focus(id); return pages[id]; }
+      var page = build();
+      page.classList.add("page");
+      page.hidden = true;
+      host.appendChild(page);
+
+      var tab = h("div", { class: "tab", "data-tab": id, role: "tab", tabindex: "0" },
+        h("span", { class: "lbl", text: title, title: title }));
+      if (opts.closable !== false) {
+        add(tab, h("button", {
+          class: "x", type: "button", title: "Đóng thẻ", html: "&times;",
+          onclick: function (e) { e.stopPropagation(); close(id); }
+        }));
+      }
+      tab.addEventListener("click", function () { focus(id); });
+      strip.appendChild(tab);
+
+      pages[id] = { tab: tab, page: page };
+      order.push(id);
+      focus(id);
+      return pages[id];
+    }
+    function focus(id) {
+      Object.keys(pages).forEach(function (k) {
+        pages[k].tab.setAttribute("aria-selected", String(k === id));
+        pages[k].page.hidden = k !== id;
+      });
+      var t = pages[id] && pages[id].tab;
+      if (t && t.scrollIntoView) t.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+    function close(id) {
+      if (!pages[id]) return;
+      pages[id].tab.remove();
+      pages[id].page.remove();
+      delete pages[id];
+      order = order.filter(function (k) { return k !== id; });
+      if (order.length) focus(order[order.length - 1]);
+    }
+    return { open: open, focus: focus, close: close, has: function (id) { return !!pages[id]; } };
+  })();
+
+  /* ==========================================================================
+     3. DỮ LIỆU MINH HOẠ
+     ========================================================================== */
+
+  var GIAO_HO = ["Giáo họ Antôn", "Giáo họ Fatima", "Giáo họ Lộ Đức", "Giáo họ Mân Côi",
+                 "Giáo họ Thánh Giuse", "Giáo họ Thánh Tâm"];
+  var TEN_THANH = ["Giuse", "Maria", "Phêrô", "Anna", "Đaminh", "Têrêsa", "Antôn", "Gioan B."];
+  var LINH_MUC = ["Lm. Giuse Nguyễn Văn Tâm", "Lm. Phêrô Trần Đình Khoa", "Lm. Antôn Lê Quang Huy"];
+  var TINH_TRANG_HP = ["", "Hợp pháp", "Hợp thức hóa", "Chuẩn", "Không theo phép đạo",
+                       "Ly thân", "Ly dị", "Đã được tháo gỡ", "Không xác định"];
+  var DIEN_GIA_DINH = ["", "Nghèo", "Cận nghèo", "Neo đơn", "Khuyết tật"];
+  var QUAN_HE = ["Chồng", "Vợ", "Con", "Cháu", "Cha", "Mẹ", "Cha chồng", "Mẹ chồng", "Anh/Chị/Em"];
+
+  /* Các danh mục dưới đây lấy đúng giá trị hard-code trong mã nguồn desktop */
+  var VAN_HOA = ["", "Lớp 1", "Lớp 2", "Lớp 3", "Lớp 4", "Lớp 5", "Lớp 6", "Lớp 7", "Lớp 8",
+                 "Lớp 9", "Lớp 10", "Lớp 11", "Lớp 12", "Trung cấp", "Cao đẳng", "Đại học", "Trên đại học"];
+  var NGOAI_NGU = ["", "Tiếng Anh", "Tiếng Pháp", "Tiếng Nga", "Tiếng Đức", "Tiếng Trung Quốc", "Tiếng Nhật"];
+  var NGHE_NGHIEP = ["", "Nông dân", "Công nhân", "Nhân viên", "Buôn bán", "Nội trợ", "Nghề tự do"];
+  var DAN_TOC = ["", "Kinh", "Tày", "Thái", "Mường", "Khơ Me", "H'Mông", "Nùng", "Hoa", "Dao",
+                 "Gia Rai", "Ê Đê", "Ba Na", "Xơ Đăng", "Chăm", "Cơ Ho", "Hrê", "Thổ", "Khơ Mú", "Cơ Tu"];
+  var CHUC_VU = ["", "Tu sĩ", "Chủng sinh", "Phó tế", "Linh mục", "Giám mục", "Khấn trọn", "Khác"];
+  var CHUYEN_XU = [
+    { label:"Ở tại xứ", value:"0" },
+    { label:"Chuyển từ xứ khác đến", value:"1" },
+    { label:"Đã chuyển đi xứ khác", value:"2" }
+  ];
+  var TINH_TRANG_XUC_DAU = ["", "Nguy tử", "Thông thường"];
+  var XEP_LOAI_GL = ["", "Trung Bình", "Khá", "Giỏi"];
+  var HOI_DOAN = ["", "Hội Legio Mariae", "Hội Các Bà Mẹ Công Giáo", "Hội Gia Trưởng",
+                  "Ca đoàn Thánh Tâm", "Giới trẻ giáo xứ", "Hội Lòng Chúa Thương Xót"];
+
   /* gach: 0 = người nam đã qua đời/chuyển · 1 = người nữ · 2 = cả hai */
-  const FAMILIES = [
+  var FAMILIES = [
     { ma:"00012", ten:"Bình - Lan", chong:"Giuse Trần Văn Bình", vo:"Maria Nguyễn Thị Lan", so:5, dt:"028 3891 4472", dtc:"0912 345 678", dtv:"0987 114 220", diachi:"12/4 Nguyễn Trãi, KP 3", giaoho:"Giáo họ Thánh Tâm", dien:"", ghichu:"", gach:null },
     { ma:"00027", ten:"Chính - Hạnh", chong:"Phêrô Lê Văn Chính", vo:"Anna Phạm Thị Hạnh", so:4, dt:"", dtc:"0908 221 774", dtv:"", diachi:"55 Lê Lợi", giaoho:"Giáo họ Mân Côi", dien:"Cận nghèo", ghichu:"", gach:null },
     { ma:"00035", ten:"Dũng - Thu", chong:"Đaminh Vũ Tiến Dũng", vo:"Têrêsa Ngô Thị Thu", so:6, dt:"028 3775 1120", dtc:"0933 561 908", dtv:"0902 447 511", diachi:"7 Hẻm 24 Trần Phú", giaoho:"Giáo họ Fatima", dien:"", ghichu:"Có con đi tu", gach:null },
@@ -1465,332 +1593,823 @@ tbody tr[aria-selected="true"] .rowhead {
     { ma:"00142", ten:"Vinh - Diễm", chong:"Giuse Ngô Quốc Vinh", vo:"Anna Bùi Thị Diễm", so:2, dt:"", dtc:"", dtv:"0983 117 664", diachi:"25 Điện Biên Phủ", giaoho:"Ngoài xứ", dien:"", ghichu:"Tạm trú, không thống kê", gach:null, ao:true }
   ];
 
-  const COLS = [
-    { key:"ma",     cap:"Mã GĐ",           w:92,  cls:"cell-code" },
-    { key:"ten",    cap:"Tên gia đình",    w:132, cls:"cell-strong" },
-    { key:"chong",  cap:"Người nam",       w:196 },
-    { key:"vo",     cap:"Người nữ",        w:196 },
-    { key:"so",     cap:"Số người",        w:84,  num:true },
-    { key:"dt",     cap:"Điện thoại",      w:126 },
-    { key:"dtc",    cap:"ĐT chồng",        w:120 },
-    { key:"dtv",    cap:"ĐT vợ",           w:120 },
-    { key:"diachi", cap:"Địa chỉ",         w:200 },
-    { key:"giaoho", cap:"Giáo họ",         w:150 },
-    { key:"dien",   cap:"Diện gia đình",   w:124, tag:true },
-    { key:"ghichu", cap:"Ghi chú",         w:180, cls:"muted" }
+  function P(o) {
+    /* Điền mặc định cho các trường ít dùng, để dữ liệu mẫu khỏi dài dòng */
+    return Object.assign({
+      tenThanh:"", hoTen:"", phai:"Nam", ngaySinh:"", noiSinh:"TP.HCM",
+      ngayRuaToi:"", noiRuaToi:"GX Thánh Tâm", ngayXtrl:"", noiXtrl:"GX Thánh Tâm",
+      ngayThemSuc:"", noiThemSuc:"GX Thánh Tâm", lapGd:false, cha:"", me:"",
+      tanTong:false, conHoc:false, ngheNghiep:"", ghiChu:"", dienThoai:"", diaChi:"",
+      giaoHo:"Giáo họ Thánh Tâm", daChuyenDi:false, vanHoa:"12/12", chuyenMon:"",
+      ngoaiNgu:"", quaDoi:false, ngayQuaDoi:"", noiAnTang:"", maGiaDinh:"", quanHe:""
+    }, o);
+  }
+
+  var PEOPLE = [
+    P({ ma:"04401", tenThanh:"Giuse", hoTen:"Trần Văn Bình", phai:"Nam", ngaySinh:"03/05/1972", ngayRuaToi:"20/05/1972", ngayXtrl:"12/06/1980", ngayThemSuc:"18/10/1986", lapGd:true, ngheNghiep:"Kỹ sư", dienThoai:"0912 345 678", diaChi:"12/4 Nguyễn Trãi, KP 3", maGiaDinh:"00012", quanHe:"Chồng", chuyenMon:"Đại học" }),
+    P({ ma:"04402", tenThanh:"Maria", hoTen:"Nguyễn Thị Lan", phai:"Nữ", ngaySinh:"11/09/1975", ngayRuaToi:"02/10/1975", ngayXtrl:"14/05/1983", ngayThemSuc:"20/11/1989", lapGd:true, ngheNghiep:"Giáo viên", dienThoai:"0987 114 220", diaChi:"12/4 Nguyễn Trãi, KP 3", maGiaDinh:"00012", quanHe:"Vợ", chuyenMon:"Cao đẳng" }),
+    P({ ma:"04412", tenThanh:"Maria", hoTen:"Trần Thị Khánh Ngọc", phai:"Nữ", ngaySinh:"14/03/2005", ngayRuaToi:"02/04/2005", ngayXtrl:"18/05/2013", ngayThemSuc:"21/11/2018", conHoc:true, cha:"Trần Văn Bình", me:"Nguyễn Thị Lan", ngheNghiep:"Sinh viên", diaChi:"12/4 Nguyễn Trãi, KP 3", maGiaDinh:"00012", quanHe:"Con" }),
+    P({ ma:"04413", tenThanh:"Giuse", hoTen:"Trần Minh Khôi", phai:"Nam", ngaySinh:"09/09/2008", ngayRuaToi:"28/09/2008", ngayXtrl:"12/05/2016", conHoc:true, cha:"Trần Văn Bình", me:"Nguyễn Thị Lan", ngheNghiep:"Học sinh", ghiChu:"Giúp lễ", diaChi:"12/4 Nguyễn Trãi, KP 3", maGiaDinh:"00012", quanHe:"Con", vanHoa:"9/12" }),
+    P({ ma:"04414", tenThanh:"Anna", hoTen:"Trần Thị Thanh Hương", phai:"Nữ", ngaySinh:"22/07/1999", ngayRuaToi:"15/08/1999", ngayXtrl:"04/06/2008", ngayThemSuc:"19/10/2013", lapGd:true, cha:"Trần Văn Bình", me:"Nguyễn Thị Lan", ngheNghiep:"Kế toán", ghiChu:"Đã lập gia đình riêng", diaChi:"33 Lê Văn Sỹ", giaoHo:"Giáo họ Mân Côi", maGiaDinh:"00012", quanHe:"Con" }),
+    P({ ma:"04398", tenThanh:"Maria", hoTen:"Phạm Thị Tần", phai:"Nữ", ngaySinh:"11/02/1941", ngayRuaToi:"03/03/1941", ngheNghiep:"Nội trợ", quaDoi:true, ngayQuaDoi:"08/06/2023", noiAnTang:"Đất thánh giáo xứ", ghiChu:"Đã qua đời", diaChi:"12/4 Nguyễn Trãi, KP 3", maGiaDinh:"00012", quanHe:"Mẹ chồng", vanHoa:"" }),
+    P({ ma:"04455", tenThanh:"Phêrô", hoTen:"Trần Gia Bảo", phai:"Nam", ngaySinh:"30/12/2019", ngayRuaToi:"19/01/2020", cha:"Trần Minh Khôi", diaChi:"12/4 Nguyễn Trãi, KP 3", maGiaDinh:"00012", quanHe:"Cháu", vanHoa:"" }),
+
+    P({ ma:"04501", tenThanh:"Đaminh", hoTen:"Vũ Tiến Dũng", phai:"Nam", ngaySinh:"17/01/1968", ngayRuaToi:"04/02/1968", ngayXtrl:"11/05/1976", ngayThemSuc:"22/10/1982", lapGd:true, ngheNghiep:"Thợ mộc", dienThoai:"0933 561 908", diaChi:"7 Hẻm 24 Trần Phú", giaoHo:"Giáo họ Fatima", maGiaDinh:"00035", quanHe:"Chồng", vanHoa:"9/12" }),
+    P({ ma:"04502", tenThanh:"Têrêsa", hoTen:"Ngô Thị Thu", phai:"Nữ", ngaySinh:"25/08/1971", ngayRuaToi:"12/09/1971", ngayXtrl:"08/05/1979", ngayThemSuc:"17/11/1985", lapGd:true, ngheNghiep:"Buôn bán", dienThoai:"0902 447 511", diaChi:"7 Hẻm 24 Trần Phú", giaoHo:"Giáo họ Fatima", maGiaDinh:"00035", quanHe:"Vợ" }),
+    P({ ma:"04511", tenThanh:"Giuse", hoTen:"Vũ Minh Trí", phai:"Nam", ngaySinh:"02/04/1996", ngayRuaToi:"21/04/1996", ngayXtrl:"09/06/2004", ngayThemSuc:"12/11/2010", cha:"Vũ Tiến Dũng", me:"Ngô Thị Thu", ngheNghiep:"Chủng sinh", ghiChu:"Đang tu học tại Đại chủng viện", diaChi:"7 Hẻm 24 Trần Phú", giaoHo:"Giáo họ Fatima", maGiaDinh:"00035", quanHe:"Con", chuyenMon:"Đại học", ngoaiNgu:"Anh, Latinh" }),
+    P({ ma:"04512", tenThanh:"Maria", hoTen:"Vũ Thị Ngọc Hà", phai:"Nữ", ngaySinh:"19/11/2001", ngayRuaToi:"09/12/2001", ngayXtrl:"05/06/2010", ngayThemSuc:"23/10/2015", cha:"Vũ Tiến Dũng", me:"Ngô Thị Thu", ngheNghiep:"Điều dưỡng", diaChi:"7 Hẻm 24 Trần Phú", giaoHo:"Giáo họ Fatima", maGiaDinh:"00035", quanHe:"Con", chuyenMon:"Cao đẳng" }),
+    P({ ma:"04513", tenThanh:"Antôn", hoTen:"Vũ Đức Duy", phai:"Nam", ngaySinh:"06/06/2010", ngayRuaToi:"27/06/2010", ngayXtrl:"14/05/2018", conHoc:true, cha:"Vũ Tiến Dũng", me:"Ngô Thị Thu", ngheNghiep:"Học sinh", diaChi:"7 Hẻm 24 Trần Phú", giaoHo:"Giáo họ Fatima", maGiaDinh:"00035", quanHe:"Con", vanHoa:"8/12" }),
+    P({ ma:"04520", tenThanh:"Gioan B.", hoTen:"Ngô Văn Cẩn", phai:"Nam", ngaySinh:"14/07/1944", ngayRuaToi:"01/08/1944", ngheNghiep:"Nghỉ hưu", diaChi:"7 Hẻm 24 Trần Phú", giaoHo:"Giáo họ Fatima", maGiaDinh:"00035", quanHe:"Cha", vanHoa:"7/12" }),
+
+    P({ ma:"04601", tenThanh:"Gioan B.", hoTen:"Nguyễn Văn Hoà", phai:"Nam", ngaySinh:"08/03/1965", ngayRuaToi:"28/03/1965", quaDoi:true, ngayQuaDoi:"12/02/2024", noiAnTang:"Đất thánh giáo xứ", ngheNghiep:"Tài xế", diaChi:"118 Cách Mạng Tháng 8", giaoHo:"Giáo họ Lộ Đức", maGiaDinh:"00048", quanHe:"Chồng" }),
+    P({ ma:"04602", tenThanh:"Maria", hoTen:"Đỗ Thị Mai", phai:"Nữ", ngaySinh:"30/10/1969", ngayRuaToi:"19/11/1969", ngayThemSuc:"08/11/1984", lapGd:true, ngheNghiep:"Nội trợ", dienThoai:"0973 882 145", diaChi:"118 Cách Mạng Tháng 8", giaoHo:"Giáo họ Lộ Đức", maGiaDinh:"00048", quanHe:"Vợ" }),
+    P({ ma:"04701", tenThanh:"Anna", hoTen:"Vũ Thị Uyên", phai:"Nữ", ngaySinh:"21/05/1978", ngayRuaToi:"10/06/1978", daChuyenDi:true, ngheNghiep:"Công nhân", ghiChu:"Đã chuyển đến GX Tân Định", diaChi:"81 Trường Chinh", giaoHo:"Giáo họ Lộ Đức", maGiaDinh:"00108", quanHe:"Vợ" }),
+    P({ ma:"04801", tenThanh:"Têrêsa", hoTen:"Lâm Thị Sương", phai:"Nữ", ngaySinh:"12/12/1966", ngayRuaToi:"01/01/1967", quaDoi:true, ngayQuaDoi:"03/09/2022", noiAnTang:"Đất thánh giáo xứ", ngheNghiep:"Nội trợ", diaChi:"66 Lý Thường Kiệt", giaoHo:"Giáo họ Mân Côi", maGiaDinh:"00082", quanHe:"Vợ" })
   ];
 
-  const TV_COLS = [
-    "Quan hệ GĐ","Mã GD","Tên thánh","Họ tên","Phái","Ngày sinh","Ngày rửa tội","Ngày XTRL",
-    "Ngày Th.Sức","Lập GĐ","Cha","Mẹ","Tân tòng","Còn học","Nghề nghiệp","Ghi chú","Địa chỉ",
-    "Giáo họ","Đã chuyển đi","Văn hóa","Chuyên môn","Ngoại ngữ","Qua đời","Ngày qua đời",
-    "Nơi an táng","Nơi sinh","Nơi rửa tội","Nơi XTRL","Nơi thêm sức"
+  function laNguoiGachDo(p) { return p.quaDoi || p.daChuyenDi || p.lapGd; }
+  function thanhVienCua(maGiaDinh) {
+    return PEOPLE.filter(function (p) {
+      return p.maGiaDinh === maGiaDinh && p.quanHe !== "Chồng" && p.quanHe !== "Vợ";
+    });
+  }
+
+  /* ==========================================================================
+     4. ĐỊNH NGHĨA CỘT (tương đương hàm FormatGrid của từng UserControl)
+     ========================================================================== */
+
+  var COLS_GIA_DINH = [
+    { key:"ma",     cap:"Mã GĐ",         w:92,  cls:"cell-code", noStrike:true },
+    { key:"ten",    cap:"Tên gia đình",  w:132, cls:"cell-strong" },
+    { key:"chong",  cap:"Người nam",     w:196, strike:function (f) { return f.gach === 0 || f.gach === 2; } },
+    { key:"vo",     cap:"Người nữ",      w:196, strike:function (f) { return f.gach === 1 || f.gach === 2; } },
+    { key:"so",     cap:"Số người",      w:84,  align:"right" },
+    { key:"dt",     cap:"Điện thoại",    w:126 },
+    { key:"dtc",    cap:"ĐT chồng",      w:120 },
+    { key:"dtv",    cap:"ĐT vợ",         w:120 },
+    { key:"diachi", cap:"Địa chỉ",       w:200 },
+    { key:"giaoho", cap:"Giáo họ",       w:150 },
+    { key:"dien",   cap:"Diện gia đình", w:124, render:function (f, v) { return v ? GxTag(v, "amber") : h("span", { class:"muted", text:"—" }); } },
+    { key:"ghichu", cap:"Ghi chú",       w:180, cls:"muted" }
   ];
 
-  const MEMBERS = [
-    { qh:"Con",       ma:"04412", ts:"Maria", ten:"Trần Thị Khánh Ngọc", phai:"Nữ", ns:"14/03/2005", nrt:"02/04/2005", nxtrl:"18/05/2013", nts:"21/11/2018", lapgd:false, cha:"Trần Văn Bình", me:"Nguyễn Thị Lan", tantong:false, conhoc:true,  nghe:"Sinh viên", gc:"", diachi:"12/4 Nguyễn Trãi, KP 3", gh:"Giáo họ Thánh Tâm", chuyen:false, qd:false, ngayqd:"", red:false },
-    { qh:"Con",       ma:"04413", ts:"Giuse", ten:"Trần Minh Khôi",      phai:"Nam", ns:"09/09/2008", nrt:"28/09/2008", nxtrl:"12/05/2016", nts:"", lapgd:false, cha:"Trần Văn Bình", me:"Nguyễn Thị Lan", tantong:false, conhoc:true,  nghe:"Học sinh", gc:"Giúp lễ", diachi:"12/4 Nguyễn Trãi, KP 3", gh:"Giáo họ Thánh Tâm", chuyen:false, qd:false, ngayqd:"", red:false },
-    { qh:"Con",       ma:"04414", ts:"Anna",  ten:"Trần Thị Thanh Hương", phai:"Nữ", ns:"22/07/1999", nrt:"15/08/1999", nxtrl:"04/06/2008", nts:"19/10/2013", lapgd:true, cha:"Trần Văn Bình", me:"Nguyễn Thị Lan", tantong:false, conhoc:false, nghe:"Kế toán", gc:"Đã lập gia đình riêng", diachi:"33 Lê Văn Sỹ", gh:"Giáo họ Mân Côi", chuyen:false, qd:false, ngayqd:"", red:true },
-    { qh:"Mẹ chồng",  ma:"04398", ts:"Maria", ten:"Phạm Thị Tần",        phai:"Nữ", ns:"11/02/1941", nrt:"03/03/1941", nxtrl:"", nts:"", lapgd:false, cha:"", me:"", tantong:false, conhoc:false, nghe:"Nội trợ", gc:"Đã qua đời", diachi:"12/4 Nguyễn Trãi, KP 3", gh:"Giáo họ Thánh Tâm", chuyen:false, qd:true, ngayqd:"08/06/2023", red:true },
-    { qh:"Cháu",      ma:"04455", ts:"Phêrô", ten:"Trần Gia Bảo",        phai:"Nam", ns:"30/12/2019", nrt:"19/01/2020", nxtrl:"", nts:"", lapgd:false, cha:"Trần Minh Khôi", me:"", tantong:false, conhoc:false, nghe:"", gc:"", diachi:"12/4 Nguyễn Trãi, KP 3", gh:"Giáo họ Thánh Tâm", chuyen:false, qd:false, ngayqd:"", red:false }
+  function cot(key, cap, w, extra) { return Object.assign({ key:key, cap:cap, w:w }, extra || {}); }
+  function cotCo(key, cap) {
+    return { key:key, cap:cap, w:96, render:function (r) {
+      return r[key] ? GxTag("✓", "mint") : h("span", { class:"muted", text:"—" });
+    } };
+  }
+
+  /* Bộ cột giáo dân — dùng chung cho DANH SÁCH GIÁO DÂN và cho lưới thành viên
+     nhúng trong form gia đình. Bản desktop cũng làm đúng vậy: cùng một
+     GxGiaoDanList, chỉ khác vài cột thêm/bớt tuỳ nơi nhúng. */
+  var COLS_GIAO_DAN = [
+    cot("ma",          "Mã GD", 96, { cls:"cell-code", noStrike:true }),
+    cot("tenThanh",    "Tên thánh", 104),
+    cot("hoTen",       "Họ tên", 190, { cls:"cell-strong" }),
+    cot("phai",        "Phái", 78),
+    cot("ngaySinh",    "Ngày sinh", 108),
+    cot("ngayRuaToi",  "Ngày rửa tội", 118),
+    cot("ngayXtrl",    "Ngày XTRL", 112),
+    cot("ngayThemSuc", "Ngày Th.Sức", 118),
+    cotCo("lapGd",     "Lập GĐ"),
+    cot("cha",         "Cha", 160),
+    cot("me",          "Mẹ", 160),
+    cotCo("tanTong",   "Tân tòng"),
+    cotCo("conHoc",    "Còn học"),
+    cot("ngheNghiep",  "Nghề nghiệp", 140),
+    cot("ghiChu",      "Ghi chú", 200, { cls:"muted" }),
+    cot("dienThoai",   "Điện thoại", 126),
+    cot("diaChi",      "Địa chỉ", 200),
+    cot("giaoHo",      "Giáo họ", 150),
+    cotCo("daChuyenDi","Đã chuyển đi"),
+    cot("vanHoa",      "Văn hóa", 100),
+    cot("chuyenMon",   "Chuyên môn", 120),
+    cot("ngoaiNgu",    "Ngoại ngữ", 110),
+    cotCo("quaDoi",    "Qua đời"),
+    cot("ngayQuaDoi",  "Ngày qua đời", 122),
+    cot("noiAnTang",   "Nơi an táng", 150),
+    cot("noiSinh",     "Nơi sinh", 120),
+    cot("noiRuaToi",   "Nơi rửa tội", 140),
+    cot("noiXtrl",     "Nơi XTRL", 130),
+    cot("noiThemSuc",  "Nơi thêm sức", 140)
   ];
 
-  const $ = function (s) { return document.querySelector(s); };
-  const esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
-    return ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" })[c];
-  }); };
+  /* Lưới thành viên trong form gia đình: thêm cột "Quan hệ GĐ" sửa được ở đầu,
+     và ẩn cột Điện thoại — đúng như frmGiaDinh_Load của bản desktop. */
+  var COT_QUAN_HE = {
+    key:"quanHe", cap:"Quan hệ GĐ", w:126, noStrike:true,
+    render:function (r) {
+      var s = GxSelect({ options: QUAN_HE, value: r.quanHe });
+      s.style.width = "100%";
+      s.style.minHeight = "26px";
+      s.style.padding = "2px 8px";
+      s.style.fontSize = "12.5px";
+      return s;
+    }
+  };
+  var COLS_THANH_VIEN = [COT_QUAN_HE].concat(
+    COLS_GIAO_DAN.filter(function (c) { return c.key !== "dienThoai"; })
+  );
 
-  /* =================== Menu trên thanh tiêu đề =================== */
-  const topbar = $("#topbar");
-  function closeMenus() {
+  /* ==========================================================================
+     5. MÀN HÌNH
+     ========================================================================== */
+
+  var CTX_GIA_DINH = [
+    { label:"In chứng nhận hôn phối" },
+    { label:"In phiếu gia đình" },
+    { label:"In lý lịch cá nhân" },
+    { label:"In giới thiệu chuyển xứ" },
+    { label:"Xem vị trí trên bản đồ" }
+  ];
+  /* Đúng thứ tự 12 mục trong constructor của GxGiaoDanList */
+  var CTX_GIAO_DAN = [
+    { label:"Xem chi tiết", onClick:function (p) { moChiTietGiaoDan(p); } },
+    { label:"In lý lịch cá nhân" },
+    { label:"In chứng nhận bí tích" },
+    { label:"In giới thiệu hôn phối" },
+    { label:"In chứng nhận rửa tội" },
+    { label:"In chứng nhận xưng tội - rước lễ" },
+    { label:"In chứng nhận thêm sức" },
+    { label:"Xem gia đình", onClick:function (p) {
+        var f = FAMILIES.filter(function (x) { return x.ma === p.maGiaDinh; })[0];
+        if (f) moChiTietGiaDinh(f);
+      } },
+    { label:"In giấy giới thiệu chứng nhận rửa tội" },
+    { label:"In giấy giới thiệu giáo lý hôn phối" },
+    { label:"In giấy giới thiệu chứng nhận thêm sức" },
+    { label:"Xem vị trí" }
+  ];
+
+  /* ---------------- Tổng quan ---------------- */
+  function manHinhTongQuan() {
+    return h("section", { class:"page" },
+      h("div", { style:"height:100%;display:grid;place-items:center;text-align:center;padding:20px" },
+        h("div", { style:"max-width:560px" },
+          h("div", { html:'<svg viewBox="0 0 120 92" fill="none" stroke="var(--brand)" stroke-width="2" style="width:150px">' +
+            '<path d="M60 6v13M53 12.5h14" stroke-linecap="round"/>' +
+            '<path d="M60 21 45 34v48h30V34L60 21z" fill="rgba(29,93,219,.10)"/>' +
+            '<path d="M45 40 27 52v30h18M75 40l18 12v30H75" fill="rgba(124,107,240,.09)"/>' +
+            '<path d="M60 82V66c0-3.2 2.7-5.6 6-5.6s6 2.4 6 5.6v16" opacity=".45"/>' +
+            '<circle cx="60" cy="43" r="5" opacity=".5"/>' +
+            '<path d="M18 82h84" stroke-linecap="round" opacity=".5"/></svg>' }),
+          h("h1", { style:"font-size:28px;font-weight:600;margin:14px 0 6px", text:"Giáo xứ Thánh Tâm" }),
+          h("p", { style:"margin:0;color:var(--ink-faint)", text:"Giáo hạt Xóm Mới · Giáo phận Sài Gòn" }),
+          h("div", { style:"display:flex;justify-content:center;gap:10px;margin-top:22px;flex-wrap:wrap" },
+            GxCountPill(PEOPLE.length, "giáo dân"),
+            GxCountPill(FAMILIES.length, "gia đình"),
+            GxCountPill(GIAO_HO.length, "giáo họ"),
+            GxCountPill(18, "bí tích tháng này")))));
+  }
+
+  /* ---------------- Danh sách gia đình ---------------- */
+  function manHinhDanhSachGiaDinh() {
+    var loc = { giaoHo:"-1", chiGiaDinhAo:false };
+    var pill = GxCountPill(0, "gia đình");
+
+    var toolbar = GxToolbar({ items: [
+      { id:"xemSua", label:"Xem & sửa", needSel:true, onClick:function () { var f = grid.selected(); if (f) moChiTietGiaDinh(f); } },
+      { id:"loaiBo", label:"Loại bỏ", needSel:true },
+      "|",
+      { id:"cnhp", label:"In chứng nhận hôn phối", needSel:true },
+      { id:"phieu", label:"In phiếu gia đình", needSel:true },
+      { id:"map", label:"Xem vị trí", needSel:true },
+      ">",
+      { label:"Xuất Excel", kind:"quiet", icon:"excel" },
+      { label:"Tải lại", kind:"quiet" }
+    ] });
+
+    var grid = GxGrid({
+      columns: COLS_GIA_DINH,
+      rows: FAMILIES,
+      keyField: "ma",
+      sortKey: "ma",
+      toolbar: toolbar.root,
+      toolbarApi: toolbar,
+      contextMenu: CTX_GIA_DINH,
+      ctxTitle: function (f) { return "Gia đình " + f.ten; },
+      onOpen: moChiTietGiaDinh,
+      onCount: function (n) { pill.querySelector("b").textContent = n; },
+      footNote: "Gạch ngang đỏ: người nam / người nữ đã qua đời hoặc chuyển xứ",
+      filterFn: function (f) {
+        if (loc.chiGiaDinhAo && !f.ao) return false;
+        if (loc.giaoHo === "0") return f.giaoho === "Ngoài xứ";
+        if (loc.giaoHo !== "-1") return f.giaoho === loc.giaoHo;
+        return true;
+      }
+    });
+
+    var cbGiaoHo = GxSelect({
+      options: [{ label:"Tất cả", value:"-1" }, { label:"Ngoài xứ", value:"0" }].concat(GIAO_HO),
+      value: "-1"
+    });
+    cbGiaoHo.addEventListener("change", function () { loc.giaoHo = cbGiaoHo.value; grid.refresh(); });
+
+    return h("section", { class:"page list-page" },
+      h("div", { class:"page-head" },
+        h("h1", { text:"Danh sách gia đình" }),
+        h("div", { class:"spacer" }),
+        pill,
+        GxBtn("Thêm gia đình", "primary", function () { moChiTietGiaDinh(null); })),
+      h("div", { class:"filters-bar glass" },
+        h("div", { class:"field" }, h("label", { text:"Giáo họ" }), cbGiaoHo),
+        GxCheck({
+          label:"Chỉ xem gia đình không được thống kê",
+          onChange:function (v) { loc.chiGiaDinhAo = v; grid.refresh(); }
+        }),
+        h("div", { class:"spacer" }),
+        h("span", { class:"muted", style:"font-size:12.5px",
+          text:"Nhấp đúp một dòng để mở chi tiết · chuột phải để xem thao tác in ấn" })),
+      grid.root);
+  }
+
+  /* ---------------- Chi tiết gia đình ---------------- */
+  function manHinhChiTietGiaDinh(f, tabId) {
+    var moi = !f;
+    f = f || { ma:"", ten:"", chong:"", vo:"", so:0, dt:"", dtc:"", dtv:"", diachi:"",
+               giaoho:"Giáo họ Thánh Tâm", dien:"", ghichu:"" };
+
+    var rowNgayChuyen = GxField("Ngày chuyển", GxDate({ width:"190px" }));
+    var rowNoiChuyen = GxField("Nơi chuyển", GxText({ placeholder:"Giáo xứ / địa phương chuyển đến" }));
+    rowNgayChuyen.hidden = true;
+    rowNoiChuyen.hidden = true;
+
+    var theTrai = GxCard({ title:"Thông tin gia đình", eyebrow:"Sổ gia đình" },
+      GxField("Mã gia đình",
+        GxText({ value: moi ? "(tự sinh khi lưu)" : f.ma, disabled:true, width:"150px" }),
+        [GxInline("Số hộ khẩu"), GxText({ value: f.ma ? "HK-" + f.ma : "" })]),
+      GxField("Người nam", GxPicker({ value:f.chong }), GxSeg("Chủ hộ", "chuho", true)),
+      GxField("Người nữ", GxPicker({ value:f.vo }), GxSeg("Chủ hộ", "chuho", false)),
+      GxField("Tên gia đình", GxText({ value:f.ten })),
+      GxField("Giáo họ", GxSelect({ options:["Ngoài xứ"].concat(GIAO_HO), value:f.giaoho })),
+      GxField("Điện thoại",
+        GxText({ value:f.dt, width:"150px" }),
+        [GxInline("Diện"), GxSelect({ options:DIEN_GIA_DINH.map(function (d) {
+          return { label: d || "Không thuộc diện nào", value: d }; }), value:f.dien })]),
+      GxField("Địa chỉ", GxText({ value:f.diachi }), GxBtn("Bản đồ", "sm quiet")),
+      GxField("Ghi chú", GxArea({ value:f.ghichu, placeholder:"Ghi chú nội bộ về gia đình…" })),
+      GxField("", [
+        GxCheck({ label:"Đã chuyển đi xứ khác", onChange:function (v) {
+          rowNgayChuyen.hidden = !v; rowNoiChuyen.hidden = !v; } }),
+        GxCheck({ label:"Không tính vào thống kê", checked:!!f.ao })
+      ]),
+      rowNgayChuyen, rowNoiChuyen);
+
+    var theHonPhoi = GxCard({ title:"Hôn phối", badge: GxTag(moi ? "Chưa có" : "Hợp pháp", "violet") },
+      GxField("Số hôn phối",
+        GxText({ value: f.ma ? "HP-" + f.ma : "", width:"110px" }),
+        [GxInline("Ngày"), GxDate({ value: f.ma ? "1998-10-24" : "" })]),
+      GxField("Nơi hôn phối", GxText({ value: f.ma ? "Nhà thờ Giáo xứ Thánh Tâm" : "" })),
+      GxField("Linh mục chứng", GxSelect({ options:LINH_MUC })),
+      GxField("Người chứng 1", GxText({ value: f.ma ? "Giuse Nguyễn Văn Tài" : "" })),
+      GxField("Người chứng 2", GxText({ value: f.ma ? "Maria Lê Thị Hồng" : "" })),
+      GxField("Tình trạng", GxSelect({ options:TINH_TRANG_HP.map(function (t) {
+        return { label: t || "Chưa xác định", value: t }; }), value: f.ma ? "Hợp pháp" : "" })),
+      GxField("Ghi chú", GxText({ placeholder:"Ghi chú hôn phối…" })));
+
+    var thanhVien = moi ? [] : thanhVienCua(f.ma);
+    var pillTv = GxCountPill(thanhVien.length, "người");
+    var toolbarTv = GxToolbar({ items: [
+      { node: h("h2", { style:"font-size:15px;font-weight:600;margin-right:6px", text:"Thành viên khác trong gia đình" }) },
+      { node: pillTv },
+      ">",
+      { label:"Thêm mới" },
+      { label:"Chọn từ danh sách" },
+      { id:"tvSua", label:"Xem & sửa", kind:"quiet", needSel:true,
+        onClick:function () { var p = gridTv.selected(); if (p) moChiTietGiaoDan(p); } },
+      { id:"tvXoa", label:"Loại bỏ", kind:"quiet", needSel:true }
+    ] });
+
+    var gridTv = GxGrid({
+      columns: COLS_THANH_VIEN,
+      rows: thanhVien,
+      keyField: "ma",
+      sortKey: "ngaySinh",
+      filterRow: false,
+      pager: false,
+      toolbar: toolbarTv.root,
+      toolbarApi: toolbarTv,
+      contextMenu: CTX_GIAO_DAN,
+      ctxTitle: function (p) { return p.tenThanh + " " + p.hoTen; },
+      onOpen: moChiTietGiaoDan,
+      rowStrike: laNguoiGachDo,
+      emptyText: "Chưa có thành viên nào. Dùng Thêm mới hoặc Chọn từ danh sách để bổ sung.",
+      footNote: "Gạch ngang: đã qua đời, chuyển xứ hoặc lập gia đình riêng",
+      footRight: "Cột <b>Quan hệ GĐ</b> sửa trực tiếp trên lưới, các cột khác chỉ đọc"
+    });
+    gridTv.root.classList.add("members-card");
+
+    return h("section", { class:"page detail-page" },
+      h("div", { class:"page-head detail-head" },
+        GxBtn("← Danh sách", "sm quiet", moDanhSachGiaDinh),
+        h("h1", { text: moi ? "Gia đình mới" : "Gia đình " + f.ten }),
+        h("span", { class:"head-sub", text: moi ? "Chưa lưu · nhập thông tin rồi bấm Cập nhật"
+                                               : f.giaoho + " · " + f.so + " nhân khẩu" }),
+        h("div", { class:"spacer" }),
+        GxTag(moi ? "Bản nháp" : (f.ao ? "Không tính thống kê" : "Đang hoạt động"),
+              moi ? "violet" : (f.ao ? "amber" : "mint"))),
+      h("div", { class:"cols" }, theTrai,
+        h("div", { class:"col-stack" }, theHonPhoi, GxCard({ title:"Hình gia đình" }, GxPhoto()))),
+      gridTv.root,
+      GxCmdBar(
+        h("span", { class:"hint", text:"Thay đổi chưa được lưu" }),
+        h("div", { class:"spacer" }),
+        GxBtn("In lý lịch cá nhân"),
+        GxBtn("In phiếu gia đình"),
+        GxBtn("Quay về", "quiet", function () { Tabs.close(tabId); }),
+        GxBtn("Cập nhật", "primary", function () { Tabs.close(tabId); })));
+  }
+
+  /* ---------------- Danh sách giáo dân ---------------- */
+  function manHinhDanhSachGiaoDan() {
+    var loc = { giaoHo:"-1", chiGiaoDanAo:false };
+    var pill = GxCountPill(0, "giáo dân");
+
+    var toolbar = GxToolbar({ items: [
+      { id:"xemSua", label:"Xem & sửa", needSel:true, onClick:function () { var p = grid.selected(); if (p) moChiTietGiaoDan(p); } },
+      { id:"loaiBo", label:"Loại bỏ", needSel:true },
+      "|",
+      { id:"giaDinh", label:"Xem gia đình", needSel:true, onClick:function () {
+          var p = grid.selected();
+          var f = p && FAMILIES.filter(function (x) { return x.ma === p.maGiaDinh; })[0];
+          if (f) moChiTietGiaDinh(f);
+        } },
+      { id:"cnbt", label:"In chứng nhận bí tích", needSel:true },
+      { id:"gthp", label:"In giới thiệu hôn phối", needSel:true },
+      { id:"map", label:"Xem vị trí", needSel:true },
+      ">",
+      { label:"Xuất Excel", kind:"quiet", icon:"excel" },
+      { label:"Tải lại", kind:"quiet" }
+    ] });
+
+    var grid = GxGrid({
+      columns: COLS_GIAO_DAN,
+      rows: PEOPLE,
+      keyField: "ma",
+      sortKey: "ma",
+      toolbar: toolbar.root,
+      toolbarApi: toolbar,
+      contextMenu: CTX_GIAO_DAN,
+      ctxTitle: function (p) { return p.tenThanh + " " + p.hoTen; },
+      onOpen: moChiTietGiaoDan,
+      onCount: function (n) { pill.querySelector("b").textContent = n; },
+      rowStrike: function (p) { return p.quaDoi || p.daChuyenDi; },
+      footNote: "Gạch ngang đỏ: đã qua đời hoặc đã chuyển đi xứ khác",
+      filterFn: function (p) {
+        if (loc.chiGiaoDanAo && !p.giaoDanAo) return false;
+        if (loc.giaoHo === "0") return p.giaoHo === "Ngoài xứ";
+        if (loc.giaoHo !== "-1") return p.giaoHo === loc.giaoHo;
+        return true;
+      }
+    });
+
+    var cbGiaoHo = GxSelect({
+      options: [{ label:"Tất cả", value:"-1" }, { label:"Ngoài xứ", value:"0" }].concat(GIAO_HO),
+      value: "-1"
+    });
+    cbGiaoHo.addEventListener("change", function () { loc.giaoHo = cbGiaoHo.value; grid.refresh(); });
+
+    return h("section", { class:"page list-page" },
+      h("div", { class:"page-head" },
+        h("h1", { text:"Danh sách giáo dân" }),
+        h("div", { class:"spacer" }),
+        pill,
+        GxBtn("Thêm giáo dân", "primary", function () { moChiTietGiaoDan(null); })),
+      h("div", { class:"filters-bar glass" },
+        h("div", { class:"field" }, h("label", { text:"Giáo họ" }), cbGiaoHo),
+        GxCheck({
+          label:"Chỉ xem giáo dân không được thống kê",
+          onChange:function (v) { loc.chiGiaoDanAo = v; grid.refresh(); }
+        }),
+        h("div", { class:"spacer" }),
+        h("span", { class:"muted", style:"font-size:12.5px",
+          text:"Nhấp đúp một dòng để mở chi tiết · chuột phải để xem thao tác in ấn" })),
+      grid.root);
+  }
+
+  /* ---------------- Chi tiết giáo dân ----------------
+     Dựng theo đúng frmGiaoDan của bản desktop: 5 tab, bí tích nhập bằng 4 khối
+     riêng (Rửa tội / Rước lễ lần đầu / Thêm sức / Xức dầu), và "đã chuyển đi"
+     là combobox "Thông tin hiện tại" chứ không phải ô tick. */
+
+  var COLS_HON_PHOI_NAM = colHonPhoi("Vợ");
+  var COLS_HON_PHOI_NU = colHonPhoi("Chồng");
+  function colHonPhoi(capBanDoi) {
+    return [
+      cot("stt", "STT", 70, { align:"right", cls:"cell-code" }),
+      cot("maHp", "Mã HP", 96, { cls:"cell-code" }),
+      cot("banDoi", capBanDoi, 200, { cls:"cell-strong" }),
+      cot("soHp", "Số HP", 96),
+      cot("noiHp", "Nơi HP", 220),
+      cot("ngayHp", "Ngày HP", 118, { align:"right" }),
+      cot("soNam", "Số năm HP", 110, { align:"right" }),
+      cot("cachThuc", "Cách thức HP", 150),
+      cot("linhMuc", "Linh mục chứng", 210),
+      cot("chung1", "Người chứng 1", 180),
+      cot("chung2", "Người chứng 2", 180),
+      cot("ghiChu", "Ghi chú", 180, { cls:"muted" }),
+      cotCo("quaDoi", "Qua Đời")
+    ];
+  }
+
+  var COLS_HOI_DOAN = [
+    cot("tenHoiDoan", "Tên hội đoàn", 260, { cls:"cell-strong" }),
+    cot("ngayVao", "Ngày vào hội đoàn", 170),
+    cot("ngayRa", "Ngày ra hội đoàn", 170),
+    cot("vaiTro", "Vai trò", 180)
+  ];
+
+  function honPhoiCua(p) {
+    if (p.quanHe !== "Chồng" && p.quanHe !== "Vợ") return [];
+    var f = FAMILIES.filter(function (x) { return x.ma === p.maGiaDinh; })[0];
+    if (!f) return [];
+    return [{
+      stt:"1", maHp:"HP-" + f.ma, banDoi: p.phai === "Nam" ? f.vo : f.chong,
+      soHp:"HP-" + f.ma, noiHp:"Nhà thờ Giáo xứ Thánh Tâm", ngayHp:"24/10/1998",
+      soNam:"27", cachThuc:"Hợp pháp", linhMuc:LINH_MUC[0],
+      chung1:"Giuse Nguyễn Văn Tài", chung2:"Maria Lê Thị Hồng", ghiChu:"",
+      quaDoi: p.phai === "Nam" ? (f.gach === 1 || f.gach === 2) : (f.gach === 0 || f.gach === 2)
+    }];
+  }
+  function hoiDoanCua(p) {
+    if (p.quaDoi || !p.ma) return [];
+    if (p.ngheNghiep === "Chủng sinh") {
+      return [{ tenHoiDoan:"Giới trẻ giáo xứ", ngayVao:"05/09/2012", ngayRa:"20/08/2016", vaiTro:"Hội viên" },
+              { tenHoiDoan:"Ca đoàn Thánh Tâm", ngayVao:"01/10/2010", ngayRa:"", vaiTro:"Ca trưởng" }];
+    }
+    if (p.phai === "Nữ" && p.quanHe === "Vợ") {
+      return [{ tenHoiDoan:"Hội Các Bà Mẹ Công Giáo", ngayVao:"12/03/2015", ngayRa:"", vaiTro:"Hội viên" }];
+    }
+    if (p.quanHe === "Chồng") {
+      return [{ tenHoiDoan:"Hội Gia Trưởng", ngayVao:"08/06/2011", ngayRa:"", vaiTro:"Uỷ viên" }];
+    }
+    return [];
+  }
+
+  function manHinhChiTietGiaoDan(p, tabId) {
+    var moi = !p;
+    p = p || P({ ma:"", hoTen:"" });
+    var giaDinh = FAMILIES.filter(function (f) { return f.ma === p.maGiaDinh; })[0];
+    var ngoaiXu = p.giaoHo === "Ngoài xứ";
+
+    /* ===== Tab 1: Cá nhân ===== */
+    var rowGiaoXu = GxField("Giáo xứ",
+      GxText({ value:"Giáo xứ Thánh Tâm", width:"230px" }),
+      [GxInline("Giáo phận"), GxText({ value:"Giáo phận Sài Gòn" })]);
+    rowGiaoXu.hidden = !ngoaiXu;
+
+    var cbGiaoHo = GxSelect({ options:["Ngoài xứ"].concat(GIAO_HO), value:p.giaoHo });
+    var theChuyenXu;   /* gán bên dưới, dùng trong liên động của cbGiaoHo */
+    cbGiaoHo.addEventListener("change", function () {
+      var la = cbGiaoHo.value === "Ngoài xứ";
+      rowGiaoXu.hidden = !la;
+      if (theChuyenXu) theChuyenXu.hidden = la;
+    });
+
+    var chkGiaoDanAo = GxCheck({
+      label:"Là giáo dân không được thống kê", checked:!!p.giaoDanAo,
+      onChange:function (v) {
+        if (v) { cbGiaoHo.value = "Ngoài xứ"; cbGiaoHo.dispatchEvent(new Event("change")); }
+      }
+    });
+
+    var theCaNhan = GxCard({ title:"Thông tin cá nhân", eyebrow:"Hồ sơ giáo dân" },
+      GxField("Mã giáo dân",
+        GxText({ value: moi ? "(tự sinh khi lưu)" : p.ma, disabled:true, width:"150px" }),
+        [GxInline("Giới tính"), GxSelect({ options:["Nam", "Nữ"], value:p.phai, width:"120px" }),
+         GxInline("Ngày sinh"), GxDate({})]),
+      GxField("Tên thánh",
+        GxSelect({ options:[""].concat(TEN_THANH), value:p.tenThanh, width:"170px" }),
+        [GxInline("Họ tên"), GxText({ value:p.hoTen })]),
+      GxField("Nơi sinh", GxText({ value:p.noiSinh })),
+      GxField("Tên Cha", GxPicker({ value:p.cha })),
+      GxField("Tên Mẹ", GxPicker({ value:p.me })),
+      GxField("Giáo họ", cbGiaoHo),
+      rowGiaoXu,
+      GxField("CMND / CCCD", GxText({ value:"", width:"210px" })),
+      GxField("", chkGiaoDanAo));
+
+    var rowNgayQuaDoi = GxField("Ngày qua đời",
+      GxDate({ width:"180px" }),
+      [GxInline("Số sổ"), GxText({ value:"", width:"140px" })]);
+    var rowNoiQuaDoi = GxField("Nơi qua đời",
+      GxText({ value:"" }),
+      [GxInline("Nơi an táng"), GxText({ value:p.noiAnTang })]);
+    rowNgayQuaDoi.hidden = !p.quaDoi;
+    rowNoiQuaDoi.hidden = !p.quaDoi;
+
+    var chkConHoc, chkQuaDoi;
+    chkQuaDoi = GxCheck({
+      label:"Qua đời", checked:p.quaDoi,
+      onChange:function (v) {
+        rowNgayQuaDoi.hidden = !v;
+        rowNoiQuaDoi.hidden = !v;
+        if (v && chkConHoc) chkConHoc.input.checked = false;   /* loại trừ lẫn nhau */
+      }
+    });
+    chkConHoc = GxCheck({
+      label:"Còn học", checked:p.conHoc,
+      onChange:function (v) { if (v) chkQuaDoi.set(false); }
+    });
+
+    var theKhac = GxCard({ title:"Thông tin khác" },
+      GxField("Trình độ văn hóa",
+        GxSelect({ options:VAN_HOA, value:p.vanHoa, width:"180px" }),
+        [GxInline("Chuyên môn"), GxText({ value:p.chuyenMon })]),
+      GxField("Biết ngoại ngữ",
+        GxSelect({ options:NGOAI_NGU, value:p.ngoaiNgu, width:"180px" }),
+        [GxInline("Dân tộc"), GxSelect({ options:DAN_TOC, value:"Kinh", width:"170px" })]),
+      GxField("Nghề nghiệp",
+        GxSelect({ options:NGHE_NGHIEP.concat(p.ngheNghiep && NGHE_NGHIEP.indexOf(p.ngheNghiep) < 0 ? [p.ngheNghiep] : []), value:p.ngheNghiep, width:"200px" }),
+        [GxInline("Điện thoại"), GxText({ value:p.dienThoai, width:"170px" }),
+         GxInline("Email"), GxText({ value:"" })]),
+      GxField("Địa chỉ", GxText({ value:p.diaChi }), GxBtn("Bản đồ", "sm quiet")),
+      GxField("", [chkQuaDoi, chkConHoc,
+        GxCheck({ label:"Tân tòng", checked:p.tanTong }),
+        GxCheck({ label:"Có gia đình", checked:p.lapGd })]),
+      rowNgayQuaDoi, rowNoiQuaDoi,
+      GxField("Ghi chú chung", GxArea({ value:p.ghiChu, placeholder:"Ghi chú nội bộ về giáo dân…" })));
+
+    var rowGiaoXuChuyen = GxField("Giáo xứ", GxText({ placeholder:"Giáo xứ chuyển đi / chuyển đến" }));
+    rowGiaoXuChuyen.hidden = !p.daChuyenDi;
+    var cbChuyenXu = GxSelect({ options:CHUYEN_XU, value: p.daChuyenDi ? "2" : "0" });
+    cbChuyenXu.addEventListener("change", function () {
+      rowGiaoXuChuyen.hidden = cbChuyenXu.value === "0";
+    });
+    theChuyenXu = GxCard({ title:"Thông tin chuyển xứ" },
+      GxField("Thông tin hiện tại", cbChuyenXu),
+      rowGiaoXuChuyen);
+    theChuyenXu.hidden = ngoaiXu;
+
+    function theBiTich(tenBiTich, nhan) {
+      return GxCard({ title:tenBiTich },
+        GxField(nhan.ngay,
+          GxDate({ width:"170px" }),
+          [GxInline("Số sổ"), GxText({ value:"", width:"150px" })]),
+        GxField("Người ban bí tích", GxPicker({ value: nhan.linhMuc || "" })),
+        nhan.doDau ? GxField("Người đỡ đầu", GxText({ value:nhan.doDau })) : null,
+        GxField("Nơi " + nhan.noiNhan, GxText({ value:nhan.noi || "" })));
+    }
+
+    var tabCaNhan = function () {
+      return [
+        h("div", { class:"cols" }, theCaNhan,
+          h("div", { class:"col-stack" },
+            GxCard({ title:"Ảnh đại diện (ảnh 3x4)" }, GxPhoto()),
+            theChuyenXu)),
+        h("div", { class:"card-row" },
+          theBiTich("Rửa tội", { ngay:"Ngày rửa tội", linhMuc:p.ngayRuaToi ? LINH_MUC[1] : "",
+                                 doDau:p.ngayRuaToi ? "Giuse Nguyễn Văn Tài" : "", noiNhan:"rửa tội", noi:p.noiRuaToi }),
+          theBiTich("Rước lễ lần đầu", { ngay:"Ngày rước lễ", linhMuc:p.ngayXtrl ? LINH_MUC[0] : "",
+                                         noiNhan:"rước lễ", noi:p.ngayXtrl ? p.noiXtrl : "" })),
+        h("div", { class:"card-row" },
+          theBiTich("Thêm sức", { ngay:"Ngày thêm sức", linhMuc:p.ngayThemSuc ? LINH_MUC[2] : "",
+                                  doDau:p.ngayThemSuc ? "Maria Lê Thị Hồng" : "", noiNhan:"thêm sức",
+                                  noi:p.ngayThemSuc ? p.noiThemSuc : "" }),
+          GxCard({ title:"Xức dầu" },
+            GxField("Ngày xức dầu",
+              GxDate({ width:"170px" }),
+              [GxInline("Tình trạng"), GxSelect({ options:TINH_TRANG_XUC_DAU, width:"180px" })]),
+            GxField("Người ban bí tích", GxPicker({ value:"" })),
+            GxField("Ghi chú", GxText({ placeholder:"Ghi chú xức dầu…" })))),
+        theKhac
+      ];
+    };
+
+    /* ===== Tab 2: Giáo lý ===== */
+    var tabGiaoLy = function () {
+      return [
+        h("div", { class:"card-row" },
+          GxCard({ title:"Bao đồng 1" },
+            GxField("Ngày kết thúc khóa học", GxDate({ width:"190px" })),
+            GxField("Tại giáo xứ", GxText({ value:p.ngayXtrl ? "Giáo xứ Thánh Tâm" : "" }))),
+          GxCard({ title:"Bao đồng 2" },
+            GxField("Ngày rước lễ trọng thể", GxDate({ width:"190px" })),
+            GxField("Tại giáo xứ", GxText({ value:"" })))),
+        GxCard({ title:"Vào đời" },
+          GxField("Ngày tuyên hứa", GxDate({ width:"190px" })),
+          GxField("Tại giáo xứ", GxText({ value:"" }))),
+        GxCard({ title:"Hôn nhân" },
+          GxField("Khóa học từ ngày",
+            GxDate({ width:"180px" }),
+            [GxInline("đến ngày"), GxDate({ width:"180px" })]),
+          GxField("Tại giáo xứ", GxText({ value:"" })),
+          GxField("Người cấp chứng nhận", GxPicker({ value:"" })),
+          GxField("Xếp loại", GxSelect({ options:XEP_LOAI_GL, width:"200px" })))
+      ];
+    };
+
+    /* ===== Tab 3: Hôn phối ===== */
+    var tabHonPhoi = function () {
+      var dsHonPhoi = honPhoiCua(p);
+      var tbHp = GxToolbar({ items: [
+        { label:"Thêm" },
+        { id:"hpSua", label:"Sửa", needSel:true },
+        { id:"hpXoa", label:"Loại bỏ", kind:"quiet", needSel:true },
+        ">",
+        { label:"Lưu", kind:"primary" }
+      ] });
+      var gridHp = GxGrid({
+        columns: p.phai === "Nam" ? COLS_HON_PHOI_NAM : COLS_HON_PHOI_NU,
+        rows: dsHonPhoi,
+        keyField:"maHp",
+        sortKey:"stt",
+        filterRow:false,
+        pager:false,
+        toolbar: tbHp.root,
+        toolbarApi: tbHp,
+        emptyText:"Giáo dân này chưa có thông tin hôn phối.",
+        footNote:"Cột " + (p.phai === "Nam" ? "Vợ" : "Chồng") + " đổi tên theo giới tính của giáo dân đang mở"
+      });
+      var hp = dsHonPhoi[0];
+      return [
+        GxCard({ title:"Thông tin đôi hôn phối" },
+          h("div", { class:"card-row" },
+            h("div", null,
+              GxField("Số thứ tự", GxText({ value: hp ? hp.stt : "", width:"120px" })),
+              GxField("Người nam", GxPicker({ value: p.phai === "Nam" ? (p.tenThanh + " " + p.hoTen) : (hp ? hp.banDoi : "") })),
+              GxField("Người nữ", GxPicker({ value: p.phai === "Nữ" ? (p.tenThanh + " " + p.hoTen) : (hp ? hp.banDoi : "") })),
+              GxField("Đôi hôn phối", GxText({ value: giaDinh ? giaDinh.ten : "" })),
+              GxField("Số hôn phối", GxText({ value: hp ? hp.soHp : "", width:"170px" })),
+              GxField("Ngày hôn phối", GxDate({ width:"190px" }))),
+            h("div", null,
+              GxField("Mã hôn phối", GxText({ value: hp ? hp.maHp : "", disabled:true, width:"170px" })),
+              GxField("Nơi hôn phối", GxText({ value: hp ? hp.noiHp : "" })),
+              GxField("Linh mục chứng", GxPicker({ value: hp ? hp.linhMuc : "" })),
+              GxField("Người chứng 1", GxText({ value: hp ? hp.chung1 : "" })),
+              GxField("Người chứng 2", GxText({ value: hp ? hp.chung2 : "" })),
+              GxField("Tình trạng hôn phối", GxSelect({ options:TINH_TRANG_HP.map(function (t) {
+                return { label: t || "Chưa xác định", value: t }; }), value: hp ? hp.cachThuc : "" })))),
+          GxField("Ghi chú", GxArea({ placeholder:"Ghi chú hôn phối…" }))),
+        gridHp.root
+      ];
+    };
+
+    /* ===== Tab 4: Ơn gọi tận hiến ===== */
+    var tabOnGoi = function () {
+      return [GxCard({ title:"Thông tin ơn gọi" },
+        h("div", { class:"card-row" },
+          h("div", null,
+            GxField("Ngày nhập dòng", GxDate({ width:"190px" })),
+            GxField("Ngày vào nhà tập", GxDate({ width:"190px" })),
+            GxField("Ngày lãnh chức phó tế", GxDate({ width:"190px" }))),
+          h("div", null,
+            GxField("Ngày vào ĐCV", GxDate({ width:"190px" })),
+            GxField("Ngày khấn lần đầu", GxDate({ width:"190px" })),
+            GxField("Ngày thụ phong LM", GxDate({ width:"190px" })))),
+        h("div", { class:"card-row" },
+          h("div", null,
+            GxField("Ngày vào nhà thử", GxDate({ width:"190px" })),
+            GxField("Ngày khấn vĩnh viễn", GxDate({ width:"190px" }))),
+          h("div", null,
+            GxField("Ngày mừng bổn mạng", GxDate({ width:"190px" })),
+            GxField("Chức vụ", GxSelect({ options:CHUC_VU, value: p.ngheNghiep === "Chủng sinh" ? "Chủng sinh" : "", width:"210px" })))),
+        GxField("Dòng tu / chủng viện", GxText({ value: p.ngheNghiep === "Chủng sinh" ? "Đại chủng viện Thánh Giuse Sài Gòn" : "" })),
+        GxField("Địa chỉ", GxText({ value: p.ngheNghiep === "Chủng sinh" ? "6 Tôn Đức Thắng, Quận 1" : "" })),
+        GxField("Nơi phục vụ", GxText({ value:"" })),
+        GxField("Địa chỉ nơi phục vụ", GxText({ value:"" })),
+        GxField("Điện thoại nơi phục vụ", GxText({ value:"", width:"200px" })),
+        GxField("Email nơi phục vụ", GxText({ value:"" })),
+        GxField("Ghi chú", GxArea({ placeholder:"Ghi chú ơn gọi…" })),
+        GxField("", GxCheck({ label:"Đã hồi tục" })))];
+    };
+
+    /* ===== Tab 5: Hội đoàn ===== */
+    var tabHoiDoan = function () {
+      var ds = hoiDoanCua(p);
+      var tbHd = GxToolbar({ items: [
+        { label:"Thêm" },
+        { id:"hdSua", label:"Xem & sửa", needSel:true },
+        { id:"hdXoa", label:"Loại bỏ", kind:"quiet", needSel:true },
+        ">",
+        { label:"In danh sách", kind:"quiet" },
+        { label:"Tải lại", kind:"quiet" }
+      ] });
+      var gridHd = GxGrid({
+        columns: COLS_HOI_DOAN,
+        rows: ds,
+        keyField:"tenHoiDoan",
+        sortKey:"ngayVao",
+        filterRow:false,
+        pager:false,
+        toolbar: tbHd.root,
+        toolbarApi: tbHd,
+        emptyText:"Giáo dân này chưa tham gia hội đoàn nào.",
+        footNote:"Bỏ trống Ngày ra nghĩa là còn đang sinh hoạt"
+      });
+      return [
+        GxCard({ title:"Thêm vào hội đoàn" },
+          GxField("Tên hội đoàn", GxSelect({ options:HOI_DOAN, width:"320px" })),
+          GxField("Ngày vào hội đoàn", GxDate({ width:"190px" })),
+          GxField("Ngày ra hội đoàn", GxDate({ width:"190px" }))),
+        gridHd.root
+      ];
+    };
+
+    var tabs = GxFormTabs([
+      { title:"Cá nhân", build:tabCaNhan },
+      { title:"Giáo lý", build:tabGiaoLy },
+      { title:"Hôn phối", build:tabHonPhoi },
+      { title:"Ơn gọi tận hiến", build:tabOnGoi },
+      { title:"Hội đoàn", build:tabHoiDoan }
+    ]);
+
+    var tinhTrang = p.quaDoi ? ["Đã qua đời", "amber"]
+                  : p.daChuyenDi ? ["Đã chuyển xứ", "amber"]
+                  : moi ? ["Bản nháp", "violet"] : ["Đang hoạt động", "mint"];
+
+    return h("section", { class:"page detail-page" },
+      h("div", { class:"page-head detail-head" },
+        GxBtn("← Danh sách", "sm quiet", moDanhSachGiaoDan),
+        h("h1", { text: moi ? "Giáo dân mới" : (p.tenThanh ? p.tenThanh + " " : "") + p.hoTen }),
+        h("span", { class:"head-sub", text: moi ? "Chưa lưu · nhập thông tin rồi bấm Cập nhật"
+                                               : p.ma + " · " + p.giaoHo + (p.ngaySinh ? " · sinh " + p.ngaySinh : "") }),
+        h("div", { class:"spacer" }),
+        GxTag(tinhTrang[0], tinhTrang[1])),
+      tabs.bar,
+      tabs.body,
+      GxCmdBar(
+        h("span", { class:"hint", text:"Thay đổi chưa được lưu" }),
+        h("div", { class:"spacer" }),
+        GxBtn("Xem gia đình", null, function () { if (giaDinh) moChiTietGiaDinh(giaDinh); }),
+        GxBtn("In lý lịch cá nhân"),
+        GxBtn("Quay về", "quiet", function () { Tabs.close(tabId); }),
+        GxBtn("Cập nhật", "primary", function () { Tabs.close(tabId); })));
+  }
+
+  /* ==========================================================================
+     6. ĐIỀU HƯỚNG — mỗi bản ghi một thẻ, mở lại thì chuyển tiêu điểm
+     ========================================================================== */
+
+  var moiDem = 0;
+
+  function moDanhSachGiaDinh() {
+    danhDauNav("giaDinhList");
+    Tabs.open("giaDinhList", "Danh sách gia đình", manHinhDanhSachGiaDinh);
+  }
+  function moDanhSachGiaoDan() {
+    danhDauNav("giaoDanList");
+    Tabs.open("giaoDanList", "Danh sách giáo dân", manHinhDanhSachGiaoDan);
+  }
+  /* Khoá thẻ theo mã bản ghi: mỗi gia đình / giáo dân mở ra một thẻ riêng, còn
+     mở lại đúng bản ghi đang mở thì Tabs.open tự chuyển tiêu điểm. Bản ghi mới
+     chưa có mã nên mỗi lần thêm là một thẻ nháp riêng. */
+  function moChiTietGiaDinh(f) {
+    var id = f ? "giaDinh:" + f.ma : "giaDinhMoi:" + (++moiDem);
+    Tabs.open(id, f ? "GĐ " + f.ten : "Gia đình mới",
+      function () { return manHinhChiTietGiaDinh(f, id); });
+  }
+  function moChiTietGiaoDan(p) {
+    var id = p ? "giaoDan:" + p.ma : "giaoDanMoi:" + (++moiDem);
+    Tabs.open(id, p ? p.hoTen : "Giáo dân mới",
+      function () { return manHinhChiTietGiaoDan(p, id); });
+  }
+
+  function danhDauNav(key) {
+    $("#sidenav").querySelectorAll(".nav-group button").forEach(function (b) {
+      b.classList.toggle("on", b.dataset.open === key);
+    });
+  }
+
+  /* ==========================================================================
+     7. KHUNG ỨNG DỤNG
+     ========================================================================== */
+
+  /* Menu trên thanh tiêu đề */
+  var topbar = $("#topbar");
+  function dongMenu() {
     topbar.querySelectorAll("[data-menu]").forEach(function (b) { b.setAttribute("aria-expanded", "false"); });
     topbar.querySelectorAll(".menu-pop").forEach(function (p) { p.hidden = true; });
   }
   topbar.querySelectorAll("[data-menu]").forEach(function (btn) {
     btn.addEventListener("click", function (e) {
       e.stopPropagation();
-      const pop = document.getElementById(btn.dataset.menu);
-      const wasOpen = btn.getAttribute("aria-expanded") === "true";
-      closeMenus();
-      if (!wasOpen) {
+      var pop = document.getElementById(btn.dataset.menu);
+      var dangMo = btn.getAttribute("aria-expanded") === "true";
+      dongMenu();
+      if (!dangMo) {
         btn.setAttribute("aria-expanded", "true");
         pop.hidden = false;
         pop.style.right = (topbar.offsetWidth - btn.offsetLeft - btn.offsetWidth) + "px";
       }
     });
   });
-  document.addEventListener("click", function () { closeMenus(); hideCtx(); });
+  document.addEventListener("click", function () { dongMenu(); CtxMenu.hide(); });
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") { closeMenus(); hideCtx(); }
+    if (e.key === "Escape") { dongMenu(); CtxMenu.hide(); }
   });
 
-  /* =================== Điều hướng trái =================== */
+  /* Điều hướng trái */
   $("#sidenav").addEventListener("click", function (e) {
-    const item = e.target.closest(".nav-group button");
+    var item = e.target.closest(".nav-group button");
     if (!item) return;
-    $("#sidenav").querySelectorAll(".nav-group button").forEach(function (b) { b.classList.remove("on"); });
-    item.classList.add("on");
-    if (item.dataset.open === "list") openTab("list", "Danh sách gia đình");
+    if (item.dataset.open === "giaDinhList") moDanhSachGiaDinh();
+    else if (item.dataset.open === "giaoDanList") moDanhSachGiaoDan();
   });
 
-  /* =================== Thẻ tài liệu =================== */
-  const tabstrip = $("#tabstrip");
-  const PAGES = { home:"#page-home", list:"#page-list", detail:"#page-detail" };
-
-  function selectTab(id) {
-    tabstrip.querySelectorAll(".tab").forEach(function (t) {
-      t.setAttribute("aria-selected", String(t.dataset.tab === id));
-    });
-    Object.keys(PAGES).forEach(function (k) { $(PAGES[k]).hidden = k !== id; });
-  }
-  function openTab(id, label) {
-    let tab = tabstrip.querySelector('.tab[data-tab="' + id + '"]');
-    if (!tab) {
-      tab = document.createElement("div");
-      tab.className = "tab";
-      tab.dataset.tab = id;
-      tab.setAttribute("role", "tab");
-      tab.tabIndex = 0;
-      tab.innerHTML = '<span class="lbl"></span><button class="x" type="button" data-close="' + id + '" title="Đóng thẻ">&times;</button>';
-      tabstrip.appendChild(tab);
-    }
-    if (label) tab.querySelector(".lbl").textContent = label;
-    selectTab(id);
-  }
-  function closeTab(id) {
-    const tab = tabstrip.querySelector('.tab[data-tab="' + id + '"]');
-    if (tab) tab.remove();
-    const rest = tabstrip.querySelector(".tab");
-    selectTab(rest ? rest.dataset.tab : "home");
-  }
-  tabstrip.addEventListener("click", function (e) {
-    const x = e.target.closest("[data-close]");
-    if (x) { e.stopPropagation(); closeTab(x.dataset.close); return; }
-    const tab = e.target.closest(".tab");
-    if (tab) selectTab(tab.dataset.tab);
-  });
-
-  /* =================== Lưới danh sách gia đình =================== */
-  const head = $("#gridHead"), filterRow = $("#gridFilters"), tbody = $("#gridBody");
-  let sortKey = "ma", sortDir = 1, selected = null;
-  const colFilters = {};
-
-  (function buildHeader() {
-    head.innerHTML = '<th class="rowhead">#</th>';
-    filterRow.innerHTML = '<th class="rowhead"></th>';
-    COLS.forEach(function (c) {
-      const th = document.createElement("th");
-      th.innerHTML = esc(c.cap) + '<span class="sortmark"></span>';
-      th.style.minWidth = c.w + "px";
-      th.dataset.key = c.key;
-      th.title = "Nhấp để sắp xếp theo " + c.cap;
-      th.addEventListener("click", function () {
-        if (sortKey === c.key) sortDir = -sortDir; else { sortKey = c.key; sortDir = 1; }
-        render();
-      });
-      head.appendChild(th);
-
-      const fth = document.createElement("th");
-      const inp = document.createElement("input");
-      inp.type = "text";
-      inp.placeholder = "Lọc…";
-      inp.setAttribute("aria-label", "Lọc cột " + c.cap);
-      inp.addEventListener("input", function () {
-        colFilters[c.key] = inp.value.trim().toLowerCase();
-        render();
-      });
-      fth.appendChild(inp);
-      filterRow.appendChild(fth);
-    });
-  })();
-
-  function visibleRows() {
-    const gh = $("#cbGiaoHo").value;
-    const onlyAo = $("#chkGiaDinhAo").checked;
-    return FAMILIES.filter(function (f) {
-      if (onlyAo && !f.ao) return false;
-      if (gh === "0" && f.giaoho !== "Ngoài xứ") return false;
-      if (gh !== "-1" && gh !== "0" && f.giaoho !== gh) return false;
-      return COLS.every(function (c) {
-        const q = colFilters[c.key];
-        if (!q) return true;
-        return String(f[c.key] == null ? "" : f[c.key]).toLowerCase().indexOf(q) !== -1;
-      });
-    }).sort(function (a, b) {
-      const va = a[sortKey], vb = b[sortKey];
-      if (typeof va === "number" && typeof vb === "number") return (va - vb) * sortDir;
-      return String(va).localeCompare(String(vb), "vi") * sortDir;
-    });
-  }
-
-  function render() {
-    const rows = visibleRows();
-    tbody.innerHTML = "";
-
-    head.querySelectorAll("th[data-key]").forEach(function (th) {
-      th.classList.toggle("sorted", th.dataset.key === sortKey);
-      th.classList.toggle("desc", th.dataset.key === sortKey && sortDir === -1);
-    });
-
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td class="empty-note" colspan="' + (COLS.length + 1) +
-        '">Không có gia đình nào khớp điều kiện lọc.</td></tr>';
-    }
-
-    rows.forEach(function (f, i) {
-      const tr = document.createElement("tr");
-      tr.setAttribute("aria-selected", String(selected === f.ma));
-      let html = '<td class="rowhead">' + (i + 1) + "</td>";
-      COLS.forEach(function (c) {
-        let cls = [c.cls || "", c.num ? "num" : ""].join(" ").trim();
-        if ((c.key === "chong" && (f.gach === 0 || f.gach === 2)) ||
-            (c.key === "vo"    && (f.gach === 1 || f.gach === 2))) cls = "struck";
-        const raw = f[c.key] == null ? "" : String(f[c.key]);
-        let content = esc(raw);
-        if (c.tag && raw) content = '<span class="tag tag-amber">' + esc(raw) + "</span>";
-        if (!raw) content = '<span class="muted">—</span>';
-        html += '<td class="' + cls + '" title="' + esc(raw) + '">' + content + "</td>";
-      });
-      tr.innerHTML = html;
-      tr.addEventListener("click", function () { selected = f.ma; render(); });
-      tr.addEventListener("dblclick", function () { openDetail(f); });
-      tr.addEventListener("contextmenu", function (e) {
-        e.preventDefault();
-        selected = f.ma;
-        render();
-        $("#ctxTitle").textContent = "Gia đình " + f.ten;
-        showCtx(e.clientX, e.clientY);
-      });
-      tbody.appendChild(tr);
-    });
-
-    $("#lblTotal").textContent = rows.length;
-    $("#recPos").textContent = rows.length ? ("1 – " + rows.length + " trên " + rows.length) : "Không có bản ghi";
-
-    const has = rows.some(function (f) { return f.ma === selected; });
-    ["btnLoaiBo", "btnXemSua", "btnCnhp", "btnPhieu", "btnMap"].forEach(function (id) {
-      document.getElementById(id).disabled = !has;
-    });
-  }
-
-  $("#cbGiaoHo").addEventListener("change", render);
-  $("#chkGiaDinhAo").addEventListener("change", render);
-  $("#btnXemSua").addEventListener("click", function () {
-    const f = FAMILIES.find(function (x) { return x.ma === selected; });
-    if (f) openDetail(f);
-  });
-  $("#btnThem").addEventListener("click", function () {
-    openDetail({ ma:"", ten:"", chong:"", vo:"", so:0, dt:"", dtc:"", dtv:"", diachi:"",
-                 giaoho:"Giáo họ Thánh Tâm", dien:"", ghichu:"" }, true);
-  });
-
-  /* =================== Menu chuột phải =================== */
-  const ctx = $("#ctxmenu");
-  function showCtx(x, y) {
-    ctx.hidden = false;
-    const w = ctx.offsetWidth, h = ctx.offsetHeight;
-    ctx.style.left = Math.min(x, window.innerWidth - w - 8) + "px";
-    ctx.style.top = Math.min(y, window.innerHeight - h - 8) + "px";
-  }
-  function hideCtx() { ctx.hidden = true; }
-  ctx.addEventListener("click", function (e) { e.stopPropagation(); hideCtx(); });
-
-  /* =================== Form chi tiết =================== */
-  function openDetail(f, isNew) {
-    $("#dTitle").textContent = isNew ? "Gia đình mới" : "Gia đình " + f.ten;
-    $("#dSub").textContent = isNew
-      ? "Chưa lưu · nhập thông tin rồi bấm Cập nhật"
-      : f.giaoho + " · " + f.so + " nhân khẩu";
-    $("#dStatus").textContent = isNew ? "Bản nháp" : (f.ao ? "Không tính thống kê" : "Đang hoạt động");
-    $("#dStatus").className = "tag " + (isNew ? "tag-violet" : (f.ao ? "tag-amber" : "tag-mint"));
-
-    $("#fMa").value      = f.ma || "(tự sinh khi lưu)";
-    $("#fChong").textContent = f.chong || "—";
-    $("#fVo").textContent    = f.vo || "—";
-    $("#fChong").classList.toggle("empty", !f.chong);
-    $("#fVo").classList.toggle("empty", !f.vo);
-    $("#fTen").value     = f.ten || "";
-    $("#fGiaoHo").value  = f.giaoho || "Giáo họ Thánh Tâm";
-    $("#fHoKhau").value  = f.ma ? "HK-" + f.ma : "";
-    $("#fDien").value    = f.dien || "";
-    $("#fDT").value      = f.dt || "";
-    $("#fDiaChi").value  = f.diachi || "";
-    $("#fGhiChu").value  = f.ghichu || "";
-
-    $("#hSo").value   = f.ma ? "HP-" + f.ma : "";
-    $("#hNgay").value = f.ma ? "1998-10-24" : "";
-    $("#hNoi").value  = f.ma ? "Nhà thờ Giáo xứ Thánh Tâm" : "";
-    $("#hC1").value   = f.ma ? "Giuse Nguyễn Văn Tài" : "";
-    $("#hC2").value   = f.ma ? "Maria Lê Thị Hồng" : "";
-    $("#hTT").value   = f.ma ? "Hợp pháp" : "";
-    $("#hGC").value   = "";
-    $("#hTag").textContent = f.ma ? "Hợp pháp" : "Chưa có";
-
-    renderMembers(isNew ? [] : MEMBERS);
-    openTab("detail", isNew ? "Gia đình mới" : "Gia đình " + f.ten);
-  }
-
-  $("#chkChuyenXu").addEventListener("change", function (e) {
-    $("#rowNgayChuyen").hidden = !e.target.checked;
-    $("#rowNoiChuyen").hidden = !e.target.checked;
-  });
-  $("#btnQuayVe").addEventListener("click", function () { closeTab("detail"); });
-  $("#btnCapNhat").addEventListener("click", function () { closeTab("detail"); });
-  $("#btnBack").addEventListener("click", function () { closeTab("detail"); });
-
-  (function buildMemberHeader() {
-    const tr = $("#tvHead");
-    tr.innerHTML = '<th class="rowhead">#</th>';
-    TV_COLS.forEach(function (c) {
-      const th = document.createElement("th");
-      th.textContent = c;
-      th.style.minWidth = (c.length > 10 ? 128 : 96) + "px";
-      tr.appendChild(th);
-    });
-  })();
-
-  function renderMembers(list) {
-    const tb = $("#tvBody");
-    tb.innerHTML = "";
-    $("#tvCount").textContent = list.length;
-
-    if (!list.length) {
-      tb.innerHTML = '<tr><td class="empty-note" colspan="' + (TV_COLS.length + 1) +
-        '">Chưa có thành viên nào. Dùng <b>Thêm mới</b> hoặc <b>Chọn từ danh sách</b> để bổ sung.</td></tr>';
-      return;
-    }
-
-    list.forEach(function (m, i) {
-      const yes = function (v) { return v ? '<span class="tag tag-mint">✓</span>' : '<span class="muted">—</span>'; };
-      const txt = function (v) { return v ? esc(v) : '<span class="muted">—</span>'; };
-      const cells = [
-        '<select class="qh" aria-label="Quan hệ gia đình"><option>' + esc(m.qh) +
-          "</option><option>Con</option><option>Cháu</option><option>Cha</option><option>Mẹ</option><option>Anh/Chị/Em</option></select>",
-        '<span class="cell-code">' + esc(m.ma) + "</span>",
-        txt(m.ts), '<span class="cell-strong">' + esc(m.ten) + "</span>", txt(m.phai),
-        txt(m.ns), txt(m.nrt), txt(m.nxtrl), txt(m.nts), yes(m.lapgd),
-        txt(m.cha), txt(m.me), yes(m.tantong), yes(m.conhoc), txt(m.nghe), txt(m.gc),
-        txt(m.diachi), txt(m.gh), yes(m.chuyen), txt("12/12"), txt(""), txt(""),
-        yes(m.qd), txt(m.ngayqd), txt(""), txt("TP.HCM"),
-        txt("GX Thánh Tâm"), txt("GX Thánh Tâm"), txt("GX Thánh Tâm")
-      ];
-      const tr = document.createElement("tr");
-      let html = '<td class="rowhead">' + (i + 1) + "</td>";
-      cells.forEach(function (v, idx) {
-        html += "<td" + (idx > 0 && m.red ? ' class="struck"' : "") + ">" + v + "</td>";
-      });
-      tr.innerHTML = html;
-      tb.appendChild(tr);
-    });
-
-    tb.querySelectorAll("select.qh").forEach(function (s) {
-      s.style.minHeight = "26px";
-      s.style.padding = "2px 8px";
-      s.style.fontSize = "12.5px";
-      s.style.width = "100%";
-    });
-  }
-
-  render();
+  /* Khởi động */
+  Tabs.open("home", "Tổng quan", manHinhTongQuan, { closable:false });
+  moDanhSachGiaDinh();
 })();
 </script>
