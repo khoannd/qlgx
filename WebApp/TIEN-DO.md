@@ -14,12 +14,12 @@ Nhánh làm việc: **`webapp-phase-1`** (tách từ `master`).
    (biến đặt bằng `setx` chỉ có hiệu lực ở cửa sổ dòng lệnh **mới mở**)
 3. Kiểm tra dịch vụ `postgresql-x64-17` đã chạy chưa: `sc query postgresql-x64-17`
 4. Chạy toàn bộ test để xác nhận môi trường lành lặn:
-   - Backend: `dotnet test WebApp/Qlgx.sln` → phải ra **77/77 xanh**
+   - Backend: `dotnet test WebApp/Qlgx.sln` → phải ra **91/91 xanh**
    - Front-end: `cd WebApp/src/web && npm test -- --run` → phải ra **49/49 xanh**
 5. Sổ theo dõi chi tiết từng task, từng quyết định:
    `.superpowers/sdd/2026-09-06-qlgx-web-phase-1/progress.md`
    (thư mục này nằm ngoài git, nhưng vẫn còn trên đĩa sau khi khởi động lại)
-6. Task tiếp theo cần làm: **Task 17 — thực thể và schema cho 19 bảng Access còn lại**.
+6. Task tiếp theo cần làm: **Task 14 — xác thực và phân tách tenant theo claim đăng nhập**.
 
 ## Cách chạy thử hệ thống với dữ liệu thật
 
@@ -79,8 +79,9 @@ Công cụ chạy lại được nhiều lần mà không tạo bản ghi trùng
 | 8 | API giáo dân: danh sách, chi tiết, cập nhật, thành viên | 12 |
 | 9 | Công cụ chuyển dữ liệu Access → PostgreSQL, đủ cột 7 bảng | 10 |
 | — | Nối front-end vào API thật, bỏ dữ liệu giả | 10 |
+| 17 | **Đủ 26 bảng Access** — 19 bảng còn lại, chia ba nhóm | 14 |
 
-Tổng: **77 test backend + 49 test front-end**, tất cả xanh.
+Tổng: **91 test backend + 49 test front-end**, tất cả xanh.
 
 ## Đã chuyển được dữ liệu thật
 
@@ -96,7 +97,18 @@ Từ `BIN/giaoxu.mdb` (giáo xứ Vô Nhiễm) sang PostgreSQL, số dòng khớ
 | HonPhoi | 522 |
 | GiaoDanHonPhoi | 1 043 |
 
-Cả 7 bảng chuyển **đủ mọi cột** (GiaoDan 63/63, GiaDinh 17/17, GiaoXu 11/11 …). `MaNhanDang`
+Đã phủ **đủ 26/26 bảng Access** (2 view là dữ liệu dẫn xuất — ngoại lệ đã ghi nhận).
+Ngoài 7 bảng trên còn có: GiaoPhan 1 · GiaoHat 1 · CauHinh 19 · DuLieuChung 343 · VaiTro 3 ·
+TenLoaiTaiKhoan 3 · TaiKhoan 0 · **DotBiTich 1 108** · **BiTichChiTiet 6 150** · ChuyenXu 0 ·
+RaoHonPhoi 0 · TanHien 0 · LinhMuc 0 · KhoiGiaoLy 0 · LopGiaoLy 0 · ChiTietLopGiaoLy 0 ·
+GiaoLyVien 0 · HoiDoan 0 · ChiTietHoiDoan 0. Bảng rỗng vẫn được tạo đủ cột vì giáo xứ khác
+sẽ có dữ liệu.
+
+Phân cấp thật đã nối được ba cấp: **Giáo phận Phan Thiết → Giáo hạt Đức Tánh → Giáo xứ Vô
+Nhiễm**. `GiaoPhan` và `GiaoHat` cố ý **không** gắn `giao_xu_id` và không có bộ lọc tenant vì
+chúng nằm trên cấp giáo xứ — đây là nền cho chức năng quản lý giáo xứ theo giáo phận.
+
+Cả 7 bảng cốt lõi chuyển **đủ mọi cột** (GiaoDan 63/63, GiaDinh 17/17, GiaoXu 11/11 …). `MaNhanDang`
 được giữ nguyên trên 4 bảng có cột này để sau còn đồng bộ hai chiều desktop↔web. Giá trị
 `VaiTro` giữ nguyên dạng thô (0,1,2,3,8,18,100) — gộp lại sẽ đụng khoá chính và mất dòng.
 Ngày tháng hỏng (chỉ ghi năm, chuỗi rỗng) được giữ nguyên văn trong cột `du_lieu_loi`.
@@ -107,9 +119,8 @@ Ngày tháng hỏng (chỉ ghi năm, chuỗi rỗng) được giữ nguyên văn
 
 | Task | Nội dung | Ghi chú |
 |---|---|---|
-| 17 | Thực thể và schema cho **19 bảng Access còn lại** | **làm tiếp ngay** |
+| 14 | Xác thực và phân tách tenant theo claim đăng nhập | **làm tiếp ngay** |
 | 13 | Kiểm thử đầu-cuối và **triển khai máy chủ** | đã đổi mục tiêu, không còn cài lên máy giáo xứ |
-| 14 | Xác thực và phân tách tenant theo claim đăng nhập | task mới |
 | 15 | Giao diện hôn phối | task mới |
 | 16 | PWA và bản nháp ngoại tuyến | task mới |
 
