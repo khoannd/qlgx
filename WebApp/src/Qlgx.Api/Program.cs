@@ -1,6 +1,8 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api;
+using Qlgx.Api.Endpoints;
+using Qlgx.Api.Services;
 using Qlgx.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddScoped<IBoiCanhGiaoXu, BoiCanhGiaoXuTuCauHinh>();
 builder.Services.AddDbContext<QlgxDbContext>((sp, opt) =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("Qlgx")));
+builder.Services.AddScoped<GiaDinhService>();
 
 var app = builder.Build();
 
@@ -20,6 +23,8 @@ app.MapGet("/api/suc-khoe", () => Results.Ok(new
     trangThai = "ok",
     phienBan = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0"
 }));
+
+app.MapGiaDinh();
 
 app.Run();
 
