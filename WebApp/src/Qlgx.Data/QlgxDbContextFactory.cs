@@ -14,7 +14,7 @@ public class QlgxDbContextFactory : IDesignTimeDbContextFactory<QlgxDbContext>
     public QlgxDbContext CreateDbContext(string[] args)
     {
         var chuoiKetNoi = Environment.GetEnvironmentVariable("QLGX_TEST_PG")
-            ?? "Host=localhost;Username=postgres;Password=postgres;Database=qlgx_design";
+            ?? "Host=localhost;Username=postgres;Password=DAT-QUA-BIEN-QLGX_TEST_PG;Database=qlgx_design";
         var options = new DbContextOptionsBuilder<QlgxDbContext>()
             .UseNpgsql(chuoiKetNoi)
             .Options;

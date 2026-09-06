@@ -7,12 +7,37 @@ using Qlgx.Domain.Entities;
 
 namespace Qlgx.Api.Services;
 
-public class GiaDinhService(QlgxDbContext db)
+/// <summary>Kết quả của <see cref="GiaDinhService.CapNhat"/> — endpoint tự ánh xạ sang mã HTTP
+/// và thông báo tiếng Việt tương ứng (xem GiaDinhEndpoints).</summary>
+public enum KetQuaCapNhatGiaDinh
+{
+    ThanhCong,
+    KhongTimThay,
+    /// <summary>Đụng RowVersion của chính bản ghi gia đình.</summary>
+    DungPhienBanGiaDinh,
+    /// <summary>Đụng RowVersion riêng của bản ghi hôn phối — khác bản ghi gia đình, cần
+    /// thông báo riêng để người dùng biết chính xác phần nào vừa bị người khác sửa.</summary>
+    DungPhienBanHonPhoi,
+    /// <summary>Gia đình chưa có cả chồng lẫn vợ mà yêu cầu vẫn gửi khối hôn phối lên — từ
+    /// chối thay vì tạo một bản ghi hôn phối mồ côi, không gắn với ai trong gia đình.</summary>
+    KhongTheGanHonPhoiMoCoi,
+}
+
+public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa)
 {
     public async Task<List<GiaDinhListItemDto>> LayDanhSach(
         Guid? giaoHoId, bool chiKhongThongKe, CancellationToken ct)
     {
         var tho = await XayDungTruyVan(db, giaoHoId, chiKhongThongKe).ToListAsync(ct);
+
+        // Hôn phối được tra riêng bằng MỘT truy vấn theo lô (không phải một subquery tương
+        // quan lặp lại cho từng gia đình) rồi ghép vào bằng LINQ-to-Objects — xem
+        // ChonHonPhoiHienTai để biết vì sao không thể dùng correlated subquery ở đây (một
+        // người có thể có nhiều hôn phối theo thời gian).
+        var idCanTra = tho
+            .SelectMany(h => new[] { h.Chong?.GiaoDanId, h.Vo?.GiaoDanId })
+            .Where(x => x is not null).Select(x => x!.Value).Distinct().ToArray();
+        var lienKetTheoNguoi = await LayLienKetTheoNguoi(idCanTra, ct);
 
         // Toàn bộ logic ghép tên, tính Gach và định dạng ngày ở đây chạy bằng LINQ-to-Objects
         // (danh sách tho đã nằm trong bộ nhớ), nên được phép gọi phương thức tự viết
@@ -22,6 +47,7 @@ public class GiaDinhService(QlgxDbContext db)
         {
             var chongMat = h.Chong?.QuaDoi ?? false;
             var voMat = h.Vo?.QuaDoi ?? false;
+            var honPhoi = ChonHonPhoiHienTai(lienKetTheoNguoi, h.Chong?.GiaoDanId, h.Vo?.GiaoDanId);
             return new GiaDinhListItemDto(
                 h.Id, h.MaGiaDinhCu, h.MaGiaDinhRieng, h.TenGiaDinh,
                 GhepTen(h.Chong), GhepTen(h.Vo),
@@ -30,8 +56,8 @@ public class GiaDinhService(QlgxDbContext db)
                 // Gach: 0 = chong mat, 1 = vo mat, 2 = ca hai, -1 = khong gach. Cong thuc
                 // 2*voMat + chongMat - 1 tai dung bang liet ke ca bon truong hop.
                 2 * (voMat ? 1 : 0) + (chongMat ? 1 : 0) - 1,
-                h.KhongThongKe, h.HonPhoi?.HonPhoiId,
-                h.HonPhoi?.NgayHonPhoi?.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture));
+                h.KhongThongKe, honPhoi?.HonPhoiId,
+                honPhoi?.NgayHonPhoi?.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture));
         }).ToList();
     }
 
@@ -42,7 +68,8 @@ public class GiaDinhService(QlgxDbContext db)
             .SingleOrDefaultAsync(x => x.Id == id && !x.DaXoa, ct);
         if (g is null) return null;
 
-        var honPhoi = await LayHonPhoiCuaGiaDinh(g.ThanhVien, ct);
+        var (chongId, voId) = LayChongVoId(g.ThanhVien);
+        var honPhoi = await LayHonPhoiDtoHienTai(chongId, voId, ct);
 
         return new GiaDinhDetailDto(
             g.Id, g.MaGiaDinhCu, g.MaGiaDinhRieng, g.TenGiaDinh, g.GiaoHoId,
@@ -58,12 +85,21 @@ public class GiaDinhService(QlgxDbContext db)
             honPhoi);
     }
 
-    /// <summary>Trả về false khi bản ghi đã bị người khác sửa từ lúc màn hình được mở.</summary>
-    public async Task<bool?> CapNhat(Guid id, CapNhatGiaDinhRequest yeuCau, CancellationToken ct)
+    /// <summary>Kết quả chi tiết trong <see cref="KetQuaCapNhatGiaDinh"/> — xem đó để biết
+    /// endpoint ánh xạ sang mã HTTP/thông báo nào.</summary>
+    public async Task<KetQuaCapNhatGiaDinh> CapNhat(Guid id, CapNhatGiaDinhRequest yeuCau, CancellationToken ct)
     {
         var g = await db.GiaDinh.Include(x => x.ThanhVien)
             .SingleOrDefaultAsync(x => x.Id == id && !x.DaXoa, ct);
-        if (g is null) return null;
+        if (g is null) return KetQuaCapNhatGiaDinh.KhongTimThay;
+
+        var (chongId, voId) = LayChongVoId(g.ThanhVien);
+
+        // Từ chối SỚM, trước khi đụng tới change tracker: gắn hôn phối cho một gia đình không
+        // có ai trong hai vai trò Chồng/Vợ sẽ tạo ra bản ghi HonPhoi không nối được với ai —
+        // mồ côi, không có cách nào xem lại từ màn hình gia đình.
+        if (yeuCau.HonPhoi is not null && chongId is null && voId is null)
+            return KetQuaCapNhatGiaDinh.KhongTheGanHonPhoiMoCoi;
 
         db.Entry(g).Property(x => x.RowVersion).OriginalValue = yeuCau.RowVersion;
 
@@ -78,78 +114,68 @@ public class GiaDinhService(QlgxDbContext db)
         g.NgayChuyen = yeuCau.NgayChuyen;
         g.NoiChuyen = yeuCau.NoiChuyen;
         g.KhongThongKe = yeuCau.KhongThongKe;
+        // Cố tình KHÔNG đụng tới g.MaNhanDang: đây là khoá nhận dạng dùng để đồng bộ hai
+        // chiều với bản desktop sau này; request không mang trường này nên không được gán gì
+        // (kể cả gán null) — property giữ nguyên giá trị đã tải từ CSDL.
 
         // yeuCau.HonPhoi == null nghĩa là màn hình không gửi khối hôn phối lên — "không gửi
         // thì không sửa", cố tình không đụng gì tới hôn phối hiện có (không phải xoá).
         if (yeuCau.HonPhoi is { } honPhoiYeuCau)
-            await GhiHonPhoi(g, honPhoiYeuCau, ct);
+            await GhiHonPhoi(g.GiaoXuId, chongId, voId, honPhoiYeuCau, ct);
 
         try
         {
             await db.SaveChangesAsync(ct);
-            return true;
+            return KetQuaCapNhatGiaDinh.ThanhCong;
         }
-        catch (DbUpdateConcurrencyException)
+        catch (DbUpdateConcurrencyException ex)
         {
-            return false;
+            // Hai bản ghi (gia đình + hôn phối) có thể cùng nằm trong một SaveChangesAsync,
+            // nên EF gộp mọi entry đụng phiên bản vào MỘT ngoại lệ — phân biệt xem entry nào
+            // thất bại để trả đúng thông báo, tránh nói "gia đình vừa bị sửa" trong khi thực
+            // ra người kia chỉ sửa khối hôn phối.
+            return ex.Entries.Any(e => e.Entity is HonPhoi)
+                ? KetQuaCapNhatGiaDinh.DungPhienBanHonPhoi
+                : KetQuaCapNhatGiaDinh.DungPhienBanGiaDinh;
         }
     }
 
-    /// <summary>
-    /// Gia đình được coi là "đã có hôn phối" khi chồng hoặc vợ có mặt trong bảng nối
-    /// GiaoDanHonPhoi — giống hệt định nghĩa dùng ở lưới danh sách (XayDungTruyVan).
-    /// </summary>
-    private async Task<HonPhoiDto?> LayHonPhoiCuaGiaDinh(List<ThanhVienGiaDinh> thanhVien, CancellationToken ct)
-    {
-        var idChongVo = thanhVien
-            .Where(tv => tv.VaiTro == VaiTroGiaDinh.Chong || tv.VaiTro == VaiTroGiaDinh.Vo)
-            .Select(tv => tv.GiaoDanId)
-            .ToArray();
-        if (idChongVo.Length == 0) return null;
-
-        return await db.HonPhoi
-            .Where(h => db.GiaoDanHonPhoi.Any(gdhp => gdhp.HonPhoiId == h.Id && idChongVo.Contains(gdhp.GiaoDanId)))
-            .Select(h => new HonPhoiDto(h.Id, h.SoHonPhoi, h.NgayHonPhoi, h.NoiHonPhoi,
-                h.LinhMucChung, h.NguoiChung1, h.NguoiChung2, h.CachThucHonPhoi, h.GhiChu, h.RowVersion))
-            .SingleOrDefaultAsync(ct);
-    }
+    private static (Guid? ChongId, Guid? VoId) LayChongVoId(IEnumerable<ThanhVienGiaDinh> thanhVien) =>
+        (thanhVien.FirstOrDefault(tv => tv.VaiTro == VaiTroGiaDinh.Chong)?.GiaoDanId,
+         thanhVien.FirstOrDefault(tv => tv.VaiTro == VaiTroGiaDinh.Vo)?.GiaoDanId);
 
     /// <summary>
     /// Tạo mới bản ghi HonPhoi (kèm nối GiaoDanHonPhoi tới chồng/vợ hiện có, bỏ qua bên nào
-    /// chưa có) nếu gia đình chưa có hôn phối, hoặc cập nhật bản ghi đã có kèm kiểm tra
-    /// RowVersion riêng của nó — đụng phiên bản thì SaveChangesAsync ném
-    /// DbUpdateConcurrencyException giống hệt cách CapNhat xử lý bản ghi gia đình.
+    /// chưa có) nếu gia đình chưa có hôn phối HIỆN TẠI (xem ChonHonPhoiHienTai), hoặc cập
+    /// nhật bản ghi đã có kèm kiểm tra RowVersion riêng của nó — đụng phiên bản thì
+    /// SaveChangesAsync ném DbUpdateConcurrencyException, CapNhat phân biệt entry nào thất
+    /// bại để trả đúng thông báo.
     /// </summary>
-    private async Task GhiHonPhoi(GiaDinh g, CapNhatHonPhoiRequest yc, CancellationToken ct)
+    private async Task GhiHonPhoi(Guid giaoXuId, Guid? chongId, Guid? voId, CapNhatHonPhoiRequest yc, CancellationToken ct)
     {
-        var chongId = g.ThanhVien.FirstOrDefault(tv => tv.VaiTro == VaiTroGiaDinh.Chong)?.GiaoDanId;
-        var voId = g.ThanhVien.FirstOrDefault(tv => tv.VaiTro == VaiTroGiaDinh.Vo)?.GiaoDanId;
-        var idChongVo = new[] { chongId, voId }.Where(x => x is not null).Select(x => x!.Value).ToArray();
-
-        var honPhoi = idChongVo.Length == 0 ? null : await db.HonPhoi
-            .Where(h => db.GiaoDanHonPhoi.Any(gdhp => gdhp.HonPhoiId == h.Id && idChongVo.Contains(gdhp.GiaoDanId)))
-            .SingleOrDefaultAsync(ct);
+        var honPhoi = await TimHonPhoiHienTaiEntity(chongId, voId, ct);
 
         if (honPhoi is null)
         {
             honPhoi = new HonPhoi
             {
-                GiaoXuId = g.GiaoXuId,
+                GiaoXuId = giaoXuId,
                 // Bản ghi tạo trực tiếp trên web, không qua chuyển đổi từ Access, nên không có
-                // mã cũ thật — tự sinh số kế tiếp trong phạm vi giáo xứ để không đụng ràng
-                // buộc duy nhất (GiaoXuId, MaHonPhoiCu). Quyết định tự đưa ra vì brief không
-                // nói rõ; xem task-7-report.md.
-                MaHonPhoiCu = (await db.HonPhoi.MaxAsync(h => (int?)h.MaHonPhoiCu, ct) ?? 0) + 1,
+                // mã cũ thật — SinhMaService cấp phát nguyên tử, khởi tạo từ mã lớn nhất ĐANG
+                // CÓ (dữ liệu chuyển từ Access đã mang sẵn mã cũ) chứ không bắt đầu từ 1. Xem
+                // SinhMaService để biết vì sao MAX+1 đọc-rồi-ghi hai lượt không an toàn.
+                MaHonPhoiCu = await sinhMa.LayMaTiepTheo(giaoXuId, "hon_phoi",
+                    await db.HonPhoi.MaxAsync(h => (int?)h.MaHonPhoiCu, ct) ?? 0, ct),
             };
             db.HonPhoi.Add(honPhoi);
 
             var soThuTu = 1;
             if (chongId is { } cId)
                 db.GiaoDanHonPhoi.Add(new GiaoDanHonPhoi
-                    { GiaoXuId = g.GiaoXuId, HonPhoi = honPhoi, GiaoDanId = cId, SoThuTu = soThuTu++ });
+                    { GiaoXuId = giaoXuId, HonPhoi = honPhoi, GiaoDanId = cId, SoThuTu = soThuTu++ });
             if (voId is { } vId)
                 db.GiaoDanHonPhoi.Add(new GiaoDanHonPhoi
-                    { GiaoXuId = g.GiaoXuId, HonPhoi = honPhoi, GiaoDanId = vId, SoThuTu = soThuTu });
+                    { GiaoXuId = giaoXuId, HonPhoi = honPhoi, GiaoDanId = vId, SoThuTu = soThuTu });
         }
         else
         {
@@ -164,6 +190,82 @@ public class GiaDinhService(QlgxDbContext db)
         honPhoi.NguoiChung2 = yc.NguoiChung2;
         honPhoi.CachThucHonPhoi = yc.CachThucHonPhoi;
         honPhoi.GhiChu = yc.GhiChu;
+        // Cố tình KHÔNG đụng tới honPhoi.MaNhanDang — cùng lý do đã ghi ở CapNhat.
+    }
+
+    private async Task<HonPhoiDto?> LayHonPhoiDtoHienTai(Guid? chongId, Guid? voId, CancellationToken ct)
+    {
+        var honPhoiId = await TimHonPhoiHienTaiId(chongId, voId, ct);
+        if (honPhoiId is null) return null;
+
+        // Tra theo khoá chính Id: luôn đúng 1 kết quả, SingleOrDefaultAsync an toàn ở đây.
+        return await db.HonPhoi.Where(h => h.Id == honPhoiId)
+            .Select(h => new HonPhoiDto(h.Id, h.SoHonPhoi, h.NgayHonPhoi, h.NoiHonPhoi,
+                h.LinhMucChung, h.NguoiChung1, h.NguoiChung2, h.CachThucHonPhoi, h.GhiChu, h.RowVersion))
+            .SingleOrDefaultAsync(ct);
+    }
+
+    private async Task<HonPhoi?> TimHonPhoiHienTaiEntity(Guid? chongId, Guid? voId, CancellationToken ct)
+    {
+        var honPhoiId = await TimHonPhoiHienTaiId(chongId, voId, ct);
+        return honPhoiId is null ? null : await db.HonPhoi.SingleOrDefaultAsync(h => h.Id == honPhoiId, ct);
+    }
+
+    private async Task<Guid?> TimHonPhoiHienTaiId(Guid? chongId, Guid? voId, CancellationToken ct)
+    {
+        var idCanTra = new[] { chongId, voId }.Where(x => x is not null).Select(x => x!.Value).ToArray();
+        if (idCanTra.Length == 0) return null;
+
+        var lienKetTheoNguoi = await LayLienKetTheoNguoi(idCanTra, ct);
+        return ChonHonPhoiHienTai(lienKetTheoNguoi, chongId, voId)?.HonPhoiId;
+    }
+
+    private async Task<ILookup<Guid, LienKetHonPhoi>> LayLienKetTheoNguoi(Guid[] idCanTra, CancellationToken ct)
+    {
+        if (idCanTra.Length == 0) return Enumerable.Empty<LienKetHonPhoi>().ToLookup(x => x.GiaoDanId);
+
+        var lienKet = await db.GiaoDanHonPhoi
+            .Where(x => idCanTra.Contains(x.GiaoDanId))
+            .Select(x => new LienKetHonPhoi(x.GiaoDanId, x.HonPhoiId, x.HonPhoi!.NgayHonPhoi))
+            .ToListAsync(ct);
+        return lienKet.ToLookup(x => x.GiaoDanId);
+    }
+
+    /// <summary>
+    /// Chọn hôn phối "hiện tại" của một gia đình — MỘT định nghĩa dùng chung cho cả lưới danh
+    /// sách (LayDanhSach) và màn hình chi tiết (LayChiTiet/GhiHonPhoi), để hai nơi không hiểu
+    /// khác nhau.
+    ///
+    /// Một giáo dân có thể có NHIỀU bản ghi hôn phối hợp lệ theo thời gian (goá rồi tái hôn —
+    /// bản Access ghi rõ điều này trong chú thích của SELECT_HONPHOI_THEO_MAGIAODAN, Source
+    /// /DBAccess/SqlConstants.cs), nên đây tuyệt đối không được là một truy vấn kỳ vọng đúng
+    /// 1 kết quả (SingleOrDefault) — dữ liệu hợp lệ như vậy sẽ khiến nó ném ngoại lệ.
+    ///
+    /// Quy tắc, giống hệt cách bản Access xác định một gia đình từ một cặp qua
+    /// SELECT_CHECK_GIADINH_THEO_VOCHONG (khớp theo CẢ HAI vai trò cùng lúc):
+    /// - Gia đình có đủ cả chồng và vợ: hôn phối hiện tại là bản ghi mà CẢ HAI cùng nối tới
+    ///   (nếu một cặp từng có nhiều hôn phối chung — hiếm nhưng không cấm về mặt dữ liệu —
+    ///   lấy bản mới nhất theo NgayHonPhoi).
+    /// - Gia đình chỉ có một bên (chỉ chồng hoặc chỉ vợ): lấy hôn phối MỚI NHẤT của riêng
+    ///   người đó, không quan tâm hôn phối trước đó với người khác.
+    /// - Gia đình không có ai trong hai vai trò: null (không có hôn phối để hiển thị).
+    /// </summary>
+    private static LienKetHonPhoi? ChonHonPhoiHienTai(
+        ILookup<Guid, LienKetHonPhoi> lienKetTheoNguoi, Guid? chongId, Guid? voId)
+    {
+        if (chongId is { } c && voId is { } v)
+        {
+            var idHonPhoiCuaChong = lienKetTheoNguoi[c].Select(x => x.HonPhoiId).ToHashSet();
+            return lienKetTheoNguoi[v]
+                .Where(x => idHonPhoiCuaChong.Contains(x.HonPhoiId))
+                .OrderByDescending(x => x.NgayHonPhoi)
+                .FirstOrDefault();
+        }
+
+        var id = chongId ?? voId;
+        return id is null ? null : lienKetTheoNguoi[id.Value]
+            .OrderByDescending(x => x.NgayHonPhoi)
+            .FirstOrDefault();
     }
 
     /// <summary>Tên hiển thị trên lưới là "Tên thánh + Họ tên", null nếu gia đình chưa có người này.</summary>
@@ -178,11 +280,14 @@ public class GiaDinhService(QlgxDbContext db)
     /// trong nhánh điều kiện rồi đọc lại trong nhánh else), EF sẽ CHÉP LẠI nguyên văn subquery ở
     /// mỗi lần đọc thay vì tính một lần rồi tái sử dụng — vòng review 1 đã thử "phép chiếu hai
     /// tầng" bằng Select().Select() và ĐO ĐƯỢC nó làm số lần "SELECT" tăng từ 24 lên 52, tệ hơn
-    /// bản gốc. Cách thật sự giảm được subquery: gộp các cột cùng nguồn (chồng: tên thánh + họ
-    /// tên + điện thoại + qua đời) vào ĐÚNG MỘT lời gọi FirstOrDefault() trả về record
-    /// NguoiVoChong, dịch xuống SQL, materialize toàn bộ qua ToListAsync() một lần, rồi mọi phép
-    /// ghép/tính toán còn lại (GhepTen, công thức Gach, định dạng ngày) làm bằng LINQ-to-Objects
-    /// ở LayDanhSach — xem log đo trong task-6-report.md, mục vòng sửa 1.
+    /// bản gốc. Cách thật sự giảm được subquery: gộp các cột cùng nguồn (chồng: mã giáo dân +
+    /// tên thánh + họ tên + điện thoại + qua đời) vào ĐÚNG MỘT lời gọi FirstOrDefault() trả về
+    /// record NguoiVoChong, dịch xuống SQL, materialize toàn bộ qua ToListAsync() một lần, rồi
+    /// mọi phép ghép/tính toán còn lại (GhepTen, công thức Gach, định dạng ngày, VÀ tra hôn
+    /// phối theo lô — xem LayDanhSach) làm bằng LINQ-to-Objects — xem log đo trong
+    /// task-6-report.md, mục vòng sửa 1. Hôn phối KHÔNG còn là một subquery tương quan ở đây
+    /// (vòng sửa 1 của Task 7 đã bỏ) vì FirstOrDefault() trên đó sẽ âm thầm chọn bừa một bản
+    /// ghi khi một trong hai người từng có hôn phối trước đó — xem ChonHonPhoiHienTai.
     /// </summary>
     private static IQueryable<HangTho> XayDungTruyVan(QlgxDbContext db, Guid? giaoHoId, bool chiKhongThongKe)
     {
@@ -198,13 +303,13 @@ public class GiaDinhService(QlgxDbContext db)
                 g.MaGiaDinhCu,
                 g.MaGiaDinhRieng,
                 g.TenGiaDinh,
-                // Chồng: một subquery duy nhất mang cả 4 cột thay vì một subquery riêng cho
-                // mỗi cột (tên thánh, họ tên, điện thoại, qua đời).
+                // Chồng: một subquery duy nhất mang cả 5 cột (kể cả GiaoDanId, dùng để tra hôn
+                // phối theo lô ở LayDanhSach) thay vì một subquery riêng cho mỗi cột.
                 g.ThanhVien.Where(tv => tv.VaiTro == VaiTroGiaDinh.Chong)
-                    .Select(tv => new NguoiVoChong(tv.GiaoDan!.TenThanh, tv.GiaoDan.HoTen, tv.GiaoDan.DienThoai, tv.GiaoDan.QuaDoi))
+                    .Select(tv => new NguoiVoChong(tv.GiaoDanId, tv.GiaoDan!.TenThanh, tv.GiaoDan.HoTen, tv.GiaoDan.DienThoai, tv.GiaoDan.QuaDoi))
                     .FirstOrDefault(),
                 g.ThanhVien.Where(tv => tv.VaiTro == VaiTroGiaDinh.Vo)
-                    .Select(tv => new NguoiVoChong(tv.GiaoDan!.TenThanh, tv.GiaoDan.HoTen, tv.GiaoDan.DienThoai, tv.GiaoDan.QuaDoi))
+                    .Select(tv => new NguoiVoChong(tv.GiaoDanId, tv.GiaoDan!.TenThanh, tv.GiaoDan.HoTen, tv.GiaoDan.DienThoai, tv.GiaoDan.QuaDoi))
                     .FirstOrDefault(),
                 // TAM THOI: dem toan bo thanh vien gia dinh. Ban Access dem "so nhan khau con
                 // song, dang o xu" (loai nguoi da qua doi hoac da chuyen xu) — se sua lai cho
@@ -215,23 +320,17 @@ public class GiaDinhService(QlgxDbContext db)
                 g.GiaoHo == null ? "Ngoài xứ" : g.GiaoHo.TenGiaoHo,
                 g.DienGiaDinh,
                 g.GhiChu,
-                g.KhongThongKe,
-                // HonPhoiId + NgayHonPhoi: gia đình được coi là "đã có hôn phối" khi chồng
-                // hoặc vợ có mặt trong bảng nối GiaoDanHonPhoi. Một subquery duy nhất mang cả
-                // hai cột, thay vì lặp lại toàn bộ điều kiện Where cho từng cột như bản trước.
-                db.GiaoDanHonPhoi
-                    .Where(gdhp => g.ThanhVien.Any(tv =>
-                        (tv.VaiTro == VaiTroGiaDinh.Chong || tv.VaiTro == VaiTroGiaDinh.Vo)
-                        && tv.GiaoDanId == gdhp.GiaoDanId))
-                    .Select(gdhp => new HonPhoiThongTin(gdhp.HonPhoiId, gdhp.HonPhoi!.NgayHonPhoi))
-                    .FirstOrDefault()));
+                g.KhongThongKe));
     }
 
-    /// <summary>Tên thánh, họ tên, điện thoại và tình trạng qua đời của chồng hoặc vợ — lấy đủ bốn cột trong một subquery.</summary>
-    private sealed record NguoiVoChong(string? TenThanh, string HoTen, string? DienThoai, bool QuaDoi);
+    /// <summary>Mã giáo dân, tên thánh, họ tên, điện thoại và tình trạng qua đời của chồng
+    /// hoặc vợ — lấy đủ 5 cột trong một subquery.</summary>
+    private sealed record NguoiVoChong(Guid GiaoDanId, string? TenThanh, string HoTen, string? DienThoai, bool QuaDoi);
 
-    /// <summary>Mã và ngày của hôn phối gắn với gia đình — lấy đủ hai cột trong một subquery.</summary>
-    private sealed record HonPhoiThongTin(Guid HonPhoiId, DateOnly? NgayHonPhoi);
+    /// <summary>Một dòng của bảng nối GiaoDanHonPhoi kèm ngày hôn phối — nguyên liệu để
+    /// ChonHonPhoiHienTai áp dụng quy tắc chọn hôn phối hiện tại theo lô, dùng chung cho cả
+    /// lưới danh sách và màn hình chi tiết.</summary>
+    private sealed record LienKetHonPhoi(Guid GiaoDanId, Guid HonPhoiId, DateOnly? NgayHonPhoi);
 
     /// <summary>
     /// Hàng trung gian lấy thẳng từ SQL, trước khi ghép tên, tính Gach và định dạng ngày hôn
@@ -243,5 +342,5 @@ public class GiaDinhService(QlgxDbContext db)
         Guid Id, int MaGiaDinhCu, string? MaGiaDinhRieng, string? TenGiaDinh,
         NguoiVoChong? Chong, NguoiVoChong? Vo, int SoLuong, string? DienThoai,
         string? DiaChi, string? TenGiaoHo, string? DienGiaDinh, string? GhiChu,
-        bool KhongThongKe, HonPhoiThongTin? HonPhoi);
+        bool KhongThongKe);
 }

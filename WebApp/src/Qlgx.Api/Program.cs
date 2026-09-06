@@ -14,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddScoped<IBoiCanhGiaoXu, BoiCanhGiaoXuTuCauHinh>();
 builder.Services.AddDbContext<QlgxDbContext>((sp, opt) =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("Qlgx")));
+builder.Services.AddScoped<SinhMaService>();
 builder.Services.AddScoped<GiaDinhService>();
 
 var app = builder.Build();

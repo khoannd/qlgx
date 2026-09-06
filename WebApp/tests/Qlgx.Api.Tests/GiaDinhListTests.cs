@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Qlgx.Domain;
@@ -131,6 +132,47 @@ public class GiaDinhListTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory
         var dong = ds!.Single(x => x.MaGiaDinhCu == 42);
         dong.HonPhoiId.Should().Be(honPhoiId);
         dong.NgayHonPhoiHienThi.Should().Be("14/02/2010");
+    }
+
+    /// <summary>
+    /// Vòng sửa 1 của Task 7: một giáo dân có thể có nhiều bản ghi hôn phối theo thời gian
+    /// (goá rồi tái hôn — xem chú thích SELECT_HONPHOI_THEO_MAGIAODAN trong
+    /// Source/DBAccess/SqlConstants.cs của bản Access). Trước bản sửa, cột HonPhoiId của lưới
+    /// dùng FirstOrDefault() trên MỘT correlated subquery lấy hôn phối theo "chồng HOẶC vợ",
+    /// nên khi chồng từng có một hôn phối trước đó, subquery này có thể ÂM THẦM CHỌN BỪA bản
+    /// ghi sai (thứ tự không xác định) thay vì bản ghi mà cả hai vợ chồng cùng nối tới.
+    /// </summary>
+    [Fact]
+    public async Task Chong_tung_co_hon_phoi_truoc_thi_luoi_van_chon_dung_hon_phoi_cua_ca_hai_vo_chong()
+    {
+        var (_, chongId, voId) = await TaoGiaDinhMau(ma: 43);
+        Guid honPhoiHienTaiId;
+        await using (var db = app.TaoContextThuan())
+        {
+            var hpCu = new HonPhoi { GiaoXuId = app.GiaoXuId, MaHonPhoiCu = 430,
+                NgayHonPhoi = new DateOnly(2000, 1, 1) };
+            db.HonPhoi.Add(hpCu);
+            db.GiaoDanHonPhoi.Add(
+                new GiaoDanHonPhoi { GiaoXuId = app.GiaoXuId, HonPhoi = hpCu, GiaoDanId = chongId, SoThuTu = 1 });
+
+            var hpHienTai = new HonPhoi { GiaoXuId = app.GiaoXuId, MaHonPhoiCu = 431,
+                NgayHonPhoi = new DateOnly(2015, 5, 5) };
+            db.HonPhoi.Add(hpHienTai);
+            db.GiaoDanHonPhoi.AddRange(
+                new GiaoDanHonPhoi { GiaoXuId = app.GiaoXuId, HonPhoi = hpHienTai, GiaoDanId = chongId, SoThuTu = 1 },
+                new GiaoDanHonPhoi { GiaoXuId = app.GiaoXuId, HonPhoi = hpHienTai, GiaoDanId = voId, SoThuTu = 2 });
+            await db.SaveChangesAsync();
+            honPhoiHienTaiId = hpHienTai.Id;
+        }
+
+        var res = await app.CreateClient().GetAsync("/api/gia-dinh");
+
+        res.StatusCode.Should().Be(HttpStatusCode.OK, "khong duoc gay loi voi du lieu hop le nay");
+        var ds = await res.Content.ReadFromJsonAsync<List<Item>>();
+        var dong = ds!.Single(x => x.MaGiaDinhCu == 43);
+        dong.HonPhoiId.Should().Be(honPhoiHienTaiId,
+            "phai la hon phoi ca hai vo chong cung noi toi, khong phai hon phoi rieng truoc day cua chong");
+        dong.NgayHonPhoiHienThi.Should().Be("05/05/2015");
     }
 
     [Fact]

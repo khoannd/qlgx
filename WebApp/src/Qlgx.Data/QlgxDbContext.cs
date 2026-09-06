@@ -25,6 +25,7 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
     public DbSet<ThanhVienGiaDinh> ThanhVienGiaDinh => Set<ThanhVienGiaDinh>();
     public DbSet<HonPhoi> HonPhoi => Set<HonPhoi>();
     public DbSet<GiaoDanHonPhoi> GiaoDanHonPhoi => Set<GiaoDanHonPhoi>();
+    public DbSet<BoDemMa> BoDemMa => Set<BoDemMa>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -41,6 +42,7 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
         b.Entity<ThanhVienGiaDinh>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         b.Entity<HonPhoi>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         b.Entity<GiaoDanHonPhoi>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<BoDemMa>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
 
         DatTenSnakeCase(b);
     }

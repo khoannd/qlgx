@@ -20,13 +20,23 @@ public static class GiaDinhEndpoints
             CapNhatGiaDinhRequest yeuCau, CancellationToken ct) =>
             await dichVu.CapNhat(id, yeuCau, ct) switch
             {
-                null => Results.NotFound(),
-                false => Results.Conflict(new
+                KetQuaCapNhatGiaDinh.KhongTimThay => Results.NotFound(),
+                KetQuaCapNhatGiaDinh.KhongTheGanHonPhoiMoCoi => Results.BadRequest(new
+                {
+                    thongBao = "Gia đình chưa có chồng hoặc vợ nên không thể gắn hôn phối. " +
+                               "Hãy thêm chồng hoặc vợ vào gia đình trước rồi thử lại."
+                }),
+                KetQuaCapNhatGiaDinh.DungPhienBanGiaDinh => Results.Conflict(new
                 {
                     thongBao = "Gia đình này vừa được người khác cập nhật. " +
                                "Hãy tải lại màn hình để xem thay đổi mới nhất rồi sửa lại."
                 }),
-                true => Results.Ok()
+                KetQuaCapNhatGiaDinh.DungPhienBanHonPhoi => Results.Conflict(new
+                {
+                    thongBao = "Khối hôn phối này vừa được người khác cập nhật. " +
+                               "Hãy tải lại màn hình để xem thay đổi mới nhất rồi sửa lại."
+                }),
+                _ => Results.Ok()
             });
     }
 }

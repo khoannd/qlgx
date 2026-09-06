@@ -30,6 +30,8 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
         DateOnly? NgayChuyen, string? NoiChuyen, bool KhongThongKe, uint RowVersion,
         CapNhatHonPhoi? HonPhoi = null);
 
+    private sealed record ThongBaoLoi(string ThongBao);
+
     private async Task<Guid> TaoGiaDinh(int ma)
     {
         await using var db = app.TaoContextThuan();
@@ -129,6 +131,9 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
         luuA.StatusCode.Should().Be(HttpStatusCode.OK);
         luuB.StatusCode.Should().Be(HttpStatusCode.Conflict,
             "ban Access ghi de im lang trong tinh huong nay, ban web phai bao cho nguoi dung");
+        var loi = await luuB.Content.ReadFromJsonAsync<ThongBaoLoi>();
+        loi!.ThongBao.Should().Contain("Gia đình",
+            "thong bao 409 phai phan biet dung ghi de o ban than gia dinh, khong phai o khoi hon phoi");
         var cuoi = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
         cuoi!.TenGiaDinh.Should().Be("Nguoi A sua");
     }
@@ -322,8 +327,125 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
         luuA.StatusCode.Should().Be(HttpStatusCode.OK);
         luuB.StatusCode.Should().Be(HttpStatusCode.Conflict,
             "hon phoi cung phai chong ghi de im lang giong nhu ban than gia dinh");
+        var loi = await luuB.Content.ReadFromJsonAsync<ThongBaoLoi>();
+        loi!.ThongBao.Should().Contain("hôn phối",
+            "thong bao 409 phai phan biet dung ghi de o khoi hon phoi, khong phai o ban than gia dinh");
 
         var cuoi = await app.CreateClient().GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
         cuoi!.HonPhoi!.SoHonPhoi.Should().Be("Nguoi A sua");
+    }
+
+    // --- Vong sua 1: mot nguoi co the co nhieu hon phoi theo thoi gian (goa roi tai hon) ---
+
+    [Fact]
+    public async Task Chong_tung_co_hon_phoi_truoc_khong_gay_loi_va_tra_dung_hon_phoi_cap_hien_tai()
+    {
+        var (id, chongId, voId) = await TaoGiaDinhVoChong(320, coVo: true);
+        Guid honPhoiHienTaiId;
+        await using (var db = app.TaoContextThuan())
+        {
+            // Hon phoi CU cua rieng nguoi chong, voi mot nguoi khac ngoai gia dinh nay (da qua
+            // doi hoac ly di, khong con lien quan) — NgayHonPhoi co tinh som hon.
+            var hpCu = new HonPhoi
+            {
+                GiaoXuId = app.GiaoXuId, MaHonPhoiCu = await MaHonPhoiKeTiep(db),
+                SoHonPhoi = "Hon phoi truoc", NgayHonPhoi = new DateOnly(2000, 1, 1),
+            };
+            db.HonPhoi.Add(hpCu);
+            db.GiaoDanHonPhoi.Add(new GiaoDanHonPhoi
+                { GiaoXuId = app.GiaoXuId, HonPhoi = hpCu, GiaoDanId = chongId, SoThuTu = 1 });
+            await db.SaveChangesAsync();
+
+            // Hon phoi HIEN TAI cua ca hai vo chong trong gia dinh nay — moi hon.
+            var hpHienTai = new HonPhoi
+            {
+                GiaoXuId = app.GiaoXuId, MaHonPhoiCu = await MaHonPhoiKeTiep(db),
+                SoHonPhoi = "Hon phoi hien tai", NgayHonPhoi = new DateOnly(2020, 6, 6),
+            };
+            db.HonPhoi.Add(hpHienTai);
+            db.GiaoDanHonPhoi.AddRange(
+                new GiaoDanHonPhoi { GiaoXuId = app.GiaoXuId, HonPhoi = hpHienTai, GiaoDanId = chongId, SoThuTu = 1 },
+                new GiaoDanHonPhoi { GiaoXuId = app.GiaoXuId, HonPhoi = hpHienTai, GiaoDanId = voId!.Value, SoThuTu = 2 });
+            await db.SaveChangesAsync();
+            honPhoiHienTaiId = hpHienTai.Id;
+        }
+
+        var res = await app.CreateClient().GetAsync($"/api/gia-dinh/{id}");
+
+        res.StatusCode.Should().Be(HttpStatusCode.OK,
+            "nguoi chong tung co mot hon phoi truoc la du lieu HOP LE (goa roi tai hon), khong duoc gay loi 500");
+        var ct = await res.Content.ReadFromJsonAsync<ChiTiet>();
+        ct!.HonPhoi.Should().NotBeNull();
+        ct.HonPhoi!.Id.Should().Be(honPhoiHienTaiId,
+            "hon phoi hien tai la ban ghi CA HAI vo chong cung noi toi, khong phai hon phoi rieng truoc day cua chong");
+        ct.HonPhoi.SoHonPhoi.Should().Be("Hon phoi hien tai");
+    }
+
+    [Fact]
+    public async Task Gia_dinh_khong_co_chong_lan_vo_ma_gui_khoi_hon_phoi_thi_tra_400()
+    {
+        var ma = 321;
+        Guid id;
+        await using (var db = app.TaoContextThuan())
+        {
+            var gd = new GiaDinh { GiaoXuId = app.GiaoXuId, MaGiaDinhCu = ma, TenGiaDinh = "Gia dinh trong" };
+            db.GiaDinh.Add(gd);
+            await db.SaveChangesAsync();
+            id = gd.Id;
+        }
+        var client = app.CreateClient();
+        var truoc = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
+
+        var res = await client.PutAsJsonAsync($"/api/gia-dinh/{id}", new CapNhat(
+            truoc!.TenGiaDinh, null, null, null, null, null, null, false, null, null, false,
+            truoc.RowVersion,
+            new CapNhatHonPhoi("Khong the co", null, null, null, null, null, null, null, 0)));
+
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest,
+            "gia dinh khong co chong lan vo thi khong the noi hon phoi voi ai — tu choi thay vi tao ban ghi mo coi");
+        var loi = await res.Content.ReadFromJsonAsync<ThongBaoLoi>();
+        loi!.ThongBao.Should().NotBeNullOrWhiteSpace();
+
+        await using var dbSau = app.TaoContextThuan();
+        (await dbSau.HonPhoi.AnyAsync(h => h.MaHonPhoiCu == ma || h.SoHonPhoi == "Khong the co"))
+            .Should().BeFalse("khong duoc tao ban ghi hon phoi mo coi");
+    }
+
+    [Fact]
+    public async Task Cap_nhat_khong_duoc_dung_toi_MaNhanDang_cua_gia_dinh_va_hon_phoi()
+    {
+        var (id, chongId, voId) = await TaoGiaDinhVoChong(322, coVo: true);
+        Guid honPhoiId;
+        await using (var db = app.TaoContextThuan())
+        {
+            var gd = await db.GiaDinh.SingleAsync(x => x.Id == id);
+            gd.MaNhanDang = "access-2026-09-06::gia_dinh::322";
+            var hp = new HonPhoi
+            {
+                GiaoXuId = app.GiaoXuId, MaHonPhoiCu = await MaHonPhoiKeTiep(db),
+                SoHonPhoi = "Ma nhan dang test", MaNhanDang = "access-2026-09-06::hon_phoi::322",
+            };
+            db.HonPhoi.Add(hp);
+            db.GiaoDanHonPhoi.AddRange(
+                new GiaoDanHonPhoi { GiaoXuId = app.GiaoXuId, HonPhoi = hp, GiaoDanId = chongId, SoThuTu = 1 },
+                new GiaoDanHonPhoi { GiaoXuId = app.GiaoXuId, HonPhoi = hp, GiaoDanId = voId!.Value, SoThuTu = 2 });
+            await db.SaveChangesAsync();
+            honPhoiId = hp.Id;
+        }
+        var client = app.CreateClient();
+        var truoc = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
+
+        var res = await client.PutAsJsonAsync($"/api/gia-dinh/{id}", new CapNhat(
+            "Ten da sua", null, null, null, null, null, null, false, null, null, false, truoc!.RowVersion,
+            new CapNhatHonPhoi("So da sua", null, null, null, null, null, null, null, truoc.HonPhoi!.RowVersion)));
+
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        await using var dbSau = app.TaoContextThuan();
+        (await dbSau.GiaDinh.SingleAsync(x => x.Id == id)).MaNhanDang
+            .Should().Be("access-2026-09-06::gia_dinh::322",
+                "MaNhanDang la khoa dong bo hai chieu voi ban desktop, API cap nhat khong duoc dong tay vao");
+        (await dbSau.HonPhoi.SingleAsync(x => x.Id == honPhoiId)).MaNhanDang
+            .Should().Be("access-2026-09-06::hon_phoi::322",
+                "MaNhanDang cua hon phoi cung khong duoc dong tay vao");
     }
 }
