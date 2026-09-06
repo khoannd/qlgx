@@ -14,8 +14,8 @@ Nhánh làm việc: **`webapp-phase-1`** (tách từ `master`).
    (biến đặt bằng `setx` chỉ có hiệu lực ở cửa sổ dòng lệnh **mới mở**)
 3. Kiểm tra dịch vụ `postgresql-x64-17` đã chạy chưa: `sc query postgresql-x64-17`
 4. Chạy toàn bộ test để xác nhận môi trường lành lặn:
-   - Backend: `dotnet test WebApp/Qlgx.sln` → phải ra **91/91 xanh**
-   - Front-end: `cd WebApp/src/web && npm test -- --run` → phải ra **49/49 xanh**
+   - Backend: `dotnet test WebApp/Qlgx.sln` → phải ra **114/114 xanh**
+   - Front-end: `cd WebApp/src/web && npm test -- --run` → phải ra **72/72 xanh**
 5. Sổ theo dõi chi tiết từng task, từng quyết định:
    `.superpowers/sdd/2026-09-06-qlgx-web-phase-1/progress.md`
    (thư mục này nằm ngoài git, nhưng vẫn còn trên đĩa sau khi khởi động lại)
@@ -81,7 +81,22 @@ Công cụ chạy lại được nhiều lần mà không tạo bản ghi trùng
 | — | Nối front-end vào API thật, bỏ dữ liệu giả | 10 |
 | 17 | **Đủ 26 bảng Access** — 19 bảng còn lại, chia ba nhóm | 14 |
 
-Tổng: **91 test backend + 49 test front-end**, tất cả xanh.
+Tổng: **114 test backend + 72 test front-end**, tất cả xanh.
+
+### Dữ liệu mẫu tự tạo trong `qlgx_thu` — KHÔNG phải dữ liệu thật
+
+Ba bảng `TanHien`, `HoiDoan`, `ChiTietHoiDoan` **rỗng hoàn toàn** trong file Access gốc (giáo xứ
+Vô Nhiễm chưa dùng hai chức năng này). Để kiểm thử được hai tab trên trình duyệt, đã tự tạo
+**5 dòng giả** bằng `psql`: `tan_hien` 1 dòng, `hoi_doan` 2 dòng, `chi_tiet_hoi_doan` 2 dòng
+(hội đoàn "Gia trưởng" và "Legio Mariae").
+
+**Đừng nhầm đây là dữ liệu giáo xứ thật.** Xoá đi khi không cần nữa:
+
+```sql
+DELETE FROM chi_tiet_hoi_doan; DELETE FROM hoi_doan; DELETE FROM tan_hien;
+```
+
+Mọi bảng khác trong `qlgx_thu` đều là dữ liệu thật chuyển từ Access.
 
 ## Đã chuyển được dữ liệu thật
 
