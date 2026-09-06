@@ -25,6 +25,45 @@ Mọi task đều ngầm chịu các ràng buộc sau.
 - Xoá mềm bằng cột `da_xoa boolean` — chỉ có ở `giao_ho`, `gia_dinh`, `giao_dan`. Các bảng khác xoá cứng.
 - Mọi commit dùng tiếng Việt không dấu ở dòng tiêu đề.
 
+## Sửa đổi ngày 2026-09-06 — có hiệu lực cao hơn mọi mô tả task bên dưới
+
+Người dùng đổi bốn quyết định lớn sau khi Task 1, 2, 3, 10, 11, 12 đã xong. Những điều dưới
+đây **thay thế** mọi chỗ mâu thuẫn trong văn bản các task, và ràng buộc mọi task chưa chạy.
+
+**A. Mô hình triển khai đảo ngược: máy chủ tập trung, không phải on-prem.**
+Giáo xứ chỉ có máy cá nhân yếu, không đủ chạy máy chủ và không tự bảo đảm được sao lưu hay
+tính sẵn sàng. Một máy chủ phục vụ nhiều giáo xứ, phân tách bằng `giao_xu_id`. Hệ quả bắt buộc:
+
+- `giao_xu_id` của phiên **chỉ lấy từ claim của token đăng nhập**, không bao giờ từ tham số
+  do trình duyệt gửi. Task 5 đổi `BoiCanhGiaoXuTuCauHinh` (đọc file cấu hình) thành lấy từ
+  claim; bản đọc cấu hình chỉ còn dùng cho công cụ chuyển dữ liệu và test.
+- **Xác thực chuyển từ giai đoạn 2 lên giai đoạn 1** — thêm Task 14.
+- API **không giữ trạng thái trong tiến trình** và **không ghi file xuống đĩa cục bộ**: ảnh
+  đại diện, ảnh gia đình phải nằm trong CSDL hoặc kho đối tượng dùng chung. Đây là điều kiện
+  để chạy nhiều bản song song sau bộ cân bằng tải.
+- Task 13 đổi mục tiêu: **không còn** script cài đặt cho máy giáo xứ. Thay bằng đóng gói và
+  triển khai máy chủ (container, biến môi trường, chạy migration lúc khởi động, kiểm tra sức khoẻ).
+
+**B. Hôn phối chuyển lên giai đoạn 1.** Khối hôn phối nằm ngay trong form gia đình của bản
+desktop và văn phòng giáo xứ dùng hằng ngày; thiếu nó thì giáo xứ chưa bỏ được bản desktop.
+Ảnh hưởng: Task 4 thêm hai bảng `HonPhoi` và `GiaoDanHonPhoi`; Task 7 và 8 thêm dữ liệu hôn
+phối vào API chi tiết; Task 9 chuyển đổi hai bảng đó; thêm Task 15 dựng giao diện.
+
+**C. Ứng dụng cài đặt được (PWA) và bản nháp ngoại tuyến** — thêm Task 16. Giáo xứ nay làm
+việc qua internet nên mất mạng giữa lúc nhập liệu là chuyện sẽ xảy ra; không được để mất
+công sức gõ của người dùng.
+
+**D. Chuyển đổi đầy đủ nghiệp vụ của từng màn hình.** Không chỉ các trường dữ liệu mà cả liên
+động, quy tắc hiển thị, menu chuột phải và thao tác trên lưới. Tiêu chí nghiệm thu: giáo xứ
+dùng bản web mà không phải mở lại bản desktop để làm nốt việc gì. Khi nghi ngờ, đối chiếu
+thẳng mã nguồn WinForms trong `Source/` chứ không suy đoán. Hệ quả cụ thể đã biết: lưới thành
+viên trong form gia đình phải có lại thanh nút **Thêm mới / Chọn từ danh sách / Xem & sửa /
+Loại bỏ**, kèm API tương ứng ở Task 7.
+
+**Ghi chú về các mục "cố ý hoãn sang Phase 2" đã ghi ở Task 12:** ba mục liên quan hôn phối
+và thanh nút thành viên **không còn được hoãn** theo sửa đổi B và D. Mục liên quan hội đoàn
+vẫn hoãn.
+
 ## Cấu trúc file
 
 ```

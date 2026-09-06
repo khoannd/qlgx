@@ -33,39 +33,66 @@ Bốn rủi ro lớn nhất khi chuyển đổi, theo thứ tự:
 
 ## Các quyết định đã chốt
 
-### 1. Mô hình triển khai
+### 1. Mô hình triển khai — máy chủ tập trung, nhiều giáo xứ
 
-On-prem, **mỗi giáo xứ một instance độc lập** — giữ đúng tinh thần bản desktop:
+> **Đã đổi ngày 2026-09-06.** Bản đầu của tài liệu này chọn mô hình on-prem, mỗi giáo xứ
+> một bản cài. Quyết định đó bị bác vì thực tế: **giáo xứ thường chỉ có máy tính cá nhân
+> cấu hình yếu**, không đủ chạy máy chủ, và càng không thể tự bảo đảm sao lưu hay tính sẵn
+> sàng cao. Mô hình đúng là tập trung.
 
 ```
-[Trình duyệt trên các PC trong LAN văn phòng giáo xứ]
-        │  HTTP/HTTPS nội bộ
+[Trình duyệt của các giáo xứ, qua internet]
+        │  HTTPS
         ▼
-[ASP.NET Core (.NET 10) — Web API + phục vụ static file của SPA]   ← chạy như Windows Service
+[Bộ cân bằng tải]                          ← chuẩn bị sẵn cho HA, giai đoạn đầu có thể một nút
+        ▼
+[ASP.NET Core (.NET 10) — Web API, KHÔNG lưu trạng thái]   ← chạy nhiều bản song song
         │  EF Core + Npgsql
         ▼
-[PostgreSQL cài cục bộ]  ← một database riêng cho giáo xứ đó
+[PostgreSQL]  ← MỘT database chung, phân tách giáo xứ bằng cột giao_xu_id
 ```
 
-- Một máy trong văn phòng đóng vai trò máy chủ; các máy khác truy cập qua LAN. **Nhiều người
-  dùng đồng thời** là lợi ích chính so với bản Access hiện tại.
-- Không phụ thuộc internet để dùng hằng ngày. Server `qlgx.net` hiện có tiếp tục dùng cho
-  cập nhật phiên bản và sao lưu đám mây tuỳ chọn.
-- Backend target .NET 10 nên **chạy được cả Linux** — cần thiết cho kịch bản gom cụm ở mục 2.
+- **Một máy chủ phục vụ nhiều giáo xứ.** Phân tách dữ liệu bằng `giao_xu_id` ở mọi bảng —
+  đây không còn là "chuẩn bị cho tương lai" mà là cơ chế bảo mật đang gánh trách nhiệm thật.
+- **Thí điểm vài giáo xứ trước.** Giai đoạn đầu, bản ghi giáo xứ được chèn thẳng vào CSDL
+  để có `giao_xu_id`; màn hình quản trị giáo phận/giáo xứ và chức năng nhập liệu hàng loạt
+  làm sau.
+- **Kiến trúc phải sẵn sàng cho tính sẵn sàng cao (HA)** ngay từ đầu, kể cả khi giai đoạn
+  đầu chỉ chạy một nút. Ba hệ quả bắt buộc:
+  1. **API không giữ trạng thái trong tiến trình** — không session in-memory, không biến
+     tĩnh nhớ dữ liệu người dùng. Phiên đăng nhập dùng token tự chứa.
+  2. **Không ghi file xuống đĩa cục bộ** — ảnh đại diện, ảnh gia đình và mọi tệp đính kèm
+     phải nằm trong CSDL hoặc kho đối tượng dùng chung, vì nút khác sẽ không thấy đĩa của nút này.
+  3. **Mọi trạng thái người dùng nằm trong CSDL** — kể cả bố cục cột của lưới.
+- Backend target .NET 10 nên chạy được Linux, đóng gói container được.
 - Dùng **.NET 10 LTS** vì .NET 8 hết hạn hỗ trợ ngày 10/11/2026 — dự án mới khởi tạo không có lý do gì để bắt đầu trên một bản sắp hết hỗ trợ.
 
-### 2. CSDL sẵn sàng gom cụm về sau
+**Hệ quả quan trọng: xác thực chuyển vào giai đoạn 1.** Khi nhiều giáo xứ dùng chung một
+máy chủ, danh tính người đăng nhập chính là thứ quyết định họ thấy dữ liệu của giáo xứ nào.
+Không thể hoãn sang giai đoạn sau như kế hoạch cũ.
 
-PostgreSQL + EF Core (code-first). Bốn quy tắc bắt buộc từ ngày đầu để sau này gộp nhiều
-giáo xứ vào một database mà không phải đánh số lại dữ liệu:
+**Hệ quả thứ hai: mạng có thể chập chờn.** Giáo xứ nhập liệu qua internet chứ không còn qua
+mạng nội bộ, nên đường truyền rớt giữa chừng là chuyện bình thường. Xem mục 3.
+
+### 2. CSDL nhiều giáo xứ dùng chung
+
+> **Đã đổi ngày 2026-09-06.** Mục này trước đây nói "chuẩn bị sẵn để gom cụm về sau". Nay
+> việc gom cụm là mô hình vận hành ngay từ đầu, nên các quy tắc dưới đây chuyển từ "phòng xa"
+> thành **bắt buộc và đang gánh trách nhiệm bảo mật**.
+
+PostgreSQL + EF Core (code-first). Bốn quy tắc bắt buộc từ ngày đầu để nhiều giáo xứ dùng
+chung một database mà dữ liệu không lẫn vào nhau:
 
 1. **Khoá chính là UUID**, không dùng số tự tăng. Hai giáo xứ độc lập đều có thể sinh
    `id = 105`; gộp lại sẽ đụng khoá và phải ánh xạ lại toàn bộ khoá ngoại. UUID sinh ở đâu
    cũng không trùng nhau nên việc gộp chỉ là `INSERT ... SELECT`.
 2. **Mọi bảng nghiệp vụ có cột `giao_xu_id`**, kể cả khi mỗi database hiện chỉ chứa một
    giáo xứ. Giá trị lấy từ `MaGiaoXuRieng` đã có sẵn — không phải phát minh định danh mới.
-3. **Mọi truy vấn nghiệp vụ lọc theo `giao_xu_id`**, kể cả khi dư thừa. Khi gộp cụm chỉ cần
-   bật Row-Level Security theo cột này, không phải viết lại tầng truy cập dữ liệu.
+3. **Mọi truy vấn nghiệp vụ lọc theo `giao_xu_id`.** Giá trị này lấy từ **claim của người
+   đăng nhập**, không bao giờ lấy từ tham số do trình duyệt gửi lên — nếu không, bất kỳ ai
+   cũng có thể đọc dữ liệu giáo xứ khác chỉ bằng cách đổi một con số trên URL. Bộ lọc toàn
+   cục của EF Core là lớp phòng thủ thứ nhất; bật Row-Level Security của PostgreSQL theo cùng
+   cột là lớp thứ hai, và phải bật trước khi có giáo xứ thứ hai lên hệ thống.
 4. **Giữ đủ trường định danh tự nhiên và cột nguồn gốc** (`created_at`, `source_system`) để
    sau này chạy được đối chiếu trùng lặp — một giáo dân có thể xuất hiện ở nhiều giáo xứ do
    chuyển xứ. Logic đối chiếu làm sau; dữ liệu để đối chiếu phải có từ bây giờ.
@@ -83,6 +110,20 @@ giáo xứ vào một database mà không phải đánh số lại dữ liệu:
 - **Chống ghi đè khi nhiều người cùng sửa**: thêm `RowVersion` (optimistic concurrency của
   EF Core). Đây là rủi ro **mới** phát sinh khi bỏ Access — `OleDbCommandBuilder` hiện tại
   sinh câu UPDATE không kiểm tra phiên bản.
+
+**Ứng dụng web cài đặt được (PWA) và bản nháp ngoại tuyến.** Vì giáo xứ nay làm việc qua
+internet, mất mạng giữa lúc nhập một gia đình đông người là chuyện sẽ xảy ra. Yêu cầu:
+
+- Đóng gói SPA thành **PWA**: có manifest, cài được lên màn hình chính, có service worker
+  cache phần vỏ ứng dụng để mở được khi mạng chập chờn.
+- **Không mất dữ liệu đang nhập.** Mỗi form chi tiết tự lưu bản nháp vào `localStorage` theo
+  khoá gồm mã bản ghi, ghi lại sau mỗi thay đổi. Khi mở lại một bản ghi mà thấy có bản nháp
+  chưa gửi được, hiện thông báo cho người dùng chọn khôi phục hay bỏ. Bản nháp bị xoá ngay
+  sau khi máy chủ xác nhận đã lưu.
+- Giới hạn có chủ ý: **không đồng bộ ngoại tuyến hai chiều**, không hàng đợi ghi nền. Lưới
+  danh sách vẫn cần mạng. Mục tiêu ở đây chỉ là không đánh mất công sức gõ của người dùng,
+  không phải biến ứng dụng thành bản chạy ngoại tuyến hoàn chỉnh — thứ đó đòi hỏi giải quyết
+  xung đột dữ liệu giữa nhiều giáo xứ, phức tạp hơn nhiều lần và chưa cần cho giai đoạn này.
 
 ### 4. Tầng component dùng lại
 
@@ -132,11 +173,21 @@ Tuyệt đối không dùng Office Interop ở tầng máy chủ.
 Thí điểm một giáo xứ trước. Các giáo xứ khác tiếp tục dùng bản desktop cho đến khi bản thí
 điểm chạy ổn định với dữ liệu thật.
 
-- **Phase 1** — bốn màn hình lõi: danh sách gia đình, chi tiết gia đình, danh sách giáo dân,
-  chi tiết giáo dân. Kèm nền tảng: schema, API, xác thực, tool chuyển dữ liệu, đóng gói cài đặt.
-- **Phase 2** — bí tích và sổ bí tích, hôn phối và rao hôn phối, hội đoàn.
+> **Đã đổi ngày 2026-09-06.** Hôn phối chuyển từ giai đoạn 2 lên **giai đoạn 1**: khối thông
+> tin hôn phối nằm ngay trong form gia đình của bản desktop và là thứ văn phòng giáo xứ dùng
+> hằng ngày, nên form gia đình thiếu nó thì giáo xứ chưa bỏ được bản desktop. Xác thực cũng
+> chuyển lên giai đoạn 1 vì mô hình tập trung bắt buộc phải có (mục 1).
+
+- **Phase 1** — bốn màn hình lõi dùng được **hoàn chỉnh**: danh sách gia đình, chi tiết gia
+  đình, danh sách giáo dân, chi tiết giáo dân, **bao gồm toàn bộ nghiệp vụ hôn phối gắn với
+  hai màn hình chi tiết**. Kèm nền tảng: schema nhiều giáo xứ, xác thực và phân tách tenant,
+  API, PWA và bản nháp ngoại tuyến, công cụ chuyển dữ liệu từ Access, triển khai máy chủ.
+  Tiêu chí nghiệm thu: **giáo xứ thí điểm dùng được bản web thay hẳn bản desktop cho bốn màn
+  hình này**, không phải quay lại bản cũ để làm nốt việc gì.
+- **Phase 2** — bí tích và sổ bí tích, rao hôn phối, hội đoàn, giáo lý; màn hình quản trị
+  giáo phận/giáo xứ và chức năng nhập dữ liệu hàng loạt cho quản trị viên.
 - **Phase 3** — thống kê, biểu đồ, báo cáo và chứng chỉ, công cụ dữ liệu (kiểm tra, chuẩn hoá,
-  chuyển họ hàng loạt), giáo lý.
+  chuyển họ hàng loạt).
 
 ## Ràng buộc chung của dự án
 
@@ -146,13 +197,26 @@ Thí điểm một giáo xứ trước. Các giáo xứ khác tiếp tục dùng
 - Frontend: React 18 + TypeScript, Vite, AG Grid Community.
 - Mọi bảng nghiệp vụ: khoá chính `uuid`, có `giao_xu_id uuid`, `created_at`, `updated_at`,
   `row_version` và `source_system`.
+- **`giao_xu_id` của phiên làm việc chỉ được lấy từ claim của token đăng nhập**, không bao
+  giờ từ tham số truy vấn, thân yêu cầu hay header do trình duyệt gửi.
+- **API không giữ trạng thái trong tiến trình** và **không ghi file xuống đĩa cục bộ** — hai
+  điều kiện để chạy được nhiều bản song song sau bộ cân bằng tải.
 - Toàn bộ nhãn giao diện giữ nguyên tiếng Việt như bản desktop, không dịch lại, không đặt lại.
+- **Mọi hành vi của màn hình bản desktop phải được chuyển sang đầy đủ** — không chỉ các
+  trường dữ liệu mà cả các liên động, quy tắc hiển thị, menu chuột phải và thao tác trên
+  lưới. Tiêu chí: giáo xứ dùng bản web mà không phải mở lại bản desktop để làm nốt việc gì.
+  Khi có nghi ngờ, đối chiếu thẳng mã nguồn WinForms trong `Source/` chứ không suy đoán.
 - Ngoại lệ duy nhất về nhãn: caption `"&Xem gia đinh"` trong `frmGiaoDan` thiếu dấu — bản web
   ghi đúng chính tả `"Xem gia đình"`.
 
 ## Ngoài phạm vi giai đoạn này
 
-- Gom nhiều giáo xứ vào một database dùng chung, và logic đối chiếu trùng lặp giáo dân giữa
-  các giáo xứ. Schema chuẩn bị sẵn (mục 2) nhưng chưa xây dựng.
+- **Logic đối chiếu trùng lặp giáo dân giữa các giáo xứ.** Một giáo dân chuyển xứ sẽ tồn tại
+  ở nhiều giáo xứ trong cùng database. Dữ liệu để đối chiếu đã được giữ đủ từ đầu (mục 2,
+  quy tắc 4) nhưng thuật toán so khớp làm sau.
+- **Đồng bộ ngoại tuyến hai chiều.** Bản nháp trong `localStorage` chỉ cứu công sức gõ của
+  một người trên một máy, không phải cơ chế đồng bộ (mục 3).
+- Bật Row-Level Security của PostgreSQL — bắt buộc trước khi có giáo xứ thứ hai, nhưng trong
+  giai đoạn thí điểm một giáo xứ thì bộ lọc toàn cục của EF Core là đủ.
 - Nâng cấp AG Grid Enterprise.
-- Ứng dụng di động.
+- Ứng dụng di động chạy nền tảng riêng (PWA đã đáp ứng nhu cầu cài lên màn hình chính).
