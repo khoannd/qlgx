@@ -1,0 +1,99 @@
+import { AgGridReact } from 'ag-grid-react'
+import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
+import type { ColDef, GetRowIdParams, RowClassParams } from 'ag-grid-community'
+import 'ag-grid-community/styles/ag-grid.css'
+import 'ag-grid-community/styles/ag-theme-quartz.css'
+import { useCallback, useMemo, useRef, useState } from 'react'
+
+// ag-grid từ bản 33 trở đi nạp theo module: thiếu dòng này thì lưới không vẽ được
+// header/hàng và ném lỗi #200 (getRowClass, rowSelection, localeText…).
+ModuleRegistry.registerModules([AllCommunityModule])
+
+export type MucMenu<T> = { nhan: string; chay?: (dong: T) => void }
+
+type Props<T> = {
+  columnDefs: ColDef<T>[]
+  rowData: T[]
+  layId: (dong: T) => string
+  onMo?: (dong: T) => void
+  onChon?: (dong: T | null) => void
+  menuChuotPhai?: MucMenu<T>[]
+  /** Trả true để tô đỏ và gạch ngang cả dòng, giống quy tắc IsRedGiaoDan của bản desktop. */
+  toDo?: (dong: T) => boolean
+  ghiChuChan?: string
+  hangLoc?: boolean
+}
+
+/**
+ * Lớp lưới cơ sở, tương đương GxGrid : GridEX của bản desktop. Gói sẵn hàng lọc từng cột,
+ * sắp xếp theo header, chọn dòng, mở bằng nhấp đúp và menu chuột phải để các lưới nghiệp vụ
+ * bên trên không phải khai báo lại.
+ */
+export function GxGrid<T>({
+  columnDefs, rowData, layId, onMo, onChon, menuChuotPhai, toDo, ghiChuChan, hangLoc = true,
+}: Props<T>) {
+  const [menu, setMenu] = useState<{ x: number; y: number; dong: T } | null>(null)
+  const boc = useRef<HTMLDivElement>(null)
+
+  const defaultColDef = useMemo<ColDef<T>>(
+    () => ({ sortable: true, resizable: true, filter: hangLoc ? 'agTextColumnFilter' : false }),
+    [hangLoc],
+  )
+
+  const getRowClass = useCallback(
+    (p: RowClassParams<T>) => (p.data && toDo?.(p.data) ? 'dong-gach-do' : ''),
+    [toDo],
+  )
+
+  return (
+    <div className="table-card glass" ref={boc}>
+      <div
+        className="grid-wrap ag-theme-quartz"
+        onContextMenu={(e) => {
+          if (!menuChuotPhai?.length) return
+          const dong = (e.target as HTMLElement).closest('.ag-row')
+          if (!dong) return
+          e.preventDefault()
+          const id = dong.getAttribute('row-id')
+          const banGhi = rowData.find((r) => layId(r) === id)
+          if (banGhi) setMenu({ x: e.clientX, y: e.clientY, dong: banGhi })
+        }}
+      >
+        <AgGridReact<T>
+          theme="legacy"
+          columnDefs={columnDefs}
+          rowData={rowData}
+          defaultColDef={defaultColDef}
+          floatingFiltersHeight={hangLoc ? 36 : 0}
+          getRowId={(p: GetRowIdParams<T>) => layId(p.data)}
+          getRowClass={getRowClass}
+          rowSelection="single"
+          onRowDoubleClicked={(e) => e.data && onMo?.(e.data)}
+          onSelectionChanged={(e) => onChon?.(e.api.getSelectedRows()[0] ?? null)}
+          localeText={{ noRowsToShow: 'Không có dòng nào khớp điều kiện lọc.' }}
+        />
+      </div>
+
+      {ghiChuChan && (
+        <div className="table-foot">
+          <span className="legend"><i />{ghiChuChan}</span>
+        </div>
+      )}
+
+      {menu && (
+        <div
+          id="ctxmenu"
+          style={{ left: menu.x, top: menu.y }}
+          onMouseLeave={() => setMenu(null)}
+        >
+          {menuChuotPhai!.map((m) => (
+            <button key={m.nhan} type="button"
+              onClick={() => { m.chay?.(menu.dong); setMenu(null) }}>
+              {m.nhan}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

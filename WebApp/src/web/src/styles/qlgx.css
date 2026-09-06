@@ -1013,3 +1013,11 @@ tbody tr[aria-selected="true"] .rowhead {
   }
   body::before { opacity: .3; }
 }
+
+/* Dòng của người đã qua đời, chuyển xứ hoặc lập gia đình riêng — quy tắc IsRedGiaoDan */
+.ag-theme-quartz .dong-gach-do,
+.ag-theme-quartz .dong-gach-do .ag-cell {
+  color: var(--rose-ink);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
