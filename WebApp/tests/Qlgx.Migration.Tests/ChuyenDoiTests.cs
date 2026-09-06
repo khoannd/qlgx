@@ -43,19 +43,43 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         int maGiaoHo = coSo * 10 + 1, maGiaDinh = coSo * 10 + 2, maGiaoDan = coSo * 10 + 3,
             maHonPhoi = coSo * 10 + 4;
 
+        var capNhat = new DateTime(2026, 9, 4, 21, 10, 17, DateTimeKind.Unspecified);
+
         var n = new NguonGia();
-        n.GiaoXu.Add(new DongGiaoXu(1, null, "Giao xu Thanh Tam", "Hat Thanh Tam", "Giao phan Sai Gon",
-            "1 Cong Truong Cong Xa Paris", "028 3822 0477", "gx@example.com", "https://gx.example.com",
-            "Nhap tu Access"));
-        n.GiaoHo.Add(new DongGiaoHo(maGiaoHo, "Giao ho Thanh Tam", null, false, $"GH-{maGiaoHo}"));
-        n.GiaDinh.Add(new DongGiaDinh(maGiaDinh, maGiaoHo, "Binh - Lan", "12/4 Nguyen Trai",
-            "028 3891 4472", null, null, false, false, "", "", false, $"GD-{maGiaDinh}"));
-        n.GiaoDan.Add(new DongGiaoDan(maGiaoDan, "Tran Van Binh", "Giuse", "Nam", maGiaoHo,
-            "03/05/1972", "20/05/1972", "", "", false, "", false, $"GX-{maGiaoDan}"));
+        n.GiaoXu.Add(new DongGiaoXu(MaGiaoXu: 1, MaGiaoHat: 1, TenGiaoXu: "Giao xu Thanh Tam",
+            DiaChi: "1 Cong Truong Cong Xa Paris", DienThoai: "028 3822 0477",
+            Email: "gx@example.com", Website: "https://gx.example.com", Hinh: null,
+            GhiChu: "Nhap tu Access", MaGiaoXuRieng: null, LastUpload: capNhat));
+        n.GiaoHo.Add(new DongGiaoHo(maGiaoHo, "Giao ho Thanh Tam", null, false, $"GH-{maGiaoHo}",
+            capNhat));
+        n.GiaDinh.Add(new DongGiaDinh(MaGiaDinh: maGiaDinh, MaGiaoHo: maGiaoHo,
+            TenGiaDinh: "Binh - Lan", GhiChu: "Gia dinh mau", DiaChi: "12/4 Nguyen Trai",
+            DienThoai: "028 3891 4472", SoHoKhau: "HK-001", DienGiaDinh: "Cong giao toan tong",
+            DaXoa: false, DaChuyenXu: false, NgayChuyen: "", NoiChuyen: "", GiaDinhAo: false,
+            MaNhanDang: $"GD-{maGiaDinh}", MaGiaDinhRieng: "29000007", AnhDaiDien: "anh-gd.jpg",
+            UpdateDate: capNhat));
+        n.GiaoDan.Add(new DongGiaoDan(
+            MaGiaoDan: maGiaoDan, HoTen: "Tran Van Binh", MaGiaoHo: maGiaoHo, Phai: "Nam",
+            TenThanh: "Giuse", NgaySinh: "03/05/1972", NoiSinh: "Sai Gon", SoRuaToi: "04/15/VN",
+            NgayRuaToi: "20/05/1972", NoiRuaToi: "Nha tho Thanh Tam", ChaRuaToi: "LM A",
+            NguoiDoDauRuaToi: "Nguoi do dau A", NgayRuocLe: "", NoiRuocLe: null, ChaRuocLe: null,
+            SoThemSuc: null, NgayThemSuc: "", NoiThemSuc: "", ChaThemSuc: null,
+            NguoiDoDauThemSuc: null, TrinhDoVanHoa: "12/12", NgheNghiep: "Cong nhan",
+            ConHoc: false, QuaDoi: false, NgayQuaDoi: "", DienThoai: "0900000000",
+            Email: "binh@example.com", DaXoa: false, GhiChu: "Ghi chu giao dan mau",
+            UpdateDate: capNhat, SoRuocLe: null, HoTenCha: "Ho ten cha", HoTenMe: "Ho ten me",
+            DaCoGiaDinh: true, GiaoDanAo: false, TanTong: false, MaNhanDang: $"GX-{maGiaoDan}",
+            ThuocGiaoXu: "Vo Nhiem", ThuocGiaoPhan: "Da Lat", DiaChi: "12/4 Nguyen Trai",
+            DanToc: "Kinh", NoiQuaDoi: null, SoAnTang: null, NoiAnTang: null,
+            AnhDaiDien: "anh-gd-2.jpg", CMND: "079123456789", TrinhDoChuyenMon: "Ky su",
+            BietNgoaiNgu: "Anh van", NgayXucDau: null, NguoiXucDau: null, TinhTrangXucDau: null,
+            GhiChuXucDau: null, NgayBD1: null, NoiBD1: null, NgayBD2: null, NoiBD2: null,
+            NgayTHVaoDoi: null, NoiTHVaoDoi: null, NgayGLHN1: null, NgayGLHN2: null,
+            NoiGLHN: null, NguoiChungNhanGLHN: null, XepLoaiGLHN: null));
         n.ThanhVien.Add(new DongThanhVien(maGiaDinh, maGiaoDan, 0, true));
         n.HonPhoi.Add(new DongHonPhoi(maHonPhoi, "Le hon phoi Binh - Lan", "SHP-501", "Nha tho Thanh Tam",
             "10/10/1998", "Cha Giuse Nguyen Van A", "Tran Van Binh", "Nguyen Thi Lan",
-            "Trong the", "Khong co gi dac biet", $"HP-{maHonPhoi}"));
+            "Trong the", "Khong co gi dac biet", $"HP-{maHonPhoi}", capNhat));
         n.GiaoDanHonPhoi.Add(new DongGiaoDanHonPhoi(maGiaoDan, maHonPhoi, 1));
         return new Mau(n, maGiaoHo, maGiaDinh, maGiaoDan, maHonPhoi);
     }
@@ -98,6 +122,28 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
 
         var giaoXu = await ctx.GiaoXu.SingleAsync(x => x.Id == db.GiaoXuId);
         giaoXu.DiaChi.Should().Be("1 Cong Truong Cong Xa Paris");
+
+        // Cột mở rộng của GiaDinh (GhiChu, MaGiaDinhRieng, AnhDaiDien) phải có giá trị thật,
+        // không phải null hàng loạt — đây là bằng chứng công cụ chuyển đủ 17 cột.
+        gd.GhiChu.Should().Be("Gia dinh mau");
+        gd.MaGiaDinhRieng.Should().Be("29000007");
+        gd.AnhDaiDien.Should().Be("anh-gd.jpg");
+        gd.UpdatedAt.Should().Be(new DateTimeOffset(new DateTime(2026, 9, 4, 21, 10, 17), TimeSpan.Zero));
+
+        // Cột mở rộng của GiaoDan phải có giá trị thật cho một giáo dân được điền đầy đủ.
+        var giaoDan = await ctx.GiaoDan.SingleAsync(x => x.MaGiaoDanCu == mau.MaGiaoDan);
+        giaoDan.NoiSinh.Should().Be("Sai Gon");
+        giaoDan.CMND.Should().Be("079123456789");
+        giaoDan.DanToc.Should().Be("Kinh");
+        giaoDan.ThuocGiaoXu.Should().Be("Vo Nhiem");
+        giaoDan.ThuocGiaoPhan.Should().Be("Da Lat");
+        giaoDan.HoTenCha.Should().Be("Ho ten cha");
+        giaoDan.HoTenMe.Should().Be("Ho ten me");
+        giaoDan.TrinhDoChuyenMon.Should().Be("Ky su");
+        giaoDan.BietNgoaiNgu.Should().Be("Anh van");
+        giaoDan.DaCoGiaDinh.Should().BeTrue();
+        giaoDan.AnhDaiDien.Should().Be("anh-gd-2.jpg");
+        giaoDan.UpdatedAt.Should().Be(new DateTimeOffset(new DateTime(2026, 9, 4, 21, 10, 17), TimeSpan.Zero));
     }
 
     [Fact]
@@ -222,5 +268,24 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         var lech = BaoCaoDoiChieu.TimBangLech(kq);
 
         lech.Should().ContainSingle().Which.Bang.Should().Be("giao_dan");
+    }
+
+    [Fact]
+    public async Task Cot_giaoxu_khong_co_thuoc_tinh_dich_duoc_bao_thanh_canh_bao_khong_bi_bo_qua()
+    {
+        // Entity GiaoXu chưa có thuộc tính cho MaGiaoHat/Hinh/LastUpload (xem ghi chú trong
+        // GhiGiaoXu). Khi các cột này có dữ liệu thật, công cụ phải cảnh báo thay vì im lặng bỏ.
+        var mau = NguonMau(9);
+        mau.Nguon.GiaoXu[0] = mau.Nguon.GiaoXu[0] with
+        {
+            MaGiaoHat = 7, Hinh = "logo-giaoxu.jpg", LastUpload = new DateTime(2026, 1, 1)
+        };
+        await using var ctx = db.TaoContext();
+
+        var kq = await new ChuyenDoiDuLieu(ctx, db.GiaoXuId, new BangAnhXaId())
+            .Chay(mau.Nguon, false, CancellationToken.None);
+
+        kq.CanhBao.Should().Contain(c => c.Contains("giao_xu") && c.Contains("MaGiaoHat")
+            && c.Contains("Hinh") && c.Contains("LastUpload"));
     }
 }

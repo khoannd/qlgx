@@ -1,29 +1,51 @@
 namespace Qlgx.Migration;
 
-public record DongGiaoXu(int MaGiaoXu, int? MaGiaoXuRieng, string TenGiaoXu, string? TenGiaoHat,
-    string? TenGiaoPhan, string? DiaChi, string? DienThoai, string? Email, string? Website,
-    string? GhiChu);
+/// <summary>
+/// Ánh xạ 11 cột thật của bảng GiaoXu. KHÔNG có cột TenGiaoHat/TenGiaoPhan trong Access —
+/// hai tên đó không tồn tại; cột thật là MaGiaoHat (số, khoá tới danh mục giáo hạt không có
+/// trong phạm vi chuyển đổi này). Xem schema-access-that.md.
+/// </summary>
+public record DongGiaoXu(int MaGiaoXu, int? MaGiaoHat, string TenGiaoXu, string? DiaChi,
+    string? DienThoai, string? Email, string? Website, string? Hinh, string? GhiChu,
+    int? MaGiaoXuRieng, DateTime? LastUpload);
 
 public record DongGiaoHo(int MaGiaoHo, string TenGiaoHo, int? MaGiaoHoCha, bool DaXoa,
-    string? MaNhanDang);
+    string? MaNhanDang, DateTime? UpdateDate);
 
-public record DongGiaDinh(int MaGiaDinh, int? MaGiaoHo, string? TenGiaDinh, string? DiaChi,
-    string? DienThoai, string? SoHoKhau, string? DienGiaDinh, bool DaXoa, bool DaChuyenXu,
-    string? NgayChuyen, string? NoiChuyen, bool GiaDinhAo, string? MaNhanDang);
+public record DongGiaDinh(int MaGiaDinh, int? MaGiaoHo, string? TenGiaDinh, string? GhiChu,
+    string? DiaChi, string? DienThoai, string? SoHoKhau, string? DienGiaDinh, bool DaXoa,
+    bool DaChuyenXu, string? NgayChuyen, string? NoiChuyen, bool GiaDinhAo, string? MaNhanDang,
+    string? MaGiaDinhRieng, string? AnhDaiDien, DateTime? UpdateDate);
 
-public record DongGiaoDan(int MaGiaoDan, string HoTen, string? TenThanh, string? Phai,
-    int? MaGiaoHo, string? NgaySinh, string? NgayRuaToi, string? NgayRuocLe, string? NgayThemSuc,
-    bool QuaDoi, string? NgayQuaDoi, bool DaXoa, string? MaNhanDang);
+/// <summary>
+/// Ánh xạ đủ 63 cột thật của bảng GiaoDan (xem schema-access-that.md). UpdateDate ánh xạ vào
+/// ThucTheCoSo.UpdatedAt; GiaoDanAo ánh xạ vào GiaoDan.KhongThongKe.
+/// </summary>
+public record DongGiaoDan(
+    int MaGiaoDan, string HoTen, int? MaGiaoHo, string? Phai, string? TenThanh, string? NgaySinh,
+    string? NoiSinh, string? SoRuaToi, string? NgayRuaToi, string? NoiRuaToi, string? ChaRuaToi,
+    string? NguoiDoDauRuaToi, string? NgayRuocLe, string? NoiRuocLe, string? ChaRuocLe,
+    string? SoThemSuc, string? NgayThemSuc, string? NoiThemSuc, string? ChaThemSuc,
+    string? NguoiDoDauThemSuc, string? TrinhDoVanHoa, string? NgheNghiep, bool ConHoc,
+    bool QuaDoi, string? NgayQuaDoi, string? DienThoai, string? Email, bool DaXoa,
+    string? GhiChu, DateTime? UpdateDate, string? SoRuocLe, string? HoTenCha, string? HoTenMe,
+    bool DaCoGiaDinh, bool GiaoDanAo, bool TanTong, string? MaNhanDang, string? ThuocGiaoXu,
+    string? ThuocGiaoPhan, string? DiaChi, string? DanToc, string? NoiQuaDoi, string? SoAnTang,
+    string? NoiAnTang, string? AnhDaiDien, string? CMND, string? TrinhDoChuyenMon,
+    string? BietNgoaiNgu, string? NgayXucDau, string? NguoiXucDau, string? TinhTrangXucDau,
+    string? GhiChuXucDau, string? NgayBD1, string? NoiBD1, string? NgayBD2, string? NoiBD2,
+    string? NgayTHVaoDoi, string? NoiTHVaoDoi, string? NgayGLHN1, string? NgayGLHN2,
+    string? NoiGLHN, string? NguoiChungNhanGLHN, string? XepLoaiGLHN);
 
 public record DongThanhVien(int MaGiaDinh, int MaGiaoDan, int VaiTro, bool ChuHo);
 
 /// <summary>
 /// Ánh xạ bảng HonPhoi trong Access. Không có cột xoá mềm — đúng như bản gốc, xem
-/// Qlgx.Domain.Entities.HonPhoi.
+/// Qlgx.Domain.Entities.HonPhoi. UpdateDate ánh xạ vào ThucTheCoSo.UpdatedAt.
 /// </summary>
 public record DongHonPhoi(int MaHonPhoi, string? TenHonPhoi, string? SoHonPhoi, string? NoiHonPhoi,
     string? NgayHonPhoi, string? LinhMucChung, string? NguoiChung1, string? NguoiChung2,
-    string? CachThucHonPhoi, string? GhiChu, string? MaNhanDang);
+    string? CachThucHonPhoi, string? GhiChu, string? MaNhanDang, DateTime? UpdateDate);
 
 /// <summary>Bảng nối giáo dân với hôn phối — khoá tổ hợp (MaGiaoDan, MaHonPhoi).</summary>
 public record DongGiaoDanHonPhoi(int MaGiaoDan, int MaHonPhoi, int SoThuTu);

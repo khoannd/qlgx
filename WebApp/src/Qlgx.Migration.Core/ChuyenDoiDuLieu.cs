@@ -76,6 +76,12 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         // ThucTheCoSo nên khoá là Id truyền vào từ dòng lệnh, không phải khoá ánh xạ qua
         // BangAnhXaId — bản ghi đích coi như đã tồn tại (do người vận hành tạo trước) hoặc
         // được tạo mới đúng bằng giaoXuId đó.
+        //
+        // GHI CHÚ VỀ CỘT KHÔNG CÓ NƠI CHỨA: entity GiaoXu không có thuộc tính cho MaGiaoHat
+        // (khoá tới danh mục giáo hạt, ngoài phạm vi 7 bảng này), Hinh (ảnh đại diện giáo xứ,
+        // dạng văn bản) và LastUpload (mốc đồng bộ desktop, khác ngữ nghĩa UpdatedAt vì GiaoXu
+        // không kế thừa ThucTheCoSo). Ba cột này ĐƯỢC ĐỌC từ Access nhưng không có cột đích để
+        // ghi — nếu có giá trị thật, việc đó được cảnh báo ở đây thay vì bỏ qua trong im lặng.
         foreach (var d in dong)
         {
             var e = await db.GiaoXu.FindAsync([giaoXuId], ct);
@@ -84,13 +90,19 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             e.MaGiaoXuCu = d.MaGiaoXu;
             e.MaGiaoXuRieng = d.MaGiaoXuRieng;
             e.TenGiaoXu = d.TenGiaoXu;
-            e.TenGiaoHat = d.TenGiaoHat;
-            e.TenGiaoPhan = d.TenGiaoPhan;
             e.DiaChi = d.DiaChi;
             e.DienThoai = d.DienThoai;
             e.Email = d.Email;
             e.Website = d.Website;
             e.GhiChu = d.GhiChu;
+
+            var khongCoCotDich = new List<string>();
+            if (d.MaGiaoHat is not null) khongCoCotDich.Add($"MaGiaoHat={d.MaGiaoHat}");
+            if (!string.IsNullOrEmpty(d.Hinh)) khongCoCotDich.Add("Hinh (có dữ liệu)");
+            if (d.LastUpload is not null) khongCoCotDich.Add($"LastUpload={d.LastUpload:O}");
+            if (khongCoCotDich.Count > 0)
+                _canhBao.Add("giao_xu mã cũ " + d.MaGiaoXu + ": đọc được nhưng entity GiaoXu " +
+                    "chưa có cột đích cho " + string.Join(", ", khongCoCotDich));
         }
         await db.SaveChangesAsync(ct);
     }
@@ -110,6 +122,9 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             e.SourceSystem = Nguon;
         }
         await db.SaveChangesAsync(ct);
+
+        foreach (var d in dong.Where(d => d.UpdateDate is not null))
+            await DatLaiUpdatedAt(db.GiaoHo, anhXa.Lay("giao_ho", d.MaGiaoHo), d.UpdateDate!.Value, ct);
     }
 
     private async Task GhiGiaDinh(List<DongGiaDinh> dong, CancellationToken ct)
@@ -125,20 +140,26 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             // MaGiaoHo = 0 nghĩa là "Ngoài xứ", không phải khoá ngoại hợp lệ
             e.GiaoHoId = d.MaGiaoHo is > 0 ? anhXa.Lay("giao_ho", d.MaGiaoHo.Value) : null;
             e.TenGiaDinh = d.TenGiaDinh;
+            e.GhiChu = d.GhiChu;
             e.DiaChi = d.DiaChi;
             e.DienThoai = d.DienThoai;
             e.SoHoKhau = d.SoHoKhau;
             e.DienGiaDinh = d.DienGiaDinh;
+            e.AnhDaiDien = d.AnhDaiDien;
             e.DaXoa = d.DaXoa;
             e.DaChuyenXu = d.DaChuyenXu;
             e.NgayChuyen = DocNgay(d.NgayChuyen, nameof(d.NgayChuyen), loi);
             e.NoiChuyen = d.NoiChuyen;
             e.KhongThongKe = d.GiaDinhAo;
             e.MaNhanDang = d.MaNhanDang;
+            e.MaGiaDinhRieng = d.MaGiaDinhRieng;
             e.SourceSystem = Nguon;
             GhiLoi(e, loi, "gia_dinh", d.MaGiaDinh);
         }
         await db.SaveChangesAsync(ct);
+
+        foreach (var d in dong.Where(d => d.UpdateDate is not null))
+            await DatLaiUpdatedAt(db.GiaDinh, anhXa.Lay("gia_dinh", d.MaGiaDinh), d.UpdateDate!.Value, ct);
     }
 
     private async Task GhiGiaoDan(List<DongGiaoDan> dong, CancellationToken ct)
@@ -151,22 +172,91 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
 
             e.GiaoXuId = giaoXuId;
             e.MaGiaoDanCu = d.MaGiaoDan;
+
+            // --- Nhân thân ---
             e.HoTen = d.HoTen;
             e.TenThanh = d.TenThanh;
             e.Phai = d.Phai;
-            e.GiaoHoId = d.MaGiaoHo is > 0 ? anhXa.Lay("giao_ho", d.MaGiaoHo.Value) : null;
             e.NgaySinh = DocNgay(d.NgaySinh, nameof(d.NgaySinh), loi);
+            e.NoiSinh = d.NoiSinh;
+            e.CMND = d.CMND;
+            e.DanToc = d.DanToc;
+            e.GiaoHoId = d.MaGiaoHo is > 0 ? anhXa.Lay("giao_ho", d.MaGiaoHo.Value) : null;
+            e.ThuocGiaoXu = d.ThuocGiaoXu;
+            e.ThuocGiaoPhan = d.ThuocGiaoPhan;
+            e.DiaChi = d.DiaChi;
+            e.DienThoai = d.DienThoai;
+            e.Email = d.Email;
+            e.AnhDaiDien = d.AnhDaiDien;
+            e.HoTenCha = d.HoTenCha;
+            e.HoTenMe = d.HoTenMe;
+
+            // --- Rửa tội ---
+            e.SoRuaToi = d.SoRuaToi;
             e.NgayRuaToi = DocNgay(d.NgayRuaToi, nameof(d.NgayRuaToi), loi);
+            e.NoiRuaToi = d.NoiRuaToi;
+            e.ChaRuaToi = d.ChaRuaToi;
+            e.NguoiDoDauRuaToi = d.NguoiDoDauRuaToi;
+
+            // --- Rước lễ lần đầu ---
+            e.SoRuocLe = d.SoRuocLe;
             e.NgayRuocLe = DocNgay(d.NgayRuocLe, nameof(d.NgayRuocLe), loi);
+            e.NoiRuocLe = d.NoiRuocLe;
+            e.ChaRuocLe = d.ChaRuocLe;
+
+            // --- Thêm sức ---
+            e.SoThemSuc = d.SoThemSuc;
             e.NgayThemSuc = DocNgay(d.NgayThemSuc, nameof(d.NgayThemSuc), loi);
+            e.NoiThemSuc = d.NoiThemSuc;
+            e.ChaThemSuc = d.ChaThemSuc;
+            e.NguoiDoDauThemSuc = d.NguoiDoDauThemSuc;
+
+            // --- Xức dầu ---
+            e.NgayXucDau = DocNgay(d.NgayXucDau, nameof(d.NgayXucDau), loi);
+            e.NguoiXucDau = d.NguoiXucDau;
+            e.TinhTrangXucDau = d.TinhTrangXucDau;
+            e.GhiChuXucDau = d.GhiChuXucDau;
+
+            // --- Giáo lý ---
+            e.NgayBD1 = DocNgay(d.NgayBD1, nameof(d.NgayBD1), loi);
+            e.NoiBD1 = d.NoiBD1;
+            e.NgayBD2 = DocNgay(d.NgayBD2, nameof(d.NgayBD2), loi);
+            e.NoiBD2 = d.NoiBD2;
+            e.NgayTHVaoDoi = DocNgay(d.NgayTHVaoDoi, nameof(d.NgayTHVaoDoi), loi);
+            e.NoiTHVaoDoi = d.NoiTHVaoDoi;
+            e.NgayGLHN1 = DocNgay(d.NgayGLHN1, nameof(d.NgayGLHN1), loi);
+            e.NgayGLHN2 = DocNgay(d.NgayGLHN2, nameof(d.NgayGLHN2), loi);
+            e.NoiGLHN = d.NoiGLHN;
+            e.NguoiChungNhanGLHN = d.NguoiChungNhanGLHN;
+            e.XepLoaiGLHN = d.XepLoaiGLHN;
+
+            // --- Học vấn, nghề nghiệp ---
+            e.TrinhDoVanHoa = d.TrinhDoVanHoa;
+            e.TrinhDoChuyenMon = d.TrinhDoChuyenMon;
+            e.BietNgoaiNgu = d.BietNgoaiNgu;
+            e.NgheNghiep = d.NgheNghiep;
+            e.ConHoc = d.ConHoc;
+
+            // --- Tình trạng ---
+            e.DaCoGiaDinh = d.DaCoGiaDinh;
+            e.TanTong = d.TanTong;
+            e.KhongThongKe = d.GiaoDanAo;
             e.QuaDoi = d.QuaDoi;
             e.NgayQuaDoi = DocNgay(d.NgayQuaDoi, nameof(d.NgayQuaDoi), loi);
+            e.NoiQuaDoi = d.NoiQuaDoi;
+            e.SoAnTang = d.SoAnTang;
+            e.NoiAnTang = d.NoiAnTang;
             e.DaXoa = d.DaXoa;
+
+            e.GhiChu = d.GhiChu;
             e.MaNhanDang = d.MaNhanDang;
             e.SourceSystem = Nguon;
             GhiLoi(e, loi, "giao_dan", d.MaGiaoDan);
         }
         await db.SaveChangesAsync(ct);
+
+        foreach (var d in dong.Where(d => d.UpdateDate is not null))
+            await DatLaiUpdatedAt(db.GiaoDan, anhXa.Lay("giao_dan", d.MaGiaoDan), d.UpdateDate!.Value, ct);
     }
 
     private async Task GhiThanhVien(List<DongThanhVien> dong, CancellationToken ct)
@@ -217,6 +307,9 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             GhiLoi(e, loi, "hon_phoi", d.MaHonPhoi);
         }
         await db.SaveChangesAsync(ct);
+
+        foreach (var d in dong.Where(d => d.UpdateDate is not null))
+            await DatLaiUpdatedAt(db.HonPhoi, anhXa.Lay("hon_phoi", d.MaHonPhoi), d.UpdateDate!.Value, ct);
     }
 
     private async Task GhiGiaoDanHonPhoi(List<DongGiaoDanHonPhoi> dong, CancellationToken ct)
@@ -236,6 +329,32 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             });
         }
         await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// UpdateDate của Access ánh xạ vào ThucTheCoSo.UpdatedAt, nhưng
+    /// QlgxDbContext.SaveChanges luôn ghi đè UpdatedAt = giờ hiện tại cho mọi bản ghi
+    /// Added/Modified (xem DongDauThoiGian) — đúng cho người dùng sửa tay qua ứng dụng web,
+    /// nhưng sẽ xoá mất mốc thời gian gốc nếu áp dụng y nguyên cho công cụ chuyển đổi.
+    ///
+    /// Vì vậy set lại bằng ExecuteUpdateAsync SAU KHI SaveChangesAsync đã chạy: câu lệnh này
+    /// gửi thẳng SQL UPDATE, không đi qua ChangeTracker/SaveChanges nên không bị đè lần nữa.
+    /// Nhưng ExecuteUpdate không cập nhật lại giá trị đang cache trong bộ theo dõi thay đổi
+    /// của chính DbContext này — nếu không đồng bộ tay, các câu truy vấn LINQ sau đó trên
+    /// CÙNG context (ví dụ trong bài test) sẽ trả về entity đã theo dõi với giá trị cũ (giờ
+    /// bị ghi đè) thay vì giá trị vừa ExecuteUpdate. Nên sau khi ExecuteUpdate, đồng bộ luôn
+    /// giá trị và mốc gốc (OriginalValue) trên entry đang theo dõi (nếu có).
+    /// </summary>
+    private async Task DatLaiUpdatedAt<T>(DbSet<T> tap, Guid id, DateTime capNhatAccess,
+        CancellationToken ct) where T : ThucTheCoSo
+    {
+        var gtri = new DateTimeOffset(capNhatAccess, TimeSpan.Zero);
+        await tap.Where(x => x.Id == id).ExecuteUpdateAsync(s => s.SetProperty(x => x.UpdatedAt, gtri), ct);
+
+        var theoDoi = db.ChangeTracker.Entries<T>().FirstOrDefault(e => e.Entity.Id == id);
+        if (theoDoi is null) return;
+        theoDoi.Entity.UpdatedAt = gtri;
+        theoDoi.Property(x => x.UpdatedAt).OriginalValue = gtri;
     }
 
     private T Them<T>(T thucThe) where T : class

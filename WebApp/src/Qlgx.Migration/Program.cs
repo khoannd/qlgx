@@ -6,10 +6,15 @@ if (args.Length < 3)
 {
     Console.WriteLine("""
         Cách dùng:
-          Qlgx.Migration <duong-dan-giaoxu.mdb> <chuoi-ket-noi-postgres> <ma-giao-xu-guid> [--chay-that]
+          Qlgx.Migration <duong-dan-giaoxu.mdb> <chuoi-ket-noi-postgres> <ma-giao-xu-guid>
+                         [--mat-khau=<mat khau file mdb>] [--nguoi-dung=<ten>] [--chay-that]
 
         Mặc định là CHẠY THỬ: chỉ đọc và in báo cáo, không ghi gì vào PostgreSQL.
         Thêm --chay-that để ghi dữ liệu.
+
+        File .mdb của QLGX thường được khoá bằng mật khẩu cấp database. Truyền qua
+        --mat-khau. Nếu không muốn mật khẩu nằm trong lịch sử dòng lệnh, đặt biến môi
+        trường QLGX_MDB_PASSWORD thay thế. Mặc định --nguoi-dung=Admin.
         """);
     return 1;
 }
@@ -17,7 +22,14 @@ if (args.Length < 3)
 var (duongDan, chuoiKetNoi, maGiaoXu) = (args[0], args[1], Guid.Parse(args[2]));
 var chayThat = args.Contains("--chay-that");
 
-using var nguon = new DocAccess(duongDan);
+static string? LayCo(string[] args, string ten) =>
+    args.FirstOrDefault(a => a.StartsWith(ten + "=", StringComparison.Ordinal))?[(ten.Length + 1)..];
+
+// Ưu tiên biến môi trường để mật khẩu không lọt vào lịch sử dòng lệnh.
+var matKhau = Environment.GetEnvironmentVariable("QLGX_MDB_PASSWORD") ?? LayCo(args, "--mat-khau");
+var nguoiDung = LayCo(args, "--nguoi-dung") ?? "Admin";
+
+using var nguon = new DocAccess(duongDan, matKhau, nguoiDung);
 try
 {
     nguon.Mo();
@@ -26,7 +38,10 @@ catch (Exception ex)
 {
     Console.WriteLine($"Không mở được file Access '{duongDan}': {ex.Message}");
     Console.WriteLine("Kiểm tra: máy đã cài Microsoft Access Database Engine (ACE OLEDB) bản " +
-        "32-bit chưa, file có bị khoá mật khẩu không, và tiến trình đang chạy có đúng x86 không.");
+        "32-bit chưa, và tiến trình đang chạy có đúng x86 không.");
+    if (string.IsNullOrEmpty(matKhau))
+        Console.WriteLine("Chưa truyền mật khẩu. File .mdb của QLGX thường bị khoá — " +
+            "thử lại với --mat-khau=<mat khau> hoặc đặt biến QLGX_MDB_PASSWORD.");
     return 3;
 }
 
