@@ -106,6 +106,64 @@ bỏ qua. Không được im lặng bỏ cột.
 của từng bảng** giữa Access và PostgreSQL, và báo cáo bảng nào lệch. Không đạt bước này thì
 không được coi là chuyển đổi xong.
 
+**G. Kết quả đọc trực tiếp file `.mdb` — số liệu ràng buộc việc chuyển đổi.**
+
+File `BIN/giaoxu.mdb` có **26 bảng người dùng**. Đã có thực thể cho 7 bảng, còn **19 bảng**.
+
+*Tin tốt:* cột `MaNhanDang` **chỉ tồn tại ở 4 bảng** `GiaDinh`, `GiaoDan`, `GiaoHo`, `HonPhoi`
+— đều nằm trong 7 bảng đã làm. Sửa đổi E vì vậy chỉ cần bổ sung vào công cụ chuyển đổi cho
+đúng 4 bảng đó, không lan sang bảng khác.
+
+*Cột tự tăng thật:* **duy nhất `ChiTietHoiDoan.ID`**. Mọi cột `Ma…` khác là số thường do ứng
+dụng tự sinh — đúng như đã biết.
+
+*Xoá mềm ở các bảng còn lại:* chỉ `LinhMuc.DaXoa` và `TaiKhoan.DaXoa`.
+
+**G.1 — `ThanhVienGiaDinh.VaiTro` KHÔNG chỉ có ba giá trị.** Dữ liệu thật chứa
+`0`(30 dòng), `1`(31), `2`(63), **`3`(2), `8`(2), `18`(4), `100`(13)**. Mã desktop xử lý theo
+quy tắc **`VaiTro > 1` nghĩa là con cái**, nên các giá trị lạ vẫn chạy đúng ở bản cũ.
+
+Hệ quả bắt buộc, **sửa quyết định trước đó của kế hoạch**:
+
+- `ThanhVienGiaDinh.VaiTro` phải lưu **nguyên giá trị số** như trong Access, KHÔNG được
+  chuẩn hoá về 0/1/2. Lý do: khoá chính là bộ ba `(GiaDinhId, GiaoDanId, VaiTro)`, nên gộp
+  `3` và `8` về `2` sẽ làm hai dòng khác nhau đụng khoá và **mất dữ liệu**.
+- Kiểu của thuộc tính đổi từ `VaiTroGiaDinh` sang `int`. Giữ enum `VaiTroGiaDinh` cho ba giá
+  trị đã biết, nhưng mọi chỗ hỏi "có phải con không" phải viết **`vaiTro > 1`**, không được
+  viết `vaiTro == 2`.
+- Rà lại toàn bộ mã đã viết ở Task 6, 7 và phần front-end: chỗ nào so sánh với `Chong`(0) hay
+  `Vo`(1) thì vẫn đúng; chỗ nào so sánh với `Con`(2) thì **sai** và phải đổi.
+- Có một bảng tra `VaiTro(ID, Value)` 3 dòng (`0='TenChong'`, `1='TenVo'`, `2='ConCai'`).
+  Chuyển bảng này sang nhưng **không đặt khoá ngoại cứng** từ `ThanhVienGiaDinh.VaiTro` sang
+  nó, vì dữ liệu thật có giá trị ngoài danh mục.
+
+**G.2 — Hai chỗ mã nguồn không khớp cột thật**, phải theo file `.mdb`:
+- `LopGiaoLy` có cột tên **`Nam`**, không phải `NamHoc` như một bản `CREATE TABLE` trong mã.
+- `BiTichChiTiet` **không có** cột `LoaiBiTich`; loại bí tích nằm ở bảng cha `DotBiTich`.
+
+**G.3 — Khối lượng dữ liệu, để xếp thứ tự ưu tiên:**
+
+| Có dữ liệu | Số dòng | | Rỗng (chỉ cần tạo schema) |
+|---|---|---|---|
+| `BiTichChiTiet` | 6150 | | `ChiTietHoiDoan`, `ChiTietLopGiaoLy`, `ChuyenXu`, |
+| `GiaoDan` | 2050 | | `GiaoLyVien`, `HoiDoan`, `KhoiGiaoLy`, `LinhMuc`, |
+| `DotBiTich` | 1108 | | `LopGiaoLy`, `RaoHonPhoi`, `TaiKhoan`, `TanHien` |
+| `GiaoDanHonPhoi` | 1043 | | |
+| `HonPhoi` | 522 | | |
+| `DuLieuChung` | 343 | | |
+| `ThanhVienGiaDinh` | 145 | | |
+| `GiaDinh` | 40 | | |
+| `CauHinh` | 19 | | |
+| `TenLoaiTaiKhoan`, `VaiTro` | 3 mỗi bảng | | |
+| `GiaoXu`, `GiaoHo`, `GiaoHat`, `GiaoPhan` | 1 mỗi bảng | | |
+
+`TaiKhoan` rỗng nghĩa là **CSDL này chưa có tài khoản nào** — Task 14 phải tạo tài khoản
+quản trị đầu tiên chứ không trông chờ dữ liệu chuyển sang.
+
+**G.4 — Dữ liệu ngày tháng bẩn.** `DotBiTich.NgayBiTich` có giá trị chỉ ghi năm như `'1958'`
+và chuỗi rỗng. Bộ chuyển đổi ngày ở Task 2 sẽ trả chúng về `LoiGiuLai` và chúng được ghi vào
+cột `du_lieu_loi` — đúng thiết kế, không được ép kiểu `date` trực tiếp làm mất dữ liệu.
+
 **Ghi chú về các mục "cố ý hoãn sang Phase 2" đã ghi ở Task 12:** ba mục liên quan hôn phối
 và thanh nút thành viên **không còn được hoãn** theo sửa đổi B và D. Mục liên quan hội đoàn
 vẫn hoãn.
