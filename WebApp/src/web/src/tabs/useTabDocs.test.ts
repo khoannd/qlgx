@@ -38,4 +38,26 @@ describe('useTabDocs', () => {
     expect(result.current.danhSach.map((t) => t.id)).toEqual(['a'])
     expect(result.current.dangChon).toBe('a')
   })
+
+  it('dong the khong phai the dang chon thi dangChon giu nguyen', () => {
+    const { result } = renderHook(() => useTabDocs())
+    act(() => result.current.mo(the('a', 'A')))
+    act(() => result.current.mo(the('b', 'B')))
+    act(() => result.current.chon('a'))
+
+    act(() => result.current.dong('b'))
+
+    expect(result.current.danhSach.map((t) => t.id)).toEqual(['a'])
+    expect(result.current.dangChon).toBe('a')
+  })
+
+  it('dong the cuoi cung thi danhSach rong va dangChon la chuoi rong', () => {
+    const { result } = renderHook(() => useTabDocs())
+    act(() => result.current.mo(the('a', 'A')))
+
+    act(() => result.current.dong('a'))
+
+    expect(result.current.danhSach).toEqual([])
+    expect(result.current.dangChon).toBe('')
+  })
 })

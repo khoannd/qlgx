@@ -2887,34 +2887,44 @@ export type TheTaiLieu = {
   dongDuoc?: boolean
 }
 
+type TrangThaiThe = { danhSach: TheTaiLieu[]; dangChon: string }
+
 /**
  * Tương đương FATabStrip cùng dictionary dicShows của frmMain: mỗi bản ghi mở ra một thẻ
  * riêng, mở lại bản ghi đang mở thì chuyển tiêu điểm thay vì tạo thẻ trùng.
+ *
+ * `danhSach` và `dangChon` gộp chung một state (không dùng hai `useState` riêng): hàm cập
+ * nhật của React bắt buộc phải thuần, không được gây tác dụng phụ, nên KHÔNG được gọi
+ * `setDangChon` từ bên trong hàm cập nhật của `setDanhSach` — dưới `<StrictMode>` React gọi
+ * hàm cập nhật hai lần để phát hiện đúng lỗi này.
  */
 export function useTabDocs() {
-  const [danhSach, setDanhSach] = useState<TheTaiLieu[]>([])
-  const [dangChon, setDangChon] = useState('')
+  const [trangThai, setTrangThai] = useState<TrangThaiThe>({ danhSach: [], dangChon: '' })
 
   const mo = useCallback((the: TheTaiLieu) => {
-    setDanhSach((truoc) =>
-      truoc.some((t) => t.id === the.id) ? truoc : [...truoc, the],
-    )
-    setDangChon(the.id)
+    setTrangThai((truoc) => ({
+      danhSach: truoc.danhSach.some((t) => t.id === the.id)
+        ? truoc.danhSach
+        : [...truoc.danhSach, the],
+      dangChon: the.id,
+    }))
   }, [])
 
-  const chon = useCallback((id: string) => setDangChon(id), [])
+  const chon = useCallback((id: string) => {
+    setTrangThai((truoc) => ({ ...truoc, dangChon: id }))
+  }, [])
 
   const dong = useCallback((id: string) => {
-    setDanhSach((truoc) => {
-      const conLai = truoc.filter((t) => t.id !== id)
-      setDangChon((hienTai) =>
-        hienTai === id ? (conLai.at(-1)?.id ?? '') : hienTai,
-      )
-      return conLai
+    setTrangThai((truoc) => {
+      const conLai = truoc.danhSach.filter((t) => t.id !== id)
+      return {
+        danhSach: conLai,
+        dangChon: truoc.dangChon === id ? (conLai.at(-1)?.id ?? '') : truoc.dangChon,
+      }
     })
   }, [])
 
-  return { danhSach, dangChon, mo, chon, dong }
+  return { danhSach: trangThai.danhSach, dangChon: trangThai.dangChon, mo, chon, dong }
 }
 ```
 
