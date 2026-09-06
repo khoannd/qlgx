@@ -16,6 +16,7 @@ builder.Services.AddDbContext<QlgxDbContext>((sp, opt) =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("Qlgx")));
 builder.Services.AddScoped<SinhMaService>();
 builder.Services.AddScoped<GiaDinhService>();
+builder.Services.AddScoped<GiaoDanService>();
 
 var app = builder.Build();
 
@@ -26,6 +27,7 @@ app.MapGet("/api/suc-khoe", () => Results.Ok(new
 }));
 
 app.MapGiaDinh();
+app.MapGiaoDan();
 
 app.Run();
 
