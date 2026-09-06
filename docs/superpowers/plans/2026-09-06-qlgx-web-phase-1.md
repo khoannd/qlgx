@@ -1973,7 +1973,9 @@ Tạo `WebApp/src/Qlgx.Api/Dtos/GiaoDanDtos.cs`:
 ```csharp
 namespace Qlgx.Api.Dtos;
 
-/// <summary>Một dòng trên lưới giáo dân — 29 cột theo đúng GxGiaoDanList.FormatGrid().</summary>
+/// <summary>Một dòng trên lưới giáo dân — 29 cột theo đúng GxGiaoDanList.FormatGrid(), cộng
+/// hai trường front-end cần để lọc/điều hướng đúng (xem Task 12: mục menu "Xem gia đình" và
+/// ô tick "không được thống kê" — cả hai từng bị lấy nhầm từ các trường khác).</summary>
 public record GiaoDanListItemDto(
     Guid Id, int MaGiaoDanCu, string? TenThanh, string HoTen, string? Phai,
     DateOnly? NgaySinh, string NamSinh,
@@ -1984,7 +1986,14 @@ public record GiaoDanListItemDto(
     string? BietNgoaiNgu, bool QuaDoi, DateOnly? NgayQuaDoi, string? NoiAnTang,
     string? NoiSinh, string? NoiRuaToi, string? NoiRuocLe, string? NoiThemSuc,
     /// <summary>Chỉ có giá trị khi lưới nhúng trong form gia đình.</summary>
-    string? QuanHe);
+    string? QuanHe,
+    /// <summary>Mã gia đình giáo dân này thuộc về (null nếu chưa gắn với gia đình nào) —
+    /// front-end dùng để mở đúng thẻ chi tiết gia đình từ mục menu "Xem gia đình", KHÔNG
+    /// được dùng Id của chính giáo dân để tra gia đình.</summary>
+    Guid? GiaDinhId,
+    /// <summary>Khác khái niệm "Ngoài xứ": một giáo dân ngoài xứ vẫn có thể được thống kê,
+    /// nên front-end không được suy trường này từ TenGiaoHo.</summary>
+    bool KhongThongKe);
 
 public record GiaoDanDetailDto(
     Guid Id, int MaGiaoDanCu, string HoTen, string? TenThanh, string? Phai,
@@ -2040,9 +2049,12 @@ public class GiaoDanService(QlgxDbContext db)
 {
     /// <summary>
     /// Một dòng nguồn trước khi dựng DTO. Có thêm QuanHe vì lưới thành viên trong form gia
-    /// đình cần cột đó, còn danh sách giáo dân thì không.
+    /// đình cần cột đó, còn danh sách giáo dân thì không. GiaDinhId lấy từ bản ghi thành viên
+    /// gia đình đầu tiên của giáo dân (một người có thể thuộc nhiều gia đình theo thời gian,
+    /// ví dụ vừa là con vừa lập gia đình riêng — lấy đầu tiên theo VaiTro là đủ cho mục đích
+    /// "Xem gia đình" trên menu chuột phải).
     /// </summary>
-    private record NguonDong(GiaoDan Gd, string? QuanHe);
+    private record NguonDong(GiaoDan Gd, string? QuanHe, Guid? GiaDinhId);
 
     public Task<List<GiaoDanListItemDto>> LayDanhSach(
         Guid? giaoHoId, bool chiKhongThongKe, CancellationToken ct)
@@ -2053,10 +2065,13 @@ public class GiaoDanService(QlgxDbContext db)
 
         return DungDanhSach(truyVan
             .OrderBy(g => g.MaGiaoDanCu)
-            .Select(g => new NguonDong(g, null))).ToListAsync(ct);
+            .Select(g => new NguonDong(g, null,
+                g.GiaDinhThamGia.OrderBy(tv => tv.VaiTro)
+                    .Select(tv => (Guid?)tv.GiaDinhId).FirstOrDefault()))).ToListAsync(ct);
     }
 
-    /// <summary>Thành viên của một gia đình — cùng bộ cột với danh sách giáo dân.</summary>
+    /// <summary>Thành viên của một gia đình — cùng bộ cột với danh sách giáo dân. GiaDinhId ở
+    /// đây biết chắc chắn (chính là tham số `giaDinhId`) nên không cần suy như LayDanhSach.</summary>
     public Task<List<GiaoDanListItemDto>> LayThanhVien(Guid giaDinhId, CancellationToken ct) =>
         DungDanhSach(db.ThanhVienGiaDinh
             .Where(tv => tv.GiaDinhId == giaDinhId)
@@ -2064,7 +2079,8 @@ public class GiaoDanService(QlgxDbContext db)
             .Select(tv => new NguonDong(
                 tv.GiaoDan!,
                 tv.VaiTro == VaiTroGiaDinh.Chong ? "Chồng"
-                    : tv.VaiTro == VaiTroGiaDinh.Vo ? "Vợ" : "Con"))).ToListAsync(ct);
+                    : tv.VaiTro == VaiTroGiaDinh.Vo ? "Vợ" : "Con",
+                giaDinhId))).ToListAsync(ct);
 
     private static IQueryable<GiaoDanListItemDto> DungDanhSach(IQueryable<NguonDong> nguon) =>
         nguon.Select(n => new GiaoDanListItemDto(
@@ -2080,7 +2096,7 @@ public class GiaoDanService(QlgxDbContext db)
             n.Gd.TrinhDoVanHoa, n.Gd.TrinhDoChuyenMon, n.Gd.BietNgoaiNgu,
             n.Gd.QuaDoi, n.Gd.NgayQuaDoi, n.Gd.NoiAnTang,
             n.Gd.NoiSinh, n.Gd.NoiRuaToi, n.Gd.NoiRuocLe, n.Gd.NoiThemSuc,
-            n.QuanHe));
+            n.QuanHe, n.GiaDinhId, n.Gd.KhongThongKe));
 
     public async Task<GiaoDanDetailDto?> LayChiTiet(Guid id, CancellationToken ct)
     {
@@ -3092,6 +3108,13 @@ export type GiaoDanListItem = {
   noiThemSuc: string | null
   /** Chỉ có giá trị khi lấy qua endpoint thành viên gia đình. */
   quanHe: string | null
+  /** Mã gia đình giáo dân này thuộc về — null khi chưa gắn với gia đình nào. Dùng cho mục
+   * menu chuột phải "Xem gia đình" (KHÔNG được dùng `id` của chính giáo dân để tra gia đình
+   * — lỗi này từng xảy ra ở Task 12, xem báo cáo). */
+  giaDinhId: string | null
+  /** true khi giáo dân này KHÔNG được tính vào thống kê — khác khái niệm "Ngoài xứ": một
+   * giáo dân ngoài xứ vẫn có thể được thống kê, nên không được suy ra từ `tenGiaoHo`. */
+  khongThongKe: boolean
 }
 
 export type ThanhVien = {
@@ -3706,13 +3729,18 @@ Dựng theo đúng bố cục đã chốt trong bản mẫu:
   "Chỉ xem gia đình không được thống kê"; `GxGiaDinhList` bên dưới.
 - `GiaDinhDetail` — bố cục neo: đầu trang một dòng, khối thông tin dùng `cols`, lưới thành
   viên `GxGiaoDanList` với `quanHeGiaDinh` chiếm phần dưới và tự cuộn, thanh nút dưới cùng
-  gồm `In lý lịch cá nhân`, `In phiếu gia đình`, `Quay về`, `Cập nhật`.
+  gồm `In lý lịch cá nhân`, `In phiếu gia đình`, `Quay về`, `Cập nhật`. **Màn hình này CỐ Ý
+  chưa có khối "Hôn phối" (bản mẫu có `theHonPhoi`), và lưới thành viên chưa có thanh nút
+  "Thêm mới"/"Chọn từ danh sách"** — dữ liệu hôn phối (bảng `HonPhoi`, `GiaoDanHonPhoi`) và
+  API thêm/bớt thành viên gia đình thuộc giai đoạn 2, xem "Việc để lại cho Phase 2".
 - `GiaoDanList` — như `GiaDinhList` nhưng ô tick là
   "Chỉ xem giáo dân không được thống kê" và lưới là `GxGiaoDanList`.
 - `GiaoDanDetail` — `GxFormTabs` năm tab, tab "Cá nhân" gồm các khối
   "Thông tin cá nhân", "Ảnh đại diện (ảnh 3x4)", "Thông tin chuyển xứ", "Rửa tội",
   "Rước lễ lần đầu", "Thêm sức", "Xức dầu", "Thông tin khác"; thanh nút dưới cùng gồm
-  `Xem gia đình`, `In lý lịch cá nhân`, `Quay về`, `Cập nhật`.
+  `Xem gia đình`, `In lý lịch cá nhân`, `Quay về`, `Cập nhật`. **Hai tab "Hôn phối" và "Hội
+  đoàn" chỉ dựng khung nhập cơ bản, CHƯA có lưới dữ liệu** (`GxHonPhoiList`/`GxHoiDoanList`
+  của bản mẫu) — bảng `GiaoDanHonPhoi` và `ChiTietHoiDoan` cũng thuộc giai đoạn 2.
 
 Ba liên động bắt buộc trong `GiaoDanDetail`, lấy đúng từ `frmGiaoDan.cs`:
 
@@ -3934,6 +3962,9 @@ Phase 1 xong khi tất cả các điều sau đúng:
 Những phần đã khảo sát nhưng **cố ý chưa làm** trong Phase 1, ghi ra đây để không bị quên:
 
 - Tab "Hôn phối", "Giáo lý", "Ơn gọi tận hiến", "Hội đoàn" của form giáo dân hiện chỉ có giao diện, chưa nối API — bốn bảng `HonPhoi`, `GiaoDanHonPhoi`, `ChiTietHoiDoan`, `TanHien` chưa đưa vào schema.
+- `GiaDinhDetail` (Task 12) chưa có khối "Hôn phối" của bản mẫu (`theHonPhoi`: số/nơi hôn phối, linh mục chứng, người chứng, tình trạng) — cùng lý do thiếu bảng `HonPhoi`/`GiaoDanHonPhoi` ở trên.
+- Lưới "Thành viên khác trong gia đình" trong `GiaDinhDetail` chưa có thanh nút "Thêm mới"/"Chọn từ danh sách" của bản mẫu — chưa có API thêm/bớt thành viên gia đình (`ThanhVienGiaDinh`) ở Task 6–8, chỉ mới có API đọc.
+- Hai tab "Hôn phối" và "Hội đoàn" của `GiaoDanDetail` (Task 12) chỉ dựng khung nhập cơ bản, chưa có lưới dữ liệu (`GxHonPhoiList`/`GxHoiDoanList` của bản mẫu) — cùng lý do thiếu bảng `GiaoDanHonPhoi`/`ChiTietHoiDoan` ở trên.
 - Bảng `ChuyenXu` chưa chuyển đổi; cột `DaChuyenDi` của lưới giáo dân hiện suy từ gia đình chứ chưa từ lịch sử chuyển xứ.
 - Xác thực và tài khoản người dùng (bảng `TaiKhoan`, mật khẩu băm đúng chuẩn).
 - Lưu bố cục cột theo người dùng (bảng `UserGridPreference`), thay cho `GridColumns.xml`.

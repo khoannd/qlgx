@@ -9,7 +9,14 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 // header/hàng và ném lỗi #200 (getRowClass, rowSelection, localeText…).
 ModuleRegistry.registerModules([AllCommunityModule])
 
-export type MucMenu<T> = { nhan: string; chay?: (dong: T) => void }
+export type MucMenu<T> = {
+  nhan: string
+  chay?: (dong: T) => void
+  /** Trả true để ẨN mục này khỏi menu chuột phải của một dòng cụ thể — dùng khi hành động
+   * không áp dụng được cho dòng đó (ví dụ "Xem gia đình" khi giáo dân chưa gắn với gia đình
+   * nào), tránh gọi `chay` với giá trị rỗng/không hợp lệ. */
+  an?: (dong: T) => boolean
+}
 
 type Props<T> = {
   columnDefs: ColDef<T>[]
@@ -94,7 +101,7 @@ export function GxGrid<T>({
           style={{ left: menu.x, top: menu.y }}
           onMouseLeave={() => setMenu(null)}
         >
-          {menuChuotPhai!.map((m) => (
+          {menuChuotPhai!.filter((m) => !m.an?.(menu.dong)).map((m) => (
             <button key={m.nhan} type="button"
               onClick={() => { m.chay?.(menu.dong); setMenu(null) }}>
               {m.nhan}

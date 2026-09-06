@@ -12,7 +12,8 @@ const nguoi = (p: Partial<GiaoDanListItem> = {}): GiaoDanListItem => ({
   diaChi: null, tenGiaoHo: 'Giáo họ Thánh Tâm', daChuyenDi: false,
   trinhDoVanHoa: null, trinhDoChuyenMon: null, bietNgoaiNgu: null,
   quaDoi: false, ngayQuaDoi: null, noiAnTang: null, noiSinh: null,
-  noiRuaToi: null, noiRuocLe: null, noiThemSuc: null, quanHe: null, ...p,
+  noiRuaToi: null, noiRuocLe: null, noiThemSuc: null, quanHe: null,
+  giaDinhId: null, khongThongKe: false, ...p,
 })
 
 // ag-grid dựng header/hàng qua setTimeout(0) nội bộ (dồn sự kiện để tối ưu hiệu năng) nên

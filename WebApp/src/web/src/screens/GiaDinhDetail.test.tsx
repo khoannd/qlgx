@@ -45,7 +45,7 @@ describe('GiaDinhDetail', () => {
     render(<GiaDinhDetail duLieu={chiTiet({
       thanhVien: [
         { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
-        { giaoDanId: 'p2', vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1998-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p2', vaiTro: 2, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1998-01-01', quaDoi: false, daXoa: false },
       ],
     })} />)
 
@@ -64,5 +64,21 @@ describe('GiaDinhDetail', () => {
     expect(await screen.findByText('Nguyễn Văn C')).toBeDefined()
     expect(screen.queryByText('Nguyễn Văn A')).toBeNull()
     expect(screen.queryByText('Trần Thị B')).toBeNull()
+  })
+
+  it('Nguoi nam/Nguoi nu xac dinh theo vaiTro (0/1), khong theo chuHo', async () => {
+    // chuHo chỉ đúng MỘT người (thường không phải người vợ ở đây) — nếu component còn lấy
+    // theo chuHo thay vì vaiTro thì "Người nữ" sẽ hiện rỗng ("—") thay vì đúng tên vợ.
+    const { container } = render(<GiaDinhDetail duLieu={chiTiet({
+      thanhVien: [
+        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p2', vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
+      ],
+    })} />)
+
+    // GxPicker dựng bằng <span id="..."> (không phải ô nhập) nên getByLabelText không tìm ra
+    // được — tra trực tiếp qua id đã nối với nhãn bằng htmlFor.
+    expect(container.querySelector('#gdinh-nguoinam')?.textContent).toContain('Nguyễn Văn A')
+    expect(container.querySelector('#gdinh-nguoinu')?.textContent).toContain('Trần Thị B')
   })
 })

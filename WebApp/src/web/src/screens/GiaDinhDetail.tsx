@@ -27,7 +27,7 @@ const DIEN_GIA_DINH = ['', 'Nghèo', 'Cận nghèo', 'Neo đơn', 'Khuyết tậ
  * lại của `GiaoDanListItem` chưa có (sẽ do endpoint thành viên riêng — Task 6/7 — trả về đầy
  * đủ hơn khi nối API thật) nên tạm điền `null`/giá trị mặc định để dùng chung cột với
  * `GxGiaoDanList`. */
-function tuThanhVien(tv: ThanhVien): GiaoDanListItem {
+function tuThanhVien(tv: ThanhVien, giaDinhId: string): GiaoDanListItem {
   return {
     id: tv.giaoDanId, maGiaoDanCu: 0, tenThanh: tv.tenThanh, hoTen: tv.hoTen, phai: tv.phai,
     ngaySinh: tv.ngaySinh, namSinh: tv.ngaySinh?.slice(0, 4) ?? '', ngayRuaToi: null,
@@ -36,7 +36,7 @@ function tuThanhVien(tv: ThanhVien): GiaoDanListItem {
     diaChi: null, tenGiaoHo: null, daChuyenDi: false, trinhDoVanHoa: null,
     trinhDoChuyenMon: null, bietNgoaiNgu: null, quaDoi: tv.quaDoi, ngayQuaDoi: null,
     noiAnTang: null, noiSinh: null, noiRuaToi: null, noiRuocLe: null, noiThemSuc: null,
-    quanHe: null,
+    quanHe: null, giaDinhId, khongThongKe: false,
   }
 }
 
@@ -57,16 +57,18 @@ export function GiaDinhDetail({ duLieu, moGiaoDan, moDanhSachGiaDinh }: Props) {
     ? [f.giaoHoId, ...DANH_SACH_GIAO_HO_TAM]
     : DANH_SACH_GIAO_HO_TAM
 
-  // "Thành viên khác trong gia đình" loại trừ vợ chồng (chuHo) — họ đã hiển thị riêng ở hai ô
-  // "Người nam"/"Người nữ" phía trên, đúng hàm `thanhVienCua()` của bản mẫu (lọc bỏ quanHe
-  // "Chồng"/"Vợ" khỏi lưới thành viên khác).
+  // Quy ước đã chốt: vaiTro 0 = Chồng, 1 = Vợ, 2 = Con. "Thành viên khác trong gia đình" loại
+  // trừ vợ chồng (vaiTro 0/1) — họ đã hiển thị riêng ở hai ô "Người nam"/"Người nữ" phía trên,
+  // đúng hàm `thanhVienCua()` của bản mẫu (lọc bỏ quanHe "Chồng"/"Vợ" khỏi lưới thành viên
+  // khác). KHÔNG dùng `chuHo` cho việc này — đúng MỘT người trong gia đình có `chuHo = true`
+  // (chủ hộ theo hộ khẩu), không nhất thiết là người nam hay đã kết hôn.
   const thanhVien = useMemo(
-    () => f.thanhVien.filter((t) => !t.chuHo).map(tuThanhVien),
-    [f.thanhVien],
+    () => f.thanhVien.filter((t) => t.vaiTro !== 0 && t.vaiTro !== 1).map((t) => tuThanhVien(t, f.id)),
+    [f.thanhVien, f.id],
   )
   const chuHo = f.thanhVien.find((t) => t.chuHo)
-  const nguoiNam = f.thanhVien.find((t) => t.chuHo && t.phai === 'Nam')
-  const nguoiNu = f.thanhVien.find((t) => t.chuHo && t.phai === 'Nữ')
+  const nguoiNam = f.thanhVien.find((t) => t.vaiTro === 0)
+  const nguoiNu = f.thanhVien.find((t) => t.vaiTro === 1)
 
   const tenTieuDe = moi ? 'Gia đình mới' : `Gia đình ${f.tenGiaDinh ?? ''}`.trim()
 

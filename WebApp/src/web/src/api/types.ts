@@ -54,11 +54,22 @@ export type GiaoDanListItem = {
   noiThemSuc: string | null
   /** Chỉ có giá trị khi lấy qua endpoint thành viên gia đình. */
   quanHe: string | null
+  /** Mã gia đình giáo dân này thuộc về — null khi chưa gắn với gia đình nào. Dùng cho mục
+   * menu chuột phải "Xem gia đình" (KHÔNG được dùng `id` của chính giáo dân để tra gia đình). */
+  giaDinhId: string | null
+  /** true khi giáo dân này KHÔNG được tính vào thống kê — khác khái niệm "Ngoài xứ": một
+   * giáo dân ngoài xứ vẫn có thể được thống kê, nên không được suy ra từ `tenGiaoHo`. */
+  khongThongKe: boolean
 }
 
 export type ThanhVien = {
   giaoDanId: string
+  /** Quy ước đã chốt của dự án: 0 = Chồng, 1 = Vợ, 2 = Con. Dùng để tách "Người nam"/"Người
+   * nữ" (0/1) khỏi lưới "Thành viên khác" (2) — KHÔNG dùng `chuHo` cho việc này, xem bên dưới. */
   vaiTro: number
+  /** Đúng MỘT người trong gia đình có `chuHo = true` (chủ hộ theo hộ khẩu) — không nhất thiết
+   * là người nam hay đã kết hôn. Không dùng trường này để suy ra "Người nam"/"Người nữ" hay để
+   * lọc lưới thành viên; việc đó dựa vào `vaiTro`. */
   chuHo: boolean
   tenThanh: string | null
   hoTen: string

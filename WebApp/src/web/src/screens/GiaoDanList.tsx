@@ -13,12 +13,10 @@ type Props = {
 
 /**
  * Danh sách giáo dân — cùng bố cục `page-head`/`filters-bar` với `GiaDinhList`, chỉ khác ô
- * tick là "Chỉ xem giáo dân không được thống kê" và lưới là `GxGiaoDanList`. Lọc theo Giáo
- * họ/ô tick thực hiện trên máy khách vì backend chưa có danh mục Giáo họ (xem
- * `data/giaoHoTam.ts`) và `GiaoDanListItem` cũng chưa có cờ "không được thống kê" riêng —
- * dùng tạm `daChuyenDi === false && tenGiaoHo === null` sẽ sai lệch nên ô tick này lọc theo
- * `tenGiaoHo === NGOAI_XU` giống hệt lọc "Ngoài xứ", chờ Task 6–8 bổ sung cờ `khongThongKe`
- * thật cho `GiaoDanListItemDto`.
+ * tick là "Chỉ xem giáo dân không được thống kê" và lưới là `GxGiaoDanList`. Lọc theo Giáo họ
+ * thực hiện trên máy khách vì backend chưa có danh mục Giáo họ (xem `data/giaoHoTam.ts`). Ô
+ * tick lọc theo `khongThongKe` — KHÔNG suy ra từ `tenGiaoHo === "Ngoài xứ"`: hai khái niệm
+ * này khác nhau (một giáo dân ngoài xứ vẫn có thể được thống kê, và ngược lại).
  */
 export function GiaoDanList({ rows, moGiaoDan, moGiaDinh }: Props) {
   const [giaoHo, setGiaoHo] = useState('-1')
@@ -31,7 +29,7 @@ export function GiaoDanList({ rows, moGiaoDan, moGiaDinh }: Props) {
 
   const rowsLoc = useMemo(
     () => rows.filter((r) => {
-      if (chiKhongThongKe && r.tenGiaoHo !== NGOAI_XU) return false
+      if (chiKhongThongKe && !r.khongThongKe) return false
       if (giaoHo === '0') return r.tenGiaoHo === NGOAI_XU
       if (giaoHo !== '-1') return r.tenGiaoHo === giaoHo
       return true
@@ -39,8 +37,11 @@ export function GiaoDanList({ rows, moGiaoDan, moGiaDinh }: Props) {
     [rows, giaoHo, chiKhongThongKe],
   )
 
+  // "Xem gia đình" phải tra theo `d.giaDinhId` (mã GIA ĐÌNH) — KHÔNG phải `d.id` (mã giáo
+  // dân); dùng nhầm `d.id` từng khiến mục này mở ra một thẻ "Gia đình mới" trống vì không
+  // tra được gia đình nào khớp. Mục menu tự ẩn khi `giaDinhId` null (xem `menuGiaoDanMacDinh`).
   const menu = useMemo(
-    () => menuGiaoDanMacDinh((d) => moGiaoDan(d.id), (d) => { if (d.quanHe) moGiaDinh?.(d.id) }),
+    () => menuGiaoDanMacDinh((d) => moGiaoDan(d.id), (d) => { if (d.giaDinhId) moGiaDinh?.(d.giaDinhId) }),
     [moGiaoDan, moGiaDinh],
   )
 

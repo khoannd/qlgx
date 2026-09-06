@@ -44,6 +44,9 @@ type PersonRaw = {
   diaChi: string; giaoHo: string; daChuyenDi: boolean; vanHoa: string; chuyenMon: string
   ngoaiNgu: string; quaDoi: boolean; ngayQuaDoi: string; noiAnTang: string; maGiaDinh: string
   quanHe: string
+  /** Không có trong bản mẫu gốc (bản mẫu không phân biệt "Ngoài xứ" với "không được thống
+   * kê") — thêm ở đây để có dữ liệu minh hoạ phân biệt được hai khái niệm khi lọc. */
+  khongThongKe?: boolean
 }
 
 /** Tương đương hàm `P(o)` của bản mẫu: điền mặc định cho các trường ít dùng. */
@@ -55,6 +58,7 @@ function P(o: Partial<PersonRaw> & { ma: string; hoTen: string }): PersonRaw {
     tanTong: false, conHoc: false, ngheNghiep: '', ghiChu: '', dienThoai: '', diaChi: '',
     giaoHo: 'Giáo họ Thánh Tâm', daChuyenDi: false, vanHoa: '12/12', chuyenMon: '',
     ngoaiNgu: '', quaDoi: false, ngayQuaDoi: '', noiAnTang: '', maGiaDinh: '', quanHe: '',
+    khongThongKe: false,
     ...o,
   }
 }
@@ -66,7 +70,7 @@ const PEOPLE: PersonRaw[] = [
   P({ ma: '04412', tenThanh: 'Maria', hoTen: 'Trần Thị Khánh Ngọc', phai: 'Nữ', ngaySinh: '14/03/2005', ngayRuaToi: '02/04/2005', ngayXtrl: '18/05/2013', ngayThemSuc: '21/11/2018', conHoc: true, cha: 'Trần Văn Bình', me: 'Nguyễn Thị Lan', ngheNghiep: 'Sinh viên', diaChi: '12/4 Nguyễn Trãi, KP 3', maGiaDinh: '00012', quanHe: 'Con' }),
   P({ ma: '04413', tenThanh: 'Giuse', hoTen: 'Trần Minh Khôi', phai: 'Nam', ngaySinh: '09/09/2008', ngayRuaToi: '28/09/2008', ngayXtrl: '12/05/2016', conHoc: true, cha: 'Trần Văn Bình', me: 'Nguyễn Thị Lan', ngheNghiep: 'Học sinh', ghiChu: 'Giúp lễ', diaChi: '12/4 Nguyễn Trãi, KP 3', maGiaDinh: '00012', quanHe: 'Con', vanHoa: '9/12' }),
   P({ ma: '04414', tenThanh: 'Anna', hoTen: 'Trần Thị Thanh Hương', phai: 'Nữ', ngaySinh: '22/07/1999', ngayRuaToi: '15/08/1999', ngayXtrl: '04/06/2008', ngayThemSuc: '19/10/2013', lapGd: true, cha: 'Trần Văn Bình', me: 'Nguyễn Thị Lan', ngheNghiep: 'Kế toán', ghiChu: 'Đã lập gia đình riêng', diaChi: '33 Lê Văn Sỹ', giaoHo: 'Giáo họ Mân Côi', maGiaDinh: '00012', quanHe: 'Con' }),
-  P({ ma: '04398', tenThanh: 'Maria', hoTen: 'Phạm Thị Tần', phai: 'Nữ', ngaySinh: '11/02/1941', ngayRuaToi: '03/03/1941', ngheNghiep: 'Nội trợ', quaDoi: true, ngayQuaDoi: '08/06/2023', noiAnTang: 'Đất thánh giáo xứ', ghiChu: 'Đã qua đời', diaChi: '12/4 Nguyễn Trãi, KP 3', maGiaDinh: '00012', quanHe: 'Mẹ chồng', vanHoa: '' }),
+  P({ ma: '04398', tenThanh: 'Maria', hoTen: 'Phạm Thị Tần', phai: 'Nữ', ngaySinh: '11/02/1941', ngayRuaToi: '03/03/1941', ngheNghiep: 'Nội trợ', quaDoi: true, ngayQuaDoi: '08/06/2023', noiAnTang: 'Đất thánh giáo xứ', ghiChu: 'Đã qua đời', diaChi: '12/4 Nguyễn Trãi, KP 3', maGiaDinh: '00012', quanHe: 'Mẹ chồng', vanHoa: '', khongThongKe: true }),
   P({ ma: '04455', tenThanh: 'Phêrô', hoTen: 'Trần Gia Bảo', phai: 'Nam', ngaySinh: '30/12/2019', ngayRuaToi: '19/01/2020', cha: 'Trần Minh Khôi', diaChi: '12/4 Nguyễn Trãi, KP 3', maGiaDinh: '00012', quanHe: 'Cháu', vanHoa: '' }),
 
   P({ ma: '04501', tenThanh: 'Đaminh', hoTen: 'Vũ Tiến Dũng', phai: 'Nam', ngaySinh: '17/01/1968', ngayRuaToi: '04/02/1968', ngayXtrl: '11/05/1976', ngayThemSuc: '22/10/1982', lapGd: true, ngheNghiep: 'Thợ mộc', dienThoai: '0933 561 908', diaChi: '7 Hẻm 24 Trần Phú', giaoHo: 'Giáo họ Fatima', maGiaDinh: '00035', quanHe: 'Chồng', vanHoa: '9/12' }),
@@ -78,7 +82,7 @@ const PEOPLE: PersonRaw[] = [
 
   P({ ma: '04601', tenThanh: 'Gioan B.', hoTen: 'Nguyễn Văn Hoà', phai: 'Nam', ngaySinh: '08/03/1965', ngayRuaToi: '28/03/1965', quaDoi: true, ngayQuaDoi: '12/02/2024', noiAnTang: 'Đất thánh giáo xứ', ngheNghiep: 'Tài xế', diaChi: '118 Cách Mạng Tháng 8', giaoHo: 'Giáo họ Lộ Đức', maGiaDinh: '00048', quanHe: 'Chồng' }),
   P({ ma: '04602', tenThanh: 'Maria', hoTen: 'Đỗ Thị Mai', phai: 'Nữ', ngaySinh: '30/10/1969', ngayRuaToi: '19/11/1969', ngayThemSuc: '08/11/1984', lapGd: true, ngheNghiep: 'Nội trợ', dienThoai: '0973 882 145', diaChi: '118 Cách Mạng Tháng 8', giaoHo: 'Giáo họ Lộ Đức', maGiaDinh: '00048', quanHe: 'Vợ' }),
-  P({ ma: '04701', tenThanh: 'Anna', hoTen: 'Vũ Thị Uyên', phai: 'Nữ', ngaySinh: '21/05/1978', ngayRuaToi: '10/06/1978', daChuyenDi: true, ngheNghiep: 'Công nhân', ghiChu: 'Đã chuyển đến GX Tân Định', diaChi: '81 Trường Chinh', giaoHo: 'Giáo họ Lộ Đức', maGiaDinh: '00108', quanHe: 'Vợ' }),
+  P({ ma: '04701', tenThanh: 'Anna', hoTen: 'Vũ Thị Uyên', phai: 'Nữ', ngaySinh: '21/05/1978', ngayRuaToi: '10/06/1978', daChuyenDi: true, ngheNghiep: 'Công nhân', ghiChu: 'Đã chuyển đến GX Tân Định', diaChi: '81 Trường Chinh', giaoHo: 'Giáo họ Lộ Đức', maGiaDinh: '00108', quanHe: 'Vợ', khongThongKe: true }),
   P({ ma: '04801', tenThanh: 'Têrêsa', hoTen: 'Lâm Thị Sương', phai: 'Nữ', ngaySinh: '12/12/1966', ngayRuaToi: '01/01/1967', quaDoi: true, ngayQuaDoi: '03/09/2022', noiAnTang: 'Đất thánh giáo xứ', ngheNghiep: 'Nội trợ', diaChi: '66 Lý Thường Kiệt', giaoHo: 'Giáo họ Mân Côi', maGiaDinh: '00082', quanHe: 'Vợ' }),
 ]
 
@@ -141,18 +145,35 @@ export const danhSachGiaoDan: GiaoDanListItem[] = PEOPLE.map((p) => ({
   noiRuocLe: p.noiXtrl || null,
   noiThemSuc: p.noiThemSuc || null,
   quanHe: p.quanHe || null,
+  giaDinhId: p.maGiaDinh || null,
+  khongThongKe: !!p.khongThongKe,
 }))
 
+/** Ánh xạ `quanHe` chữ của bản mẫu sang `vaiTro` số theo quy ước đã chốt của dự án: 0 =
+ * Chồng, 1 = Vợ, 2 = Con (và mọi quan hệ khác — cháu, cha mẹ chồng… — cũng xếp vào 2 vì lưới
+ * "Thành viên khác" chỉ cần phân biệt "là vợ/chồng hay không"). */
+function vaiTroCua(quanHe: string): number {
+  if (quanHe === 'Chồng') return 0
+  if (quanHe === 'Vợ') return 1
+  return 2
+}
+
 /** Chi tiết gia đình dựng tạm cho một mã gia đình — thành viên lấy từ `PEOPLE` có cùng
- * `maGiaDinh`. Chồng/vợ được đánh dấu `chuHo`, đúng quy ước `vaiTro` của `frmGiaDinh`. */
+ * `maGiaDinh`. Đúng MỘT người (ưu tiên người có quanHe "Chồng") được đánh dấu `chuHo`, đúng
+ * ngữ nghĩa chủ hộ theo hộ khẩu của bản desktop (`ImportData.cs` chỉ gán `ChuHo = true` cho
+ * đúng một mã giáo dân) — KHÔNG đánh dấu cả hai vợ chồng như trước. */
 export function timChiTietGiaDinh(id: string): GiaDinhDetail | undefined {
   const f = FAMILIES.find((x) => x.ma === id)
   if (!f) return undefined
 
-  const thanhVien: ThanhVien[] = PEOPLE.filter((p) => p.maGiaDinh === f.ma).map((p, i) => ({
+  const thanhVienGiaDinh = PEOPLE.filter((p) => p.maGiaDinh === f.ma)
+  const chuHoMa = thanhVienGiaDinh.find((p) => p.quanHe === 'Chồng')?.ma
+    ?? thanhVienGiaDinh.find((p) => p.quanHe === 'Vợ')?.ma
+
+  const thanhVien: ThanhVien[] = thanhVienGiaDinh.map((p) => ({
     giaoDanId: p.ma,
-    vaiTro: i,
-    chuHo: p.quanHe === 'Chồng' || p.quanHe === 'Vợ',
+    vaiTro: vaiTroCua(p.quanHe),
+    chuHo: p.ma === chuHoMa,
     tenThanh: p.tenThanh || null,
     hoTen: p.hoTen,
     phai: p.phai,
@@ -229,7 +250,7 @@ export function timChiTietGiaoDan(id: string): GiaoDanDetail | undefined {
     conHoc: p.conHoc,
     daCoGiaDinh: p.lapGd,
     tanTong: p.tanTong,
-    khongThongKe: false,
+    khongThongKe: !!p.khongThongKe,
     quaDoi: p.quaDoi,
     ngayQuaDoi: iso(p.ngayQuaDoi),
     noiQuaDoi: null,

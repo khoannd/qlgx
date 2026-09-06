@@ -13,7 +13,9 @@ type Props = {
   hangLoc?: boolean
 }
 
-/** Đúng 12 mục và đúng thứ tự trong constructor của GxGiaoDanList bản desktop. */
+/** Đúng 12 mục và đúng thứ tự trong constructor của GxGiaoDanList bản desktop. "Xem gia đình"
+ * tự ẩn khi dòng chưa gắn với gia đình nào (`giaDinhId` null) — tránh gọi `xemGiaDinh` với
+ * giá trị rỗng, vốn từng khiến mục này mở nhầm một thẻ "Gia đình mới" trống. */
 export const menuGiaoDanMacDinh = (
   moChiTiet: (d: GiaoDanListItem) => void,
   xemGiaDinh: (d: GiaoDanListItem) => void,
@@ -25,7 +27,7 @@ export const menuGiaoDanMacDinh = (
   { nhan: 'In chứng nhận rửa tội' },
   { nhan: 'In chứng nhận xưng tội - rước lễ' },
   { nhan: 'In chứng nhận thêm sức' },
-  { nhan: 'Xem gia đình', chay: xemGiaDinh },
+  { nhan: 'Xem gia đình', chay: xemGiaDinh, an: (d) => !d.giaDinhId },
   { nhan: 'In giấy giới thiệu chứng nhận rửa tội' },
   { nhan: 'In giấy giới thiệu giáo lý hôn phối' },
   { nhan: 'In giấy giới thiệu chứng nhận thêm sức' },
