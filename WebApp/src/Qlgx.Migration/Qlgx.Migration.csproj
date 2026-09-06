@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Qlgx.Migration.Core\Qlgx.Migration.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Data.OleDb" Version="10.0.11" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!--
+      Windows + x86 la bat buoc: driver Microsoft ACE OLEDB tren nhieu may giao xu la ban
+      32-bit, dung nguyen ly do bat buoc bang desktop hien tai cung phai build x86. Day la
+      project DUY NHAT trong solution duoc phep phu thuoc Windows/OleDb; logic chuyen doi
+      thuc su nam o Qlgx.Migration.Core (net10.0, AnyCPU) de con test duoc tren moi may.
+    -->
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Platforms>x86</Platforms>
+    <PlatformTarget>x86</PlatformTarget>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
