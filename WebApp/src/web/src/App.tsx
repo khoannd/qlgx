@@ -2,13 +2,10 @@ import { useEffect, useRef } from 'react'
 import { AppShell } from './components/ThanhPhanKhung/AppShell'
 import { TabDocs } from './components/ThanhPhanKhung/TabDocs'
 import { useTabDocs } from './tabs/useTabDocs'
-import { GiaDinhList } from './screens/GiaDinhList'
-import { GiaDinhDetail } from './screens/GiaDinhDetail'
-import { GiaoDanList } from './screens/GiaoDanList'
-import { GiaoDanDetail } from './screens/GiaoDanDetail'
-import {
-  danhSachGiaDinh, danhSachGiaoDan, timChiTietGiaDinh, timChiTietGiaoDan,
-} from './api/duLieuMinhHoa'
+import { GiaDinhListPage } from './screens/GiaDinhListPage'
+import { GiaDinhDetailPage } from './screens/GiaDinhDetailPage'
+import { GiaoDanListPage } from './screens/GiaoDanListPage'
+import { GiaoDanDetailPage } from './screens/GiaoDanDetailPage'
 
 /** Chỗ giữ chỗ — màn hình Tổng quan thật sẽ được dựng ở task sau. */
 function TongQuan() {
@@ -24,15 +21,17 @@ function App() {
   // Mở thẻ chi tiết gia đình: khoá thẻ theo mã bản ghi để mở lại đúng bản ghi thì chuyển tiêu
   // điểm thay vì tạo thẻ trùng (tương đương moChiTietGiaDinh của bản mẫu); id null tương ứng
   // nút "Thêm gia đình" nên luôn mở một thẻ nháp mới.
+  // Tiêu đề thẻ chi tiết không còn biết trước tên bản ghi (dữ liệu giờ tải bất đồng bộ từ
+  // API thay vì tra ngay trong mảng tĩnh) — dùng tiêu đề tạm rồi để chính `GiaDinhDetailPage`/
+  // `GiaoDanDetailPage` hiển thị tên thật trong nội dung thẻ khi tải xong.
   function moChiTietGiaDinh(id: string | null) {
-    const duLieu = id ? timChiTietGiaDinh(id) : undefined
     const idThe = id ? `giaDinh:${id}` : `giaDinhMoi:${++moiDem.current}`
     mo({
       id: idThe,
-      tieuDe: duLieu ? `GĐ ${duLieu.tenGiaDinh ?? ''}` : 'Gia đình mới',
+      tieuDe: id ? 'Gia đình' : 'Gia đình mới',
       noiDung: (
-        <GiaDinhDetail
-          duLieu={duLieu}
+        <GiaDinhDetailPage
+          id={id}
           moGiaoDan={moChiTietGiaoDan}
           moDanhSachGiaDinh={moDanhSachGiaDinh}
         />
@@ -41,14 +40,13 @@ function App() {
   }
 
   function moChiTietGiaoDan(id: string | null) {
-    const duLieu = id ? timChiTietGiaoDan(id) : undefined
     const idThe = id ? `giaoDan:${id}` : `giaoDanMoi:${++moiDem.current}`
     mo({
       id: idThe,
-      tieuDe: duLieu ? duLieu.hoTen : 'Giáo dân mới',
+      tieuDe: id ? 'Giáo dân' : 'Giáo dân mới',
       noiDung: (
-        <GiaoDanDetail
-          duLieu={duLieu}
+        <GiaoDanDetailPage
+          id={id}
           moGiaDinh={moChiTietGiaDinh}
           moDanhSachGiaoDan={moDanhSachGiaoDan}
         />
@@ -60,7 +58,7 @@ function App() {
     mo({
       id: 'giaDinhList',
       tieuDe: 'Danh sách gia đình',
-      noiDung: <GiaDinhList rows={danhSachGiaDinh} moGiaDinh={moChiTietGiaDinh} />,
+      noiDung: <GiaDinhListPage moGiaDinh={moChiTietGiaDinh} />,
     })
   }
 
@@ -69,8 +67,7 @@ function App() {
       id: 'giaoDanList',
       tieuDe: 'Danh sách giáo dân',
       noiDung: (
-        <GiaoDanList
-          rows={danhSachGiaoDan}
+        <GiaoDanListPage
           moGiaoDan={moChiTietGiaoDan}
           moGiaDinh={moChiTietGiaDinh}
         />

@@ -571,7 +571,15 @@ input:disabled, textarea:disabled {
 /* --- Bảng dữ liệu --- */
 .table-card {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  /* CHỈ 2 hàng: GxGrid.tsx luôn render đúng `.grid-wrap` rồi tới `.table-foot` (nếu có
+   * ghiChuChan) — không có toolbar nào chen giữa (GxToolbar.tsx tồn tại nhưng chưa nơi nào
+   * import/dùng). Từng khai báo "auto 1fr auto" (3 hàng) cho một toolbar chưa từng được
+   * dựng: với đúng 2 phần tử con, CSS Grid auto-placement xếp `.grid-wrap` vào hàng "auto"
+   * đầu tiên (co theo nội dung, cao đúng vài px) và đẩy `.table-foot` vào hàng "1fr" — lưới
+   * coi như cao 0, mọi dòng dữ liệu bị ag-grid định vị tuyệt đối RA NGOÀI vùng nhìn thấy.
+   * Chỉ lộ ra khi chạy thật trong trình duyệt với dữ liệu thật (bài test dùng jsdom giả lập
+   * kích thước cố định nên không bắt được) — xem task-noi-frontend-report.md. */
+  grid-template-rows: 1fr auto;
   min-height: 0;
   overflow: hidden;
 }

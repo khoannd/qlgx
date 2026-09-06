@@ -1,9 +1,29 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState, type FormEvent } from 'react'
 import type { GiaDinhDetail as GiaDinhDetailDuLieu, GiaoDanListItem, ThanhVien } from '../api/types'
 import { GxField, GxInline } from '../components/GxField'
 import { GxGiaoDanList, menuGiaoDanMacDinh } from '../components/GxGiaoDanList'
 import { GxPicker } from '../components/GxPicker'
 import { DANH_SACH_GIAO_HO_TAM, NGOAI_XU } from '../data/giaoHoTam'
+
+/** Các trường gửi lên `PUT /api/gia-dinh/{id}` — đúng `CapNhatGiaDinhRequest` phía backend,
+ * trừ `giaoHoId` (xem ghi chú tại chỗ dựng payload bên dưới) và `honPhoi` (khối hôn phối
+ * chưa có giao diện sửa ở Phase 1 này nên luôn gửi `null` — nghĩa là "không đụng tới hôn
+ * phối hiện có", KHÔNG phải "xoá hôn phối", xem GiaDinhService.CapNhat). */
+export type YeuCauCapNhatGiaDinh = {
+  tenGiaDinh: string | null
+  giaoHoId: string | null
+  dienThoai: string | null
+  diaChi: string | null
+  soHoKhau: string | null
+  dienGiaDinh: string | null
+  ghiChu: string | null
+  daChuyenXu: boolean
+  ngayChuyen: string | null
+  noiChuyen: string | null
+  khongThongKe: boolean
+  rowVersion: number
+  honPhoi: null
+}
 
 type Props = {
   duLieu?: GiaDinhDetailDuLieu
@@ -12,6 +32,14 @@ type Props = {
   /** "Quay về" và "← Danh sách" mở lại thẻ danh sách gia đình — có thẻ thì chuyển tiêu
    * điểm, chưa có thì mở mới (quy tắc của `useTabDocs`), không quay về thẻ Tổng quan. */
   moDanhSachGiaDinh?: () => void
+  /** Nút "Cập nhật" gọi hàm này với payload đã dựng từ form — container (`GiaDinhDetailPage`)
+   * chịu trách nhiệm gọi `api.giaDinh.capNhat`, xử lý xung đột RowVersion và tải lại. Bản ghi
+   * mới (`duLieu` chưa có `id`) chưa có API tạo mới nên nút bị vô hiệu hoá khi thiếu prop này. */
+  onLuu?: (payload: YeuCauCapNhatGiaDinh) => void
+  dangLuu?: boolean
+  /** Thông báo kết quả lần lưu gần nhất — container quyết định nội dung (thành công/lỗi/xung
+   * đột), component này chỉ hiển thị nguyên văn. */
+  thongBaoLuu?: string | null
 }
 
 const rong = (): GiaDinhDetailDuLieu => ({
@@ -46,9 +74,12 @@ function tuThanhVien(tv: ThanhVien, giaDinhId: string): GiaoDanListItem {
  * nút dưới cùng. Trường "Ngày chuyển"/"Nơi chuyển" chỉ dựng khi tick "Đã chuyển đi xứ khác",
  * và bị BỎ HẲN khỏi DOM lúc ẩn (không chỉ gắn `hidden`) để khớp `queryByLabelText` khi test.
  */
-export function GiaDinhDetail({ duLieu, moGiaoDan, moDanhSachGiaDinh }: Props) {
+export function GiaDinhDetail({
+  duLieu, moGiaoDan, moDanhSachGiaDinh, onLuu, dangLuu, thongBaoLuu,
+}: Props) {
   const f = duLieu ?? rong()
   const moi = !duLieu?.id
+  const formRef = useRef<HTMLFormElement>(null)
 
   const [daChuyenXu, setDaChuyenXu] = useState(f.daChuyenXu)
   const [giaoHo, setGiaoHo] = useState<string>(f.giaoHoId ?? NGOAI_XU)
@@ -79,8 +110,37 @@ export function GiaDinhDetail({ duLieu, moGiaoDan, moDanhSachGiaDinh }: Props) {
     [moGiaoDan],
   )
 
+  // Dựng payload từ form (chủ yếu là input không kiểm soát — defaultValue) rồi giao cho
+  // container qua onLuu; container gọi API thật, xử lý thành công/lỗi/xung đột RowVersion.
+  // giaoHoId CỐ TÌNH giữ nguyên giá trị đã tải (f.giaoHoId), KHÔNG suy từ <select> "Giáo họ":
+  // combobox đó tạm liệt kê TÊN giáo họ cứng (`DANH_SACH_GIAO_HO_TAM`, xem file đó) vì backend
+  // chưa có danh mục giáo họ thật kèm Id — gửi nhầm tên lên chỗ backend cần Guid sẽ hỏng dữ
+  // liệu, nên màn hình này chưa cho đổi giáo họ qua API cho tới khi có danh mục thật.
+  function xuLySubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!onLuu || !formRef.current) return
+    const fd = new FormData(formRef.current)
+    const chuoi = (ten: string) => (fd.get(ten) as string | null)?.trim() || null
+
+    onLuu({
+      tenGiaDinh: chuoi('tenGiaDinh'),
+      giaoHoId: f.giaoHoId,
+      dienThoai: chuoi('dienThoai'),
+      diaChi: chuoi('diaChi'),
+      soHoKhau: chuoi('soHoKhau'),
+      dienGiaDinh: chuoi('dienGiaDinh'),
+      ghiChu: chuoi('ghiChu'),
+      daChuyenXu,
+      ngayChuyen: daChuyenXu ? chuoi('ngayChuyen') : null,
+      noiChuyen: daChuyenXu ? chuoi('noiChuyen') : null,
+      khongThongKe: fd.get('khongThongKe') === 'on',
+      rowVersion: f.rowVersion,
+      honPhoi: null,
+    })
+  }
+
   return (
-    <section className="page detail-page">
+    <form className="page detail-page" ref={formRef} onSubmit={xuLySubmit}>
       <div className="page-head detail-head">
         <button type="button" className="btn btn-sm btn-quiet" onClick={() => moDanhSachGiaDinh?.()}>
           ← Danh sách
@@ -99,7 +159,7 @@ export function GiaDinhDetail({ duLieu, moGiaoDan, moDanhSachGiaDinh }: Props) {
         <div className="card glass">
           <div className="card-head"><h2>Thông tin gia đình</h2><span className="eyebrow">Sổ gia đình</span></div>
           <GxField label="Mã gia đình" id="gdinh-ma"
-            extra={<><GxInline>Số hộ khẩu</GxInline><input aria-label="Số hộ khẩu" type="text" defaultValue={f.soHoKhau ?? ''} /></>}>
+            extra={<><GxInline>Số hộ khẩu</GxInline><input aria-label="Số hộ khẩu" name="soHoKhau" type="text" defaultValue={f.soHoKhau ?? ''} /></>}>
             <input id="gdinh-ma" type="text" value={moi ? '(tự sinh khi lưu)' : String(f.maGiaDinhCu)} disabled style={{ maxWidth: 150 }} />
           </GxField>
           <GxField label="Người nam" id="gdinh-nguoinam"
@@ -111,7 +171,7 @@ export function GiaDinhDetail({ duLieu, moGiaoDan, moDanhSachGiaDinh }: Props) {
             <GxPicker id="gdinh-nguoinu" value={nguoiNu ? `${nguoiNu.tenThanh ?? ''} ${nguoiNu.hoTen}`.trim() : null} />
           </GxField>
           <GxField label="Tên gia đình" id="gdinh-ten">
-            <input id="gdinh-ten" type="text" defaultValue={f.tenGiaDinh ?? ''} />
+            <input id="gdinh-ten" name="tenGiaDinh" type="text" defaultValue={f.tenGiaDinh ?? ''} />
           </GxField>
           <GxField label="Giáo họ" id="gdinh-giaoho">
             <select id="gdinh-giaoho" value={giaoHo} onChange={(e) => setGiaoHo(e.target.value)}>
@@ -123,18 +183,18 @@ export function GiaDinhDetail({ duLieu, moGiaoDan, moDanhSachGiaDinh }: Props) {
             extra={
               <>
                 <GxInline>Diện</GxInline>
-                <select aria-label="Diện gia đình" defaultValue={f.dienGiaDinh ?? ''}>
+                <select aria-label="Diện gia đình" name="dienGiaDinh" defaultValue={f.dienGiaDinh ?? ''}>
                   {DIEN_GIA_DINH.map((d) => <option key={d} value={d}>{d || 'Không thuộc diện nào'}</option>)}
                 </select>
               </>
             }>
-            <input id="gdinh-dienthoai" type="text" defaultValue={f.dienThoai ?? ''} style={{ maxWidth: 150 }} />
+            <input id="gdinh-dienthoai" name="dienThoai" type="text" defaultValue={f.dienThoai ?? ''} style={{ maxWidth: 150 }} />
           </GxField>
           <GxField label="Địa chỉ" id="gdinh-diachi" extra={<button type="button" className="btn btn-sm btn-quiet">Bản đồ</button>}>
-            <input id="gdinh-diachi" type="text" defaultValue={f.diaChi ?? ''} />
+            <input id="gdinh-diachi" name="diaChi" type="text" defaultValue={f.diaChi ?? ''} />
           </GxField>
           <GxField label="Ghi chú" id="gdinh-ghichu">
-            <textarea id="gdinh-ghichu" defaultValue={f.ghiChu ?? ''} placeholder="Ghi chú nội bộ về gia đình…" />
+            <textarea id="gdinh-ghichu" name="ghiChu" defaultValue={f.ghiChu ?? ''} placeholder="Ghi chú nội bộ về gia đình…" />
           </GxField>
           <GxField label="">
             <label className="toggle">
@@ -142,17 +202,17 @@ export function GiaDinhDetail({ duLieu, moGiaoDan, moDanhSachGiaDinh }: Props) {
               Đã chuyển đi xứ khác
             </label>
             <label className="toggle">
-              <input type="checkbox" defaultChecked={f.khongThongKe} />
+              <input type="checkbox" name="khongThongKe" defaultChecked={f.khongThongKe} />
               Không tính vào thống kê
             </label>
           </GxField>
           {daChuyenXu && (
             <>
               <GxField label="Ngày chuyển" id="gdinh-ngaychuyen">
-                <input id="gdinh-ngaychuyen" type="date" defaultValue={f.ngayChuyen ?? ''} style={{ maxWidth: 190 }} />
+                <input id="gdinh-ngaychuyen" name="ngayChuyen" type="date" defaultValue={f.ngayChuyen ?? ''} style={{ maxWidth: 190 }} />
               </GxField>
               <GxField label="Nơi chuyển" id="gdinh-noichuyen">
-                <input id="gdinh-noichuyen" type="text" defaultValue={f.noiChuyen ?? ''} placeholder="Giáo xứ / địa phương chuyển đến" />
+                <input id="gdinh-noichuyen" name="noiChuyen" type="text" defaultValue={f.noiChuyen ?? ''} placeholder="Giáo xứ / địa phương chuyển đến" />
               </GxField>
             </>
           )}
@@ -180,13 +240,17 @@ export function GiaDinhDetail({ duLieu, moGiaoDan, moDanhSachGiaDinh }: Props) {
       />
 
       <div className="cmdbar">
-        <span className="hint">Thay đổi chưa được lưu</span>
+        <span className="hint" role={thongBaoLuu ? 'status' : undefined}>
+          {thongBaoLuu ?? (moi ? 'Chưa hỗ trợ tạo mới gia đình qua web ở giai đoạn này' : 'Thay đổi chưa được lưu')}
+        </span>
         <div className="spacer" />
         <button type="button" className="btn">In lý lịch cá nhân</button>
         <button type="button" className="btn">In phiếu gia đình</button>
         <button type="button" className="btn btn-quiet" onClick={() => moDanhSachGiaDinh?.()}>Quay về</button>
-        <button type="button" className="btn btn-primary">Cập nhật</button>
+        <button type="submit" className="btn btn-primary" disabled={moi || !onLuu || dangLuu}>
+          {dangLuu ? 'Đang lưu…' : 'Cập nhật'}
+        </button>
       </div>
-    </section>
+    </form>
   )
 }
