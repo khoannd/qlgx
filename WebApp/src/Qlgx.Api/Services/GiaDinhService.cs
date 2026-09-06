@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
 using Qlgx.Domain;
+using Qlgx.Domain.Entities;
 
 namespace Qlgx.Api.Services;
 
@@ -32,6 +33,137 @@ public class GiaDinhService(QlgxDbContext db)
                 h.KhongThongKe, h.HonPhoi?.HonPhoiId,
                 h.HonPhoi?.NgayHonPhoi?.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture));
         }).ToList();
+    }
+
+    public async Task<GiaDinhDetailDto?> LayChiTiet(Guid id, CancellationToken ct)
+    {
+        var g = await db.GiaDinh
+            .Include(x => x.ThanhVien).ThenInclude(tv => tv.GiaoDan)
+            .SingleOrDefaultAsync(x => x.Id == id && !x.DaXoa, ct);
+        if (g is null) return null;
+
+        var honPhoi = await LayHonPhoiCuaGiaDinh(g.ThanhVien, ct);
+
+        return new GiaDinhDetailDto(
+            g.Id, g.MaGiaDinhCu, g.MaGiaDinhRieng, g.TenGiaDinh, g.GiaoHoId,
+            g.DienThoai, g.DiaChi, g.SoHoKhau, g.DienGiaDinh, g.GhiChu,
+            g.DaChuyenXu, g.NgayChuyen, g.NoiChuyen, g.KhongThongKe, g.RowVersion,
+            g.ThanhVien
+                .OrderBy(tv => tv.VaiTro).ThenBy(tv => tv.GiaoDan!.NgaySinh)
+                .Select(tv => new ThanhVienDto(
+                    tv.GiaoDanId, (int)tv.VaiTro, tv.ChuHo,
+                    tv.GiaoDan!.TenThanh, tv.GiaoDan.HoTen, tv.GiaoDan.Phai,
+                    tv.GiaoDan.NgaySinh, tv.GiaoDan.QuaDoi, tv.GiaoDan.DaXoa))
+                .ToArray(),
+            honPhoi);
+    }
+
+    /// <summary>Trả về false khi bản ghi đã bị người khác sửa từ lúc màn hình được mở.</summary>
+    public async Task<bool?> CapNhat(Guid id, CapNhatGiaDinhRequest yeuCau, CancellationToken ct)
+    {
+        var g = await db.GiaDinh.Include(x => x.ThanhVien)
+            .SingleOrDefaultAsync(x => x.Id == id && !x.DaXoa, ct);
+        if (g is null) return null;
+
+        db.Entry(g).Property(x => x.RowVersion).OriginalValue = yeuCau.RowVersion;
+
+        g.TenGiaDinh = yeuCau.TenGiaDinh;
+        g.GiaoHoId = yeuCau.GiaoHoId;
+        g.DienThoai = yeuCau.DienThoai;
+        g.DiaChi = yeuCau.DiaChi;
+        g.SoHoKhau = yeuCau.SoHoKhau;
+        g.DienGiaDinh = yeuCau.DienGiaDinh;
+        g.GhiChu = yeuCau.GhiChu;
+        g.DaChuyenXu = yeuCau.DaChuyenXu;
+        g.NgayChuyen = yeuCau.NgayChuyen;
+        g.NoiChuyen = yeuCau.NoiChuyen;
+        g.KhongThongKe = yeuCau.KhongThongKe;
+
+        // yeuCau.HonPhoi == null nghĩa là màn hình không gửi khối hôn phối lên — "không gửi
+        // thì không sửa", cố tình không đụng gì tới hôn phối hiện có (không phải xoá).
+        if (yeuCau.HonPhoi is { } honPhoiYeuCau)
+            await GhiHonPhoi(g, honPhoiYeuCau, ct);
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            return true;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Gia đình được coi là "đã có hôn phối" khi chồng hoặc vợ có mặt trong bảng nối
+    /// GiaoDanHonPhoi — giống hệt định nghĩa dùng ở lưới danh sách (XayDungTruyVan).
+    /// </summary>
+    private async Task<HonPhoiDto?> LayHonPhoiCuaGiaDinh(List<ThanhVienGiaDinh> thanhVien, CancellationToken ct)
+    {
+        var idChongVo = thanhVien
+            .Where(tv => tv.VaiTro == VaiTroGiaDinh.Chong || tv.VaiTro == VaiTroGiaDinh.Vo)
+            .Select(tv => tv.GiaoDanId)
+            .ToArray();
+        if (idChongVo.Length == 0) return null;
+
+        return await db.HonPhoi
+            .Where(h => db.GiaoDanHonPhoi.Any(gdhp => gdhp.HonPhoiId == h.Id && idChongVo.Contains(gdhp.GiaoDanId)))
+            .Select(h => new HonPhoiDto(h.Id, h.SoHonPhoi, h.NgayHonPhoi, h.NoiHonPhoi,
+                h.LinhMucChung, h.NguoiChung1, h.NguoiChung2, h.CachThucHonPhoi, h.GhiChu, h.RowVersion))
+            .SingleOrDefaultAsync(ct);
+    }
+
+    /// <summary>
+    /// Tạo mới bản ghi HonPhoi (kèm nối GiaoDanHonPhoi tới chồng/vợ hiện có, bỏ qua bên nào
+    /// chưa có) nếu gia đình chưa có hôn phối, hoặc cập nhật bản ghi đã có kèm kiểm tra
+    /// RowVersion riêng của nó — đụng phiên bản thì SaveChangesAsync ném
+    /// DbUpdateConcurrencyException giống hệt cách CapNhat xử lý bản ghi gia đình.
+    /// </summary>
+    private async Task GhiHonPhoi(GiaDinh g, CapNhatHonPhoiRequest yc, CancellationToken ct)
+    {
+        var chongId = g.ThanhVien.FirstOrDefault(tv => tv.VaiTro == VaiTroGiaDinh.Chong)?.GiaoDanId;
+        var voId = g.ThanhVien.FirstOrDefault(tv => tv.VaiTro == VaiTroGiaDinh.Vo)?.GiaoDanId;
+        var idChongVo = new[] { chongId, voId }.Where(x => x is not null).Select(x => x!.Value).ToArray();
+
+        var honPhoi = idChongVo.Length == 0 ? null : await db.HonPhoi
+            .Where(h => db.GiaoDanHonPhoi.Any(gdhp => gdhp.HonPhoiId == h.Id && idChongVo.Contains(gdhp.GiaoDanId)))
+            .SingleOrDefaultAsync(ct);
+
+        if (honPhoi is null)
+        {
+            honPhoi = new HonPhoi
+            {
+                GiaoXuId = g.GiaoXuId,
+                // Bản ghi tạo trực tiếp trên web, không qua chuyển đổi từ Access, nên không có
+                // mã cũ thật — tự sinh số kế tiếp trong phạm vi giáo xứ để không đụng ràng
+                // buộc duy nhất (GiaoXuId, MaHonPhoiCu). Quyết định tự đưa ra vì brief không
+                // nói rõ; xem task-7-report.md.
+                MaHonPhoiCu = (await db.HonPhoi.MaxAsync(h => (int?)h.MaHonPhoiCu, ct) ?? 0) + 1,
+            };
+            db.HonPhoi.Add(honPhoi);
+
+            var soThuTu = 1;
+            if (chongId is { } cId)
+                db.GiaoDanHonPhoi.Add(new GiaoDanHonPhoi
+                    { GiaoXuId = g.GiaoXuId, HonPhoi = honPhoi, GiaoDanId = cId, SoThuTu = soThuTu++ });
+            if (voId is { } vId)
+                db.GiaoDanHonPhoi.Add(new GiaoDanHonPhoi
+                    { GiaoXuId = g.GiaoXuId, HonPhoi = honPhoi, GiaoDanId = vId, SoThuTu = soThuTu });
+        }
+        else
+        {
+            db.Entry(honPhoi).Property(x => x.RowVersion).OriginalValue = yc.RowVersion;
+        }
+
+        honPhoi.SoHonPhoi = yc.SoHonPhoi;
+        honPhoi.NgayHonPhoi = yc.NgayHonPhoi;
+        honPhoi.NoiHonPhoi = yc.NoiHonPhoi;
+        honPhoi.LinhMucChung = yc.LinhMucChung;
+        honPhoi.NguoiChung1 = yc.NguoiChung1;
+        honPhoi.NguoiChung2 = yc.NguoiChung2;
+        honPhoi.CachThucHonPhoi = yc.CachThucHonPhoi;
+        honPhoi.GhiChu = yc.GhiChu;
     }
 
     /// <summary>Tên hiển thị trên lưới là "Tên thánh + Họ tên", null nếu gia đình chưa có người này.</summary>

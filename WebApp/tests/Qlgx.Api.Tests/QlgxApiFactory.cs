@@ -18,7 +18,7 @@ public class QlgxApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public async Task InitializeAsync()
     {
         _goc = Environment.GetEnvironmentVariable("QLGX_TEST_PG")
-            ?? "Host=localhost;Username=postgres;Password=postgres";
+            ?? "Host=localhost;Username=postgres;Password=DAT-QUA-BIEN-QLGX_TEST_PG";
 
         await using (var kn = new NpgsqlConnection(_goc + ";Database=postgres"))
         {
