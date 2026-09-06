@@ -17,8 +17,13 @@ public class QlgxApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public async Task InitializeAsync()
     {
+        // KHÔNG ghi mật khẩu thật vào mã nguồn — file này nằm trong git. Bộ test cần một
+        // PostgreSQL thật nên thà báo lỗi rõ ràng còn hơn âm thầm thử một mật khẩu đoán được.
         _goc = Environment.GetEnvironmentVariable("QLGX_TEST_PG")
-            ?? "Host=localhost;Username=postgres;Password=DAT-QUA-BIEN-QLGX_TEST_PG";
+            ?? throw new InvalidOperationException(
+                "Chưa đặt biến môi trường QLGX_TEST_PG. Bộ test cần một PostgreSQL thật. " +
+                "Ví dụ: setx QLGX_TEST_PG \"Host=localhost;Username=postgres;Password=<mật khẩu của bạn>\" " +
+                "rồi mở lại cửa sổ dòng lệnh.");
 
         await using (var kn = new NpgsqlConnection(_goc + ";Database=postgres"))
         {

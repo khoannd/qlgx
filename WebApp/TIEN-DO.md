@@ -8,8 +8,9 @@ Nhánh làm việc: **`webapp-phase-1`** (tách từ `master`).
 1. `git checkout webapp-phase-1`
 2. Kiểm tra biến môi trường kết nối CSDL còn không:
    `echo %QLGX_TEST_PG%` (PowerShell: `$env:QLGX_TEST_PG`)
-   Giá trị đúng: `Host=localhost;Username=postgres;Password=DAT-QUA-BIEN-QLGX_TEST_PG`
-   Nếu mất, đặt lại: `setx QLGX_TEST_PG "Host=localhost;Username=postgres;Password=DAT-QUA-BIEN-QLGX_TEST_PG"`
+   Định dạng: `Host=localhost;Username=postgres;Password=<mật khẩu PostgreSQL của bạn>`
+   Nếu mất, đặt lại: `setx QLGX_TEST_PG "Host=localhost;Username=postgres;Password=<mật khẩu>"`
+   **Không ghi mật khẩu thật vào bất kỳ file nào trong repo** — chỉ đặt qua biến môi trường.
    (biến đặt bằng `setx` chỉ có hiệu lực ở cửa sổ dòng lệnh **mới mở**)
 3. Kiểm tra dịch vụ `postgresql-x64-17` đã chạy chưa: `sc query postgresql-x64-17`
 4. Chạy toàn bộ test để xác nhận môi trường lành lặn:
@@ -34,7 +35,7 @@ Nhánh làm việc: **`webapp-phase-1`** (tách từ `master`).
 |---|---|
 | .NET SDK | **10.0.400** (đã nâng từ 9; toàn bộ project target `net10.0`) |
 | Node / npm | v22.17.1 / 10.9.2 |
-| PostgreSQL | **17.5**, dịch vụ `postgresql-x64-17`, user `postgres`, mật khẩu `DAT-QUA-BIEN-QLGX_TEST_PG` |
+| PostgreSQL | **17.5**, dịch vụ `postgresql-x64-17`, user `postgres`; mật khẩu lấy từ biến `QLGX_TEST_PG`, không ghi trong repo |
 | `psql` | ở `C:\Program Files\PostgreSQL\17\bin`, **không có trong PATH** |
 
 ## Đã hoàn thành
@@ -82,8 +83,11 @@ Ghi lại vì chúng đảo ngược quyết định ban đầu và ràng buộc
 
 ## Việc nhỏ còn nợ
 
-- `WebApp/tests/Qlgx.Api.Tests/QlgxApiFactory.cs`: chuỗi kết nối dự phòng vẫn ghi
-  `Password=postgres`, chỉ dùng khi thiếu biến `QLGX_TEST_PG`. Nên sửa cho khớp mật khẩu thật.
+- **Mật khẩu CSDL không bao giờ được ghi vào repo.** Cả hai bộ test và factory design-time nay
+  đều bắt buộc lấy từ biến `QLGX_TEST_PG`, thiếu thì báo lỗi rõ ràng thay vì đoán mật khẩu.
+  Trước đây mật khẩu thật đã lỡ lọt vào ba commit cục bộ (`67093c8`, `8e54c3b`, `319e5a2`) —
+  nhánh này **chưa được đẩy lên GitHub** nên chưa rò ra ngoài, nhưng cần dọn lịch sử trước khi
+  push lần đầu, hoặc đổi mật khẩu PostgreSQL.
 - Màn hình chi tiết giáo dân: thông tin liên hệ (điện thoại, email, địa chỉ) hiện nằm chìm
   dưới dạng nhãn phụ trong khối "Thông tin khác" — cần tách thành nhóm riêng cho dễ thấy.
 - Danh sách các việc nhỏ khác nằm ở các dòng `minor (deferred)` trong sổ theo dõi.
