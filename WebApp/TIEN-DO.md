@@ -14,8 +14,8 @@ Nhánh làm việc: **`webapp-phase-1`** (tách từ `master`).
    (biến đặt bằng `setx` chỉ có hiệu lực ở cửa sổ dòng lệnh **mới mở**)
 3. Kiểm tra dịch vụ `postgresql-x64-17` đã chạy chưa: `sc query postgresql-x64-17`
 4. Chạy toàn bộ test để xác nhận môi trường lành lặn:
-   - Backend: `dotnet test WebApp/Qlgx.sln` → phải ra **114/114 xanh**
-   - Front-end: `cd WebApp/src/web && npm test -- --run` → phải ra **72/72 xanh**
+   - Backend: `dotnet test WebApp/Qlgx.sln` → phải ra **133/133 xanh**
+   - Front-end: `cd WebApp/src/web && npm test -- --run` → phải ra **87/87 xanh**
 5. Sổ theo dõi chi tiết từng task, từng quyết định:
    `.superpowers/sdd/2026-09-06-qlgx-web-phase-1/progress.md`
    (thư mục này nằm ngoài git, nhưng vẫn còn trên đĩa sau khi khởi động lại)
@@ -81,7 +81,20 @@ Công cụ chạy lại được nhiều lần mà không tạo bản ghi trùng
 | — | Nối front-end vào API thật, bỏ dữ liệu giả | 10 |
 | 17 | **Đủ 26 bảng Access** — 19 bảng còn lại, chia ba nhóm | 14 |
 
-Tổng: **114 test backend + 72 test front-end**, tất cả xanh.
+| — | Hôn phối, tận hiến, hội đoàn: 3 tab đọc/ghi thật | 32 |
+| — | Thao tác ghi giáo dân: tạo mới, xoá, kiểm tra nghiệp vụ máy chủ | 34 |
+
+Tổng: **133 test backend + 87 test front-end**, tất cả xanh.
+
+### Quy tắc nghiệp vụ giáo dân CHƯA tái hiện (mục 19 `can-review-sau.md`)
+
+Sáu quy tắc trong spec chưa có ở bản web — không phải quyết định có chủ đích, là việc còn nợ:
+- **Rule 8** (cảnh báo lệch giáo họ) và **Rule 15** (tuổi cha/mẹ ≥ con + 15): bị chặn vì
+  Tên Cha/Mẹ và Giáo họ hiện là ô văn bản/danh mục tạm, chưa có **picker chọn giáo dân thật**.
+  Picker này cũng là thứ màn hình gia đình cần (chọn Người nam/Người nữ) → làm chung.
+- **Rule 18** (không bỏ tick "Có gia đình" khi còn hôn phối), **Rule 22/23** (tự sửa
+  `DaCoGiaDinh` của vợ/chồng còn lại khi tick Qua đời): cần đọc `HonPhoi` — làm sau picker.
+- **Rule 11** + khối chuyển xứ + tab Giáo lý: các trường chưa có trong request tạo/sửa.
 
 ### Dữ liệu mẫu tự tạo trong `qlgx_thu` — KHÔNG phải dữ liệu thật
 
