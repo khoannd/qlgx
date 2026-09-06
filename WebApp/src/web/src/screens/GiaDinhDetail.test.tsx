@@ -1,8 +1,18 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { GiaDinhDetail } from './GiaDinhDetail'
-import type { GiaDinhDetail as ChiTiet } from '../api/types'
+import { api } from '../api/client'
+import type { GiaDinhDetail as ChiTiet, GiaoDanTimKiem } from '../api/types'
+
+vi.mock('../api/client', () => ({
+  api: { timKiem: { giaoDan: vi.fn() } },
+}))
+
+const nguoiTim = (p: Partial<GiaoDanTimKiem> = {}): GiaoDanTimKiem => ({
+  id: 'moi1', maGiaoDanCu: 999, tenThanh: 'Phêrô', hoTen: 'Lê Văn Mới', phai: 'Nam',
+  ngaySinh: '1985-01-01', ...p,
+})
 
 const chiTiet = (p: Partial<ChiTiet> = {}): ChiTiet => ({
   id: 'g1', maGiaDinhCu: 12, maGiaDinhRieng: null, tenGiaDinh: 'Nguyễn Văn A',
@@ -80,5 +90,90 @@ describe('GiaDinhDetail', () => {
     // được — tra trực tiếp qua id đã nối với nhãn bằng htmlFor.
     expect(container.querySelector('#gdinh-nguoinam')?.textContent).toContain('Nguyễn Văn A')
     expect(container.querySelector('#gdinh-nguoinu')?.textContent).toContain('Trần Thị B')
+  })
+
+  it('chon nguoi moi cho Nguoi nam qua GxPicker thi goi onGanVoChong(0, ...)', async () => {
+    vi.mocked(api.timKiem.giaoDan).mockResolvedValue([nguoiTim()])
+    const onGanVoChong = vi.fn()
+    const nguoiDung = userEvent.setup()
+    render(<GiaDinhDetail duLieu={chiTiet()} onGanVoChong={onGanVoChong} />)
+
+    // Người nam là ô picker ĐẦU TIÊN của form.
+    await nguoiDung.click(screen.getAllByTitle('Chọn từ danh sách giáo dân')[0])
+    await nguoiDung.type(screen.getByPlaceholderText('Gõ tên hoặc mã cũ để tìm…'), 'Mới')
+    await nguoiDung.click(await screen.findByText(/Lê Văn Mới/))
+
+    expect(onGanVoChong).toHaveBeenCalledWith(0, nguoiTim())
+  })
+
+  it('bam Bo chon o Nguoi nu (dang co nguoi) thi goi onBoChonVoChong(1)', async () => {
+    const onBoChonVoChong = vi.fn()
+    const nguoiDung = userEvent.setup()
+    render(<GiaDinhDetail duLieu={chiTiet({
+      thanhVien: [
+        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p2', vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
+      ],
+    })} onBoChonVoChong={onBoChonVoChong} />)
+
+    // Thứ tự các nút "Bỏ chọn": Người nam, Người nữ, (rồi ô thêm thành viên).
+    await nguoiDung.click(screen.getAllByTitle('Bỏ chọn')[1])
+
+    expect(onBoChonVoChong).toHaveBeenCalledWith(1)
+  })
+
+  it('them mot thanh vien: chon nguoi + vai tro roi bam Them vao gia dinh', async () => {
+    vi.mocked(api.timKiem.giaoDan).mockResolvedValue([nguoiTim()])
+    const onThemThanhVien = vi.fn()
+    const nguoiDung = userEvent.setup()
+    render(<GiaDinhDetail duLieu={chiTiet()} onThemThanhVien={onThemThanhVien} />)
+
+    const nutChon = screen.getAllByTitle('Chọn từ danh sách giáo dân')
+    // Không có Người nam/nữ nên chỉ có MỘT picker: ô thêm thành viên.
+    await nguoiDung.click(nutChon[nutChon.length - 1])
+    await nguoiDung.type(screen.getByPlaceholderText('Gõ tên hoặc mã cũ để tìm…'), 'Mới')
+    await nguoiDung.click(await screen.findByText(/Lê Văn Mới/))
+
+    await nguoiDung.selectOptions(screen.getByLabelText('Vai trò thành viên mới'), '4')
+    await nguoiDung.click(screen.getByRole('button', { name: 'Thêm vào gia đình' }))
+
+    expect(onThemThanhVien).toHaveBeenCalledWith(nguoiTim(), 4)
+  })
+
+  it('muc menu Xoa khoi gia dinh goi onXoaThanhVien voi dung vaiTro', async () => {
+    const onXoaThanhVien = vi.fn()
+    render(<GiaDinhDetail duLieu={chiTiet({
+      thanhVien: [
+        { giaoDanId: 'p3', vaiTro: 4, chuHo: false, tenThanh: 'Anna', hoTen: 'Nguyễn Thị Cha Me', phai: 'Nữ', ngaySinh: '1950-01-01', quaDoi: false, daXoa: false },
+      ],
+    })} onXoaThanhVien={onXoaThanhVien} />)
+
+    const dong = (await screen.findByText('Nguyễn Thị Cha Me')).closest('.ag-row')!
+    fireEvent.contextMenu(dong)
+    await userEvent.click(await screen.findByText('Xoá khỏi gia đình'))
+
+    expect(onXoaThanhVien).toHaveBeenCalledWith('p3', 4)
+  })
+
+  it('gia dinh moi: bam Tao gia dinh khi chua nhap ten thi bao loi, khong goi onTaoMoi', async () => {
+    const onTaoMoi = vi.fn()
+    const baoLoi = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    render(<GiaDinhDetail onTaoMoi={onTaoMoi} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tạo gia đình' }))
+
+    expect(baoLoi).toHaveBeenCalledWith('Hãy nhập tên gia đình!')
+    expect(onTaoMoi).not.toHaveBeenCalled()
+    baoLoi.mockRestore()
+  })
+
+  it('gia dinh moi: nhap ten roi bam Tao gia dinh thi goi onTaoMoi dung payload', async () => {
+    const onTaoMoi = vi.fn()
+    render(<GiaDinhDetail onTaoMoi={onTaoMoi} />)
+
+    await userEvent.type(screen.getByLabelText('Tên gia đình'), 'Gia đình Thử Nghiệm')
+    await userEvent.click(screen.getByRole('button', { name: 'Tạo gia đình' }))
+
+    expect(onTaoMoi).toHaveBeenCalledWith({ tenGiaDinh: 'Gia đình Thử Nghiệm', giaoHoId: null })
   })
 })

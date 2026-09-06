@@ -66,6 +66,13 @@ const thamSo = (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: bool
  * trong thân yêu cầu để lưu bất chấp cảnh báo. */
 export type KetQuaLuuGiaoDan = { id: string | null; canhBao: string[] }
 
+/** Ánh xạ 1-1 với `KetQuaThemThanhVienDto` — dùng chung cho cả "Thêm thành viên"
+ * (`POST /api/gia-dinh/{id}/thanh-vien`) lẫn "Gán vợ chồng" (`PUT .../vo-chong/{vaiTro}`).
+ * `giaoDanId === null` nghĩa là CHƯA lưu — `canhBao` chứa hoặc (a) cảnh báo nghiệp vụ thật cần
+ * xác nhận (gửi lại `boQuaCanhBao: true`), hoặc (b) một câu cảnh báo CỐ ĐỊNH (sentinel) yêu cầu
+ * client quyết định thêm — xem `lib/canhBaoGiaDinh.ts` để phân biệt hai loại này. */
+export type KetQuaGhiGiaDinh = { giaoDanId: string | null; canhBao: string[] }
+
 export const api = {
   giaDinh: {
     danhSach: (giaoHoId?: string, chiKhongThongKe?: boolean) =>
@@ -79,6 +86,19 @@ export const api = {
      * nào khác giáo dân). */
     xoa: (id: string, vinhVien: boolean) =>
       goi<void>(`/api/gia-dinh/${id}?vinhVien=${vinhVien}`, { method: 'DELETE' }),
+    /** Tạo một gia đình mới trống (chỉ Tên gia đình + Giáo họ) — xem `GiaDinhService.Tao`. */
+    tao: (than: unknown) =>
+      goi<{ id: string; maGiaDinhCu: number }>('/api/gia-dinh', { method: 'POST', body: JSON.stringify(than) }),
+    /** Gán/đổi Người nam (vaiTro=0) hay Người nữ (vaiTro=1) — xem `GiaDinhService.GanVoChong`. */
+    ganVoChong: (id: string, vaiTro: 0 | 1, than: unknown) =>
+      goi<KetQuaGhiGiaDinh>(`/api/gia-dinh/${id}/vo-chong/${vaiTro}`, { method: 'PUT', body: JSON.stringify(than) }),
+    /** Thêm một người vào lưới "Thành viên khác" — xem `GiaDinhService.ThemThanhVien`. */
+    themThanhVien: (id: string, than: unknown) =>
+      goi<KetQuaGhiGiaDinh>(`/api/gia-dinh/${id}/thanh-vien`, { method: 'POST', body: JSON.stringify(than) }),
+    /** Xoá VĨNH VIỄN một thành viên (kể cả Người nam/nữ nếu vaiTro=0/1) — xem
+     * can-review-sau.md mục 5. */
+    xoaThanhVien: (id: string, giaoDanId: string, vaiTro: number) =>
+      goi<void>(`/api/gia-dinh/${id}/thanh-vien/${giaoDanId}/${vaiTro}`, { method: 'DELETE' }),
   },
   giaoDan: {
     danhSach: (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: boolean) =>

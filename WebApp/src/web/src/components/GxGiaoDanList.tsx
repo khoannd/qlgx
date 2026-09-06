@@ -61,8 +61,15 @@ function GxGiaoDanListTrong(
       columnDefs={columnDefs}
       rowData={rows}
       layId={(d) => d.id}
-      toDo={(d) => d.quaDoi || d.daChuyenDi || d.lapGd}
-      ghiChuChan="Gạch ngang đỏ: đã qua đời, chuyển xứ hoặc lập gia đình riêng"
+      // Bản desktop KHÔNG gạch ngang dòng nào trên lưới GIÁO DÂN (GxGiaoDanList.FormattingRow
+      // để trống — xem can-review-sau.md mục 7): gạch ngang chỉ có ý nghĩa ở lưới GIA ĐÌNH
+      // (cột GACH nội bộ của frmGiaDinh, dùng cho lưới "Thành viên khác" — quanHeGiaDinh=true).
+      // Cố ý bỏ `lapGd` khỏi điều kiện (khác một bản nháp trước đó của web) — xem quyết định
+      // ghi ở can-review-sau.md: gạch ngang người "đã lập gia đình" gây hiểu nhầm nghiêm trọng
+      // (phần lớn giáo dân trưởng thành đã lập gia đình), trong khi quaDoi/daChuyenDi đúng
+      // nghĩa "không còn sinh hoạt" và mặc định đã bị lọc ẩn khỏi lưới.
+      toDo={quanHeGiaDinh ? (d) => d.quaDoi || d.daChuyenDi : undefined}
+      ghiChuChan={quanHeGiaDinh ? 'Gạch ngang đỏ: đã qua đời hoặc đã chuyển xứ' : undefined}
       {...phanConLai}
     />
   )

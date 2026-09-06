@@ -58,12 +58,13 @@ export const cotGiaoDan: ColDef<GiaoDanListItem>[] = [
   { field: 'noiThemSuc', headerName: 'Nơi thêm sức', width: 140 },
 ]
 
-/** Cột chỉ có khi lưới nhúng trong form gia đình — frmGiaDinh chèn ở vị trí 0. */
+/** Cột chỉ có khi lưới nhúng trong form gia đình — frmGiaDinh chèn ở vị trí 0. Bản desktop có
+ * đây là cột dropdown SỬA ĐƯỢC tại chỗ (`Memory.GetQuanHeList()`) — bản web CHƯA có endpoint
+ * "sửa vai trò tại chỗ" (chỉ có Thêm/Xoá, xem báo cáo backend "ghi gia đình" mục Quy tắc spec
+ * CHƯA tái hiện), nên cột này tạm CHỈ ĐỌC, hiển thị nhãn từ `lib/vaiTroGiaDinh.ts` — đổi vai trò
+ * qua xoá rồi thêm lại với vai trò mới. */
 export const cotQuanHeGiaDinh: ColDef<GiaoDanListItem> = {
   field: 'quanHe',
   headerName: 'Quan hệ GĐ',
   width: 130,
-  editable: true,
-  cellEditor: 'agSelectCellEditor',
-  cellEditorParams: { values: ['Chồng', 'Vợ', 'Con'] },
 }

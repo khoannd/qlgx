@@ -47,13 +47,32 @@ describe('GxGiaoDanList', () => {
     expect(onMo).toHaveBeenCalledWith(expect.objectContaining({ maGiaoDanCu: 4412 }))
   })
 
-  it('to do dong cua nguoi da qua doi, chuyen xu hoac lap gia dinh rieng', async () => {
+  it('man hinh danh sach giao dan KHONG gach ngang dong nao (dung ban desktop: FormattingRow rong)', async () => {
     const { container } = render(
-      <GxGiaoDanList rows={[nguoi({ quaDoi: true }), nguoi({ id: 'a2', maGiaoDanCu: 1, quaDoi: false })]} />,
+      <GxGiaoDanList rows={[nguoi({ quaDoi: true }), nguoi({ id: 'a2', maGiaoDanCu: 1, lapGd: true })]} />,
     )
 
     await screen.findByText('Mã GD')
-    await waitFor(() => expect(container.querySelectorAll('.dong-gach-do')).toHaveLength(1))
+    await waitFor(() => expect(container.querySelectorAll('.ag-row')).toHaveLength(2))
+    expect(container.querySelectorAll('.dong-gach-do')).toHaveLength(0)
+    expect(screen.queryByText(/Gạch ngang đỏ/)).toBeNull()
+  })
+
+  it('luoi thanh vien gia dinh (quanHeGiaDinh) gach ngang nguoi qua doi/chuyen xu, KHONG gach nguoi da lap GD', async () => {
+    const { container } = render(
+      <GxGiaoDanList
+        quanHeGiaDinh
+        rows={[
+          nguoi({ id: 'a1', quaDoi: true }),
+          nguoi({ id: 'a2', daChuyenDi: true }),
+          nguoi({ id: 'a3', lapGd: true }),
+        ]}
+      />,
+    )
+
+    await screen.findByText('Mã GD')
+    await waitFor(() => expect(container.querySelectorAll('.dong-gach-do')).toHaveLength(2))
+    expect(await screen.findByText(/Gạch ngang đỏ: đã qua đời hoặc đã chuyển xứ/)).toBeDefined()
   })
 
   it('mac dinh (hangLoc) thi hien hang loc duoi moi tieu de cot', async () => {

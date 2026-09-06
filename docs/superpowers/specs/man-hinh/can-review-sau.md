@@ -413,3 +413,115 @@ Các mục trên là *lỗi của bản desktop* mà ta cố ý tái hiện. M�
      `WebApp/anh-chup-kiem-thu/26-*.png`).
   7. **Không đổi hợp đồng API**: dữ liệu gửi lên/nhận về vẫn nguyên ISO `yyyy-MM-dd`, chỉ đổi
      tầng hiển thị/nhập liệu ở client.
+
+---
+
+### 24. Giao diện form gia đình (2026-09-07) — nối GxPicker, cây quyết định NguoiCu, lưới thành viên, tạo mới
+
+Hoàn thiện phần giao diện còn thiếu của `GiaDinhDetail.tsx`/`GiaDinhDetailPage.tsx` — backend đã
+xong từ trước (xem `task-ghi-gia-dinh-backend-report.md`). Các quyết định tự đưa ra (người dùng
+đã đi ngủ, theo đúng chỉ dẫn "tự quyết theo hướng hợp lý nhất"):
+
+- **Mục 4 (lỗi chọn người làm đóng cả form) — QUYẾT ĐỊNH: KHÔNG tái hiện, báo lỗi tại chỗ.**
+  Toàn bộ lỗi khi gán Người nam/Người nữ (sai giới tính, đang ở gia đình khác, RowVersion xung
+  đột, lỗi mạng...) hiện qua hộp thoại trong ứng dụng (`useHoiDap.bao`) ngay tại thẻ đang mở,
+  KHÔNG đóng thẻ, KHÔNG mất dữ liệu các trường khác đang gõ dở. Lý do (như đã ghi ở mục 4): trên
+  web mất dữ liệu đang nhập khó chịu hơn desktop rất nhiều (không có "mất con trỏ focus" để cảnh
+  báo sớm như WinForms), và hành vi đóng form của desktop được chính spec gốc gọi là "kỳ quặc".
+  Không cần review thêm — đây thuộc nhóm khác biệt GIAO DIỆN được quyết trực tiếp trong yêu cầu.
+
+- **Cây quyết định `NguoiCu` (mục 3) — migrate ĐẦY ĐỦ, không rút gọn.** Đọc trực tiếp
+  `Source/GXControl/frmGiaDinh.cs:649-919` (UTF-16LE) và hàm phụ trợ `CheckVaiTroTrongGiaDinh`
+  (dòng 621-646) để giải mã chính xác từng nhánh — bản spec `gia-dinh-chi-tiet.md` mục 4 chỉ
+  trích một phần thông báo, không đủ để tái hiện đúng thứ tự/điều kiện. Cài tại
+  `WebApp/src/web/src/lib/nguoiCu.ts` (`chayCayQuyetDinhNguoiCu`), giữ NGUYÊN các nhánh "có vẻ
+  vô lý" của bản gốc — ví dụ kiểm tra vai trò `VAITRO_CON` trên chính ID của người-còn-lại
+  (vợ/chồng) thay vì hỏi tổng quát "gia đình đã có con chưa" (dòng 700/717/827 bản gốc) — đúng
+  quy tắc migrate y hệt. 12 bài test đơn vị (`nguoiCu.test.ts`) phủ mọi nhánh chính (xoá hẳn,
+  hạ xuống thành viên với Cha/Mẹ/Chưa rõ, đổi hàng loạt sang Ông/Bà, đổi hàng loạt sang Chưa rõ,
+  cả hai chiều Chồng/Vợ).
+  - **Giới hạn đã biết**: nhánh "đổi hàng loạt vai trò các thành viên KHÁC" (Cha/Mẹ→Ông/Bà,
+    hoặc mọi người→Chưa rõ, dòng 728-736/752-755/840-847/865-867) được áp dụng bằng các lệnh
+    xoá+thêm lại tuần tự qua API hiện có (không có endpoint "sửa vai trò tại chỗ") — nếu một
+    lệnh giữa chừng lỗi mạng, một phần đổi hàng loạt có thể dang dở (chỉ ghi log, không chặn
+    thao tác chính người dùng đang chờ). Bản desktop làm việc này trên một `DataTable` trong bộ
+    nhớ rồi lưu một lượt (atomic hơn). Chấp nhận được ở quy mô gia đình (thường <10 thành viên)
+    nhưng cần biết nếu sau này thấy dữ liệu vai trò "nửa vời" ở một gia đình cụ thể.
+  - **KHÔNG migrate** nhánh `chonNguoiConLai`/`ganNguoiConLai`/`KiemTraSuThayDoiNguoiConLai`
+    (dòng 350-410) — tính năng "tự động đề nghị chọn luôn người còn lại nếu đã có hôn phối với
+    ai đó" khi chọn MỘT trong hai vai trò Chồng/Vợ. Đây là một luồng RIÊNG, phức tạp tương đương
+    (dùng lại `NguoiCu` với `rowmoi=null` ở một nhánh phụ), nằm NGOÀI phạm vi "cây quyết định
+    NguoiCu khi đổi vợ/chồng" được giao lần này. Ghi lại để không quên — người dùng vẫn tự chọn
+    tay cả hai vai trò, không bị chặn, chỉ là không được "gợi ý tự động" như desktop.
+
+- **Danh sách 21 giá trị `VaiTro`** (`lib/vaiTroGiaDinh.ts`) lấy từ khối chú thích cũ
+  `frmGiaDinh.cs:992-1018` (đã đánh dấu "không chắc còn khớp" ở `gia-dinh-chi-tiet.md` mục 9) vì
+  không tìm được `Memory.GetQuanHeList()` thật trong phạm vi đã đọc. Dữ liệu thật `qlgx_thu` chỉ
+  dùng tập con {0,1,2,3,8,18,100} — đúng khớp với danh sách này, tăng độ tin cậy nhưng CHƯA xác
+  nhận 100%. Cột "Quan hệ GĐ" trên lưới thành viên đổi thành CHỈ ĐỌC (trước đây là dropdown sửa
+  tại chỗ với 3 giá trị Chồng/Vợ/Con — không nối gì, không có tác dụng thật) — sửa vai trò một
+  thành viên nay làm qua Xoá rồi Thêm lại với vai trò mới (chưa có endpoint "sửa tại chỗ").
+
+- **"Bỏ chọn" (nút X) cạnh Người nam/Người nữ** cũng chạy qua ĐÚNG cây quyết định `NguoiCu` (với
+  `idNguoiMoi=null`) trước khi xoá — đúng bản gốc gọi `NguoiCu(nguoicu, null)` từ
+  `KiemTraSuThayDoiNguoiConLai` (dòng 393/401). Vì không có `giaoDanId` mới để gọi
+  `PUT vo-chong`, thực hiện bằng `DELETE thanh-vien` (+ `POST thanh-vien` nếu hạ xuống thành
+  viên) — hai endpoint đã có sẵn, không cần endpoint mới.
+
+- **"Thêm gia đình mới" (mục 4 nhiệm vụ)**: khác thời điểm sinh mã so với desktop (đúng
+  `Memory.Instance.GetNextId` gọi ngay khi MỞ form Thêm mới, dòng 292) — bản web gọi
+  `POST /api/gia-dinh` khi người dùng bấm nút "Tạo gia đình" (sau khi nhập Tên gia đình) thay vì
+  ngay lúc mở thẻ, vì không có state phía máy khách nào giữ được "bản ghi nháp có mã nhưng chưa
+  lưu vào CSDL" kiểu WinForms (mọi lần tải lại trang sẽ mất). Sau khi có id thật, thẻ CHUYỂN
+  SANG chế độ sửa bình thường trên CÙNG một thẻ (không đóng/mở lại) — Người nam/nữ và thành viên
+  dùng được ngay. Chỉ validate tối thiểu "Tên gia đình" bắt buộc (đúng thông báo nguyên văn
+  "Hãy nhập tên gia đình!", rule 6 `checkInput`) — các quy tắc còn lại của `checkInput` (Giáo họ
+  bắt buộc, xác định Chủ hộ, kiểm tra cặp Chồng-Vợ đã từng lập gia đình khác...) CHƯA migrate ở
+  lượt này, đã ghi trong `gia-dinh-chi-tiet.md` mục 10 ("Validate... Thiếu ở frontend") từ trước.
+
+- **Chủ hộ (radio Người nam/Người nữ)** vẫn CHƯA nối (đã ghi từ trước ở `gia-dinh-chi-tiet.md`
+  mục 10) — ngoài phạm vi 5 việc được giao lần này (picker, NguoiCu, lưới thành viên, tạo mới,
+  gạch ngang), không tự ý mở rộng thêm.
+
+### 25. Bỏ `lapGd` khỏi điều kiện gạch ngang, VÀ tách hẳn quy tắc theo màn hình (2026-09-07)
+
+- **Bối cảnh**: `GxGiaoDanList` (component dùng CHUNG cho cả màn hình danh sách giáo dân lẫn
+  lưới "Thành viên khác" trong form gia đình) trước đây LUÔN áp `toDo={(d) => d.quaDoi ||
+  d.daChuyenDi || d.lapGd}` bất kể nhúng ở đâu — VI PHẠM mục 7 đã ghi từ trước ("Bản desktop
+  không gạch ngang dòng nào trên lưới giáo dân") vì màn hình danh sách giáo dân dùng đúng
+  component này.
+- **Đã sửa hai việc cùng lúc**:
+  1. Chỉ áp gạch ngang khi `quanHeGiaDinh=true` (tức đang nhúng trong form gia đình) — màn hình
+     danh sách giáo dân (dùng mặc định, `quanHeGiaDinh` không truyền) nay ĐÚNG mục 7: không gạch
+     ngang dòng nào, bất kể `quaDoi`/`daChuyenDi`/`lapGd`.
+  2. **Bỏ `lapGd` khỏi điều kiện** ở nhánh `quanHeGiaDinh` (lưới gia đình) — QUYẾT ĐỊNH TỰ ĐƯA RA
+     (người dùng đang ngủ): giữ `quaDoi`/`daChuyenDi`, bỏ `lapGd`. Lý do: gạch ngang người "đã
+     lập gia đình" trong chính lưới liệt kê THÀNH VIÊN GIA ĐÌNH gây hiểu nhầm nghiêm trọng — con
+     cái trưởng thành đã lập gia đình riêng vẫn thường được liệt kê ở đây (ví dụ để biết ai từng
+     là con của gia đình), gạch ngang khiến họ trông như "không còn tồn tại"/lỗi dữ liệu. Ngược
+     lại `quaDoi`/`daChuyenDi` đúng nghĩa "không còn sinh hoạt tại xứ", và mặc định các bản ghi
+     này đã bị lọc ẨN khỏi lưới (chỉ hiện khi người dùng chủ động tick "Hiện cả người đã qua đời
+     / đã chuyển xứ" ở màn hình liên quan) — lúc đó gạch ngang mới thực sự hữu ích để phân biệt.
+  3. Sửa chú thích chân lưới tương ứng: còn "Gạch ngang đỏ: đã qua đời hoặc đã chuyển xứ" (bỏ
+     "hoặc lập gia đình riêng"), và chú thích này CHỈ hiện khi `quanHeGiaDinh=true` (trước đây
+     hiện cả ở màn hình danh sách giáo dân dù không gạch ngang gì — gây hiểu nhầm).
+- **Bản desktop THẬT SỰ làm gì**: không xác định được (file `FormattingRow` của
+  `GxGiaoDanList.cs` không đọc trong phạm vi 2 nhiệm vụ đã giao — chỉ biết CHẮC CHẮN màn hình
+  DANH SÁCH GIÁO DÂN không gạch ngang, còn màn hình GIA ĐÌNH desktop dùng cột nội bộ `GACH` tính
+  từ `Memory.IsRedGiaoDan` — logic của hàm đó chưa đọc). Quyết định trên là suy luận hợp lý nhất
+  từ mục đích sử dụng, cần người dùng xác nhận lại khi thức dậy.
+- **Câu hỏi cho người dùng**: xác nhận bỏ `lapGd` khỏi gạch ngang lưới gia đình là đúng ý muốn,
+  hay muốn khôi phục lại (và nếu khôi phục, có cần đọc thêm mã `Memory.IsRedGiaoDan` để biết
+  chính xác desktop tính "GACH" ra sao thay vì suy luận)?
+
+### 26. Nút "Xoá khỏi gia đình" trên lưới thành viên — mở rộng có chủ đích (menu chuột phải)
+
+Thêm mục menu chuột phải "Xoá khỏi gia đình" vào lưới "Thành viên khác trong gia đình" (nối
+`DELETE /api/gia-dinh/{id}/thanh-vien/{giaoDanId}/{vaiTro}`, xoá VĨNH VIỄN đúng mục 5) — bản
+desktop dùng nút riêng trên thanh công cụ `gxAddEdit1` phía trên lưới (nút "Xóa" theo
+`gia-dinh-chi-tiet.md` mục 2 "Lưới..."), không phải menu chuột phải. Bản web dùng menu chuột
+phải vì thanh công cụ `GxGiaoDanList` dùng chung không có sẵn chỗ cho nút thao tác riêng của
+màn hình gia đình (thanh công cụ đó phục vụ Thêm/Sửa/Xóa/Lấy lại/In chung, không phải nút "chỉ
+xoá thành viên gia đình" — xem mục 8 đã xác nhận tooltip). Hành vi nghiệp vụ (hỏi xác nhận đúng
+nguyên văn, xoá vĩnh viễn) giữ nguyên y hệt — chỉ khác VỊ TRÍ nút bấm trên giao diện, không phải
+khác biệt nghiệp vụ.

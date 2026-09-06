@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react'
 import type {
-  GiaDinhDetail as GiaDinhDetailDuLieu, GiaoDanListItem, GiaoHo, ThanhVien,
+  GiaDinhDetail as GiaDinhDetailDuLieu, GiaoDanListItem, GiaoDanTimKiem, GiaoHo, ThanhVien,
 } from '../api/types'
+import { DANH_SACH_VAI_TRO_THANH_VIEN, tenVaiTro } from '../lib/vaiTroGiaDinh'
 import { GxDate } from '../components/GxDate'
 import { GxField, GxInline } from '../components/GxField'
 import { GxGiaoDanList, menuGiaoDanMacDinh } from '../components/GxGiaoDanList'
@@ -48,6 +49,24 @@ type Props = {
   thongBaoLuu?: string | null
   /** Danh mục Giáo họ THẬT (GET /api/giao-ho) — thay `data/giaoHoTam.ts` hard-code theo tên. */
   danhMucGiaoHo?: GiaoHo[]
+  /** Chọn/đổi Người nam (vaiTro=0) hoặc Người nữ (vaiTro=1) qua GxPicker — container
+   * (`GiaDinhDetailPage`) chịu trách nhiệm gọi `PUT .../vo-chong/{vaiTro}`, chạy cây quyết định
+   * `NguoiCu` khi cần (xem `lib/nguoiCu.ts`) và hiển thị lỗi/cảnh báo qua hộp thoại trong ứng
+   * dụng (`useHoiDap`) — component này chỉ chuyển tiếp lựa chọn của người dùng. */
+  onGanVoChong?: (vaiTro: 0 | 1, giaoDan: GiaoDanTimKiem) => void
+  /** Nút "Bỏ chọn" (X) cạnh Người nam/Người nữ — cũng chạy qua cây quyết định `NguoiCu` nếu
+   * vai trò đang có người (xem `GiaDinhDetailPage.boChonVoChong`). */
+  onBoChonVoChong?: (vaiTro: 0 | 1) => void
+  /** Thêm một người vào lưới "Thành viên khác" (`addGiaoDan`) — container xử lý chuỗi cảnh báo
+   * (đã thuộc gia đình khác/đã xoá/đã chuyển xứ) qua hộp thoại trong ứng dụng. */
+  onThemThanhVien?: (giaoDan: GiaoDanTimKiem, vaiTro: number) => void
+  /** Xoá VĨNH VIỄN một thành viên khỏi gia đình (can-review-sau.md mục 5) — container hỏi xác
+   * nhận trước khi gọi API. */
+  onXoaThanhVien?: (giaoDanId: string, vaiTro: number) => void
+  /** Tạo gia đình mới trống (chỉ Tên gia đình + Giáo họ) — chỉ dùng khi `moi`; sau khi tạo
+   * xong, container chuyển sang chế độ sửa bình thường (có id thật) để dùng được các thao tác
+   * Người nam/nữ/thành viên ở trên. */
+  onTaoMoi?: (payload: { tenGiaDinh: string | null; giaoHoId: string | null }) => void
 }
 
 const rong = (): GiaDinhDetailDuLieu => ({
@@ -72,7 +91,7 @@ function tuThanhVien(tv: ThanhVien, giaDinhId: string): GiaoDanListItem {
     diaChi: null, tenGiaoHo: null, daChuyenDi: false, trinhDoVanHoa: null,
     trinhDoChuyenMon: null, bietNgoaiNgu: null, quaDoi: tv.quaDoi, ngayQuaDoi: null,
     noiAnTang: null, noiSinh: null, noiRuaToi: null, noiRuocLe: null, noiThemSuc: null,
-    quanHe: null, giaDinhId, khongThongKe: false,
+    quanHe: tenVaiTro(tv.vaiTro), giaDinhId, khongThongKe: false,
   }
 }
 
@@ -84,10 +103,15 @@ function tuThanhVien(tv: ThanhVien, giaDinhId: string): GiaoDanListItem {
  */
 export function GiaDinhDetail({
   duLieu, moGiaoDan, moDanhSachGiaDinh, onLuu, dangLuu, thongBaoLuu, danhMucGiaoHo = [],
+  onGanVoChong, onBoChonVoChong, onThemThanhVien, onXoaThanhVien, onTaoMoi,
 }: Props) {
   const f = duLieu ?? rong()
   const moi = !duLieu?.id
   const formRef = useRef<HTMLFormElement>(null)
+  // Thêm thành viên: chọn người qua GxPicker rồi chọn vai trò trước khi bấm "Thêm vào gia đình"
+  // — tách hai bước vì máy chủ cần biết VaiTro ngay từ đầu (không có vai trò "mặc định" hợp lý).
+  const [dangThem, setDangThem] = useState<GiaoDanTimKiem | null>(null)
+  const [vaiTroMoi, setVaiTroMoi] = useState(DANH_SACH_VAI_TRO_THANH_VIEN[0].giaTri)
 
   const [daChuyenXu, setDaChuyenXu] = useState(f.daChuyenXu)
   // null = "Ngoài xứ" (xem NGOAI_XU ở trên) — KHÔNG phải khoá ngoại tới bảng giao_ho.
@@ -99,7 +123,8 @@ export function GiaDinhDetail({
     ? [{ id: giaoHoId, tenGiaoHo: tenGiaoHoHienTai, maGiaoHoCu: 0, giaoHoChaId: null }, ...danhMucGiaoHo]
     : danhMucGiaoHo
 
-  // Quy ước đã chốt: vaiTro 0 = Chồng, 1 = Vợ, 2 = Con. "Thành viên khác trong gia đình" loại
+  // Quy ước đã chốt: vaiTro 0 = Chồng, 1 = Vợ, giá trị khác (2=Con, 3=Cháu, 4=Cha... 100=Chưa
+  // rõ, xem lib/vaiTroGiaDinh.ts) = "thành viên khác". "Thành viên khác trong gia đình" loại
   // trừ vợ chồng (vaiTro 0/1) — họ đã hiển thị riêng ở hai ô "Người nam"/"Người nữ" phía trên,
   // đúng hàm `thanhVienCua()` của bản mẫu (lọc bỏ quanHe "Chồng"/"Vợ" khỏi lưới thành viên
   // khác). KHÔNG dùng `chuHo` cho việc này — đúng MỘT người trong gia đình có `chuHo = true`
@@ -115,10 +140,21 @@ export function GiaDinhDetail({
   const tenTieuDe = moi ? 'Gia đình mới' : `Gia đình ${f.tenGiaDinh ?? ''}`.trim()
 
   // Xem & sửa một thành viên mở thẳng thẻ chi tiết giáo dân đó — cùng cách "Xem gia đình"
-  // của GxGiaoDanList dùng ở màn hình danh sách, chỉ khác đích đến.
+  // của GxGiaoDanList dùng ở màn hình danh sách, chỉ khác đích đến. Thêm mục "Xoá khỏi gia
+  // đình" (xoá VĨNH VIỄN, can-review-sau.md mục 5) — cần tra lại vaiTro thô từ f.thanhVien vì
+  // GiaoDanListItem hiển thị trên lưới chỉ mang nhãn (quanHe), không mang số vai trò.
   const menuThanhVien = useMemo(
-    () => menuGiaoDanMacDinh((d) => moGiaoDan?.(d.id), () => {}),
-    [moGiaoDan],
+    () => [
+      ...menuGiaoDanMacDinh((d) => moGiaoDan?.(d.id), () => {}),
+      {
+        nhan: 'Xoá khỏi gia đình',
+        chay: (d: GiaoDanListItem) => {
+          const vaiTro = f.thanhVien.find((t) => t.giaoDanId === d.id)?.vaiTro
+          if (vaiTro !== undefined) onXoaThanhVien?.(d.id, vaiTro)
+        },
+      },
+    ],
+    [moGiaoDan, onXoaThanhVien, f.thanhVien],
   )
 
   // Dựng payload từ form (chủ yếu là input không kiểm soát — defaultValue) rồi giao cho
@@ -127,10 +163,21 @@ export function GiaDinhDetail({
   // đây field này cố tình giữ nguyên giá trị cũ vì combobox chỉ liệt kê TÊN cứng không có Id.
   function xuLySubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!onLuu || !formRef.current) return
+    if (!formRef.current) return
     const fd = new FormData(formRef.current)
     const chuoi = (ten: string) => (fd.get(ten) as string | null)?.trim() || null
 
+    if (moi) {
+      // Rule 6 (checkInput, dòng 1301): "Hãy nhập tên gia đình!" — chỉ kiểm tra tối thiểu này
+      // ở bước Tạo mới, các quy tắc còn lại (Giáo họ, chủ hộ...) chưa migrate đủ ở web (xem
+      // gia-dinh-chi-tiet.md mục 10, "Validate... Thiếu ở frontend").
+      const ten = chuoi('tenGiaDinh')
+      if (!ten) { window.alert('Hãy nhập tên gia đình!'); return }
+      onTaoMoi?.({ tenGiaDinh: ten, giaoHoId })
+      return
+    }
+
+    if (!onLuu) return
     onLuu({
       tenGiaDinh: chuoi('tenGiaDinh'),
       giaoHoId,
@@ -173,11 +220,15 @@ export function GiaDinhDetail({
           </GxField>
           <GxField label="Người nam" id="gdinh-nguoinam"
             extra={<label className="seg"><input type="radio" name="chuho" defaultChecked={chuHo?.phai === 'Nam'} />Chủ hộ</label>}>
-            <GxPicker id="gdinh-nguoinam" value={nguoiNam ? `${nguoiNam.tenThanh ?? ''} ${nguoiNam.hoTen}`.trim() : null} />
+            <GxPicker id="gdinh-nguoinam" value={nguoiNam ? `${nguoiNam.tenThanh ?? ''} ${nguoiNam.hoTen}`.trim() : null}
+              onChon={moi ? undefined : (gd) => onGanVoChong?.(0, gd)}
+              onBoChon={moi || !nguoiNam ? undefined : () => onBoChonVoChong?.(0)} />
           </GxField>
           <GxField label="Người nữ" id="gdinh-nguoinu"
             extra={<label className="seg"><input type="radio" name="chuho" defaultChecked={chuHo?.phai === 'Nữ'} />Chủ hộ</label>}>
-            <GxPicker id="gdinh-nguoinu" value={nguoiNu ? `${nguoiNu.tenThanh ?? ''} ${nguoiNu.hoTen}`.trim() : null} />
+            <GxPicker id="gdinh-nguoinu" value={nguoiNu ? `${nguoiNu.tenThanh ?? ''} ${nguoiNu.hoTen}`.trim() : null}
+              onChon={moi ? undefined : (gd) => onGanVoChong?.(1, gd)}
+              onBoChon={moi || !nguoiNu ? undefined : () => onBoChonVoChong?.(1)} />
           </GxField>
           <GxField label="Tên gia đình" id="gdinh-ten">
             <input id="gdinh-ten" name="tenGiaDinh" type="text" defaultValue={f.tenGiaDinh ?? ''} />
@@ -241,6 +292,19 @@ export function GiaDinhDetail({
         <div className="spacer" />
         <span className="count-pill"><b>{thanhVien.length}</b> người</span>
       </div>
+      {!moi && (
+        <div className="thanhvien-them" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 2px 10px' }}>
+          <GxPicker id="gdinh-them-thanhvien" value={dangThem ? `${dangThem.tenThanh ?? ''} ${dangThem.hoTen}`.trim() : null}
+            onChon={setDangThem} onBoChon={() => setDangThem(null)} />
+          <select aria-label="Vai trò thành viên mới" value={vaiTroMoi} onChange={(e) => setVaiTroMoi(Number(e.target.value))}>
+            {DANH_SACH_VAI_TRO_THANH_VIEN.map((v) => <option key={v.giaTri} value={v.giaTri}>{v.nhan}</option>)}
+          </select>
+          <button type="button" className="btn btn-sm" disabled={!dangThem}
+            onClick={() => { if (dangThem) { onThemThanhVien?.(dangThem, vaiTroMoi); setDangThem(null) } }}>
+            Thêm vào gia đình
+          </button>
+        </div>
+      )}
       <GxGiaoDanList
         quanHeGiaDinh
         rows={thanhVien}
@@ -251,14 +315,14 @@ export function GiaDinhDetail({
 
       <div className="cmdbar">
         <span className="hint" role={thongBaoLuu ? 'status' : undefined}>
-          {thongBaoLuu ?? (moi ? 'Chưa hỗ trợ tạo mới gia đình qua web ở giai đoạn này' : 'Thay đổi chưa được lưu')}
+          {thongBaoLuu ?? (moi ? 'Nhập Tên gia đình rồi bấm "Tạo gia đình" — chọn Người nam/nữ và thành viên sau khi đã tạo' : 'Thay đổi chưa được lưu')}
         </span>
         <div className="spacer" />
         <button type="button" className="btn">In lý lịch cá nhân</button>
         <button type="button" className="btn">In phiếu gia đình</button>
         <button type="button" className="btn btn-quiet" onClick={() => moDanhSachGiaDinh?.()}>Quay về</button>
-        <button type="submit" className="btn btn-primary" disabled={moi || !onLuu || dangLuu}>
-          {dangLuu ? 'Đang lưu…' : 'Cập nhật'}
+        <button type="submit" className="btn btn-primary" disabled={moi ? (!onTaoMoi || dangLuu) : (!onLuu || dangLuu)}>
+          {dangLuu ? 'Đang lưu…' : moi ? 'Tạo gia đình' : 'Cập nhật'}
         </button>
       </div>
     </form>
