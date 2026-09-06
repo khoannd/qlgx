@@ -1,11 +1,25 @@
 import type { ColDef } from 'ag-grid-community'
 import type { GiaoDanListItem } from '../api/types'
+import { dinhDangNgay } from '../lib/ngay'
 
 const co = (field: keyof GiaoDanListItem, headerName: string, width = 110): ColDef<GiaoDanListItem> => ({
   field: field as ColDef<GiaoDanListItem>['field'],
   headerName,
   width,
   valueFormatter: (p) => (p.value === true ? '✓' : p.value === false ? '—' : (p.value ?? '—')),
+})
+
+/** Cột ngày: GIỮ NGUYÊN giá trị gốc ISO `yyyy-MM-dd` ở `field` (so sánh/sắp xếp/lọc vẫn dựa
+ * trên chuỗi này — ISO sắp đúng thứ tự thời gian khi so sánh dạng chuỗi) và CHỈ đổi cách
+ * HIỂN THỊ qua `valueFormatter` sang `dd/MM/yyyy`. Cố ý không dùng `valueGetter` trả thẳng
+ * chuỗi đã định dạng — làm vậy sẽ sắp xếp sai (so sánh chuỗi `"25/04/2015" < "26/03/1990"`
+ * theo ASCII, không theo thời gian thật) — xem
+ * docs/superpowers/specs/man-hinh/can-review-sau.md mục W1. */
+const ngay = (field: keyof GiaoDanListItem, headerName: string, width = 115): ColDef<GiaoDanListItem> => ({
+  field: field as ColDef<GiaoDanListItem>['field'],
+  headerName,
+  width,
+  valueFormatter: (p) => dinhDangNgay(p.value as string | null),
 })
 
 /**
@@ -17,10 +31,10 @@ export const cotGiaoDan: ColDef<GiaoDanListItem>[] = [
   { field: 'tenThanh', headerName: 'Tên thánh', width: 110 },
   { field: 'hoTen', headerName: 'Họ tên', width: 190, cellClass: 'cell-strong' },
   { field: 'phai', headerName: 'Phái', width: 80 },
-  { field: 'ngaySinh', headerName: 'Ngày sinh', width: 115 },
-  { field: 'ngayRuaToi', headerName: 'Ngày rửa tội', width: 125 },
-  { field: 'ngayRuocLe', headerName: 'Ngày XTRL', width: 120 },
-  { field: 'ngayThemSuc', headerName: 'Ngày Th.Sức', width: 125 },
+  ngay('ngaySinh', 'Ngày sinh'),
+  ngay('ngayRuaToi', 'Ngày rửa tội', 125),
+  ngay('ngayRuocLe', 'Ngày XTRL', 120),
+  ngay('ngayThemSuc', 'Ngày Th.Sức', 125),
   co('lapGd', 'Lập GĐ', 95),
   { field: 'hoTenCha', headerName: 'Cha', width: 160 },
   { field: 'hoTenMe', headerName: 'Mẹ', width: 160 },
@@ -36,7 +50,7 @@ export const cotGiaoDan: ColDef<GiaoDanListItem>[] = [
   { field: 'trinhDoChuyenMon', headerName: 'Chuyên môn', width: 130 },
   { field: 'bietNgoaiNgu', headerName: 'Ngoại ngữ', width: 120 },
   co('quaDoi', 'Qua đời', 95),
-  { field: 'ngayQuaDoi', headerName: 'Ngày qua đời', width: 130 },
+  ngay('ngayQuaDoi', 'Ngày qua đời', 130),
   { field: 'noiAnTang', headerName: 'Nơi an táng', width: 150 },
   { field: 'noiSinh', headerName: 'Nơi sinh', width: 130 },
   { field: 'noiRuaToi', headerName: 'Nơi rửa tội', width: 140 },

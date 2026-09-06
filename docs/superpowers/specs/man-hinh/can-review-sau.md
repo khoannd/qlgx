@@ -370,20 +370,46 @@ Mọi chỗ như vậy phải:
 Các mục trên là *lỗi của bản desktop* mà ta cố ý tái hiện. Mục dưới đây ngược lại: **bản web
 đang làm khác desktop mà không cố ý** — cần sửa để đúng nguyên tắc "giống hệt bản hiện tại".
 
-### W1. Ngày tháng hiển thị sai định dạng ở màn hình chi tiết
+### W1. Ngày tháng hiển thị sai định dạng ở màn hình chi tiết — ĐÃ XỬ LÝ (2026-09-06)
 
 - **Phát hiện**: 2026-09-06, khi xem ảnh chụp kiểm thử tab Hôn phối. Ô "Ngày hôn phối" hiện
   `04/25/2015` (định dạng Mỹ MM/DD/YYYY) thay vì `25/04/2015`.
-- **Nguyên nhân**: hai màn hình chi tiết dùng tổng cộng **19 ô `<input type="date">` gốc của
-  trình duyệt** (`GiaoDanDetail.tsx` 18 ô, `GiaDinhDetail.tsx` 1 ô). Ô ngày gốc **luôn hiển thị
-  theo locale của trình duyệt người dùng**, lập trình viên không kiểm soát được. Phía web hiện
-  **không có hàm định dạng `dd/MM/yyyy` nào cả**.
+- **Nguyên nhân**: hai màn hình chi tiết dùng tổng cộng **26 ô `<input type="date">` gốc của
+  trình duyệt** (`GiaoDanDetail.tsx` 25 ô, `GiaDinhDetail.tsx` 1 ô — nhiều hơn con số 19 ước
+  lượng ban đầu vì tính thêm cả các ô tĩnh chưa nối API ở tab Giáo lý). Ô ngày gốc **luôn hiển
+  thị theo locale của trình duyệt người dùng**, lập trình viên không kiểm soát được. Lưới danh
+  sách cũng hiện ISO `yyyy-MM-dd` thay vì `dd/MM/yyyy` cho các cột ngày.
 - **Bản desktop**: luôn hiển thị `dd/MM/yyyy`, không phụ thuộc máy người dùng. Toàn bộ dữ liệu
-  ngày trong Access cũng lưu dạng chuỗi `dd/MM/yyyy`.
-- **Rủi ro thật**: người dùng Việt Nam đọc `04/25/2015` sẽ hiểu nhầm, hoặc tệ hơn là **gõ vào
-  theo thứ tự sai**. Với ngày mơ hồ như `03/04/2015` thì không ai biết là 3 tháng 4 hay 4 tháng 3
-  — sai âm thầm, không có cách phát hiện.
-- **Cần quyết**: đây là đánh đổi giao diện. Hai hướng:
-  1. Giữ ô ngày gốc (có lịch bấm chọn, hợp với điện thoại) và chấp nhận định dạng theo máy.
-  2. Tự làm ô nhập `dd/MM/yyyy` (giống desktop, chắc chắn đúng) nhưng mất lịch bấm chọn gốc.
-  Đề xuất: hướng 2 kèm nút mở lịch riêng — nhưng **chờ người dùng quyết**.
+  ngày trong Access cũng lưu dạng chuỗi `dd/MM/yyyy` (xem `Qlgx.Data/NgayThangText.cs` phía máy
+  chủ — không đổi, chỉ tầng hiển thị/nhập liệu ở client thay đổi).
+- **Cách đã làm — hướng 2 (tự làm ô nhập, kèm nút mở lịch) đúng như đề xuất ban đầu**:
+  1. Thêm `WebApp/src/web/src/lib/ngay.ts`: `dinhDangNgay()` (ISO → `dd/MM/yyyy`, giữ nguyên
+     văn dữ liệu lỗi như `"1958"`/chuỗi rỗng, không ném lỗi) và `ngayTuHienThi()` (`dd/MM/yyyy`
+     → ISO, phân biệt `null` = xoá ngày và `undefined` = gõ sai định dạng để không âm thầm nuốt
+     giá trị).
+  2. Thêm component dùng chung `WebApp/src/web/src/components/GxDate.tsx`: một ô văn bản hiển
+     thị/nhập `dd/MM/yyyy` thật (placeholder `dd/mm/yyyy`), báo lỗi rõ ràng dưới ô khi gõ sai,
+     kèm nút tròn 📅 mở lịch bấm chọn qua `showPicker()` của một `<input type="date">` ẩn khỏi
+     mắt bằng kỹ thuật "clip" (không dùng `hidden`/`display:none` vì một số trình duyệt chặn
+     `showPicker()` trên phần tử ẩn kiểu đó) — ô lịch ẩn này mang chính `name`/giá trị ISO nên
+     `FormData`/`querySelector('[name="…"]')` ở nơi gọi không cần đổi gì.
+  3. Thay toàn bộ 26 ô `<input type="date">` bằng `<GxDate>` ở cả `GiaoDanDetail.tsx` và
+     `GiaDinhDetail.tsx` (kể cả các ô tĩnh chưa nối API ở tab Giáo lý, cho nhất quán); đổi dòng
+     tóm tắt đầu trang chi tiết giáo dân (`sinh 2014-12-18` → `sinh 18/12/2014`).
+  4. Cột ngày trên lưới (`WebApp/src/web/src/cot/cotGiaoDan.ts`): thêm hàm `ngay()` dùng
+     `valueFormatter: (p) => dinhDangNgay(p.value)`, **giữ nguyên `field` là ISO gốc** để sắp
+     xếp/lọc vẫn đúng (ISO so sánh chuỗi trùng thứ tự thời gian) — cố ý **không** dùng
+     `valueGetter` trả chuỗi đã định dạng vì sẽ làm sai sắp xếp. Xuất CSV (`GxGrid.layCsv`)
+     cũng đổi sang `getDataAsCsv({ processCellCallback: (p) => p.formatValue(p.value) })` để
+     CSV xuất ra cũng là `dd/MM/yyyy`, không phải ISO.
+  5. Test: `WebApp/src/web/src/lib/ngay.test.ts`, `components/GxDate.test.tsx` (component mới),
+     và một bài test sắp xếp trong `components/GxGiaoDanList.test.tsx` chứng minh bấm sắp xếp
+     cột "Ngày sinh" cho kết quả đúng theo THỜI GIAN THẬT (1990 < 2005 < 2015), không theo so
+     sánh chuỗi `dd/MM/yyyy` đã định dạng.
+  6. Kiểm chứng bằng chạy thật trên `qlgx_thu` (Playwright): sửa "Ngày rửa tội" của giáo dân
+     mã 1 từ `28/02/2015` thành `25/04/2015`, lưu, tải lại — `psql` xác nhận cột
+     `ngay_rua_toi = 2015-04-25` (đúng ngày 25, tháng 4, không bị đảo). Bấm sắp xếp cột "Ngày
+     sinh" trên 2039 bản ghi thật cho thứ tự tăng/giảm đúng theo năm-tháng-ngày thật (ảnh chụp
+     `WebApp/anh-chup-kiem-thu/26-*.png`).
+  7. **Không đổi hợp đồng API**: dữ liệu gửi lên/nhận về vẫn nguyên ISO `yyyy-MM-dd`, chỉ đổi
+     tầng hiển thị/nhập liệu ở client.

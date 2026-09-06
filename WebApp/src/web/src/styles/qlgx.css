@@ -965,6 +965,30 @@ tbody tr[aria-selected="true"] .rowhead {
 }
 .picker .mini:hover { background: var(--brand); color: #fff; }
 
+/* Ô nhập ngày dùng chung (GxDate) — thay input[type=date] gốc để không phụ thuộc locale máy
+ * người dùng, xem docs/superpowers/specs/man-hinh/can-review-sau.md mục W1. */
+.gx-date { display: inline-flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gx-date-row { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.gx-date-row input[type="text"] { min-width: 0; flex: 1; }
+.gx-date-row input[type="text"].invalid {
+  border-color: var(--rose-ink);
+  box-shadow: 0 0 0 3px rgba(225,29,72,.14);
+}
+.gx-date-btn { width: 26px; height: 26px; }
+/* Input ngày gốc chỉ dùng làm cửa ngõ mở lịch bấm chọn (showPicker()) — ẩn khỏi mắt nhưng
+ * KHÔNG dùng `hidden`/`display:none`: một số trình duyệt chặn showPicker() trên phần tử ẩn
+ * kiểu đó. Thu về 0 kích thước, đặt ngoài luồng bố cục là đủ để không chiếm chỗ. */
+.gx-date-native {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.gx-date-loi { font-size: 11.5px; color: var(--rose-ink); }
+
 .seg {
   display: inline-flex;
   padding: 2px;

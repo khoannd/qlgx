@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, type FormEvent } from 'react'
 import type {
   GiaDinhDetail as GiaDinhDetailDuLieu, GiaoDanListItem, GiaoHo, ThanhVien,
 } from '../api/types'
+import { GxDate } from '../components/GxDate'
 import { GxField, GxInline } from '../components/GxField'
 import { GxGiaoDanList, menuGiaoDanMacDinh } from '../components/GxGiaoDanList'
 import { GxPicker } from '../components/GxPicker'
@@ -218,7 +219,7 @@ export function GiaDinhDetail({
           {daChuyenXu && (
             <>
               <GxField label="Ngày chuyển" id="gdinh-ngaychuyen">
-                <input id="gdinh-ngaychuyen" name="ngayChuyen" type="date" defaultValue={f.ngayChuyen ?? ''} style={{ maxWidth: 190 }} />
+                <GxDate id="gdinh-ngaychuyen" name="ngayChuyen" defaultValue={f.ngayChuyen} style={{ maxWidth: 190 }} />
               </GxField>
               <GxField label="Nơi chuyển" id="gdinh-noichuyen">
                 <input id="gdinh-noichuyen" name="noiChuyen" type="text" defaultValue={f.noiChuyen ?? ''} placeholder="Giáo xứ / địa phương chuyển đến" />

@@ -54,7 +54,14 @@ function GxGridTrong<T>(
   const apiRef = useRef<GridApi<T> | null>(null)
 
   useImperativeHandle(ref, () => ({
-    layCsv: () => apiRef.current?.getDataAsCsv() ?? null,
+    // `getDataAsCsv()` mặc định xuất GIÁ TRỊ GỐC của ô, không áp `valueFormatter` của cột —
+    // dùng `processCellCallback` + `formatValue()` để cột ngày xuất ra CSV cũng là `dd/MM/yyyy`
+    // giống trên lưới, không phải ISO `yyyy-MM-dd`, xem
+    // docs/superpowers/specs/man-hinh/can-review-sau.md mục W1.
+    layCsv: () =>
+      apiRef.current?.getDataAsCsv({
+        processCellCallback: (p) => p.formatValue(p.value),
+      }) ?? null,
   }))
 
   const defaultColDef = useMemo<ColDef<T>>(

@@ -291,7 +291,7 @@ describe('GiaoDanDetail', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Hội đoàn' }))
 
     await userEvent.selectOptions(screen.getByLabelText('Tên hội đoàn'), 'hoidoan2')
-    await userEvent.type(screen.getByLabelText('Ngày vào hội đoàn'), '2020-01-01')
+    await userEvent.type(screen.getByLabelText('Ngày vào hội đoàn'), '01/01/2020')
     await userEvent.click(screen.getByRole('button', { name: 'Thêm hội đoàn' }))
 
     expect(onThemHoiDoan).toHaveBeenCalledWith(expect.objectContaining({
@@ -313,7 +313,7 @@ describe('GiaoDanDetail', () => {
 
     await userEvent.type(screen.getByLabelText('Họ tên'), 'Nguyễn Văn Mới')
     await userEvent.selectOptions(screen.getByLabelText('Giới tính'), 'Nam')
-    await userEvent.type(screen.getByLabelText('Ngày sinh'), '2000-01-01')
+    await userEvent.type(screen.getByLabelText('Ngày sinh'), '01/01/2000')
     await userEvent.click(screen.getByRole('button', { name: 'Thêm giáo dân' }))
 
     expect(onLuu).toHaveBeenCalledWith(expect.objectContaining({

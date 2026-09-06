@@ -3,9 +3,11 @@ import type {
   GiaoDanDetail as GiaoDanDetailDuLieu, GiaoDanTimKiem, GiaoHo, HoiDoanCuaGiaoDan,
   HoiDoanDanhMuc, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
 } from '../api/types'
+import { GxDate } from '../components/GxDate'
 import { GxField, GxInline } from '../components/GxField'
 import { GxFormTabs } from '../components/GxFormTabs'
 import { GxPicker } from '../components/GxPicker'
+import { dinhDangNgay } from '../lib/ngay'
 
 /** Sentinel hiển thị khi chưa chọn giáo họ nào — đúng quy ước "MaGiaoHo = 0 nghĩa là Ngoài xứ"
  * của `frmGiaoDan.cs`. Ở bản web, "Ngoài xứ" ứng với `giaoHoId === null` (không phải khoá
@@ -100,7 +102,7 @@ function KhoiHonPhoi({
             <input id={`${idBase}-so`} name="soHonPhoi" type="text" defaultValue={hp.soHonPhoi ?? ''} />
           </GxField>
           <GxField label="Ngày hôn phối" id={`${idBase}-ngay`}>
-            <input id={`${idBase}-ngay`} name="ngayHonPhoi" type="date" defaultValue={hp.ngayHonPhoi ?? ''} style={{ maxWidth: 180 }} />
+            <GxDate id={`${idBase}-ngay`} name="ngayHonPhoi" defaultValue={hp.ngayHonPhoi} style={{ maxWidth: 180 }} />
           </GxField>
           <GxField label="Nơi hôn phối" id={`${idBase}-noi`}>
             <input id={`${idBase}-noi`} name="noiHonPhoi" type="text" defaultValue={hp.noiHonPhoi ?? ''} />
@@ -240,31 +242,31 @@ function KhoiTanHien({
       <div className="card-row">
         <div>
           <GxField label="Ngày nhập dòng" id={`${idBase}-batdau`}>
-            <input id={`${idBase}-batdau`} name="ngayBatDau" type="date" defaultValue={gt.ngayBatDau ?? ''} style={{ maxWidth: 180 }} />
+            <GxDate id={`${idBase}-batdau`} name="ngayBatDau" defaultValue={gt.ngayBatDau} style={{ maxWidth: 180 }} />
           </GxField>
           <GxField label="Ngày vào nhà thử" id={`${idBase}-nhathu`}>
-            <input id={`${idBase}-nhathu`} name="ngayVaoNhaThu" type="date" defaultValue={gt.ngayVaoNhaThu ?? ''} style={{ maxWidth: 180 }} />
+            <GxDate id={`${idBase}-nhathu`} name="ngayVaoNhaThu" defaultValue={gt.ngayVaoNhaThu} style={{ maxWidth: 180 }} />
           </GxField>
           <GxField label="Ngày vào nhà tập" id={`${idBase}-nhatap`}>
-            <input id={`${idBase}-nhatap`} name="ngayVaoNhaTap" type="date" defaultValue={gt.ngayVaoNhaTap ?? ''} style={{ maxWidth: 180 }} />
+            <GxDate id={`${idBase}-nhatap`} name="ngayVaoNhaTap" defaultValue={gt.ngayVaoNhaTap} style={{ maxWidth: 180 }} />
           </GxField>
           <GxField label="Ngày vào ĐCV" id={`${idBase}-dcv`}>
-            <input id={`${idBase}-dcv`} name="ngayVaoDCV" type="date" defaultValue={gt.ngayVaoDCV ?? ''} style={{ maxWidth: 180 }} />
+            <GxDate id={`${idBase}-dcv`} name="ngayVaoDCV" defaultValue={gt.ngayVaoDCV} style={{ maxWidth: 180 }} />
           </GxField>
           <GxField label="Ngày khấn lần đầu" id={`${idBase}-khan1`}>
-            <input id={`${idBase}-khan1`} name="ngayVaoKhanLanDau" type="date" defaultValue={gt.ngayVaoKhanLanDau ?? ''} style={{ maxWidth: 180 }} />
+            <GxDate id={`${idBase}-khan1`} name="ngayVaoKhanLanDau" defaultValue={gt.ngayVaoKhanLanDau} style={{ maxWidth: 180 }} />
           </GxField>
           <GxField label="Ngày khấn vĩnh viễn" id={`${idBase}-khanvv`}>
-            <input id={`${idBase}-khanvv`} name="ngayVaoKhanTronDoi" type="date" defaultValue={gt.ngayVaoKhanTronDoi ?? ''} style={{ maxWidth: 180 }} />
+            <GxDate id={`${idBase}-khanvv`} name="ngayVaoKhanTronDoi" defaultValue={gt.ngayVaoKhanTronDoi} style={{ maxWidth: 180 }} />
           </GxField>
           <GxField label="Ngày lãnh chức phó tế" id={`${idBase}-phote`}>
-            <input id={`${idBase}-phote`} name="ngayPhoTe" type="date" defaultValue={gt.ngayPhoTe ?? ''} style={{ maxWidth: 180 }} />
+            <GxDate id={`${idBase}-phote`} name="ngayPhoTe" defaultValue={gt.ngayPhoTe} style={{ maxWidth: 180 }} />
           </GxField>
           <GxField label="Ngày thụ phong LM" id={`${idBase}-tplm`}>
-            <input id={`${idBase}-tplm`} name="ngayThuPhongLM" type="date" defaultValue={gt.ngayThuPhongLM ?? ''} style={{ maxWidth: 180 }} />
+            <GxDate id={`${idBase}-tplm`} name="ngayThuPhongLM" defaultValue={gt.ngayThuPhongLM} style={{ maxWidth: 180 }} />
           </GxField>
           <GxField label="Ngày mừng bổn mạng" id={`${idBase}-bonmang`}>
-            <input id={`${idBase}-bonmang`} name="ngayBonMang" type="date" defaultValue={gt.ngayBonMang ?? ''} style={{ maxWidth: 180 }} />
+            <GxDate id={`${idBase}-bonmang`} name="ngayBonMang" defaultValue={gt.ngayBonMang} style={{ maxWidth: 180 }} />
           </GxField>
         </div>
         <div>
@@ -373,9 +375,9 @@ function KhoiHoiDoan({
     <div className="card glass" ref={containerRef} style={{ marginBottom: 12 }}>
       <div className="card-head"><h2>{hd.tenHoiDoan}</h2></div>
       <GxField label="Ngày vào hội đoàn" id={`${idBase}-vao`}>
-        <input id={`${idBase}-vao`} name="ngayVaoHoiDoan" type="date" defaultValue={hd.ngayVaoHoiDoan ?? ''} style={{ maxWidth: 180 }} />
+        <GxDate id={`${idBase}-vao`} name="ngayVaoHoiDoan" defaultValue={hd.ngayVaoHoiDoan} style={{ maxWidth: 180 }} />
         <GxInline>Ngày ra hội đoàn</GxInline>
-        <input aria-label="Ngày ra hội đoàn" name="ngayRaHoiDoan" type="date" defaultValue={hd.ngayRaHoiDoan ?? ''} style={{ maxWidth: 180 }} />
+        <GxDate ariaLabel="Ngày ra hội đoàn" name="ngayRaHoiDoan" defaultValue={hd.ngayRaHoiDoan} style={{ maxWidth: 180 }} />
       </GxField>
       <GxField label="Vai trò" id={`${idBase}-vaitro`}>
         <input id={`${idBase}-vaitro`} name="vaiTro" type="text" defaultValue={hd.vaiTro ?? ''} style={{ maxWidth: 220 }} />
@@ -439,10 +441,10 @@ function KhoiThemHoiDoan({
         )}
       </GxField>
       <GxField label="Ngày vào hội đoàn" id="gd-hd-vao">
-        <input id="gd-hd-vao" name="ngayVaoHoiDoanMoi" type="date" style={{ maxWidth: 190 }} />
+        <GxDate id="gd-hd-vao" name="ngayVaoHoiDoanMoi" style={{ maxWidth: 190 }} />
       </GxField>
       <GxField label="Ngày ra hội đoàn" id="gd-hd-ra">
-        <input id="gd-hd-ra" name="ngayRaHoiDoanMoi" type="date" style={{ maxWidth: 190 }} />
+        <GxDate id="gd-hd-ra" name="ngayRaHoiDoanMoi" style={{ maxWidth: 190 }} />
       </GxField>
       <div className="cmdbar">
         <span className="hint" role={thongBao ? 'status' : undefined}>{thongBao}</span>
@@ -673,7 +675,7 @@ export function GiaoDanDetail({
                 <option value="Nữ">Nữ</option>
               </select>
               <GxInline>Ngày sinh</GxInline>
-              <input type="date" aria-label="Ngày sinh" name="ngaySinh" defaultValue={p.ngaySinh ?? ''} />
+              <GxDate ariaLabel="Ngày sinh" name="ngaySinh" defaultValue={p.ngaySinh} />
             </GxField>
             <GxField label="Nơi sinh" id="gd-noisinh">
               <input id="gd-noisinh" name="noiSinh" type="text" defaultValue={p.noiSinh ?? ''} />
@@ -703,7 +705,7 @@ export function GiaoDanDetail({
         <div className="card glass">
           <div className="card-head"><h2>Rửa tội</h2></div>
           <GxField label="Ngày rửa tội" id="gd-ngayruatoi">
-            <input id="gd-ngayruatoi" name="ngayRuaToi" type="date" defaultValue={p.ngayRuaToi ?? ''} style={{ maxWidth: 170 }} />
+            <GxDate id="gd-ngayruatoi" name="ngayRuaToi" defaultValue={p.ngayRuaToi} style={{ maxWidth: 170 }} />
             <GxInline>Số sổ</GxInline>
             <input aria-label="Số sổ rửa tội" name="soRuaToi" type="text" defaultValue={p.soRuaToi ?? ''} style={{ maxWidth: 150 }} />
           </GxField>
@@ -717,7 +719,7 @@ export function GiaoDanDetail({
         <div className="card glass">
           <div className="card-head"><h2>Rước lễ lần đầu</h2></div>
           <GxField label="Ngày rước lễ" id="gd-ngayruocle">
-            <input id="gd-ngayruocle" name="ngayRuocLe" type="date" defaultValue={p.ngayRuocLe ?? ''} style={{ maxWidth: 170 }} />
+            <GxDate id="gd-ngayruocle" name="ngayRuocLe" defaultValue={p.ngayRuocLe} style={{ maxWidth: 170 }} />
             <GxInline>Số sổ</GxInline>
             <input aria-label="Số sổ rước lễ" name="soRuocLe" type="text" defaultValue={p.soRuocLe ?? ''} style={{ maxWidth: 150 }} />
           </GxField>
@@ -732,7 +734,7 @@ export function GiaoDanDetail({
         <div className="card glass">
           <div className="card-head"><h2>Thêm sức</h2></div>
           <GxField label="Ngày thêm sức" id="gd-ngaythemsuc">
-            <input id="gd-ngaythemsuc" name="ngayThemSuc" type="date" defaultValue={p.ngayThemSuc ?? ''} style={{ maxWidth: 170 }} />
+            <GxDate id="gd-ngaythemsuc" name="ngayThemSuc" defaultValue={p.ngayThemSuc} style={{ maxWidth: 170 }} />
             <GxInline>Số sổ</GxInline>
             <input aria-label="Số sổ thêm sức" name="soThemSuc" type="text" defaultValue={p.soThemSuc ?? ''} style={{ maxWidth: 150 }} />
           </GxField>
@@ -746,7 +748,7 @@ export function GiaoDanDetail({
         <div className="card glass">
           <div className="card-head"><h2>Xức dầu</h2></div>
           <GxField label="Ngày xức dầu" id="gd-ngayxucdau">
-            <input id="gd-ngayxucdau" name="ngayXucDau" type="date" defaultValue={p.ngayXucDau ?? ''} style={{ maxWidth: 170 }} />
+            <GxDate id="gd-ngayxucdau" name="ngayXucDau" defaultValue={p.ngayXucDau} style={{ maxWidth: 170 }} />
             <GxInline>Tình trạng</GxInline>
             <select aria-label="Tình trạng xức dầu" name="tinhTrangXucDau" defaultValue={p.tinhTrangXucDau ?? ''} style={{ maxWidth: 180 }}>
               {TINH_TRANG_XUC_DAU.map((t) => <option key={t} value={t}>{t || 'Chưa xác định'}</option>)}
@@ -819,7 +821,7 @@ export function GiaoDanDetail({
         {quaDoi && (
           <>
             <GxField label="Ngày qua đời" id="gd-ngayquadoi">
-              <input id="gd-ngayquadoi" name="ngayQuaDoi" type="date" defaultValue={p.ngayQuaDoi ?? ''} style={{ maxWidth: 180 }} />
+              <GxDate id="gd-ngayquadoi" name="ngayQuaDoi" defaultValue={p.ngayQuaDoi} style={{ maxWidth: 180 }} />
               <GxInline>Số sổ</GxInline>
               <input aria-label="Số sổ qua đời" name="soAnTang" type="text" defaultValue={p.soAnTang ?? ''} style={{ maxWidth: 140 }} />
             </GxField>
@@ -842,26 +844,26 @@ export function GiaoDanDetail({
       <div className="card-row">
         <div className="card glass">
           <div className="card-head"><h2>Bao đồng 1</h2></div>
-          <GxField label="Ngày kết thúc khóa học" id="gd-gl-bd1"><input id="gd-gl-bd1" type="date" style={{ maxWidth: 190 }} /></GxField>
+          <GxField label="Ngày kết thúc khóa học" id="gd-gl-bd1"><GxDate id="gd-gl-bd1" style={{ maxWidth: 190 }} /></GxField>
           <GxField label="Tại giáo xứ" id="gd-gl-bd1-gx"><input id="gd-gl-bd1-gx" type="text" /></GxField>
         </div>
         <div className="card glass">
           <div className="card-head"><h2>Bao đồng 2</h2></div>
-          <GxField label="Ngày rước lễ trọng thể" id="gd-gl-bd2"><input id="gd-gl-bd2" type="date" style={{ maxWidth: 190 }} /></GxField>
+          <GxField label="Ngày rước lễ trọng thể" id="gd-gl-bd2"><GxDate id="gd-gl-bd2" style={{ maxWidth: 190 }} /></GxField>
           <GxField label="Tại giáo xứ" id="gd-gl-bd2-gx"><input id="gd-gl-bd2-gx" type="text" /></GxField>
         </div>
       </div>
       <div className="card glass">
         <div className="card-head"><h2>Vào đời</h2></div>
-        <GxField label="Ngày tuyên hứa" id="gd-gl-vd"><input id="gd-gl-vd" type="date" style={{ maxWidth: 190 }} /></GxField>
+        <GxField label="Ngày tuyên hứa" id="gd-gl-vd"><GxDate id="gd-gl-vd" style={{ maxWidth: 190 }} /></GxField>
         <GxField label="Tại giáo xứ" id="gd-gl-vd-gx"><input id="gd-gl-vd-gx" type="text" /></GxField>
       </div>
       <div className="card glass">
         <div className="card-head"><h2>Hôn nhân</h2></div>
         <GxField label="Khóa học từ ngày" id="gd-gl-hn-tu">
-          <input id="gd-gl-hn-tu" type="date" style={{ maxWidth: 180 }} />
+          <GxDate id="gd-gl-hn-tu" style={{ maxWidth: 180 }} />
           <GxInline>đến ngày</GxInline>
-          <input aria-label="Khóa học đến ngày" type="date" style={{ maxWidth: 180 }} />
+          <GxDate ariaLabel="Khóa học đến ngày" style={{ maxWidth: 180 }} />
         </GxField>
         <GxField label="Tại giáo xứ" id="gd-gl-hn-gx"><input id="gd-gl-hn-gx" type="text" /></GxField>
         <GxField label="Người cấp chứng nhận" id="gd-gl-hn-nguoicap"><GxPicker id="gd-gl-hn-nguoicap" /></GxField>
@@ -983,7 +985,7 @@ export function GiaoDanDetail({
         <h1>{tenDayDu}</h1>
         <span className="head-sub">
           {moi ? 'Chưa lưu · nhập thông tin rồi bấm Thêm giáo dân'
-            : `${p.maGiaoDanCu} · ${dsGiaoHo.find((g) => g.id === giaoHoId)?.tenGiaoHo ?? NGOAI_XU}${p.ngaySinh ? ' · sinh ' + p.ngaySinh : ''}`}
+            : `${p.maGiaoDanCu} · ${dsGiaoHo.find((g) => g.id === giaoHoId)?.tenGiaoHo ?? NGOAI_XU}${p.ngaySinh ? ' · sinh ' + dinhDangNgay(p.ngaySinh) : ''}`}
         </span>
         <div className="spacer" />
         <span className={'tag tag-' + tagTone}>{tinhTrang}</span>

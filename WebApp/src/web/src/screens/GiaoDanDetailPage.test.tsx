@@ -283,7 +283,7 @@ describe('GiaoDanDetailPage', () => {
     render(<GiaoDanDetailPage id={null} moGiaoDan={moGiaoDan} />)
     await userEvent.type(screen.getByLabelText('Họ tên'), 'Nguyễn Văn Mới')
     await userEvent.selectOptions(screen.getByLabelText('Giới tính'), 'Nam')
-    await userEvent.type(screen.getByLabelText('Ngày sinh'), '2000-01-01')
+    await userEvent.type(screen.getByLabelText('Ngày sinh'), '01/01/2000')
 
     await userEvent.click(screen.getByRole('button', { name: 'Thêm giáo dân' }))
 
@@ -302,7 +302,7 @@ describe('GiaoDanDetailPage', () => {
     render(<GiaoDanDetailPage id={null} moGiaoDan={moGiaoDan} />)
     await userEvent.type(screen.getByLabelText('Họ tên'), 'Nguyễn Văn Trùng')
     await userEvent.selectOptions(screen.getByLabelText('Giới tính'), 'Nam')
-    await userEvent.type(screen.getByLabelText('Ngày sinh'), '2000-01-01')
+    await userEvent.type(screen.getByLabelText('Ngày sinh'), '01/01/2000')
     await userEvent.click(screen.getByRole('button', { name: 'Thêm giáo dân' }))
 
     await screen.findByText('Đã tạo giáo dân mới.')
@@ -322,7 +322,7 @@ describe('GiaoDanDetailPage', () => {
     render(<GiaoDanDetailPage id={null} moGiaoDan={moGiaoDan} />)
     await userEvent.type(screen.getByLabelText('Họ tên'), 'Nguyễn Văn Huy')
     await userEvent.selectOptions(screen.getByLabelText('Giới tính'), 'Nam')
-    await userEvent.type(screen.getByLabelText('Ngày sinh'), '2000-01-01')
+    await userEvent.type(screen.getByLabelText('Ngày sinh'), '01/01/2000')
     await userEvent.click(screen.getByRole('button', { name: 'Thêm giáo dân' }))
 
     expect(await screen.findByText('Đã hủy — chưa lưu giáo dân này.')).toBeDefined()
