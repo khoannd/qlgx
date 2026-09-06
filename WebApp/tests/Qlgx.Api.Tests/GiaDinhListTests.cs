@@ -132,4 +132,91 @@ public class GiaDinhListTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory
         dong.HonPhoiId.Should().Be(honPhoiId);
         dong.NgayHonPhoiHienThi.Should().Be("14/02/2010");
     }
+
+    [Fact]
+    public async Task Gia_dinh_chua_co_chong_tra_ve_TenChong_va_DTChong_null()
+    {
+        var ma = 50;
+        await using (var db = app.TaoContextThuan())
+        {
+            var gd = new GiaDinh { GiaoXuId = app.GiaoXuId, MaGiaDinhCu = ma, TenGiaDinh = "Lan" };
+            var vo = new GiaoDan { GiaoXuId = app.GiaoXuId, MaGiaoDanCu = ma * 10 + 2, HoTen = "Nguyen Thi Lan",
+                TenThanh = "Maria", Phai = "Nu" };
+            db.AddRange(gd, vo);
+            db.ThanhVienGiaDinh.Add(
+                new ThanhVienGiaDinh { GiaoXuId = app.GiaoXuId, GiaDinh = gd, GiaoDan = vo, VaiTro = VaiTroGiaDinh.Vo });
+            await db.SaveChangesAsync();
+        }
+
+        var ds = await app.CreateClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
+
+        var dong = ds!.Single(x => x.MaGiaDinhCu == ma);
+        dong.TenChong.Should().BeNull();
+        dong.DTChong.Should().BeNull();
+        dong.TenVo.Should().Be("Maria Nguyen Thi Lan");
+    }
+
+    [Fact]
+    public async Task Gia_dinh_chua_co_vo_tra_ve_TenVo_va_DTVo_null()
+    {
+        var ma = 51;
+        await using (var db = app.TaoContextThuan())
+        {
+            var gd = new GiaDinh { GiaoXuId = app.GiaoXuId, MaGiaDinhCu = ma, TenGiaDinh = "Binh" };
+            var chong = new GiaoDan { GiaoXuId = app.GiaoXuId, MaGiaoDanCu = ma * 10 + 1, HoTen = "Tran Van Binh",
+                TenThanh = "Giuse", Phai = "Nam" };
+            db.AddRange(gd, chong);
+            db.ThanhVienGiaDinh.Add(
+                new ThanhVienGiaDinh { GiaoXuId = app.GiaoXuId, GiaDinh = gd, GiaoDan = chong, VaiTro = VaiTroGiaDinh.Chong });
+            await db.SaveChangesAsync();
+        }
+
+        var ds = await app.CreateClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
+
+        var dong = ds!.Single(x => x.MaGiaDinhCu == ma);
+        dong.TenVo.Should().BeNull();
+        dong.DTVo.Should().BeNull();
+        dong.TenChong.Should().Be("Giuse Tran Van Binh");
+    }
+
+    [Fact]
+    public async Task Gia_dinh_khong_co_thanh_vien_nao_tra_ve_SoLuong_0_va_Gach_am_1()
+    {
+        var ma = 52;
+        await using (var db = app.TaoContextThuan())
+        {
+            db.GiaDinh.Add(new GiaDinh { GiaoXuId = app.GiaoXuId, MaGiaDinhCu = ma, TenGiaDinh = "Gia dinh trong" });
+            await db.SaveChangesAsync();
+        }
+
+        var ds = await app.CreateClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
+
+        var dong = ds!.Single(x => x.MaGiaDinhCu == ma);
+        dong.SoLuong.Should().Be(0);
+        dong.TenChong.Should().BeNull();
+        dong.TenVo.Should().BeNull();
+        dong.Gach.Should().Be(-1);
+    }
+
+    [Fact]
+    public async Task Giao_dan_ten_thanh_rong_hien_thi_ho_ten_tron_khong_khoang_trang_thua()
+    {
+        var ma = 53;
+        await using (var db = app.TaoContextThuan())
+        {
+            var gd = new GiaDinh { GiaoXuId = app.GiaoXuId, MaGiaDinhCu = ma, TenGiaDinh = "Khong ten thanh" };
+            var chong = new GiaoDan { GiaoXuId = app.GiaoXuId, MaGiaoDanCu = ma * 10 + 1, HoTen = "Le Van Cuong",
+                TenThanh = "", Phai = "Nam" };
+            db.AddRange(gd, chong);
+            db.ThanhVienGiaDinh.Add(
+                new ThanhVienGiaDinh { GiaoXuId = app.GiaoXuId, GiaDinh = gd, GiaoDan = chong, VaiTro = VaiTroGiaDinh.Chong });
+            await db.SaveChangesAsync();
+        }
+
+        var ds = await app.CreateClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
+
+        var dong = ds!.Single(x => x.MaGiaDinhCu == ma);
+        dong.TenChong.Should().Be("Le Van Cuong");
+        dong.TenChong.Should().NotStartWith(" ");
+    }
 }
