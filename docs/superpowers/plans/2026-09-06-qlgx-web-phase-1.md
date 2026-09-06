@@ -60,6 +60,52 @@ thẳng mã nguồn WinForms trong `Source/` chứ không suy đoán. Hệ quả
 viên trong form gia đình phải có lại thanh nút **Thêm mới / Chọn từ danh sách / Xem & sửa /
 Loại bỏ**, kèm API tương ứng ở Task 7.
 
+**E. Phải giữ `MaNhanDang` của mọi bảng có cột đó.** Bốn bảng `GiaoHo`, `GiaDinh`, `GiaoDan`,
+`HonPhoi` đều có cột `MaNhanDang` — trong bản desktop đây là **khoá nhận dạng dùng khi hợp
+nhất dữ liệu giữa các file `.mdb`**. Người dùng cho biết tương lai sẽ cần đồng bộ dữ liệu
+hai chiều giữa bản desktop và bản web, nên giá trị này phải được mang sang nguyên vẹn.
+
+Kiểm tra ngày 2026-09-06 phát hiện **thiếu sót thật**: bốn thực thể đều đã có thuộc tính
+`MaNhanDang`, nhưng đoạn mã công cụ chuyển dữ liệu ở Task 9 **không chép nó** — cả ba hàm
+`GhiGiaoHo`, `GhiGiaDinh`, `GhiGiaoDan` đều bỏ sót, và các bản ghi `DongGiaoHo`,
+`DongGiaDinh`, `DongGiaoDan` cũng không có trường này, nên câu `SELECT` trong `DocAccess`
+cũng không lấy về. Nếu để nguyên, toàn bộ khoá nhận dạng sẽ mất khi chuyển đổi và việc đồng
+bộ hai chiều sau này không làm được.
+
+Task 9 bắt buộc phải: thêm `MaNhanDang` vào cả bốn bản ghi nguồn, thêm cột đó vào câu
+`SELECT` đọc Access, và gán vào thực thể ở cả bốn hàm ghi. Task nào tạo bản ghi mới trên web
+thì để `MaNhanDang` là null — nó chỉ có nghĩa với dữ liệu đến từ Access. API cập nhật tuyệt
+đối **không được** cho phép sửa hay xoá trắng giá trị này.
+
+**F. Chuyển TOÀN BỘ cột của TOÀN BỘ bảng trong Access, trừ khi có lý do được ghi rõ.**
+
+Nguyên tắc: **chuyển dữ liệu tách rời khỏi dựng màn hình.** Bí tích, hội đoàn, giáo lý mãi
+giai đoạn 2–3 mới có màn hình, nhưng dữ liệu của chúng phải được chuyển sang **ngay từ lần
+chuyển đầu tiên**. Lý do: mỗi bảng chưa chuyển biến file `.mdb` cũ thành nguồn sự thật thứ
+hai tồn tại song song; đến lúc chuyển nốt thì dữ liệu hai bên đã phân kỳ và phải hợp nhất
+thủ công. Chuyển hết ngay rẻ hơn nhiều lần.
+
+Hiện trạng khi ra quyết định này: mới có thực thể cho 7 bảng, công cụ chuyển dữ liệu mới
+đụng 4 bảng. Còn thiếu khoảng 20 bảng.
+
+Yêu cầu: bổ sung thực thể, ánh xạ schema và bước chuyển đổi cho mọi bảng còn lại. Mỗi cột
+của Access phải có chỗ tương ứng bên PostgreSQL.
+
+**Các trường hợp được phép không chuyển, và chỉ những trường hợp này:**
+
+| Không chuyển | Lý do |
+|---|---|
+| `SELECT_GIADINH_LIST`, `SELECT_HONPHOI_LIST`, `SELECT_HONPHOI_LIST_1` | Là view (saved query) của Access, tức **dữ liệu dẫn xuất**, không phải dữ liệu nguồn. Bản web tính lại ở tầng dịch vụ. |
+| Cột `UpdateDate` của từng bảng | Đã được thể hiện bằng `ThucTheCoSo.UpdatedAt`. |
+| Mật khẩu trong bảng `TaiKhoan` | Bản desktop lưu mật khẩu theo cách không đạt chuẩn hiện nay. Chuyển **danh sách tài khoản** nhưng **không chuyển mật khẩu**; người dùng đặt lại mật khẩu ở lần đăng nhập đầu. Đây là quyết định bảo mật có chủ đích, không phải bỏ sót. |
+
+Mọi trường hợp không chuyển khác đều phải được ghi vào bảng trên kèm lý do, **trước khi**
+bỏ qua. Không được im lặng bỏ cột.
+
+**Kiểm chứng bắt buộc:** công cụ chuyển dữ liệu phải có bước đối chiếu tự động so **số dòng
+của từng bảng** giữa Access và PostgreSQL, và báo cáo bảng nào lệch. Không đạt bước này thì
+không được coi là chuyển đổi xong.
+
 **Ghi chú về các mục "cố ý hoãn sang Phase 2" đã ghi ở Task 12:** ba mục liên quan hôn phối
 và thanh nút thành viên **không còn được hoãn** theo sửa đổi B và D. Mục liên quan hội đoàn
 vẫn hoãn.
