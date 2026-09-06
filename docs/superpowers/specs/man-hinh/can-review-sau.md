@@ -151,3 +151,28 @@ Mọi chỗ như vậy phải:
   - Tab Hôn phối ở `GiaoDanDetail.tsx` mới chỉ là **khung giao diện tĩnh**, không gọi API.
 - **Đây là Task 15**, không phải lỗi hồi quy.
 - Cùng tình trạng: tab **Ơn gọi tận hiến** và tab **Hội đoàn** cũng là khung tĩnh.
+
+---
+
+## Chỗ bản WEB đang lệch so với desktop (khác loại với các mục trên)
+
+Các mục trên là *lỗi của bản desktop* mà ta cố ý tái hiện. Mục dưới đây ngược lại: **bản web
+đang làm khác desktop mà không cố ý** — cần sửa để đúng nguyên tắc "giống hệt bản hiện tại".
+
+### W1. Ngày tháng hiển thị sai định dạng ở màn hình chi tiết
+
+- **Phát hiện**: 2026-09-06, khi xem ảnh chụp kiểm thử tab Hôn phối. Ô "Ngày hôn phối" hiện
+  `04/25/2015` (định dạng Mỹ MM/DD/YYYY) thay vì `25/04/2015`.
+- **Nguyên nhân**: hai màn hình chi tiết dùng tổng cộng **19 ô `<input type="date">` gốc của
+  trình duyệt** (`GiaoDanDetail.tsx` 18 ô, `GiaDinhDetail.tsx` 1 ô). Ô ngày gốc **luôn hiển thị
+  theo locale của trình duyệt người dùng**, lập trình viên không kiểm soát được. Phía web hiện
+  **không có hàm định dạng `dd/MM/yyyy` nào cả**.
+- **Bản desktop**: luôn hiển thị `dd/MM/yyyy`, không phụ thuộc máy người dùng. Toàn bộ dữ liệu
+  ngày trong Access cũng lưu dạng chuỗi `dd/MM/yyyy`.
+- **Rủi ro thật**: người dùng Việt Nam đọc `04/25/2015` sẽ hiểu nhầm, hoặc tệ hơn là **gõ vào
+  theo thứ tự sai**. Với ngày mơ hồ như `03/04/2015` thì không ai biết là 3 tháng 4 hay 4 tháng 3
+  — sai âm thầm, không có cách phát hiện.
+- **Cần quyết**: đây là đánh đổi giao diện. Hai hướng:
+  1. Giữ ô ngày gốc (có lịch bấm chọn, hợp với điện thoại) và chấp nhận định dạng theo máy.
+  2. Tự làm ô nhập `dd/MM/yyyy` (giống desktop, chắc chắn đúng) nhưng mất lịch bấm chọn gốc.
+  Đề xuất: hướng 2 kèm nút mở lịch riêng — nhưng **chờ người dùng quyết**.
