@@ -438,4 +438,194 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         (await ctx.TaiKhoan.CountAsync(x => x.GiaoXuId == giaoXuId && x.TenTaiKhoan == "nguoinhap1"))
             .Should().Be(1);
     }
+
+    [Fact]
+    public async Task Chuyen_doi_bi_tich_va_di_chuyen_ghi_du_du_lieu_va_noi_khoa_ngoai()
+    {
+        // Bảng lớn nhất CSDL thật (BiTichChiTiet, 6150 dòng) và 5 bảng còn lại của Task 17B.
+        // Test này chứng minh đủ cột của cả 6 bảng được chuyển, không phải chỉ vài cột đầu.
+        var mau = NguonMau(14);
+        var capNhat = new DateTime(2026, 9, 4, 21, 10, 17, DateTimeKind.Unspecified);
+
+        mau.Nguon.DotBiTich.Add(new DongDotBiTich(MaDotBiTich: 1, NgayBiTich: "20/05/1972",
+            MoTa: "Dot rua toi dau nam", LinhMuc: "Cha Giuse Nguyen Van A", LoaiBiTich: 0,
+            NoiBiTich: "Nha tho Thanh Tam", UpdateDate: capNhat));
+        mau.Nguon.BiTichChiTiet.Add(new DongBiTichChiTiet(MaDotBiTich: 1, MaGiaoDan: mau.MaGiaoDan,
+            GhiChu: "Da rua toi dung ngay", UpdateDate: capNhat));
+        mau.Nguon.ChuyenXu.Add(new DongChuyenXu(MaChuyenXu: 1, MaGiaoDan: mau.MaGiaoDan,
+            NgayChuyen: "01/06/2000", NoiChuyen: "Giao xu Vinh Son", LoaiChuyen: 1,
+            GhiChuChuyen: "Chuyen den tu giao xu khac", UpdateDate: capNhat));
+        mau.Nguon.RaoHonPhoi.Add(new DongRaoHonPhoi(MaRaoHonPhoi: 1, TenRaoHonPhoi: "Rao Binh - Lan",
+            MaGiaoDan1: mau.MaGiaoDan, MaGiaoDan2: 0, NgayRaoLan1: "01/01/1998",
+            NgayRaoLan2: "08/01/1998", NgayRaoLan3: "15/01/1998", GiaoXu1: "Giao xu Thanh Tam",
+            GiaoPhan1: "Phan Thiet", GiaoXuTruoc1: null, GiaoPhanTruoc1: null,
+            GiaoXu2: "Giao xu Vinh Son", GiaoPhan2: "Da Lat", GiaoXuTruoc2: null,
+            GiaoPhanTruoc2: null, LinhMucNhan: "Cha Phero", GiaoXuNhan: "Giao xu Thanh Tam",
+            GhiChu: "Khong co gi ngan tro", Tam1: "tam1", Tam2: "tam2", Tam3: "tam3",
+            UpdateDate: capNhat, GiaoXuNQ1: "gxnq1", GiaoPhanNQ1: "gpnq1", GiaoXuNQ2: "gxnq2",
+            GiaoPhanNQ2: "gpnq2"));
+        mau.Nguon.TanHien.Add(new DongTanHien(MaTanHien: 1, MaGiaoDan: mau.MaGiaoDan,
+            NgayBatDau: "01/01/2010", ChucVu: "Tu si", NoiTu: "Dong Chua Cuu The",
+            DongTu: "Dong Chua Cuu The", NoiPhucVu: "Giao xu Duc Me", DiaChiPhucVu: "12 Vo Thi Sau",
+            DienThoaiPhucVu: "0900000002", EmailPhucVu: "tansinh@example.com",
+            GhiChu: "Ghi chu tan hien", DaHoiTuc: true, NgayVaoDCV: "01/09/2005",
+            NgayVaoNhaThu: "01/09/2004", NgayVaoNhaTap: "01/09/2006", NgayVaoKhanLanDau: "01/09/2008",
+            NgayVaoKhanTronDoi: "01/09/2012", NgayPhoTe: "01/06/2013", NgayThuPhongLM: "01/06/2014",
+            NgayBonMang: "19/03/2015"));
+        mau.Nguon.LinhMuc.Add(new DongLinhMuc(MaLinhMuc: 1, TenThanh: "Giuse",
+            HoTen: "Nguyen Van Cha So", NgaySinh: "01/01/1950", ChucVu: "Chanh xu",
+            TuNgay: "01/01/2000", DenNgay: null, GhiChu: "Ghi chu linh muc", DienThoai: "0900000003",
+            Email: "linhmuc@example.com", DaXoa: false, UpdateDate: capNhat));
+
+        await using var ctx = db.TaoContext();
+        await new ChuyenDoiDuLieu(ctx, db.GiaoXuId, new BangAnhXaId())
+            .Chay(mau.Nguon, chayThu: false, CancellationToken.None);
+
+        var dotBiTich = await ctx.DotBiTich.SingleAsync(x => x.MaDotBiTichCu == 1);
+        dotBiTich.NgayBiTich.Should().Be(new DateOnly(1972, 5, 20));
+        dotBiTich.MoTa.Should().Be("Dot rua toi dau nam");
+        dotBiTich.LinhMuc.Should().Be("Cha Giuse Nguyen Van A");
+        dotBiTich.LoaiBiTich.Should().Be(LoaiBiTich.RuaToi);
+        dotBiTich.NoiBiTich.Should().Be("Nha tho Thanh Tam");
+        dotBiTich.UpdatedAt.Should().Be(new DateTimeOffset(capNhat, TimeSpan.Zero));
+
+        var chiTiet = await ctx.BiTichChiTiet.Include(x => x.DotBiTich).Include(x => x.GiaoDan)
+            .SingleAsync(x => x.DotBiTich!.MaDotBiTichCu == 1);
+        chiTiet.GiaoDan!.MaGiaoDanCu.Should().Be(mau.MaGiaoDan);
+        chiTiet.GhiChu.Should().Be("Da rua toi dung ngay");
+        chiTiet.UpdatedAt.Should().Be(new DateTimeOffset(capNhat, TimeSpan.Zero));
+
+        var chuyenXu = await ctx.ChuyenXu.SingleAsync(x => x.MaChuyenXuCu == 1);
+        chuyenXu.NgayChuyen.Should().Be(new DateOnly(2000, 6, 1));
+        chuyenXu.NoiChuyen.Should().Be("Giao xu Vinh Son");
+        chuyenXu.LoaiChuyen.Should().Be(LoaiChuyenXu.ChuyenDen);
+        chuyenXu.GhiChuChuyen.Should().Be("Chuyen den tu giao xu khac");
+
+        var rao = await ctx.RaoHonPhoi.SingleAsync(x => x.MaRaoHonPhoiCu == 1);
+        rao.TenRaoHonPhoi.Should().Be("Rao Binh - Lan");
+        rao.GiaoDan1Id.Should().NotBeNull();
+        // MaGiaoDan2 = 0 nghia la khong phai giao dan cua xu nay -> khong phai khoa ngoai mo coi.
+        rao.GiaoDan2Id.Should().BeNull();
+        rao.NgayRaoLan1.Should().Be(new DateOnly(1998, 1, 1));
+        rao.NgayRaoLan2.Should().Be(new DateOnly(1998, 1, 8));
+        rao.NgayRaoLan3.Should().Be(new DateOnly(1998, 1, 15));
+        rao.GiaoXu1.Should().Be("Giao xu Thanh Tam");
+        rao.GiaoPhan1.Should().Be("Phan Thiet");
+        rao.GiaoXu2.Should().Be("Giao xu Vinh Son");
+        rao.GiaoPhan2.Should().Be("Da Lat");
+        rao.LinhMucNhan.Should().Be("Cha Phero");
+        rao.GiaoXuNhan.Should().Be("Giao xu Thanh Tam");
+        rao.GhiChu.Should().Be("Khong co gi ngan tro");
+        rao.Tam1.Should().Be("tam1");
+        rao.Tam2.Should().Be("tam2");
+        rao.Tam3.Should().Be("tam3");
+        rao.GiaoXuNQ1.Should().Be("gxnq1");
+        rao.GiaoPhanNQ1.Should().Be("gpnq1");
+        rao.GiaoXuNQ2.Should().Be("gxnq2");
+        rao.GiaoPhanNQ2.Should().Be("gpnq2");
+
+        var tanHien = await ctx.TanHien.SingleAsync(x => x.MaTanHienCu == 1);
+        tanHien.ChucVu.Should().Be("Tu si");
+        tanHien.DongTu.Should().Be("Dong Chua Cuu The");
+        tanHien.NoiPhucVu.Should().Be("Giao xu Duc Me");
+        tanHien.DiaChiPhucVu.Should().Be("12 Vo Thi Sau");
+        tanHien.DienThoaiPhucVu.Should().Be("0900000002");
+        tanHien.EmailPhucVu.Should().Be("tansinh@example.com");
+        tanHien.DaHoiTuc.Should().BeTrue();
+        tanHien.NgayBatDau.Should().Be(new DateOnly(2010, 1, 1));
+        tanHien.NgayVaoDCV.Should().Be(new DateOnly(2005, 9, 1));
+        tanHien.NgayVaoNhaThu.Should().Be(new DateOnly(2004, 9, 1));
+        tanHien.NgayVaoNhaTap.Should().Be(new DateOnly(2006, 9, 1));
+        tanHien.NgayVaoKhanLanDau.Should().Be(new DateOnly(2008, 9, 1));
+        tanHien.NgayVaoKhanTronDoi.Should().Be(new DateOnly(2012, 9, 1));
+        tanHien.NgayPhoTe.Should().Be(new DateOnly(2013, 6, 1));
+        tanHien.NgayThuPhongLM.Should().Be(new DateOnly(2014, 6, 1));
+        tanHien.NgayBonMang.Should().Be(new DateOnly(2015, 3, 19));
+        // Access khong co UpdateDate cho TanHien -> chi con lai gio ghi that (khong phai capNhat).
+        tanHien.UpdatedAt.Should().NotBe(new DateTimeOffset(capNhat, TimeSpan.Zero));
+
+        var linhMuc = await ctx.LinhMuc.SingleAsync(x => x.MaLinhMucCu == 1);
+        linhMuc.TenThanh.Should().Be("Giuse");
+        linhMuc.HoTen.Should().Be("Nguyen Van Cha So");
+        linhMuc.NgaySinh.Should().Be(new DateOnly(1950, 1, 1));
+        linhMuc.ChucVu.Should().Be("Chanh xu");
+        linhMuc.TuNgay.Should().Be(new DateOnly(2000, 1, 1));
+        linhMuc.DenNgay.Should().BeNull();
+        linhMuc.DaXoa.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task BiTichChiTiet_bo_qua_dong_mo_coi_va_bao_cao_canh_bao_thay_vi_lam_sap()
+    {
+        // MaGiaoDan=999999 khong ton tai trong tap du lieu nguon cua lan chay nay -> khoa ngoai
+        // mo coi. Cong cu phai bo qua dong nay, ghi canh bao, va KHONG duoc nem ngoai le lam
+        // sap toan bo lan chuyen (yeu cau cua brief).
+        var mau = NguonMau(15);
+        var capNhat = new DateTime(2026, 9, 4, 21, 10, 17, DateTimeKind.Unspecified);
+        mau.Nguon.DotBiTich.Add(new DongDotBiTich(MaDotBiTich: 2, NgayBiTich: "01/01/2001",
+            MoTa: "Dot bi tich", LinhMuc: null, LoaiBiTich: 1, NoiBiTich: null, UpdateDate: capNhat));
+        // Dong hop le - phai duoc ghi binh thuong.
+        mau.Nguon.BiTichChiTiet.Add(new DongBiTichChiTiet(MaDotBiTich: 2, MaGiaoDan: mau.MaGiaoDan,
+            GhiChu: "Hop le", UpdateDate: capNhat));
+        // Dong mo coi ve MaGiaoDan - phai bi bo qua.
+        mau.Nguon.BiTichChiTiet.Add(new DongBiTichChiTiet(MaDotBiTich: 2, MaGiaoDan: 999999,
+            GhiChu: "Mo coi giao dan", UpdateDate: capNhat));
+        // Dong mo coi ve MaDotBiTich - phai bi bo qua.
+        mau.Nguon.BiTichChiTiet.Add(new DongBiTichChiTiet(MaDotBiTich: 888888, MaGiaoDan: mau.MaGiaoDan,
+            GhiChu: "Mo coi dot bi tich", UpdateDate: capNhat));
+        await using var ctx = db.TaoContext();
+
+        var kq = await new ChuyenDoiDuLieu(ctx, db.GiaoXuId, new BangAnhXaId())
+            .Chay(mau.Nguon, chayThu: false, CancellationToken.None);
+
+        (await ctx.BiTichChiTiet.CountAsync(x => x.DotBiTich!.MaDotBiTichCu == 2)).Should().Be(1);
+        (await ctx.BiTichChiTiet.CountAsync(x => x.GiaoDan!.MaGiaoDanCu == 999999)).Should().Be(0);
+        kq.CanhBao.Should().Contain(c => c.Contains("999999"));
+        kq.CanhBao.Should().Contain(c => c.Contains("888888"));
+    }
+
+    [Fact]
+    public async Task Chay_lai_bang_bi_tich_va_di_chuyen_khong_sinh_ban_ghi_trung()
+    {
+        var mau = NguonMau(16);
+        var capNhat = new DateTime(2026, 9, 4, 21, 10, 17, DateTimeKind.Unspecified);
+        mau.Nguon.DotBiTich.Add(new DongDotBiTich(MaDotBiTich: 3, NgayBiTich: "01/01/2001",
+            MoTa: null, LinhMuc: null, LoaiBiTich: 2, NoiBiTich: null, UpdateDate: capNhat));
+        mau.Nguon.BiTichChiTiet.Add(new DongBiTichChiTiet(MaDotBiTich: 3, MaGiaoDan: mau.MaGiaoDan,
+            GhiChu: null, UpdateDate: capNhat));
+        mau.Nguon.ChuyenXu.Add(new DongChuyenXu(MaChuyenXu: 2, MaGiaoDan: mau.MaGiaoDan,
+            NgayChuyen: null, NoiChuyen: null, LoaiChuyen: 0, GhiChuChuyen: null, UpdateDate: capNhat));
+        mau.Nguon.RaoHonPhoi.Add(new DongRaoHonPhoi(MaRaoHonPhoi: 2, TenRaoHonPhoi: null,
+            MaGiaoDan1: mau.MaGiaoDan, MaGiaoDan2: null, NgayRaoLan1: null, NgayRaoLan2: null,
+            NgayRaoLan3: null, GiaoXu1: null, GiaoPhan1: null, GiaoXuTruoc1: null,
+            GiaoPhanTruoc1: null, GiaoXu2: null, GiaoPhan2: null, GiaoXuTruoc2: null,
+            GiaoPhanTruoc2: null, LinhMucNhan: null, GiaoXuNhan: null, GhiChu: null, Tam1: null,
+            Tam2: null, Tam3: null, UpdateDate: capNhat, GiaoXuNQ1: null, GiaoPhanNQ1: null,
+            GiaoXuNQ2: null, GiaoPhanNQ2: null));
+        mau.Nguon.TanHien.Add(new DongTanHien(MaTanHien: 2, MaGiaoDan: mau.MaGiaoDan,
+            NgayBatDau: null, ChucVu: null, NoiTu: null, DongTu: null, NoiPhucVu: null,
+            DiaChiPhucVu: null, DienThoaiPhucVu: null, EmailPhucVu: null, GhiChu: null,
+            DaHoiTuc: false, NgayVaoDCV: null, NgayVaoNhaThu: null, NgayVaoNhaTap: null,
+            NgayVaoKhanLanDau: null, NgayVaoKhanTronDoi: null, NgayPhoTe: null,
+            NgayThuPhongLM: null, NgayBonMang: null));
+        mau.Nguon.LinhMuc.Add(new DongLinhMuc(MaLinhMuc: 2, TenThanh: null, HoTen: "Linh muc B",
+            NgaySinh: null, ChucVu: null, TuNgay: null, DenNgay: null, GhiChu: null,
+            DienThoai: null, Email: null, DaXoa: false, UpdateDate: capNhat));
+        var giaoXuId = Guid.NewGuid();
+        await using var ctx = db.TaoContext();
+        ctx.GiaoXu.Add(new GiaoXu { Id = giaoXuId, TenGiaoXu = "Giao xu rieng bi tich", MaGiaoXuCu = 998 });
+        await ctx.SaveChangesAsync();
+        var anhXa = new BangAnhXaId();
+
+        await new ChuyenDoiDuLieu(ctx, giaoXuId, anhXa).Chay(mau.Nguon, false, CancellationToken.None);
+        var kq = await new ChuyenDoiDuLieu(ctx, giaoXuId, anhXa).Chay(mau.Nguon, false, CancellationToken.None);
+
+        (await ctx.DotBiTich.CountAsync(x => x.GiaoXuId == giaoXuId && x.MaDotBiTichCu == 3)).Should().Be(1);
+        (await ctx.BiTichChiTiet.CountAsync(x => x.GiaoXuId == giaoXuId)).Should().Be(1);
+        (await ctx.ChuyenXu.CountAsync(x => x.GiaoXuId == giaoXuId && x.MaChuyenXuCu == 2)).Should().Be(1);
+        (await ctx.RaoHonPhoi.CountAsync(x => x.GiaoXuId == giaoXuId && x.MaRaoHonPhoiCu == 2)).Should().Be(1);
+        (await ctx.TanHien.CountAsync(x => x.GiaoXuId == giaoXuId && x.MaTanHienCu == 2)).Should().Be(1);
+        (await ctx.LinhMuc.CountAsync(x => x.GiaoXuId == giaoXuId && x.MaLinhMucCu == 2)).Should().Be(1);
+        BaoCaoDoiChieu.TimBangLech(kq).Should().BeEmpty();
+    }
 }
