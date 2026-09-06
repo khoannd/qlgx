@@ -1,5 +1,9 @@
 namespace Qlgx.Domain.Entities;
 
+/// <summary>
+/// Ánh xạ 63 cột của bảng GiaoDan trong Access. Lớp này có 62 thuộc tính riêng vì cột
+/// UpdateDate của Access được thể hiện bằng ThucTheCoSo.UpdatedAt.
+/// </summary>
 public class GiaoDan : ThucTheCoSo
 {
     public int MaGiaoDanCu { get; set; }

@@ -1,5 +1,9 @@
 namespace Qlgx.Domain.Entities;
 
+/// <summary>
+/// Ánh xạ 17 cột của bảng GiaDinh trong Access. Lớp này có 16 thuộc tính riêng vì cột
+/// UpdateDate của Access được thể hiện bằng ThucTheCoSo.UpdatedAt.
+/// </summary>
 public class GiaDinh : ThucTheCoSo
 {
     public int MaGiaDinhCu { get; set; }
