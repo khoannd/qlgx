@@ -271,6 +271,48 @@ Mọi chỗ như vậy phải:
   bước (mỗi cảnh báo một bước xác nhận riêng) để giữ đúng khả năng "đồng ý một phần" của
   desktop.
 
+### 21. Backend "ghi gia đình" (2026-09-06) — xác nhận đã tái hiện các mục 2, 3, 4, 5
+
+- **Mục 2** (tự xoá giáo dân khỏi gia đình cũ bị comment): `GiaDinhService.ThemThanhVien` hỏi
+  cảnh báo rồi **vẫn cho thêm mà không xoá khỏi gia đình cũ** khi client xác nhận
+  (`BoQuaCanhBao=true`) — kiểm bằng
+  `GiaDinhGhiTests.Them_nguoi_da_thuoc_gia_dinh_khac_tra_ve_canh_bao_roi_van_cho_them_khi_xac_nhan`
+  (giáo dân thuộc CẢ HAI gia đình sau khi xác nhận, đúng lỗi gốc).
+- **Mục 3** (cây quyết định `NguoiCu`): server **không** tự đoán vai trò mới — endpoint
+  `PUT /api/gia-dinh/{id}/vo-chong/{vaiTro}` nhận `XuLyNguoiCuDto { Xoa, VaiTroMoi }` là Ý ĐỊNH
+  CUỐI CÙNG mà lượt sau (giao diện) đã hỏi xong qua cây quyết định nhiều bước, rồi thực hiện
+  nguyên tử (xoá dòng cũ + thêm dòng mới cùng một giao dịch). Nếu vai trò đang có người mà
+  client chưa gửi `XuLyNguoiCu`, server trả `CanQuyetDinhNguoiCu` (không tự đoán) — xem
+  `GiaDinhGhiTests.Doi_nguoi_chong_khi_chua_quyet_dinh_nguoi_cu_tra_canh_bao_can_quyet_dinh`.
+- **Mục 5** (xoá thành viên là xoá vĩnh viễn): `GiaDinhService.XoaThanhVien` gọi
+  `db.ThanhVienGiaDinh.Remove` (xoá thật), không có cờ `DaXoa` nào trên bảng này — kiểm bằng
+  `GiaDinhGhiTests.Xoa_thanh_vien_la_xoa_vinh_vien_khoi_ThanhVienGiaDinh`.
+- **Mục 4** (không áp dụng trực tiếp ở đây — mục 4 nói về Ơn gọi tận hiến, không liên quan gia
+  đình; bỏ qua).
+
+### 22. `GiaDinhService.GanVoChong` — hai chỗ mô hình hoá gần đúng, không đọc được nguyên văn từ mã nguồn desktop
+
+- **"Đã chuyển xứ" của một GIÁO DÂN** (dùng trong `ThemThanhVien` khi thêm thành viên): bảng
+  `GiaoDan` KHÔNG có cột `DaChuyenXu` riêng (khác `GiaDinh`, có cột này) — desktop đọc giá trị
+  này từ đâu (có thể tính từ bảng `ChuyenXu` qua một hàm `Memory`/`GxGiaoDan` chưa đọc trong
+  nhiệm vụ này). Bản web suy "đã chuyển xứ" = bản ghi `ChuyenXu` MỚI NHẤT (theo `NgayChuyen`) của
+  giáo dân đó có `LoaiChuyen = ChuyenDi`. Đây là suy diễn hợp lý dựa trên enum có sẵn, chưa đối
+  chiếu được với mã nguồn thật.
+- **Hành động "chuyển về lại xứ"** khi client trả lời Yes cho hộp thoại 3 lựa chọn (dòng
+  1127-1131): bản web tạo một bản ghi `ChuyenXu` MỚI với `LoaiChuyen = ChuyenDen` (ghi chú
+  "Chuyển về lại xứ khi được thêm vào gia đình") thay vì sửa/xoá gì trên bản ghi `ChuyenXu` cũ —
+  chưa xác nhận đây có đúng ý nghĩa "trở về lại xứ" của bản gốc không (bản gốc có thể chỉ đổi
+  một cờ, không thêm bản ghi lịch sử mới).
+- **`Memory.KiemTraVoChong` (CMemory.cs:1691-1710)**: câu SQL gốc `SELECT_CHECK_VOCHONG` không
+  nằm trong phạm vi đọc của nhiệm vụ này (nằm trong `SqlConstants.cs`, không đọc). Bản web tái
+  hiện qua suy luận: lấy đôi hôn phối MỚI NHẤT theo `SoThuTu` của giáo dân, người kia còn sống
+  (`!QuaDoi`), rồi hiện đúng nguyên văn thông báo `"Giáo dân này đã từng kết hôn với [...], thuộc
+  đôi hôn phối [...]"`. Đã kiểm tra thật bằng dữ liệu `qlgx_thu` (một giáo dân từng kết hôn thật
+  sự kích hoạt đúng cảnh báo này khi gán làm Người nam của một gia đình khác) — hành vi có vẻ
+  đúng nhưng chưa đối chiếu được 100% với SQL gốc.
+- **Câu hỏi cho người dùng**: xác nhận ba điểm suy diễn trên là chấp nhận được, hay cần đọc thêm
+  mã nguồn (`GxGiaoDan.cs`, `SqlConstants.cs`) để làm đúng hơn.
+
 ---
 
 ## Chỗ bản WEB đang lệch so với desktop (khác loại với các mục trên)

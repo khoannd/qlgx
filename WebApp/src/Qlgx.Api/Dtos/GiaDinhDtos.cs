@@ -82,3 +82,47 @@ public record CapNhatGiaDinhRequest(
     string? TenGiaDinh, Guid? GiaoHoId, string? DienThoai, string? DiaChi, string? SoHoKhau,
     string? DienGiaDinh, string? GhiChu, bool DaChuyenXu, DateOnly? NgayChuyen,
     string? NoiChuyen, bool KhongThongKe, uint RowVersion, CapNhatHonPhoiRequest? HonPhoi);
+
+// --- Ghi (tạo mới / xoá / thành viên / vợ-chồng) — xem GiaDinhService và can-review-sau.md
+// mục 2, 3, 4, 5 (quyết định chi phối: migrate y hệt bản desktop, kể cả chỗ sai). ------------
+
+/// <summary>Tạo một gia đình mới, tương đương mở `frmGiaDinh` ở chế độ Thêm mới rồi bấm Cập
+/// nhật ngay (chỉ hai trường bắt buộc tối thiểu để có một bản ghi hợp lệ — Người nam/nữ và
+/// thành viên được thêm bằng các endpoint riêng SAU KHI đã có Id gia đình, vì lưới/hai ô chọn
+/// người của desktop chỉ hoạt động trên một `MaGiaDinh` đã tồn tại).</summary>
+public record TaoGiaDinhRequest(string? TenGiaDinh, Guid? GiaoHoId);
+
+public record KetQuaTaoGiaDinhDto(Guid Id, int MaGiaDinhCu);
+
+/// <summary>Thêm một người vào lưới "Thành viên khác trong gia đình" (`addGiaoDan`,
+/// frmGiaDinh.cs:1043-1140). `VaiTro` giữ nguyên giá trị thô (0..100, xem GiaDinhService) —
+/// client chịu trách nhiệm không gửi 0/1 (Chồng/Vợ có endpoint riêng, xem
+/// GanVoChongRequest). `BoQuaCanhBao=true` xác nhận MỌI cảnh báo áp dụng được cùng lúc, đúng
+/// mẫu KiemTraNghiepVu của giáo dân (can-review-sau.md mục 20) — không phân biệt "đồng ý cảnh
+/// báo A nhưng không đồng ý cảnh báo B". `MuonChuyenVeXu`: chỉ có ý nghĩa khi người được chọn
+/// đã chuyển xứ đi — null = chưa quyết (server trả cảnh báo yêu cầu quyết định, tương đương
+/// hộp thoại Yes/No/Cancel 3 lựa chọn của desktop, dòng 1127-1131), true = "Yes" (chuyển về lại
+/// xứ, tự đặt lại GiaoXuId/xoá cờ chuyển xứ liên quan), false = "No" (vẫn thêm nhưng KHÔNG đổi
+/// gì về tình trạng chuyển xứ của người đó) — chọn "Cancel" ở client thì đơn giản là KHÔNG gọi
+/// endpoint này.</summary>
+public record ThemThanhVienRequest(Guid GiaoDanId, int VaiTro, bool BoQuaCanhBao, bool? MuonChuyenVeXu);
+
+public record KetQuaThemThanhVienDto(Guid? GiaoDanId, IReadOnlyList<string> CanhBao);
+
+/// <summary>Gán hoặc đổi Người nam (VaiTro=0/Chồng) hay Người nữ (VaiTro=1/Vợ) của một gia
+/// đình — tương đương `txtNguoiChong_OnSelecting`/`txtNguoiVo_OnSelecting`
+/// (frmGiaDinh.cs:390-611) cộng phần chọn ban đầu của cây quyết định `NguoiCu` (dòng 649-919).
+///
+/// Cây quyết định NguoiCu (nhiều hộp thoại Yes/No liên tiếp để ĐOÁN vai trò mới của người cũ)
+/// là logic GIAO DIỆN chạy tuần tự — thuộc phạm vi lượt sau (xây form gia đình). Máy chủ ở đây
+/// chỉ nhận Ý ĐỊNH CUỐI CÙNG mà người dùng đã chốt qua <see cref="XuLyNguoiCu"/> và thực hiện
+/// NGUYÊN TỬ trong cùng một giao dịch với việc gán người mới — không tự đoán gì thêm.</summary>
+public record GanVoChongRequest(
+    Guid GiaoDanId, uint RowVersion, bool BoQuaCanhBao, XuLyNguoiCuDto? XuLyNguoiCu);
+
+/// <summary>Ý định cuối cùng về người đang giữ vai trò Chồng/Vợ trước khi bị thay — bắt buộc
+/// phải có (khác null) nếu vai trò đó ĐANG có người, để tránh máy chủ tự "đoán" thay. `Xoa=true`
+/// = xoá hẳn khỏi gia đình (không còn dòng ThanhVienGiaDinh nào cho người này ở gia đình này);
+/// `Xoa=false` = hạ xuống thành viên với `VaiTroMoi` do client (đã hỏi người dùng qua cây quyết
+/// định) chọn — bắt buộc phải có giá trị khi Xoa=false.</summary>
+public record XuLyNguoiCuDto(bool Xoa, int? VaiTroMoi);

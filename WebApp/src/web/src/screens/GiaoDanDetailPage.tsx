@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, LoiXungDot } from '../api/client'
 import type {
-  GiaoDanDetail as GiaoDanDetailDuLieu, HoiDoanCuaGiaoDan, HoiDoanDanhMuc, HonPhoiCuaGiaoDan,
-  TanHienCuaGiaoDan,
+  GiaoDanDetail as GiaoDanDetailDuLieu, GiaoHo, HoiDoanCuaGiaoDan, HoiDoanDanhMuc,
+  HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
 } from '../api/types'
 import { TrangThaiTai } from '../components/TrangThaiTai'
 import {
@@ -36,6 +36,7 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan 
   const [hoiDoan, setHoiDoan] = useState<HoiDoanCuaGiaoDan[]>([])
   const [dangTaiHoiDoan, setDangTaiHoiDoan] = useState(id !== null)
   const [danhMucHoiDoan, setDanhMucHoiDoan] = useState<HoiDoanDanhMuc[]>([])
+  const [danhMucGiaoHo, setDanhMucGiaoHo] = useState<GiaoHo[]>([])
 
   const tai = useCallback(() => {
     if (id === null) return
@@ -104,6 +105,13 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan 
       .catch((e: unknown) => { console.error('Không tải được danh mục hội đoàn', e) })
   }, [])
 
+  // Danh mục Giáo họ thật (combo "Giáo họ") — không phụ thuộc `id`, tải một lần.
+  useEffect(() => {
+    api.giaoHo.danhMuc()
+      .then(setDanhMucGiaoHo)
+      .catch((e: unknown) => { console.error('Không tải được danh mục giáo họ', e) })
+  }, [])
+
   // Gộp MỌI cảnh báo nghiệp vụ áp dụng được (xem TaoGiaoDanRequest.BoQuaCanhBao phía backend)
   // thành MỘT hộp thoại xác nhận, thay vì chuỗi hộp thoại Yes/No tuần tự của desktop — cùng
   // tinh thần "chặn tới khi được xác nhận rõ ràng", chỉ khác cách trình bày. Trả về `true` nếu
@@ -145,6 +153,7 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan 
         onLuu={tao}
         dangLuu={dangLuu}
         thongBaoLuu={thongBaoLuu}
+        danhMucGiaoHo={danhMucGiaoHo}
       />
     )
   }
@@ -227,6 +236,7 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan 
           onLuuHoiDoan={luuHoiDoan}
           onThemHoiDoan={themHoiDoan}
           danhMucHoiDoan={danhMucHoiDoan}
+          danhMucGiaoHo={danhMucGiaoHo}
         />
       )}
     </TrangThaiTai>

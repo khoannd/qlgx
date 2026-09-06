@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { GxGiaDinhList } from './GxGiaDinhList'
+import { GxGiaDinhList, menuGiaDinhMacDinh } from './GxGiaDinhList'
 import type { GiaDinhListItem } from '../api/types'
 
 const giaDinh = (p: Partial<GiaDinhListItem> = {}): GiaDinhListItem => ({
@@ -73,5 +73,21 @@ describe('GxGiaDinhList', () => {
     await userEvent.dblClick(await screen.findByText('Nguyễn Văn A'))
 
     expect(onMo).toHaveBeenCalledWith(expect.objectContaining({ maGiaDinhCu: 12 }))
+  })
+
+  // Task "ghi gia đình" mục C: "In phiếu gia đình" TỪNG bị nối nhầm vào mở màn hình chi tiết
+  // (moChiTiet) — xem gia-dinh-danh-sach.md mục 10 "Ưu tiên cao #2". Đã gỡ nối sai; giờ mọi
+  // mục in/xem-vị-trí đều hiện đúng thông báo "chưa hỗ trợ", không mở gì cả.
+  it('menu In phieu gia dinh KHONG con mo man hinh chi tiet, chi hien thong bao chua ho tro', () => {
+    const moChiTiet = vi.fn()
+    const alertGia = vi.spyOn(window, 'alert').mockImplementation(() => {})
+
+    const menu = menuGiaDinhMacDinh(moChiTiet)
+    const inPhieu = menu.find((m) => m.nhan === 'In phiếu gia đình')
+    inPhieu?.chay?.(giaDinh())
+
+    expect(moChiTiet).not.toHaveBeenCalled()
+    expect(alertGia).toHaveBeenCalledWith(expect.stringContaining('chưa được hỗ trợ'))
+    alertGia.mockRestore()
   })
 })

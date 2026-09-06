@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, LoiXungDot } from '../api/client'
-import type { GiaDinhDetail as GiaDinhDetailDuLieu } from '../api/types'
+import type { GiaDinhDetail as GiaDinhDetailDuLieu, GiaoHo } from '../api/types'
 import { TrangThaiTai } from '../components/TrangThaiTai'
 import { GiaDinhDetail, type YeuCauCapNhatGiaDinh } from './GiaDinhDetail'
 
@@ -24,6 +24,13 @@ export function GiaDinhDetailPage({ id, moGiaoDan, moDanhSachGiaDinh }: Props) {
   const [loi, setLoi] = useState<string | null>(null)
   const [dangLuu, setDangLuu] = useState(false)
   const [thongBaoLuu, setThongBaoLuu] = useState<string | null>(null)
+  const [danhMucGiaoHo, setDanhMucGiaoHo] = useState<GiaoHo[]>([])
+
+  useEffect(() => {
+    api.giaoHo.danhMuc()
+      .then(setDanhMucGiaoHo)
+      .catch((e: unknown) => { console.error('Không tải được danh mục giáo họ', e) })
+  }, [])
 
   const tai = useCallback(() => {
     if (id === null) return
@@ -41,7 +48,10 @@ export function GiaDinhDetailPage({ id, moGiaoDan, moDanhSachGiaDinh }: Props) {
   useEffect(tai, [tai])
 
   if (id === null) {
-    return <GiaDinhDetail moGiaoDan={moGiaoDan} moDanhSachGiaDinh={moDanhSachGiaDinh} />
+    return (
+      <GiaDinhDetail moGiaoDan={moGiaoDan} moDanhSachGiaDinh={moDanhSachGiaDinh}
+        danhMucGiaoHo={danhMucGiaoHo} />
+    )
   }
 
   async function luu(payload: YeuCauCapNhatGiaDinh) {
@@ -73,6 +83,7 @@ export function GiaDinhDetailPage({ id, moGiaoDan, moDanhSachGiaDinh }: Props) {
           onLuu={luu}
           dangLuu={dangLuu}
           thongBaoLuu={thongBaoLuu}
+          danhMucGiaoHo={danhMucGiaoHo}
         />
       )}
     </TrangThaiTai>

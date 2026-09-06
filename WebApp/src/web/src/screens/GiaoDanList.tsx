@@ -1,10 +1,15 @@
 import { useMemo, useState } from 'react'
-import type { GiaoDanListItem } from '../api/types'
+import type { GiaoDanListItem, GiaoHo } from '../api/types'
 import { GxGiaoDanList, menuGiaoDanMacDinh } from '../components/GxGiaoDanList'
-import { DANH_SACH_GIAO_HO_TAM, NGOAI_XU } from '../data/giaoHoTam'
+
+/** Sentinel hiển thị cho "Ngoài xứ" — đúng quy ước `MaGiaoHo = 0` của bản desktop; ở bản web
+ * ứng với `tenGiaoHo === "Ngoài xứ"` (xem GiaoDanService.DungDanhSach). */
+const NGOAI_XU = 'Ngoài xứ'
 
 type Props = {
   rows: GiaoDanListItem[]
+  /** Danh mục Giáo họ THẬT (GET /api/giao-ho) — thay `data/giaoHoTam.ts` hard-code theo tên. */
+  danhMucGiaoHo?: GiaoHo[]
   /** Mở thẻ chi tiết giáo dân — truyền `null` để mở bản ghi mới, đúng nút "Thêm giáo dân". */
   moGiaoDan: (id: string | null) => void
   /** Mục "Xem gia đình" trên menu chuột phải của lưới mở thẳng thẻ chi tiết gia đình. */
@@ -23,12 +28,14 @@ type Props = {
 /**
  * Danh sách giáo dân — cùng bố cục `page-head`/`filters-bar` với `GiaDinhList`, chỉ khác ô
  * tick là "Chỉ xem giáo dân không được thống kê" và lưới là `GxGiaoDanList`. Lọc theo Giáo họ
- * thực hiện trên máy khách vì backend chưa có danh mục Giáo họ (xem `data/giaoHoTam.ts`). Ô
- * tick lọc theo `khongThongKe` — KHÔNG suy ra từ `tenGiaoHo === "Ngoài xứ"`: hai khái niệm
- * này khác nhau (một giáo dân ngoài xứ vẫn có thể được thống kê, và ngược lại).
+ * vẫn thực hiện trên máy khách (so khớp `tenGiaoHo`, không gọi lại API) dù danh mục Giáo họ
+ * nay đã thật (`GET /api/giao-ho`, xem prop `danhMucGiaoHo`) — chấp nhận được ở quy mô hiện
+ * tại (2050 giáo dân). Ô tick lọc theo `khongThongKe` — KHÔNG suy ra từ
+ * `tenGiaoHo === "Ngoài xứ"`: hai khái niệm này khác nhau (một giáo dân ngoài xứ vẫn có thể
+ * được thống kê, và ngược lại).
  */
 export function GiaoDanList({
-  rows, moGiaoDan, moGiaDinh, hienCaDaMat = false, onDoiHienCaDaMat, onXoa,
+  rows, moGiaoDan, moGiaDinh, hienCaDaMat = false, onDoiHienCaDaMat, onXoa, danhMucGiaoHo = [],
 }: Props) {
   const [giaoHo, setGiaoHo] = useState('-1')
   const [chiKhongThongKe, setChiKhongThongKe] = useState(false)
@@ -54,8 +61,9 @@ export function GiaoDanList({
 
   const dsGiaoHo = useMemo(() => {
     const tuDuLieu = rows.map((r) => r.tenGiaoHo).filter((t): t is string => !!t && t !== NGOAI_XU)
-    return Array.from(new Set([...tuDuLieu, ...DANH_SACH_GIAO_HO_TAM])).sort((a, b) => a.localeCompare(b, 'vi'))
-  }, [rows])
+    const tuDanhMuc = danhMucGiaoHo.map((g) => g.tenGiaoHo)
+    return Array.from(new Set([...tuDuLieu, ...tuDanhMuc])).sort((a, b) => a.localeCompare(b, 'vi'))
+  }, [rows, danhMucGiaoHo])
 
   const rowsLoc = useMemo(
     () => rows.filter((r) => {

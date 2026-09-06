@@ -25,6 +25,13 @@ public class GiaoDan : ThucTheCoSo
     public string? AnhDaiDien { get; set; }
     public string? HoTenCha { get; set; }
     public string? HoTenMe { get; set; }
+    /// <summary>Liên kết tới MỘT giáo dân có sẵn khi Tên Cha/Mẹ được chọn qua picker thật (hạ
+    /// tầng "GxPicker" — xem docs/superpowers/specs/man-hinh/can-review-sau.md mục 19). Cột
+    /// MỚI, không có ở bản Access gốc (nơi Tên Cha/Mẹ chỉ là chuỗi tự do) — cần để tra NgaySinh
+    /// thật của cha/mẹ và tái hiện Rule 15 (CheckTuoiChaMe, frmGiaoDan.cs:586-607). Null nghĩa
+    /// là chưa chọn qua picker (dữ liệu cũ chuyển từ Access, hoặc người dùng chỉ gõ tay).</summary>
+    public Guid? ChaId { get; set; }
+    public Guid? MeId { get; set; }
 
     // --- Rửa tội ---
     public string? SoRuaToi { get; set; }

@@ -140,16 +140,16 @@ So với `WebApp/src/web/src/screens/GiaDinhList.tsx`, `WebApp/src/web/src/compo
 | Hành vi bản desktop | Bản web đã có? | Ghi chú |
 |---|---|---|
 | Liệt kê gia đình, đếm tổng số | **Có** | `GiaDinhList.tsx` hiện `count-pill` số dòng sau lọc; API `GET /api/gia-dinh` |
-| Lọc theo Giáo họ (kể cả "Tất cả"/"Ngoài xứ") | **Có, nhưng lọc phía client** | `GiaDinhList.tsx` dùng `giaoHo` state lọc bằng JS trên toàn bộ `rows` đã tải, không gọi lại API theo `giaoHoId` thật — do "backend chưa có danh mục Giáo họ để truyền `giaoHoId` thật" (chú thích trong code). Khác desktop: desktop lọc bằng SQL `WHERE MaGiaoHo=?`. Với dữ liệu lớn, cách lọc client có thể chậm/tải thừa, nhưng endpoint đã có tham số `giaoHoId` sẵn sàng dùng khi có danh mục giáo họ thật |
+| Lọc theo Giáo họ (kể cả "Tất cả"/"Ngoài xứ") | **Có, nhưng lọc phía client** | Danh mục Giáo họ nay ĐÃ THẬT (`GET /api/giao-ho`, xem can-review-sau.md mục 19) — `GiaDinhList.tsx` nhận `danhMucGiaoHo` để liệt kê đúng tên thật thay vì danh sách cứng cũ, nhưng vẫn lọc bằng JS trên `tenGiaoHo` của các dòng đã tải, KHÔNG gọi lại API theo `giaoHoId`. Khác desktop: desktop lọc bằng SQL `WHERE MaGiaoHo=?`. Chấp nhận được ở quy mô 40 gia đình; chuyển sang lọc server (endpoint đã có tham số `giaoHoId`) nếu cần khi dữ liệu lớn hơn |
 | "Chỉ xem gia đình không được thống kê" | **Có** | Cả UI (`chiKhongThongKe` state, lọc client) lẫn API (`chiKhongThongKe` query param, đã cài trong `GiaDinhService.LayDanhSach`) — nhưng UI hiện tại lọc client thay vì gọi lại API với tham số đó |
 | 12 cột đúng thứ tự desktop | **Có** | `cotGiaDinh.ts` khớp gần như 1:1 tên cột và thứ tự với `FormatGrid` (trừ cột GACH ẩn) |
 | Gạch đỏ riêng ô Người nam/Người nữ theo qua đời/chuyển xứ | **Có** | `cellClass` trong `cotGiaDinh.ts` dùng đúng công thức `gach` (0/1/2) khớp với backend (`GiaDinhService.cs` dòng 56-58, công thức `2*voMat + chongMat - 1`) |
 | Thêm gia đình mới | **Thiếu (dẫn tới ngõ cụt)** | Nút "Thêm gia đình" điều hướng sang `GiaDinhDetail` với `duLieu=undefined`, nhưng màn hình đó khóa cứng nút Lưu cho bản ghi mới — xem `gia-dinh-chi-tiet.md` mục 10 |
 | Sửa gia đình (mở chi tiết) | **Có** | Nhấp đúp dòng / menu "In phiếu gia đình" hiện đang **dùng nhầm** để mở chi tiết (xem dưới) |
-| Xóa gia đình (mềm/vĩnh viễn, chọn nhiều dòng) | **Thiếu hoàn toàn** | Không có nút Xóa nào trong `GiaDinhList.tsx`/`GxGiaDinhList.tsx`; không có endpoint DELETE |
+| Xóa gia đình (mềm/vĩnh viễn, chọn nhiều dòng) | **Backend có (2026-09-06), UI chưa nối** | `DELETE /api/gia-dinh/{id}?vinhVien=` — xem `GiaDinhService.Xoa`, `GiaDinhGhiTests`. Chưa có nút Xóa nào trong `GiaDinhList.tsx`/`GxGiaDinhList.tsx`, và chưa hỗ trợ chọn nhiều dòng — việc của lượt sau (giao diện) |
 | In danh sách ra Excel | **Thiếu** | Không có nút/hành động tương ứng |
 | In chứng nhận hôn phối | **Thiếu** | Mục menu "In chứng nhận hôn phối" tồn tại trong `menuGiaDinhMacDinh` (`GxGiaDinhList.tsx:17`) nhưng **không có `chay` (handler)** — bấm vào không làm gì |
-| In phiếu gia đình | **Sai/thiếu** | Mục menu "In phiếu gia đình" có `chay: moChiTiet` — tức bấm vào lại **mở màn hình chi tiết**, không in gì cả. Đây là hành vi hiển nhiên sai (nhãn ghi "in" nhưng chức năng là "mở chi tiết") — cần sửa nếu muốn giữ nhãn, hoặc đổi nhãn nếu cố ý dùng làm lối tắt mở chi tiết |
+| In phiếu gia đình | **Đã gỡ nối sai (2026-09-06)** | Mục menu "In phiếu gia đình" TỪNG có `chay: moChiTiet` (bấm vào lại mở màn hình chi tiết, không in gì cả). Đã gỡ — nay hiện đúng thông báo "Chức năng này chưa được hỗ trợ trên web ở giai đoạn này." như các mục in/xem-vị-trí khác, xem `GxGiaDinhList.tsx` (`menuGiaDinhMacDinh`) và `GxGiaDinhList.test.tsx`. In ấn thật vẫn chưa làm (giai đoạn 3) |
 | In lý lịch cá nhân | **Thiếu** | Có mục menu nhưng không có `chay` |
 | In giới thiệu chuyển xứ | **Thiếu** | Có mục menu nhưng không có `chay` |
 | Xem vị trí trên bản đồ | **Thiếu** | Có mục menu "Xem vị trí" nhưng không có `chay` |
@@ -160,9 +160,9 @@ So với `WebApp/src/web/src/screens/GiaDinhList.tsx`, `WebApp/src/web/src/compo
 ### Ưu tiên các thiếu sót (ảnh hưởng tới việc bỏ hẳn bản desktop)
 
 **Cao:**
-1. Không thể xóa gia đình qua web (mềm hoặc vĩnh viễn) — nghiệp vụ dọn dẹp dữ liệu định kỳ của giáo xứ không thực hiện được.
-2. Menu "In phiếu gia đình" bấm vào lại mở màn hình chi tiết thay vì in — gây hiểu lầm/mất niềm tin vào phần mềm nếu không sửa trước khi bàn giao.
-3. Không in được bất kỳ loại giấy tờ nào từ danh sách (chứng nhận hôn phối, phiếu gia đình, lý lịch cá nhân, giới thiệu chuyển xứ) — đây là nhu cầu vận hành hàng ngày của giáo xứ.
+1. ~~Không thể xóa gia đình qua web...~~ **Backend xong (2026-09-06)** — `DELETE /api/gia-dinh/{id}?vinhVien=`; còn thiếu nút Xoá trên giao diện danh sách (việc của lượt sau).
+2. ~~Menu "In phiếu gia đình" bấm vào lại mở màn hình chi tiết...~~ **Đã sửa (2026-09-06)** — gỡ nối sai, nay hiện thông báo "chưa hỗ trợ" như các mục in khác.
+3. Không in được bất kỳ loại giấy tờ nào từ danh sách (chứng nhận hôn phối, phiếu gia đình, lý lịch cá nhân, giới thiệu chuyển xứ) — đây là nhu cầu vận hành hàng ngày của giáo xứ. Vẫn thiếu, thuộc giai đoạn in ấn (giai đoạn 3).
 
 **Trung bình:**
 4. Lọc theo Giáo họ đang thực hiện phía client (tải hết rồi lọc) thay vì gọi API lọc — chấp nhận được ở quy mô nhỏ nhưng sẽ chậm dần khi số gia đình tăng, và không tận dụng được tham số `chiKhongThongKe`/`giaoHoId` mà backend đã hỗ trợ sẵn.

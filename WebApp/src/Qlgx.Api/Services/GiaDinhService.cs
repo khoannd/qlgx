@@ -23,8 +23,58 @@ public enum KetQuaCapNhatGiaDinh
     KhongTheGanHonPhoiMoCoi,
 }
 
-public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa)
+/// <summary>Kết quả xoá một gia đình — đúng 2 lựa chọn (Yes=vĩnh viễn, No=mềm) của hộp thoại 3
+/// nút gốc (`gxAddEdit1_DeleteClick`, frmGiaDinhList.cs:261-314); "Cancel" đơn giản là không
+/// gọi endpoint này. Khác giáo dân: bản desktop KHÔNG có điều kiện chặn nào khi xoá gia đình
+/// (không kiểm tra còn thành viên hay không) — xoá vĩnh viễn xoá cả bảng nối
+/// ThanhVienGiaDinh.</summary>
+public enum KetQuaXoaGiaDinh { ThanhCong, KhongTimThay }
+
+/// <summary>Kết quả thêm một người vào lưới "Thành viên khác" — xem GiaDinhEndpoints để biết
+/// ánh xạ HTTP.</summary>
+public enum KetQuaThemThanhVien
 {
+    ThanhCong,
+    KhongTimThayGiaDinh,
+    KhongTimThayGiaoDan,
+    /// <summary>Vi phạm CHẶN CỨNG (frmGiaDinh.cs:1053/1061) — không thể bỏ qua.</summary>
+    Loi,
+    /// <summary>Có cảnh báo (Yes/No của desktop) mà client chưa gửi BoQuaCanhBao=true.</summary>
+    CanhBaoChuaXacNhan,
+    /// <summary>Người được chọn đã chuyển xứ (frmGiaDinh.cs:1127-1131) — cần client quyết định
+    /// MuonChuyenVeXu (Yes/No) trước, hoặc Cancel (không gọi lại endpoint này nữa).</summary>
+    CanQuyetDinhChuyenXu,
+}
+
+/// <summary>Kết quả gán/đổi Người nam hoặc Người nữ — xem GiaDinhEndpoints.</summary>
+public enum KetQuaGanVoChong
+{
+    ThanhCong,
+    KhongTimThayGiaDinh,
+    KhongTimThayGiaoDan,
+    DungPhienBan,
+    /// <summary>Vi phạm CHẶN CỨNG: sai giới tính, hoặc đang là vợ/chồng gia đình khác còn hiệu
+    /// lực, hoặc dưới 14 tuổi.</summary>
+    Loi,
+    CanhBaoChuaXacNhan,
+    /// <summary>Vai trò đang có người mà client chưa gửi XuLyNguoiCu — máy chủ từ chối tự đoán
+    /// (xem ghi chú GanVoChongRequest.XuLyNguoiCu).</summary>
+    CanQuyetDinhNguoiCu,
+}
+
+public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoXu boiCanh)
+{
+    // Hai hằng số này lấy nguyên từ Source/DBAccess/GxConstants.cs (đã đọc trực tiếp,
+    // UTF-16LE) — CÙNG giá trị GiaoDanService.KiemTraNghiepVu đã dùng cho tuổi kết hôn khi tick
+    // "Có gia đình" ở màn hình giáo dân; ở đây áp dụng cho MỌI lần gán Người nam/Người nữ (đây
+    // chính là hành động "kết hôn" của bản desktop, không có điều kiện DaCoGiaDinh nào khác).
+    private const int TuoiChoPhepKetHon = 18;
+    private const int TuoiKhongChoPhepKetHon = 14;
+
+    private static bool TuoiKhongHopLe(DateOnly ngayTruoc, DateOnly ngaySau, int khoangCach) =>
+        ngaySau.Year - ngayTruoc.Year < khoangCach;
+
+
     public async Task<List<GiaDinhListItemDto>> LayDanhSach(
         Guid? giaoHoId, bool chiKhongThongKe, CancellationToken ct)
     {
@@ -138,6 +188,273 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa)
                 ? KetQuaCapNhatGiaDinh.DungPhienBanHonPhoi
                 : KetQuaCapNhatGiaDinh.DungPhienBanGiaDinh;
         }
+    }
+
+    // --- Ghi: tạo mới / xoá / thành viên / vợ-chồng --------------------------------------
+
+    /// <summary>Tạo một gia đình mới trống (chỉ Tên gia đình + Giáo họ) — tương đương mở
+    /// `frmGiaDinh` ở chế độ Thêm mới, nơi mã gia đình đã được sinh sẵn ngay khi mở form
+    /// (`Memory.Instance.GetNextId`, frmGiaDinh.cs:292) TRƯỚC khi người dùng nhập gì. Người
+    /// nam/nữ và thành viên được gán bằng các endpoint riêng sau khi đã có Id.</summary>
+    public async Task<KetQuaTaoGiaDinhDto> Tao(TaoGiaDinhRequest yc, CancellationToken ct)
+    {
+        var giaoXuId = boiCanh.GiaoXuId;
+        var g = new GiaDinh
+        {
+            GiaoXuId = giaoXuId,
+            MaGiaDinhCu = await sinhMa.LayMaTiepTheo(giaoXuId, "gia_dinh",
+                await db.GiaDinh.MaxAsync(x => (int?)x.MaGiaDinhCu, ct) ?? 0, ct),
+            // Bản ghi web tạo mới thì sinh MaNhanDang mới — KHÁC với CapNhat, nơi cố tình
+            // không đụng tới cột này của bản ghi đã có (xem ghi chú ở CapNhat/GiaoDanService).
+            MaNhanDang = $"web::gia_dinh::{Guid.NewGuid():N}",
+            TenGiaDinh = yc.TenGiaDinh,
+            GiaoHoId = yc.GiaoHoId,
+        };
+        db.GiaDinh.Add(g);
+        await db.SaveChangesAsync(ct);
+        return new KetQuaTaoGiaDinhDto(g.Id, g.MaGiaDinhCu);
+    }
+
+    /// <summary>Xoá một gia đình — đúng 2 lựa chọn Yes(vĩnh viễn)/No(mềm) của
+    /// `gxAddEdit1_DeleteClick` (frmGiaDinhList.cs:261-314). Không có điều kiện chặn nào (khác
+    /// hẳn giáo dân, nơi xoá vĩnh viễn bị chặn nếu còn thuộc gia đình) — bản desktop cho xoá
+    /// vĩnh viễn một gia đình bất kể còn bao nhiêu thành viên, xoá luôn cả bảng nối.</summary>
+    public async Task<KetQuaXoaGiaDinh> Xoa(Guid id, bool vinhVien, CancellationToken ct)
+    {
+        var g = await db.GiaDinh.FirstOrDefaultAsync(x => x.Id == id && !x.DaXoa, ct);
+        if (g is null) return KetQuaXoaGiaDinh.KhongTimThay;
+
+        if (!vinhVien)
+        {
+            g.DaXoa = true;
+            await db.SaveChangesAsync(ct);
+            return KetQuaXoaGiaDinh.ThanhCong;
+        }
+
+        await using var giaoDich = await db.Database.BeginTransactionAsync(ct);
+        await db.ThanhVienGiaDinh.Where(tv => tv.GiaDinhId == id).ExecuteDeleteAsync(ct);
+        db.GiaDinh.Remove(g);
+        await db.SaveChangesAsync(ct);
+        await giaoDich.CommitAsync(ct);
+        return KetQuaXoaGiaDinh.ThanhCong;
+    }
+
+    private static string TenHienThi(GiaoDan g) =>
+        string.IsNullOrWhiteSpace(g.TenThanh) ? g.HoTen : g.TenThanh + " " + g.HoTen;
+
+    /// <summary>Thêm một người vào lưới "Thành viên khác trong gia đình" — đúng thứ tự kiểm tra
+    /// của `addGiaoDan` (frmGiaDinh.cs:1043-1140, xem gia-dinh-chi-tiet.md mục 4 và
+    /// can-review-sau.md mục 2). VaiTro giữ nguyên giá trị thô do client gửi (không ép về Con).
+    /// </summary>
+    public async Task<(KetQuaThemThanhVien KetQua, string? ThongBaoLoi, IReadOnlyList<string> CanhBao)>
+        ThemThanhVien(Guid giaDinhId, ThemThanhVienRequest yc, CancellationToken ct)
+    {
+        var gd = await db.GiaDinh.Include(x => x.ThanhVien)
+            .FirstOrDefaultAsync(x => x.Id == giaDinhId && !x.DaXoa, ct);
+        if (gd is null) return (KetQuaThemThanhVien.KhongTimThayGiaDinh, null, []);
+
+        var giaoDan = await db.GiaoDan.FirstOrDefaultAsync(x => x.Id == yc.GiaoDanId, ct);
+        if (giaoDan is null) return (KetQuaThemThanhVien.KhongTimThayGiaoDan, null, []);
+
+        // Rule dòng 1053: đã là Chồng/Vợ HIỆN TẠI của chính gia đình này.
+        var (chongId, voId) = LayChongVoId(gd.ThanhVien);
+        if (yc.GiaoDanId == chongId || yc.GiaoDanId == voId)
+            return (KetQuaThemThanhVien.Loi, "Giáo dân này đã có trong gia đình", []);
+
+        // Rule dòng 1061: đã có trong lưới thành viên của CHÍNH gia đình này, bất kể vai trò.
+        if (gd.ThanhVien.Any(tv => tv.GiaoDanId == yc.GiaoDanId))
+            return (KetQuaThemThanhVien.Loi, "Giáo dân này đã tồn tại trong danh sách thành viên", []);
+
+        var ten = TenHienThi(giaoDan);
+        var canhBao = new List<string>();
+
+        // Rule dòng 1077-1090 (can-review-sau.md mục 2): thuộc MỘT GIA ĐÌNH KHÁC còn hiệu lực
+        // với vai trò > Vợ (tức không phải Chồng/Vợ ở đó — "con cái/thành viên"). Hỏi rồi VẪN
+        // CHO THÊM dù chọn Yes hay No — nhánh xoá khỏi gia đình cũ đã bị comment ở bản desktop,
+        // tái hiện y hệt: không xoá gì cả, kể cả khi client xác nhận (BoQuaCanhBao=true).
+        var giaDinhKhac = await db.ThanhVienGiaDinh
+            .Where(tv => tv.GiaoDanId == yc.GiaoDanId && tv.GiaDinhId != giaDinhId
+                         && tv.VaiTro > VaiTroGiaDinh.Vo && !tv.GiaDinh!.DaXoa)
+            .Select(tv => tv.GiaDinh!.TenGiaDinh)
+            .FirstOrDefaultAsync(ct);
+        if (giaDinhKhac is not null)
+            canhBao.Add(
+                $"Giáo dân [{ten}] đã thuộc về gia đình [{giaDinhKhac}].\r\n" +
+                $"Vui lòng xóa giáo dân [{ten}] ra khỏi gia đình [{giaDinhKhac}] trước khi thêm.\r\n" +
+                $"Bạn có muốn chương trình tự xóa giáo dân [{ten}] ra khỏi gia đình [{giaDinhKhac}] không?\r\n" +
+                "Chọn [Yes] để chương trình tự xóa.\r\nChọn [No] để xem lại");
+
+        // Rule dòng 1114-1117: đã bị đánh dấu Đã xóa.
+        if (giaoDan.DaXoa)
+            canhBao.Add(
+                $"Giáo dân [{ten}] đã bị xóa.\r\n" +
+                "Nếu thêm giáo dân này vào gia đình thì sẽ khôi phục giáo dân này thành chưa xóa.\r\n" +
+                "Chọn [Yes] để tiếp tục thêm giáo dân này vào thành viên gia đình.\r\nChọn [No] để hủy.");
+
+        if (canhBao.Count > 0 && !yc.BoQuaCanhBao)
+            return (KetQuaThemThanhVien.CanhBaoChuaXacNhan, null, canhBao);
+
+        // Rule dòng 1127-1131: đã chuyển xứ đi — hộp thoại 3 lựa chọn Yes/No/Cancel, xử lý
+        // SAU CÙNG (chỉ hỏi khi các cảnh báo trước đã được xác nhận), đúng thứ tự tuần tự của
+        // desktop. "Đã chuyển xứ" ở đây suy từ bản ghi ChuyenXu MỚI NHẤT của giáo dân (bảng
+        // GiaoDan không có cột DaChuyenXu riêng như GiaDinh — mô hình hoá khác biệt có ghi chú
+        // ở đây, không có trong dữ liệu Access gốc nên không kiểm chứng được 1:1).
+        var loaiChuyenGanNhat = await db.ChuyenXu.Where(c => c.GiaoDanId == yc.GiaoDanId)
+            .OrderByDescending(c => c.NgayChuyen).ThenByDescending(c => c.CreatedAt)
+            .Select(c => (LoaiChuyenXu?)c.LoaiChuyen).FirstOrDefaultAsync(ct);
+        var daChuyenDi = loaiChuyenGanNhat == LoaiChuyenXu.ChuyenDi;
+        if (daChuyenDi && yc.MuonChuyenVeXu is null)
+            return (KetQuaThemThanhVien.CanQuyetDinhChuyenXu, null, []);
+
+        await using var giaoDich = await db.Database.BeginTransactionAsync(ct);
+        if (giaoDan.DaXoa) giaoDan.DaXoa = false;
+        if (daChuyenDi && yc.MuonChuyenVeXu == true)
+            db.ChuyenXu.Add(new ChuyenXu
+            {
+                GiaoXuId = gd.GiaoXuId, GiaoDanId = yc.GiaoDanId,
+                MaChuyenXuCu = await sinhMa.LayMaTiepTheo(gd.GiaoXuId, "chuyen_xu",
+                    await db.ChuyenXu.MaxAsync(x => (int?)x.MaChuyenXuCu, ct) ?? 0, ct),
+                NgayChuyen = DateOnly.FromDateTime(DateTime.Now), LoaiChuyen = LoaiChuyenXu.ChuyenDen,
+                GhiChuChuyen = "Chuyển về lại xứ khi được thêm vào gia đình (thao tác thêm thành viên)",
+            });
+        db.ThanhVienGiaDinh.Add(new ThanhVienGiaDinh
+        {
+            GiaoXuId = gd.GiaoXuId, GiaDinhId = giaDinhId, GiaoDanId = yc.GiaoDanId,
+            VaiTro = (VaiTroGiaDinh)yc.VaiTro, ChuHo = false,
+        });
+        await db.SaveChangesAsync(ct);
+        await giaoDich.CommitAsync(ct);
+        return (KetQuaThemThanhVien.ThanhCong, null, []);
+    }
+
+    /// <summary>Xoá một thành viên khỏi lưới — XOÁ VĨNH VIỄN khỏi ThanhVienGiaDinh, đúng
+    /// `gxAddEdit1_DeleteClick` (frmGiaDinh.cs:1198, can-review-sau.md mục 5), KHÔNG phải xoá
+    /// mềm dù mọi bảng khác trong hệ thống đều dùng cờ DaXoa.</summary>
+    public async Task<bool> XoaThanhVien(Guid giaDinhId, Guid giaoDanId, int vaiTro, CancellationToken ct)
+    {
+        var tv = await db.ThanhVienGiaDinh.FirstOrDefaultAsync(x =>
+            x.GiaDinhId == giaDinhId && x.GiaoDanId == giaoDanId && x.VaiTro == (VaiTroGiaDinh)vaiTro, ct);
+        if (tv is null) return false;
+        db.ThanhVienGiaDinh.Remove(tv);
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    /// <summary>Gán hoặc đổi Người nam (vaiTro=Chồng) / Người nữ (vaiTro=Vợ) của một gia đình —
+    /// đúng thứ tự kiểm tra của `txtNguoiChong_OnSelecting`/`txtNguoiVo_OnSelecting`
+    /// (frmGiaDinh.cs:390-611). Phần "cây quyết định NguoiCu" (dòng 649-919) là logic giao diện
+    /// của lượt sau — ở đây chỉ nhận Ý ĐỊNH CUỐI CÙNG qua `yc.XuLyNguoiCu` và áp dụng NGUYÊN TỬ
+    /// cùng lúc với việc gán người mới.</summary>
+    public async Task<(KetQuaGanVoChong KetQua, string? ThongBaoLoi, IReadOnlyList<string> CanhBao)>
+        GanVoChong(Guid giaDinhId, VaiTroGiaDinh vaiTro, GanVoChongRequest yc, CancellationToken ct)
+    {
+        var gd = await db.GiaDinh.Include(x => x.ThanhVien)
+            .FirstOrDefaultAsync(x => x.Id == giaDinhId && !x.DaXoa, ct);
+        if (gd is null) return (KetQuaGanVoChong.KhongTimThayGiaDinh, null, []);
+
+        var giaoDan = await db.GiaoDan.FirstOrDefaultAsync(x => x.Id == yc.GiaoDanId, ct);
+        if (giaoDan is null) return (KetQuaGanVoChong.KhongTimThayGiaoDan, null, []);
+
+        // Rule dòng 481/554: kiểm tra giới tính đúng vai trò.
+        if (vaiTro == VaiTroGiaDinh.Chong && giaoDan.Phai == "Nữ")
+            return (KetQuaGanVoChong.Loi, "Người chồng không thể là nữ!", []);
+        if (vaiTro == VaiTroGiaDinh.Vo && giaoDan.Phai == "Nam")
+            return (KetQuaGanVoChong.Loi, "Người vợ không thể là nam!", []);
+
+        // Rule dòng 463-466 (checkNguoiNamNguoiNuTrongGiaDinhKhac): đang là chồng/vợ MỘT GIA
+        // ĐÌNH KHÁC còn hiệu lực (chưa xóa, chưa chuyển xứ) — CHẶN CỨNG, thông báo nguyên văn.
+        var oCoGiaDinhKhac = await db.ThanhVienGiaDinh
+            .Where(tv => tv.GiaoDanId == yc.GiaoDanId && tv.GiaDinhId != giaDinhId
+                         && (tv.VaiTro == VaiTroGiaDinh.Chong || tv.VaiTro == VaiTroGiaDinh.Vo)
+                         && !tv.GiaDinh!.DaXoa && !tv.GiaDinh.DaChuyenXu)
+            .Select(tv => new { tv.VaiTro, tv.GiaDinh!.TenGiaDinh, tv.GiaDinh.MaGiaDinhCu })
+            .FirstOrDefaultAsync(ct);
+        if (oCoGiaDinhKhac is not null)
+        {
+            var vaiTroChu = oCoGiaDinhKhac.VaiTro == VaiTroGiaDinh.Chong
+                ? "người nam (Người chồng)" : "người nữ (Người vợ)";
+            return (KetQuaGanVoChong.Loi,
+                $"Giáo dân này đang làm {vaiTroChu} trong gia đình [{oCoGiaDinhKhac.TenGiaDinh}] " +
+                $"có mã gia đình là [{oCoGiaDinhKhac.MaGiaDinhCu}] Vui lòng xem lại", []);
+        }
+
+        var canhBao = new List<string>();
+
+        // Rule Memory.checkTuoiKetHon: <14 chặn cứng, 14-17 cảnh báo (cùng công thức/thông báo
+        // GiaoDanService.KiemTraNghiepVu dùng cho tick "Có gia đình" — CMemory.cs:1444-1460).
+        if (giaoDan.NgaySinh is { } ns)
+        {
+            var homNay = DateOnly.FromDateTime(DateTime.Now);
+            if (TuoiKhongHopLe(ns, homNay, TuoiChoPhepKetHon))
+            {
+                if (TuoiKhongHopLe(ns, homNay, TuoiKhongChoPhepKetHon))
+                    return (KetQuaGanVoChong.Loi,
+                        $"Giáo dân này hiện tại chưa đủ {TuoiKhongChoPhepKetHon} tuổi. Không thể kết hôn", []);
+                canhBao.Add(
+                    $"Giáo dân này hiện tại chưa đủ {TuoiChoPhepKetHon} tuổi để kết hôn. " +
+                    "Bạn có muốn tiếp tục không.\r\nChọn [Yes] để tiếp tục.\r\nChọn [No] để xem lại.");
+            }
+        }
+
+        // Rule Memory.KiemTraVoChong (CMemory.cs:1691-1710): đã từng lập hôn phối với ai đó mà
+        // người kia còn sống (QuaDoi=0) — CẢNH BÁO, không chặn. Lấy đôi hôn phối MỚI NHẤT theo
+        // SoThuTu, đúng "ORDER BY HP1.SoThuTu DESC" của bản gốc.
+        var voChongCu = await db.GiaoDanHonPhoi
+            .Where(x => x.GiaoDanId == yc.GiaoDanId)
+            .OrderByDescending(x => x.SoThuTu)
+            .Select(x => new
+            {
+                TenHonPhoi = x.HonPhoi!.TenHonPhoi,
+                Nguoi = db.GiaoDanHonPhoi
+                    .Where(k => k.HonPhoiId == x.HonPhoiId && k.GiaoDanId != yc.GiaoDanId && !k.GiaoDan!.QuaDoi)
+                    .Select(k => new { k.GiaoDan!.TenThanh, k.GiaoDan.HoTen })
+                    .FirstOrDefault(),
+            })
+            .FirstOrDefaultAsync(x => x.Nguoi != null, ct);
+        if (voChongCu?.Nguoi is not null)
+        {
+            var tenNguoiKia = string.IsNullOrWhiteSpace(voChongCu.Nguoi.TenThanh)
+                ? voChongCu.Nguoi.HoTen : voChongCu.Nguoi.TenThanh + " " + voChongCu.Nguoi.HoTen;
+            canhBao.Add(
+                $"Giáo dân này đã từng kết hôn với [{tenNguoiKia}], thuộc đôi hôn phối [{voChongCu.TenHonPhoi}].\r\n" +
+                " Bạn có chắc tiếp tục chọn giáo dân này không?");
+        }
+
+        if (canhBao.Count > 0 && !yc.BoQuaCanhBao)
+            return (KetQuaGanVoChong.CanhBaoChuaXacNhan, null, canhBao);
+
+        var nguoiCu = gd.ThanhVien.FirstOrDefault(tv => tv.VaiTro == vaiTro);
+        var doiNguoi = nguoiCu is not null && nguoiCu.GiaoDanId != yc.GiaoDanId;
+        if (doiNguoi && yc.XuLyNguoiCu is null)
+            return (KetQuaGanVoChong.CanQuyetDinhNguoiCu, null, []);
+        if (doiNguoi && yc.XuLyNguoiCu is { Xoa: false, VaiTroMoi: null })
+            return (KetQuaGanVoChong.Loi,
+                "Phải chọn vai trò mới cho người cũ khi hạ xuống thành viên (không xoá hẳn)", []);
+
+        db.Entry(gd).Property(x => x.RowVersion).OriginalValue = yc.RowVersion;
+
+        await using var giaoDich = await db.Database.BeginTransactionAsync(ct);
+        if (doiNguoi)
+        {
+            db.ThanhVienGiaDinh.Remove(nguoiCu!);
+            if (yc.XuLyNguoiCu!.Xoa == false)
+                db.ThanhVienGiaDinh.Add(new ThanhVienGiaDinh
+                {
+                    GiaoXuId = gd.GiaoXuId, GiaDinhId = giaDinhId, GiaoDanId = nguoiCu!.GiaoDanId,
+                    VaiTro = (VaiTroGiaDinh)yc.XuLyNguoiCu.VaiTroMoi!.Value, ChuHo = false,
+                });
+        }
+        if (nguoiCu is null || doiNguoi)
+            db.ThanhVienGiaDinh.Add(new ThanhVienGiaDinh
+            {
+                GiaoXuId = gd.GiaoXuId, GiaDinhId = giaDinhId, GiaoDanId = yc.GiaoDanId,
+                VaiTro = vaiTro, ChuHo = false,
+            });
+
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateConcurrencyException) { return (KetQuaGanVoChong.DungPhienBan, null, []); }
+        await giaoDich.CommitAsync(ct);
+        return (KetQuaGanVoChong.ThanhCong, null, []);
     }
 
     private static (Guid? ChongId, Guid? VoId) LayChongVoId(IEnumerable<ThanhVienGiaDinh> thanhVien) =>

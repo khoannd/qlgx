@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api/client'
-import type { GiaoDanListItem } from '../api/types'
+import type { GiaoDanListItem, GiaoHo } from '../api/types'
 import { TrangThaiTai } from '../components/TrangThaiTai'
 import { GiaoDanList } from './GiaoDanList'
 
@@ -20,6 +20,13 @@ export function GiaoDanListPage({ moGiaoDan, moGiaDinh }: Props) {
   // các màn hình Tìm kiếm riêng, ngoài phạm vi migrate) — cờ này là khả năng MỚI để không mất
   // hẳn cách xem người đã mất/chuyển xứ trên web.
   const [hienCaDaMat, setHienCaDaMat] = useState(false)
+  const [danhMucGiaoHo, setDanhMucGiaoHo] = useState<GiaoHo[]>([])
+
+  useEffect(() => {
+    api.giaoHo.danhMuc()
+      .then(setDanhMucGiaoHo)
+      .catch((e: unknown) => { console.error('Không tải được danh mục giáo họ', e) })
+  }, [])
 
   const tai = useCallback(() => {
     setDangTai(true)
@@ -49,6 +56,7 @@ export function GiaoDanListPage({ moGiaoDan, moGiaDinh }: Props) {
         hienCaDaMat={hienCaDaMat}
         onDoiHienCaDaMat={setHienCaDaMat}
         onXoa={xoa}
+        danhMucGiaoHo={danhMucGiaoHo}
       />
     </TrangThaiTai>
   )

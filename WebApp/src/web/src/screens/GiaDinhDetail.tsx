@@ -1,9 +1,14 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react'
-import type { GiaDinhDetail as GiaDinhDetailDuLieu, GiaoDanListItem, ThanhVien } from '../api/types'
+import type {
+  GiaDinhDetail as GiaDinhDetailDuLieu, GiaoDanListItem, GiaoHo, ThanhVien,
+} from '../api/types'
 import { GxField, GxInline } from '../components/GxField'
 import { GxGiaoDanList, menuGiaoDanMacDinh } from '../components/GxGiaoDanList'
 import { GxPicker } from '../components/GxPicker'
-import { DANH_SACH_GIAO_HO_TAM, NGOAI_XU } from '../data/giaoHoTam'
+
+/** Sentinel hiển thị cho "Ngoài xứ" — ứng với `giaoHoId === null` (xem NGOAI_XU ở
+ * GiaoDanDetail.tsx, cùng quy ước). */
+const NGOAI_XU = 'Ngoài xứ'
 
 /** Các trường gửi lên `PUT /api/gia-dinh/{id}` — đúng `CapNhatGiaDinhRequest` phía backend,
  * trừ `giaoHoId` (xem ghi chú tại chỗ dựng payload bên dưới) và `honPhoi` (khối hôn phối
@@ -40,6 +45,8 @@ type Props = {
   /** Thông báo kết quả lần lưu gần nhất — container quyết định nội dung (thành công/lỗi/xung
    * đột), component này chỉ hiển thị nguyên văn. */
   thongBaoLuu?: string | null
+  /** Danh mục Giáo họ THẬT (GET /api/giao-ho) — thay `data/giaoHoTam.ts` hard-code theo tên. */
+  danhMucGiaoHo?: GiaoHo[]
 }
 
 const rong = (): GiaDinhDetailDuLieu => ({
@@ -75,18 +82,21 @@ function tuThanhVien(tv: ThanhVien, giaDinhId: string): GiaoDanListItem {
  * và bị BỎ HẲN khỏi DOM lúc ẩn (không chỉ gắn `hidden`) để khớp `queryByLabelText` khi test.
  */
 export function GiaDinhDetail({
-  duLieu, moGiaoDan, moDanhSachGiaDinh, onLuu, dangLuu, thongBaoLuu,
+  duLieu, moGiaoDan, moDanhSachGiaDinh, onLuu, dangLuu, thongBaoLuu, danhMucGiaoHo = [],
 }: Props) {
   const f = duLieu ?? rong()
   const moi = !duLieu?.id
   const formRef = useRef<HTMLFormElement>(null)
 
   const [daChuyenXu, setDaChuyenXu] = useState(f.daChuyenXu)
-  const [giaoHo, setGiaoHo] = useState<string>(f.giaoHoId ?? NGOAI_XU)
+  // null = "Ngoài xứ" (xem NGOAI_XU ở trên) — KHÔNG phải khoá ngoại tới bảng giao_ho.
+  const [giaoHoId, setGiaoHoId] = useState<string | null>(f.giaoHoId)
 
-  const dsGiaoHo = f.giaoHoId && !DANH_SACH_GIAO_HO_TAM.includes(f.giaoHoId)
-    ? [f.giaoHoId, ...DANH_SACH_GIAO_HO_TAM]
-    : DANH_SACH_GIAO_HO_TAM
+  const tenGiaoHoHienTai = giaoHoId === null ? NGOAI_XU
+    : danhMucGiaoHo.find((g) => g.id === giaoHoId)?.tenGiaoHo ?? `(#${giaoHoId.slice(0, 8)}…)`
+  const dsGiaoHo = giaoHoId && !danhMucGiaoHo.some((g) => g.id === giaoHoId)
+    ? [{ id: giaoHoId, tenGiaoHo: tenGiaoHoHienTai, maGiaoHoCu: 0, giaoHoChaId: null }, ...danhMucGiaoHo]
+    : danhMucGiaoHo
 
   // Quy ước đã chốt: vaiTro 0 = Chồng, 1 = Vợ, 2 = Con. "Thành viên khác trong gia đình" loại
   // trừ vợ chồng (vaiTro 0/1) — họ đã hiển thị riêng ở hai ô "Người nam"/"Người nữ" phía trên,
@@ -112,10 +122,8 @@ export function GiaDinhDetail({
 
   // Dựng payload từ form (chủ yếu là input không kiểm soát — defaultValue) rồi giao cho
   // container qua onLuu; container gọi API thật, xử lý thành công/lỗi/xung đột RowVersion.
-  // giaoHoId CỐ TÌNH giữ nguyên giá trị đã tải (f.giaoHoId), KHÔNG suy từ <select> "Giáo họ":
-  // combobox đó tạm liệt kê TÊN giáo họ cứng (`DANH_SACH_GIAO_HO_TAM`, xem file đó) vì backend
-  // chưa có danh mục giáo họ thật kèm Id — gửi nhầm tên lên chỗ backend cần Guid sẽ hỏng dữ
-  // liệu, nên màn hình này chưa cho đổi giáo họ qua API cho tới khi có danh mục thật.
+  // giaoHoId nay lấy từ state thật (danh mục GET /api/giao-ho, xem prop danhMucGiaoHo) — trước
+  // đây field này cố tình giữ nguyên giá trị cũ vì combobox chỉ liệt kê TÊN cứng không có Id.
   function xuLySubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!onLuu || !formRef.current) return
@@ -124,7 +132,7 @@ export function GiaDinhDetail({
 
     onLuu({
       tenGiaDinh: chuoi('tenGiaDinh'),
-      giaoHoId: f.giaoHoId,
+      giaoHoId,
       dienThoai: chuoi('dienThoai'),
       diaChi: chuoi('diaChi'),
       soHoKhau: chuoi('soHoKhau'),
@@ -147,7 +155,7 @@ export function GiaDinhDetail({
         </button>
         <h1>{tenTieuDe}</h1>
         <span className="head-sub">
-          {moi ? 'Chưa lưu · nhập thông tin rồi bấm Cập nhật' : `${giaoHo} · ${f.thanhVien.length} nhân khẩu`}
+          {moi ? 'Chưa lưu · nhập thông tin rồi bấm Cập nhật' : `${tenGiaoHoHienTai} · ${f.thanhVien.length} nhân khẩu`}
         </span>
         <div className="spacer" />
         <span className={'tag tag-' + (moi ? 'violet' : f.khongThongKe ? 'amber' : 'mint')}>
@@ -174,9 +182,10 @@ export function GiaDinhDetail({
             <input id="gdinh-ten" name="tenGiaDinh" type="text" defaultValue={f.tenGiaDinh ?? ''} />
           </GxField>
           <GxField label="Giáo họ" id="gdinh-giaoho">
-            <select id="gdinh-giaoho" value={giaoHo} onChange={(e) => setGiaoHo(e.target.value)}>
+            <select id="gdinh-giaoho" value={giaoHoId ?? NGOAI_XU}
+              onChange={(e) => setGiaoHoId(e.target.value === NGOAI_XU ? null : e.target.value)}>
               <option value={NGOAI_XU}>{NGOAI_XU}</option>
-              {dsGiaoHo.map((g) => <option key={g} value={g}>{g}</option>)}
+              {dsGiaoHo.map((g) => <option key={g.id} value={g.id}>{g.tenGiaoHo}</option>)}
             </select>
           </GxField>
           <GxField label="Điện thoại" id="gdinh-dienthoai"

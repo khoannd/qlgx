@@ -28,6 +28,7 @@ app.MapGet("/api/suc-khoe", () => Results.Ok(new
 
 app.MapGiaDinh();
 app.MapGiaoDan();
+app.MapGiaoHo();
 
 app.Run();
 

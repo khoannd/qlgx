@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api/client'
-import type { GiaDinhListItem } from '../api/types'
+import type { GiaDinhListItem, GiaoHo } from '../api/types'
 import { TrangThaiTai } from '../components/TrangThaiTai'
 import { GiaDinhList } from './GiaDinhList'
 
@@ -17,6 +17,13 @@ export function GiaDinhListPage({ moGiaDinh }: Props) {
   const [rows, setRows] = useState<GiaDinhListItem[] | null>(null)
   const [loi, setLoi] = useState<string | null>(null)
   const [dangTai, setDangTai] = useState(true)
+  const [danhMucGiaoHo, setDanhMucGiaoHo] = useState<GiaoHo[]>([])
+
+  useEffect(() => {
+    api.giaoHo.danhMuc()
+      .then(setDanhMucGiaoHo)
+      .catch((e: unknown) => { console.error('Không tải được danh mục giáo họ', e) })
+  }, [])
 
   const tai = useCallback(() => {
     setDangTai(true)
@@ -34,7 +41,7 @@ export function GiaDinhListPage({ moGiaDinh }: Props) {
 
   return (
     <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={tai}>
-      <GiaDinhList rows={rows ?? []} moGiaDinh={moGiaDinh} />
+      <GiaDinhList rows={rows ?? []} moGiaDinh={moGiaDinh} danhMucGiaoHo={danhMucGiaoHo} />
     </TrangThaiTai>
   )
 }

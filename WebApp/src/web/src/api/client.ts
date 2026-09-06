@@ -1,6 +1,6 @@
 import type {
-  GiaDinhDetail, GiaDinhListItem, GiaoDanDetail, GiaoDanListItem, HoiDoanCuaGiaoDan,
-  HoiDoanDanhMuc, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
+  GiaDinhDetail, GiaDinhListItem, GiaoDanDetail, GiaoDanListItem, GiaoDanTimKiem, GiaoHo,
+  HoiDoanCuaGiaoDan, HoiDoanDanhMuc, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
 } from './types'
 
 class LoiXungDot extends Error {}
@@ -104,5 +104,16 @@ export const api = {
   },
   hoiDoan: {
     danhMuc: () => goi<HoiDoanDanhMuc[]>('/api/hoi-doan'),
+  },
+  giaoHo: {
+    // Danh mục thật (Id + tên) — thay data/giaoHoTam.ts hard-code theo tên, xem
+    // docs/superpowers/specs/man-hinh/can-review-sau.md mục 19.
+    danhMuc: () => goi<GiaoHo[]>('/api/giao-ho'),
+  },
+  timKiem: {
+    // Dùng cho GxPicker thật (gõ để tìm Tên Cha/Mẹ, Người nam/nữ…) — giới hạn kết quả, KHÔNG
+    // tải hết danh sách giáo dân về trình duyệt.
+    giaoDan: (tuKhoa: string, limit = 20) =>
+      goi<GiaoDanTimKiem[]>(`/api/giao-dan/tim?tuKhoa=${encodeURIComponent(tuKhoa)}&limit=${limit}`),
   },
 }

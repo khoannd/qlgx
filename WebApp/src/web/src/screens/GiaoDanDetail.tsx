@@ -1,12 +1,16 @@
 import { useRef, useState, type FormEvent } from 'react'
 import type {
-  GiaoDanDetail as GiaoDanDetailDuLieu, HoiDoanCuaGiaoDan, HoiDoanDanhMuc, HonPhoiCuaGiaoDan,
-  TanHienCuaGiaoDan,
+  GiaoDanDetail as GiaoDanDetailDuLieu, GiaoDanTimKiem, GiaoHo, HoiDoanCuaGiaoDan,
+  HoiDoanDanhMuc, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
 } from '../api/types'
 import { GxField, GxInline } from '../components/GxField'
 import { GxFormTabs } from '../components/GxFormTabs'
 import { GxPicker } from '../components/GxPicker'
-import { DANH_SACH_GIAO_HO_TAM, NGOAI_XU } from '../data/giaoHoTam'
+
+/** Sentinel hiển thị khi chưa chọn giáo họ nào — đúng quy ước "MaGiaoHo = 0 nghĩa là Ngoài xứ"
+ * của `frmGiaoDan.cs`. Ở bản web, "Ngoài xứ" ứng với `giaoHoId === null` (không phải khoá
+ * ngoại tới một dòng thật trong bảng giao_ho — xem GET /api/giao-ho). */
+const NGOAI_XU = 'Ngoài xứ'
 
 /** Các trường gửi lên `PUT /api/giao-dan/hon-phoi/{honPhoiId}` — đúng `CapNhatHonPhoiRequest`
  * phía backend (dùng lại nguyên type đã có từ Task 7, xem GiaDinhDtos.cs). */
@@ -468,6 +472,8 @@ export type YeuCauCapNhatGiaoDan = {
   email: string | null
   hoTenCha: string | null
   hoTenMe: string | null
+  chaId: string | null
+  meId: string | null
   soRuaToi: string | null
   ngayRuaToi: string | null
   noiRuaToi: string | null
@@ -544,12 +550,15 @@ type Props = {
   onThemHoiDoan?: (payload: YeuCauThemHoiDoan) => Promise<void>
   /** Danh mục hội đoàn của giáo xứ — dùng cho combo chọn khi thêm một lượt tham gia mới. */
   danhMucHoiDoan?: HoiDoanDanhMuc[]
+  /** Danh mục Giáo họ THẬT (GET /api/giao-ho) — thay `data/giaoHoTam.ts` hard-code theo tên
+   * (xem docs/superpowers/specs/man-hinh/can-review-sau.md mục 19). */
+  danhMucGiaoHo?: GiaoHo[]
 }
 
 const rong = (): GiaoDanDetailDuLieu => ({
   id: '', maGiaoDanCu: 0, hoTen: '', tenThanh: null, phai: 'Nam', ngaySinh: null,
   noiSinh: null, cmnd: null, danToc: null, giaoHoId: null, diaChi: null, dienThoai: null,
-  email: null, hoTenCha: null, hoTenMe: null, soRuaToi: null, ngayRuaToi: null,
+  email: null, hoTenCha: null, hoTenMe: null, chaId: null, meId: null, soRuaToi: null, ngayRuaToi: null,
   noiRuaToi: null, chaRuaToi: null, nguoiDoDauRuaToi: null, soRuocLe: null, ngayRuocLe: null,
   noiRuocLe: null, chaRuocLe: null, soThemSuc: null, ngayThemSuc: null, noiThemSuc: null,
   chaThemSuc: null, nguoiDoDauThemSuc: null, ngayXucDau: null, nguoiXucDau: null,
@@ -578,7 +587,7 @@ export function GiaoDanDetail({
   danhSachHonPhoi = [], dangTaiHonPhoi = false, onLuuHonPhoi,
   danhSachTanHien = [], dangTaiTanHien = false, onLuuTanHien, onThemTanHien,
   danhSachHoiDoan = [], dangTaiHoiDoan = false, onLuuHoiDoan, onThemHoiDoan,
-  danhMucHoiDoan = [],
+  danhMucHoiDoan = [], danhMucGiaoHo = [],
 }: Props) {
   const p = duLieu ?? rong()
   const moi = !duLieu?.id
@@ -586,19 +595,26 @@ export function GiaoDanDetail({
 
   const [quaDoi, setQuaDoi] = useState(p.quaDoi)
   const [conHoc, setConHoc] = useState(p.conHoc)
-  const [giaoHo, setGiaoHo] = useState<string>(p.giaoHoId ?? NGOAI_XU)
+  // null = "Ngoài xứ" (không phải khoá ngoại tới bảng giao_ho — xem NGOAI_XU ở trên).
+  const [giaoHoId, setGiaoHoId] = useState<string | null>(p.giaoHoId)
   const [giaoDanAo, setGiaoDanAo] = useState(p.khongThongKe)
+  const [tenCha, setTenCha] = useState(p.hoTenCha)
+  const [chaId, setChaId] = useState(p.chaId)
+  const [tenMe, setTenMe] = useState(p.hoTenMe)
+  const [meId, setMeId] = useState(p.meId)
 
   const doiQuaDoi = (v: boolean) => { setQuaDoi(v); if (v) setConHoc(false) }
   const doiConHoc = (v: boolean) => { setConHoc(v); if (v) setQuaDoi(false) }
-  const doiGiaoDanAo = (v: boolean) => { setGiaoDanAo(v); if (v) setGiaoHo(NGOAI_XU) }
+  const doiGiaoDanAo = (v: boolean) => { setGiaoDanAo(v); if (v) setGiaoHoId(null) }
+  const chonCha = (gd: GiaoDanTimKiem) => { setChaId(gd.id); setTenCha((gd.tenThanh ? gd.tenThanh + ' ' : '') + gd.hoTen) }
+  const chonMe = (gd: GiaoDanTimKiem) => { setMeId(gd.id); setTenMe((gd.tenThanh ? gd.tenThanh + ' ' : '') + gd.hoTen) }
 
-  const ngoaiXu = giaoHo === NGOAI_XU
-  // giaoHoId thật (không phải sentinel "Ngoài xứ") có thể chưa nằm trong danh mục tạm bên
-  // dưới — chèn thêm để <select> không rơi vào trạng thái "không khớp option nào".
-  const dsGiaoHo = p.giaoHoId && !DANH_SACH_GIAO_HO_TAM.includes(p.giaoHoId)
-    ? [p.giaoHoId, ...DANH_SACH_GIAO_HO_TAM]
-    : DANH_SACH_GIAO_HO_TAM
+  const ngoaiXu = giaoHoId === null
+  // giaoHoId thật hiện tại có thể chưa nằm trong danh mục tải về (dữ liệu đang chờ tải, hoặc
+  // giáo họ đã bị xoá mềm) — chèn thêm để <select> không rơi vào "không khớp option nào".
+  const dsGiaoHo = giaoHoId && !danhMucGiaoHo.some((g) => g.id === giaoHoId)
+    ? [{ id: giaoHoId, tenGiaoHo: `(#${giaoHoId.slice(0, 8)}…)`, maGiaoHoCu: 0, giaoHoChaId: null }, ...danhMucGiaoHo]
+    : danhMucGiaoHo
 
   const tenDayDu = moi ? 'Giáo dân mới' : `${p.tenThanh ? p.tenThanh + ' ' : ''}${p.hoTen}`
   const tinhTrang = quaDoi ? 'Đã qua đời' : moi ? 'Bản nháp' : 'Đang hoạt động'
@@ -627,12 +643,18 @@ export function GiaoDanDetail({
           <GxField label="Nơi sinh" id="gd-noisinh">
             <input id="gd-noisinh" name="noiSinh" type="text" defaultValue={p.noiSinh ?? ''} />
           </GxField>
-          <GxField label="Tên Cha" id="gd-tencha"><GxPicker id="gd-tencha" value={p.hoTenCha} /></GxField>
-          <GxField label="Tên Mẹ" id="gd-tenme"><GxPicker id="gd-tenme" value={p.hoTenMe} /></GxField>
+          <GxField label="Tên Cha" id="gd-tencha">
+            <GxPicker id="gd-tencha" value={tenCha} onChon={chonCha}
+              onBoChon={() => { setChaId(null); setTenCha(null) }} />
+          </GxField>
+          <GxField label="Tên Mẹ" id="gd-tenme">
+            <GxPicker id="gd-tenme" value={tenMe} onChon={chonMe}
+              onBoChon={() => { setMeId(null); setTenMe(null) }} />
+          </GxField>
           <GxField label="Giáo họ" id="gd-giaoho">
-            <select id="gd-giaoho" value={giaoHo} onChange={(e) => setGiaoHo(e.target.value)}>
+            <select id="gd-giaoho" value={giaoHoId ?? NGOAI_XU} onChange={(e) => setGiaoHoId(e.target.value === NGOAI_XU ? null : e.target.value)}>
               <option value={NGOAI_XU}>{NGOAI_XU}</option>
-              {dsGiaoHo.map((g) => <option key={g} value={g}>{g}</option>)}
+              {dsGiaoHo.map((g) => <option key={g.id} value={g.id}>{g.tenGiaoHo}</option>)}
             </select>
           </GxField>
           {ngoaiXu && (
@@ -887,12 +909,14 @@ export function GiaoDanDetail({
       noiSinh: chuoi('noiSinh'),
       cmnd: chuoi('cmnd'),
       danToc: p.danToc,
-      giaoHoId: p.giaoHoId,
+      giaoHoId,
       diaChi: chuoi('diaChi'),
       dienThoai: chuoi('dienThoai'),
       email: chuoi('email'),
-      hoTenCha: p.hoTenCha,
-      hoTenMe: p.hoTenMe,
+      hoTenCha: tenCha,
+      hoTenMe: tenMe,
+      chaId,
+      meId,
       soRuaToi: chuoi('soRuaToi'),
       ngayRuaToi: chuoi('ngayRuaToi'),
       noiRuaToi: chuoi('noiRuaToi'),
@@ -939,7 +963,7 @@ export function GiaoDanDetail({
         <h1>{tenDayDu}</h1>
         <span className="head-sub">
           {moi ? 'Chưa lưu · nhập thông tin rồi bấm Thêm giáo dân'
-            : `${p.maGiaoDanCu} · ${ngoaiXu ? NGOAI_XU : giaoHo}${p.ngaySinh ? ' · sinh ' + p.ngaySinh : ''}`}
+            : `${p.maGiaoDanCu} · ${dsGiaoHo.find((g) => g.id === giaoHoId)?.tenGiaoHo ?? NGOAI_XU}${p.ngaySinh ? ' · sinh ' + p.ngaySinh : ''}`}
         </span>
         <div className="spacer" />
         <span className={'tag tag-' + tagTone}>{tinhTrang}</span>

@@ -201,12 +201,12 @@ So với `WebApp/src/web/src/screens/GiaDinhDetail.tsx`, `WebApp/src/Qlgx.Api/Se
 |---|---|---|
 | Xem thông tin gia đình (tên, giáo họ, điện thoại, địa chỉ, ghi chú, diện, số hộ khẩu, chuyển xứ, không thống kê) | **Có** | `GiaDinhDetail.tsx` có đủ field tương ứng, `GET /api/gia-dinh/{id}` trả đủ |
 | Sửa và lưu các trường trên (PUT) | **Có** | `PUT /api/gia-dinh/{id}` cập nhật đúng các trường, có kiểm soát `RowVersion` (đồng thời/concurrency) — desktop KHÔNG có cơ chế phát hiện đụng độ này, đây là điểm bản web LÀM TỐT HƠN |
-| Thêm gia đình mới | **Thiếu** | Nút "Thêm gia đình" mở form trống nhưng nút Cập nhật bị khoá cứng (`disabled={moi || ...}`), text hiện "Chưa hỗ trợ tạo mới gia đình qua web ở giai đoạn này". Không có `POST /api/gia-dinh` |
-| Xóa gia đình (mềm hoặc vĩnh viễn) | **Thiếu** | Không có endpoint DELETE nào trong `GiaDinhEndpoints.cs` |
-| Chọn/đổi Người nam, Người nữ qua picker thật (tìm giáo dân, kiểm tra giới tính, kiểm tra đã có gia đình khác, kiểm tra tuổi kết hôn...) | **Thiếu** | `GxPicker` trong `GiaDinhDetail.tsx` chỉ hiển thị tên hiện tại (`value={...}`), không thấy sự kiện chọn/đổi người — toàn bộ logic nghiệp vụ ở mục 4 (một trong những phần phức tạp nhất của màn hình desktop) chưa có bên web |
-| Đổi Giáo họ + cảnh báo "chuyển tất cả thành viên theo" | **Thiếu một phần** | Select Giáo họ trên UI chỉ đổi state hiển thị (`giaoHo`), nhưng khi lưu (`xuLySubmit`) luôn gửi `giaoHoId: f.giaoHoId` (giá trị cũ) — do danh mục giáo họ thật chưa có Id, xem chú thích trong code. Nghĩa là **hiện tại đổi giáo họ qua UI không có tác dụng thật**, và không có cảnh báo cascading như desktop |
+| Thêm gia đình mới | **Backend có, UI chưa nối** | `POST /api/gia-dinh` tạo bản ghi trống (Tên + Giáo họ), sinh `MaGiaDinhCu` qua `SinhMaService` và `MaNhanDang` mới — xem `GiaDinhService.Tao`, `GiaDinhGhiTests`. Nút "Thêm gia đình" trên UI vẫn khoá cứng nút Cập nhật — nối luồng giao diện (chọn Người nam/nữ trước khi có gì để lưu) là việc của lượt sau |
+| Xóa gia đình (mềm hoặc vĩnh viễn) | **Backend có, UI chưa nối** | `DELETE /api/gia-dinh/{id}?vinhVien=` — đúng 2 lựa chọn Yes(vĩnh viễn, xoá cả `ThanhVienGiaDinh`)/No(mềm) của hộp thoại gốc, KHÔNG có điều kiện chặn nào (khác giáo dân) — xem `GiaDinhService.Xoa`. Chưa có nút Xoá trên `GiaDinhList.tsx` (lượt sau) |
+| Chọn/đổi Người nam, Người nữ qua picker thật (tìm giáo dân, kiểm tra giới tính, kiểm tra đã có gia đình khác, kiểm tra tuổi kết hôn...) | **Backend có đầy đủ, UI chưa nối** | `PUT /api/gia-dinh/{id}/vo-chong/{vaiTro}` kiểm đủ: giới tính đúng thông báo nguyên văn, đang là vợ/chồng gia đình khác còn hiệu lực (chặn, thông báo có tên+mã gia đình), tuổi kết hôn (<14 chặn/14-17 cảnh báo, đúng `checkTuoiKetHon`), đã từng kết hôn với ai còn sống (`KiemTraVoChong`, cảnh báo) — xem `GiaDinhService.GanVoChong`, `GiaDinhGhiTests`, can-review-sau.md mục 22. Cây quyết định `NguoiCu` (đổi người thì người cũ đi đâu) là logic giao diện của LƯỢT SAU — server chỉ nhận ý định cuối (`XuLyNguoiCuDto`) và thực hiện nguyên tử. `GxPicker` trong `GiaDinhDetail.tsx` (dùng cho Người nam/nữ) vẫn CHƯA nối các sự kiện chọn — đó là việc của lượt sau, chỉ hạ tầng picker dùng chung (component + `GET /api/giao-dan/tim`) đã có, đã nối xong ở Tên Cha/Mẹ của màn hình giáo dân |
+| Đổi Giáo họ + cảnh báo "chuyển tất cả thành viên theo" | **Danh mục thật đã có, cảnh báo cascade vẫn thiếu** | `GET /api/giao-ho` trả danh mục thật; `GiaDinhDetail.tsx` nay dùng `giaoHoId` thật (state riêng, không còn giữ nguyên giá trị cũ) và gửi đúng lên `PUT /api/gia-dinh/{id}` khi lưu — xem can-review-sau.md mục 19. Vẫn KHÔNG có cảnh báo "chuyển tất cả thành viên theo" (cascade) như desktop — đó vẫn là việc chưa làm |
 | Chọn Chủ hộ | **Thiếu** | Có radio "Chủ hộ" trên UI (`defaultChecked` theo dữ liệu tải về) nhưng `xuLySubmit` không đọc giá trị này để gửi lên — không thể đổi chủ hộ qua web |
-| Thêm/sửa/xóa "thành viên khác" (con cái...) trong lưới | **Thiếu hoàn toàn** | `GxGiaoDanList` trong `GiaDinhDetail.tsx` chỉ hiển thị danh sách (đọc từ `duLieu.thanhVien`, lọc bỏ vai trò 0/1), không có nút Thêm/Sửa/Xóa nào nối API — không có endpoint thành viên nào trong `GiaDinhEndpoints.cs` |
+| Thêm/sửa/xóa "thành viên khác" (con cái...) trong lưới | **Backend có, UI chưa nối** | `POST /api/gia-dinh/{id}/thanh-vien` (thêm, đúng thứ tự kiểm tra `addGiaoDan`: đã là vợ/chồng hiện tại → chặn; đã trong lưới → chặn; thuộc gia đình khác → cảnh báo rồi VẪN CHO THÊM không xoá, đúng lỗi gốc — can-review-sau.md mục 2; đã xoá mềm → cảnh báo rồi tự khôi phục; đã chuyển xứ → cần quyết định riêng) và `DELETE /api/gia-dinh/{id}/thanh-vien/{giaoDanId}/{vaiTro}` (xoá VĨNH VIỄN, đúng can-review-sau.md mục 5) — xem `GiaDinhService.ThemThanhVien`/`XoaThanhVien`, `GiaDinhGhiTests`. `GxGiaoDanList` trong `GiaDinhDetail.tsx` vẫn chỉ hiển thị, chưa có nút Thêm/Sửa/Xóa nối API — việc của lượt sau |
 | Đổi vai trò (Quan hệ GĐ) của từng thành viên | **Thiếu** | Không có UI/endpoint |
 | Cảnh báo tick "Đã chuyển đi xứ khác" → ảnh hưởng mọi thành viên | **Thiếu** | Checkbox chỉ toggle hiện/ẩn Ngày chuyển + Nơi chuyển, không có hộp thoại xác nhận, không có logic chuyển xứ hàng loạt cho thành viên ở backend |
 | Cảnh báo đổi Địa chỉ → hỏi cập nhật địa chỉ hàng loạt cho thành viên | **Thiếu** | Không có |
@@ -223,10 +223,16 @@ So với `WebApp/src/web/src/screens/GiaDinhDetail.tsx`, `WebApp/src/Qlgx.Api/Se
 ### Ưu tiên các thiếu sót (ảnh hưởng tới việc bỏ hẳn bản desktop)
 
 **Cao — chặn hẳn việc bỏ bản desktop cho nghiệp vụ "gia đình":**
-1. Không có picker chọn/đổi Người nam, Người nữ kèm toàn bộ kiểm tra nghiệp vụ (giới tính, trùng gia đình khác, tuổi kết hôn...) — không thể lập gia đình mới hoặc sửa đúng qua web.
-2. Không có màn hình/luồng thêm mới gia đình (nút có nhưng vô hiệu) — giáo xứ không thể tạo gia đình mới qua web.
-3. Không thể thêm/sửa/xóa thành viên (con cái...) trong gia đình qua web — đây là một phần lõi của "sổ gia đình".
-4. Không in được phiếu gia đình / lý lịch cá nhân / chứng nhận hôn phối — các bản in giấy tờ giáo xứ cần hàng ngày.
+1. ~~Không có picker chọn/đổi Người nam, Người nữ...~~ **Backend xong (2026-09-06)** —
+   `PUT /api/gia-dinh/{id}/vo-chong/{vaiTro}` kiểm đủ mọi quy tắc; còn thiếu GIAO DIỆN (nối
+   `GxPicker` vào ô Người nam/nữ + cây quyết định `NguoiCu`) — việc của lượt sau.
+2. ~~Không có màn hình/luồng thêm mới gia đình...~~ **Backend xong (2026-09-06)** —
+   `POST /api/gia-dinh`; còn thiếu GIAO DIỆN mở khoá nút "Cập nhật" cho bản ghi mới.
+3. ~~Không thể thêm/sửa/xóa thành viên...~~ **Backend xong (2026-09-06)** —
+   `POST`/`DELETE /api/gia-dinh/{id}/thanh-vien`; còn thiếu GIAO DIỆN (nút Thêm/Sửa/Xóa trên
+   lưới thành viên) — việc của lượt sau. "Sửa" một thành viên (đổi vai trò tại chỗ, không xoá
+   rồi thêm lại) CHƯA có endpoint riêng — cần thêm nếu lượt sau cần.
+4. Không in được phiếu gia đình / lý lịch cá nhân / chứng nhận hôn phối — các bản in giấy tờ giáo xứ cần hàng ngày. Vẫn thiếu, ngoài phạm vi nhiệm vụ "ghi gia đình" (thuộc giai đoạn in ấn).
 
 **Trung bình:**
 5. Không có form sửa khối hôn phối dù backend đã hỗ trợ đầy đủ (chỉ thiếu UI) — phí phần đã làm.

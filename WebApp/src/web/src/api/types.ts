@@ -115,6 +115,10 @@ export type GiaoDanDetail = {
   email: string | null
   hoTenCha: string | null
   hoTenMe: string | null
+  /** Liên kết tới một giáo dân có sẵn khi Tên Cha/Mẹ được chọn qua GxPicker thật — null nếu
+   * chỉ gõ tay hoặc dữ liệu cũ chưa gán. Dùng để Rule 15 (tuổi cha/mẹ) tính được ở máy chủ. */
+  chaId: string | null
+  meId: string | null
   soRuaToi: string | null
   ngayRuaToi: string | null
   noiRuaToi: string | null
@@ -217,4 +221,24 @@ export type HoiDoanCuaGiaoDan = {
   ngayRaHoiDoan: string | null
   vaiTro: string | null
   rowVersion: number
+}
+
+/** Ánh xạ 1-1 với GiaoHoDto — một dòng danh mục Giáo họ THẬT (thay data/giaoHoTam.ts hard-code
+ * theo tên). MaGiaoHoCu chỉ để hiển thị/đối chiếu, không dùng làm khoá khi lưu — lưu bằng `id`. */
+export type GiaoHo = {
+  id: string
+  maGiaoHoCu: number
+  tenGiaoHo: string
+  giaoHoChaId: string | null
+}
+
+/** Ánh xạ 1-1 với GiaoDanTimKiemDto — một kết quả tìm kiếm cho GxPicker thật (gõ để tìm Tên
+ * Cha/Mẹ, Người nam/nữ…), KHÔNG phải bộ cột đầy đủ của lưới danh sách giáo dân. */
+export type GiaoDanTimKiem = {
+  id: string
+  maGiaoDanCu: number
+  tenThanh: string | null
+  hoTen: string
+  phai: string | null
+  ngaySinh: string | null
 }

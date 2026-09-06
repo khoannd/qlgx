@@ -5,7 +5,7 @@ import { api } from '../api/client'
 import type { GiaDinhListItem } from '../api/types'
 
 vi.mock('../api/client', () => ({
-  api: { giaDinh: { danhSach: vi.fn() } },
+  api: { giaDinh: { danhSach: vi.fn() }, giaoHo: { danhMuc: vi.fn().mockResolvedValue([]) } },
 }))
 
 const giaDinh = (p: Partial<GiaDinhListItem> = {}): GiaDinhListItem => ({

@@ -9,7 +9,10 @@ vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client')
   return {
     LoiXungDot: actual.LoiXungDot,
-    api: { giaDinh: { chiTiet: vi.fn(), capNhat: vi.fn() } },
+    api: {
+      giaDinh: { chiTiet: vi.fn(), capNhat: vi.fn() },
+      giaoHo: { danhMuc: vi.fn().mockResolvedValue([]) },
+    },
   }
 })
 

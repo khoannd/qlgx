@@ -16,6 +16,13 @@ public static class GiaoDanEndpoints
         nhom.MapGet("/{id:guid}", async (GiaoDanService dv, Guid id, CancellationToken ct) =>
             await dv.LayChiTiet(id, ct) is { } chiTiet ? Results.Ok(chiTiet) : Results.NotFound());
 
+        // Tìm giáo dân theo tên/mã cũ — hạ tầng cho GxPicker thật (gõ để tìm, chọn từ danh
+        // sách), dùng ở Tên Cha/Mẹ (màn hình giáo dân) và Người nam/nữ (màn hình gia đình, lượt
+        // sau). Route CỐ Ý đặt trước "/{id:guid}" phía trên không đụng nhau nhờ tiền tố "/tim"
+        // không khớp mẫu :guid.
+        nhom.MapGet("/tim", async (GiaoDanService dv, string? tuKhoa, int? limit, CancellationToken ct) =>
+            Results.Ok(await dv.TimKiem(tuKhoa, limit, ct)));
+
         // Tạo mới một giáo dân (Task "ghi cho giáo dân") — xem GiaoDanService.Tao.
         nhom.MapPost("", async (GiaoDanService dv, TaoGiaoDanRequest yeuCau, CancellationToken ct) =>
         {

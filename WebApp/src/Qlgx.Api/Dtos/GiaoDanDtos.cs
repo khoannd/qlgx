@@ -27,7 +27,7 @@ public record GiaoDanDetailDto(
     DateOnly? NgaySinh, string? NoiSinh, string? CMND, string? DanToc,
     Guid? GiaoHoId, string? ThuocGiaoXu, string? ThuocGiaoPhan,
     string? DiaChi, string? DienThoai, string? Email,
-    string? HoTenCha, string? HoTenMe,
+    string? HoTenCha, string? HoTenMe, Guid? ChaId, Guid? MeId,
     string? SoRuaToi, DateOnly? NgayRuaToi, string? NoiRuaToi, string? ChaRuaToi, string? NguoiDoDauRuaToi,
     string? SoRuocLe, DateOnly? NgayRuocLe, string? NoiRuocLe, string? ChaRuocLe,
     string? SoThemSuc, DateOnly? NgayThemSuc, string? NoiThemSuc, string? ChaThemSuc, string? NguoiDoDauThemSuc,
@@ -103,7 +103,7 @@ public record CapNhatHoiDoanRequest(
 public record CapNhatGiaoDanRequest(
     string HoTen, string? TenThanh, string? Phai, DateOnly? NgaySinh, string? NoiSinh,
     string? CMND, string? DanToc, Guid? GiaoHoId, string? DiaChi, string? DienThoai, string? Email,
-    string? HoTenCha, string? HoTenMe,
+    string? HoTenCha, string? HoTenMe, Guid? ChaId, Guid? MeId,
     string? SoRuaToi, DateOnly? NgayRuaToi, string? NoiRuaToi, string? ChaRuaToi, string? NguoiDoDauRuaToi,
     string? SoRuocLe, DateOnly? NgayRuocLe, string? NoiRuocLe, string? ChaRuocLe,
     string? SoThemSuc, DateOnly? NgayThemSuc, string? NoiThemSuc, string? ChaThemSuc, string? NguoiDoDauThemSuc,
@@ -121,7 +121,7 @@ public record CapNhatGiaoDanRequest(
 public record TaoGiaoDanRequest(
     string HoTen, string? TenThanh, string? Phai, DateOnly? NgaySinh, string? NoiSinh,
     string? CMND, string? DanToc, Guid? GiaoHoId, string? DiaChi, string? DienThoai, string? Email,
-    string? HoTenCha, string? HoTenMe,
+    string? HoTenCha, string? HoTenMe, Guid? ChaId, Guid? MeId,
     string? SoRuaToi, DateOnly? NgayRuaToi, string? NoiRuaToi, string? ChaRuaToi, string? NguoiDoDauRuaToi,
     string? SoRuocLe, DateOnly? NgayRuocLe, string? NoiRuocLe, string? ChaRuocLe,
     string? SoThemSuc, DateOnly? NgayThemSuc, string? NoiThemSuc, string? ChaThemSuc, string? NguoiDoDauThemSuc,
@@ -145,3 +145,8 @@ public record TaoGiaoDanRequest(
 /// `Id` là null và `CanhBao` liệt kê các cảnh báo (client hiện cho người dùng xác nhận rồi gọi
 /// lại với `BoQuaCanhBao = true`).</summary>
 public record KetQuaLuuGiaoDanDto(Guid? Id, IReadOnlyList<string> CanhBao);
+
+/// <summary>Một kết quả tìm kiếm giáo dân — dùng cho `GxPicker` thật (gõ để tìm, chọn từ danh
+/// sách), KHÔNG phải bộ cột đầy đủ của lưới danh sách (29 cột) vì mục đích chỉ là chọn đúng một
+/// người. Xem GiaoDanService.TimKiem.</summary>
+public record GiaoDanTimKiemDto(Guid Id, int MaGiaoDanCu, string? TenThanh, string HoTen, string? Phai, DateOnly? NgaySinh);

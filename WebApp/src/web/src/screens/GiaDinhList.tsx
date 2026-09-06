@@ -1,28 +1,35 @@
 import { useMemo, useState } from 'react'
-import type { GiaDinhListItem } from '../api/types'
+import type { GiaDinhListItem, GiaoHo } from '../api/types'
 import { GxGiaDinhList, menuGiaDinhMacDinh } from '../components/GxGiaDinhList'
-import { DANH_SACH_GIAO_HO_TAM, NGOAI_XU } from '../data/giaoHoTam'
+
+/** Sentinel hiển thị cho "Ngoài xứ" — xem cùng hằng số ở GiaoDanList.tsx. */
+const NGOAI_XU = 'Ngoài xứ'
 
 type Props = {
   rows: GiaDinhListItem[]
   /** Mở thẻ chi tiết gia đình — truyền `null` để mở bản ghi mới, đúng nút "Thêm gia đình". */
   moGiaDinh: (id: string | null) => void
+  /** Danh mục Giáo họ THẬT (GET /api/giao-ho) — thay `data/giaoHoTam.ts` hard-code theo tên. */
+  danhMucGiaoHo?: GiaoHo[]
 }
 
 /**
  * Danh sách gia đình — `page-head` với tiêu đề và nút "Thêm gia đình", `filters-bar` có
- * combobox Giáo họ (kèm "Tất cả"/"Ngoài xứ") và ô tick "Chỉ xem gia đình không được thống
- * kê", `GxGiaDinhList` bên dưới. Lọc theo Giáo họ/ô tick thực hiện trên máy khách vì backend
- * chưa có danh mục Giáo họ để truyền `giaoHoId` thật cho endpoint (xem `data/giaoHoTam.ts`).
+ * combobox Giáo họ (kèm "Tất cả"/"Ngoài xứ", tên lấy từ danh mục THẬT — `GET /api/giao-ho`,
+ * xem prop `danhMucGiaoHo`) và ô tick "Chỉ xem gia đình không được thống kê", `GxGiaDinhList`
+ * bên dưới. Lọc theo Giáo họ/ô tick vẫn thực hiện trên máy khách (so khớp `tenGiaoHo`, KHÔNG
+ * gọi lại API theo `giaoHoId`) — chấp nhận được ở quy mô hiện tại (40 gia đình); xem
+ * gia-dinh-danh-sach.md mục 10 "Ưu tiên trung bình #4" nếu cần chuyển sang lọc phía máy chủ.
  */
-export function GiaDinhList({ rows, moGiaDinh }: Props) {
+export function GiaDinhList({ rows, moGiaDinh, danhMucGiaoHo = [] }: Props) {
   const [giaoHo, setGiaoHo] = useState('-1')
   const [chiKhongThongKe, setChiKhongThongKe] = useState(false)
 
   const dsGiaoHo = useMemo(() => {
     const tuDuLieu = rows.map((r) => r.tenGiaoHo).filter((t): t is string => !!t && t !== NGOAI_XU)
-    return Array.from(new Set([...tuDuLieu, ...DANH_SACH_GIAO_HO_TAM])).sort((a, b) => a.localeCompare(b, 'vi'))
-  }, [rows])
+    const tuDanhMuc = danhMucGiaoHo.map((g) => g.tenGiaoHo)
+    return Array.from(new Set([...tuDuLieu, ...tuDanhMuc])).sort((a, b) => a.localeCompare(b, 'vi'))
+  }, [rows, danhMucGiaoHo])
 
   const rowsLoc = useMemo(
     () => rows.filter((r) => {

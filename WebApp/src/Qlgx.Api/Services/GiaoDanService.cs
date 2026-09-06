@@ -131,7 +131,7 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         return new GiaoDanDetailDto(
             g.Id, g.MaGiaoDanCu, g.HoTen, g.TenThanh, g.Phai, g.NgaySinh, g.NoiSinh, g.CMND, g.DanToc,
             g.GiaoHoId, g.ThuocGiaoXu, g.ThuocGiaoPhan, g.DiaChi, g.DienThoai, g.Email,
-            g.HoTenCha, g.HoTenMe,
+            g.HoTenCha, g.HoTenMe, g.ChaId, g.MeId,
             g.SoRuaToi, g.NgayRuaToi, g.NoiRuaToi, g.ChaRuaToi, g.NguoiDoDauRuaToi,
             g.SoRuocLe, g.NgayRuocLe, g.NoiRuocLe, g.ChaRuocLe,
             g.SoThemSuc, g.NgayThemSuc, g.NoiThemSuc, g.ChaThemSuc, g.NguoiDoDauThemSuc,
@@ -153,6 +153,9 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
     private const int TuoiRuocLe = 7;
     private const int TuoiChoPhepKetHon = 18;
     private const int TuoiKhongChoPhepKetHon = 14;
+    // Lấy từ Source/DBAccess/GxConstants.cs dòng 13 (đã đọc trực tiếp, UTF-16LE) — dùng cho
+    // Rule 15 (CheckTuoiChaMe) ngay dưới đây.
+    private const int TuoiChoPhepCoCon = 15;
 
     /// <summary>
     /// Cùng công thức của Memory.KiemTraTuoiKhongHopLe (CMemory.cs:1426-1441) — CHỈ so lệch
@@ -163,11 +166,69 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
     private static bool TuoiKhongHopLe(DateOnly ngayTruoc, DateOnly ngaySau, int khoangCach) =>
         ngaySau.Year - ngayTruoc.Year < khoangCach;
 
+    /// <summary>Tuổi hiện tại tính đủ ngày/tháng (không phải công thức thô chỉ so năm) — đúng
+    /// `Memory.GetTuoi` mà `CheckTuoiChaMe` dùng (khác `KiemTraTuoiKhongHopLe` ở trên).</summary>
+    private static int TuoiHienTai(DateOnly ngaySinh, DateOnly homNay)
+    {
+        var tuoi = homNay.Year - ngaySinh.Year;
+        if (homNay < ngaySinh.AddYears(tuoi)) tuoi--;
+        return tuoi;
+    }
+
+    /// <summary>
+    /// Rule 15 (`CheckTuoiChaMe`, frmGiaoDan.cs:586-607) — CHẶN CỨNG nếu tuổi cha/mẹ không lớn
+    /// hơn tuổi con ít nhất <see cref="TuoiChoPhepCoCon"/> (15). Bản desktop chỉ áp dụng khi
+    /// TÊN GÕ TAY khớp CHÍNH XÁC với tên hiển thị của bản ghi tra theo mã cha/mẹ (`hoten.Trim()
+    /// == tenPhuHuynh`) — một cách so khớp mong manh. Bản web dùng `ChaId`/`MeId` THẬT (một liên
+    /// kết Guid, không phải so tên) nên bỏ được bước so khớp tên đó — đây là hạ tầng MỚI, không
+    /// có ở bản Access gốc (xem GiaoDan.ChaId/MeId), nên không tính là "sửa lại logic sai của
+    /// desktop" cần ghi vào can-review-sau.md, chỉ là cách áp dụng cùng một ngưỡng nghiệp vụ lên
+    /// một cơ chế chọn chính xác hơn khi nó tồn tại. Không đụng gì nếu ChaId/MeId là null (giáo
+    /// dân cũ hoặc người dùng chỉ gõ tay, không chọn qua picker).
+    /// </summary>
+    private async Task<string?> KiemTraTuoiChaMe(Guid? chaId, Guid? meId, DateOnly ngaySinhCon, CancellationToken ct)
+    {
+        foreach (var (id, nhan) in new[] { (chaId, "Cha") , (meId, "Mẹ") })
+        {
+            if (id is not { } phId) continue;
+            var ngaySinhPhuHuynh = await db.GiaoDan.Where(x => x.Id == phId)
+                .Select(x => x.NgaySinh).FirstOrDefaultAsync(ct);
+            if (ngaySinhPhuHuynh is not { } nsph) continue;
+
+            var homNay = DateOnly.FromDateTime(DateTime.Now);
+            var tuoiPhuHuynh = TuoiHienTai(nsph, homNay);
+            var tuoiCon = TuoiHienTai(ngaySinhCon, homNay);
+            if (tuoiPhuHuynh - tuoiCon < TuoiChoPhepCoCon)
+                return $"Vui lòng xem lại.\r\n{nhan} chưa đủ {TuoiChoPhepCoCon} tuổi để có con. " +
+                       $"Tuổi phụ huynh phải lớn hơn tuổi của giáo dân ít nhất là {TuoiChoPhepCoCon}";
+        }
+        return null;
+    }
+
+    /// <summary>Tìm giáo dân theo tên hoặc mã cũ — dùng cho `GxPicker` thật (gõ để tìm). Giới
+    /// hạn kết quả (mặc định 20, tối đa 50): giáo xứ có thể có hàng nghìn giáo dân (2050 ở
+    /// database khảo sát), không được trả hết. Không lọc DaXoa/QuaDoi/DaChuyenXu — chọn Tên
+    /// Cha/Mẹ hay Người nam/nữ đều có thể cần chọn một người đã qua đời.</summary>
+    public Task<List<GiaoDanTimKiemDto>> TimKiem(string? tuKhoa, int? limit, CancellationToken ct)
+    {
+        var soLuong = Math.Clamp(limit ?? 20, 1, 50);
+        var truyVan = db.GiaoDan.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(tuKhoa))
+        {
+            var tk = tuKhoa.Trim();
+            truyVan = int.TryParse(tk, out var maCu)
+                ? truyVan.Where(g => g.HoTen.Contains(tk) || g.MaGiaoDanCu == maCu)
+                : truyVan.Where(g => g.HoTen.Contains(tk));
+        }
+        return truyVan.OrderBy(g => g.HoTen).Take(soLuong)
+            .Select(g => new GiaoDanTimKiemDto(g.Id, g.MaGiaoDanCu, g.TenThanh, g.HoTen, g.Phai, g.NgaySinh))
+            .ToListAsync(ct);
+    }
+
     /// <summary>
     /// Áp toàn bộ các quy tắc còn kiểm tra được với các trường hiện có trong
-    /// Tao/CapNhatGiaoDanRequest (loại: Tên Cha/Mẹ chỉ là text tự do, chưa có picker chọn giáo
-    /// dân thật nên KHÔNG kiểm tra được tuổi cha/mẹ — CheckTuoiChaMe của frmGiaoDan.cs:586-607;
-    /// Thông tin chuyển xứ/Giáo lý chưa có trong request nên bỏ qua các mốc ngày liên quan).
+    /// Tao/CapNhatGiaoDanRequest (Thông tin chuyển xứ/Giáo lý chưa có trong request nên bỏ qua
+    /// các mốc ngày liên quan).
     ///
     /// Trả về (loiChan, canhBao): loiChan khác null nghĩa là VI PHẠM QUY TẮC CHẶN CỨNG (dừng
     /// ngay, không đánh giá tiếp — đúng "return false" đầu tiên gặp phải của checkInput());
@@ -176,7 +237,8 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
     /// </summary>
     private async Task<(string? LoiChan, List<string> CanhBao)> KiemTraNghiepVu(
         Guid? boQuaId, string hoTen, string? tenThanh, string? phai, DateOnly? ngaySinh,
-        DateOnly? ngayRuaToi, DateOnly? ngayRuocLe, bool daCoGiaDinh, CancellationToken ct)
+        DateOnly? ngayRuaToi, DateOnly? ngayRuocLe, bool daCoGiaDinh, Guid? chaId, Guid? meId,
+        CancellationToken ct)
     {
         // Rule 4 (frmGiaoDan.cs:294-299)
         if (string.IsNullOrWhiteSpace(hoTen)) return ("Hãy nhập Họ tên", []);
@@ -188,6 +250,10 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         // Rule 6 (dòng 308-313) — dtNgaySinh.CheckInput(false); DateOnly? luôn đúng định dạng
         // nếu có giá trị nên chỉ còn ý nghĩa "bắt buộc phải nhập".
         if (ngaySinh is not { } ns) return ("Hãy nhập ngày sinh hợp lệ", []);
+
+        // Rule 15 (CheckTuoiChaMe, frmGiaoDan.cs:586-607) — CHẶN CỨNG, xem KiemTraTuoiChaMe.
+        if (await KiemTraTuoiChaMe(chaId, meId, ns, ct) is { } loiTuoiChaMe)
+            return (loiTuoiChaMe, []);
 
         // Rule 13 (dòng 431-434 + Memory.checkTuoiKetHon, CMemory.cs:1444-1460) — CHẶN CỨNG nếu
         // dưới 14 tuổi, CẢNH BÁO nếu 14-17 tuổi, không đụng gì nếu >=18 hoặc không tick "Có gia
@@ -258,7 +324,8 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         Tao(TaoGiaoDanRequest r, CancellationToken ct)
     {
         var (loiChan, canhBao) = await KiemTraNghiepVu(
-            null, r.HoTen, r.TenThanh, r.Phai, r.NgaySinh, r.NgayRuaToi, r.NgayRuocLe, r.DaCoGiaDinh, ct);
+            null, r.HoTen, r.TenThanh, r.Phai, r.NgaySinh, r.NgayRuaToi, r.NgayRuocLe, r.DaCoGiaDinh,
+            r.ChaId, r.MeId, ct);
         if (loiChan is not null) return (KetQuaLuuGiaoDan.Loi, null, loiChan, []);
         if (canhBao.Count > 0 && !r.BoQuaCanhBao) return (KetQuaLuuGiaoDan.CanhBaoChuaXacNhan, null, null, canhBao);
 
@@ -277,7 +344,7 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
             HoTen = r.HoTen, TenThanh = r.TenThanh, Phai = r.Phai,
             NgaySinh = r.NgaySinh, NoiSinh = r.NoiSinh, CMND = r.CMND, DanToc = r.DanToc,
             GiaoHoId = r.GiaoHoId, DiaChi = r.DiaChi, DienThoai = r.DienThoai, Email = r.Email,
-            HoTenCha = r.HoTenCha, HoTenMe = r.HoTenMe,
+            HoTenCha = r.HoTenCha, HoTenMe = r.HoTenMe, ChaId = r.ChaId, MeId = r.MeId,
             SoRuaToi = r.SoRuaToi, NgayRuaToi = r.NgayRuaToi, NoiRuaToi = r.NoiRuaToi,
             ChaRuaToi = r.ChaRuaToi, NguoiDoDauRuaToi = r.NguoiDoDauRuaToi,
             SoRuocLe = r.SoRuocLe, NgayRuocLe = r.NgayRuocLe, NoiRuocLe = r.NoiRuocLe, ChaRuocLe = r.ChaRuocLe,
@@ -313,7 +380,8 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
                 "các gia đình hoặc hôn phối mà giáo dân này là vợ/chồng và bỏ đi quan hệ đó trước", []);
 
         var (loiChan, canhBao) = await KiemTraNghiepVu(
-            id, r.HoTen, r.TenThanh, r.Phai, r.NgaySinh, r.NgayRuaToi, r.NgayRuocLe, r.DaCoGiaDinh, ct);
+            id, r.HoTen, r.TenThanh, r.Phai, r.NgaySinh, r.NgayRuaToi, r.NgayRuocLe, r.DaCoGiaDinh,
+            r.ChaId, r.MeId, ct);
         if (loiChan is not null) return (KetQuaLuuGiaoDan.Loi, loiChan, []);
         if (canhBao.Count > 0 && !r.BoQuaCanhBao) return (KetQuaLuuGiaoDan.CanhBaoChuaXacNhan, null, canhBao);
 
@@ -322,7 +390,7 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         g.HoTen = r.HoTen; g.TenThanh = r.TenThanh; g.Phai = r.Phai;
         g.NgaySinh = r.NgaySinh; g.NoiSinh = r.NoiSinh; g.CMND = r.CMND; g.DanToc = r.DanToc;
         g.GiaoHoId = r.GiaoHoId; g.DiaChi = r.DiaChi; g.DienThoai = r.DienThoai; g.Email = r.Email;
-        g.HoTenCha = r.HoTenCha; g.HoTenMe = r.HoTenMe;
+        g.HoTenCha = r.HoTenCha; g.HoTenMe = r.HoTenMe; g.ChaId = r.ChaId; g.MeId = r.MeId;
         g.SoRuaToi = r.SoRuaToi; g.NgayRuaToi = r.NgayRuaToi; g.NoiRuaToi = r.NoiRuaToi;
         g.ChaRuaToi = r.ChaRuaToi; g.NguoiDoDauRuaToi = r.NguoiDoDauRuaToi;
         g.SoRuocLe = r.SoRuocLe; g.NgayRuocLe = r.NgayRuocLe; g.NoiRuocLe = r.NoiRuocLe; g.ChaRuocLe = r.ChaRuocLe;
