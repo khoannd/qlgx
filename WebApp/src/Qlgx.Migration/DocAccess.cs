@@ -139,4 +139,45 @@ public class DocAccess(string duongDanFile, string? matKhau = null, string nguoi
         Doc("SELECT MaGiaoDan, MaHonPhoi, SoThuTu FROM GiaoDanHonPhoi")
             .Select(r => new DongGiaoDanHonPhoi(r.GetInt32(0), r.GetInt32(1), r.GetInt32(2)))
             .ToList();
+
+    public IEnumerable<DongGiaoPhan> DocGiaoPhan() =>
+        Doc("SELECT MaGiaoPhan, TenGiaoPhan, GhiChu, MaGiaoPhanRieng FROM GiaoPhan")
+            .Select(r => new DongGiaoPhan(r.GetInt32(0), Chuoi(r[1]) ?? "", Chuoi(r[2]), SoNull(r[3])))
+            .ToList();
+
+    public IEnumerable<DongGiaoHat> DocGiaoHat() =>
+        Doc("SELECT MaGiaoHat, MaGiaoPhan, TenGiaoHat, GhiChu, MaGiaoHatRieng FROM GiaoHat")
+            .Select(r => new DongGiaoHat(r.GetInt32(0), r.GetInt32(1), Chuoi(r[2]) ?? "", Chuoi(r[3]),
+                SoNull(r[4])))
+            .ToList();
+
+    public IEnumerable<DongCauHinh> DocCauHinh() =>
+        Doc("SELECT MaCauHinh, GiaTri, MoTa, UpdateDate FROM CauHinh")
+            .Select(r => new DongCauHinh(Chuoi(r[0]) ?? "", Chuoi(r[1]), Chuoi(r[2]), NgayGio(r[3])))
+            .ToList();
+
+    public IEnumerable<DongDuLieuChung> DocDuLieuChung() =>
+        Doc("SELECT ID, LoaiDuLieu, MaDuLieu, DuLieu1, DuLieu2 FROM DuLieuChung")
+            .Select(r => new DongDuLieuChung(r.GetInt32(0), r.GetInt32(1), Chuoi(r[2]), Chuoi(r[3]),
+                Chuoi(r[4])))
+            .ToList();
+
+    public IEnumerable<DongVaiTro> DocVaiTro() =>
+        Doc("SELECT ID, Value FROM VaiTro")
+            .Select(r => new DongVaiTro(r.GetInt32(0), Chuoi(r[1])))
+            .ToList();
+
+    public IEnumerable<DongTenLoaiTaiKhoan> DocTenLoaiTaiKhoan() =>
+        Doc("SELECT ID, TenLoai FROM TenLoaiTaiKhoan")
+            .Select(r => new DongTenLoaiTaiKhoan(r.GetInt32(0), Chuoi(r[1])))
+            .ToList();
+
+    // KHÔNG đọc cột MatKhau — quyết định bảo mật đã chốt (xem DongTaiKhoan).
+    public IEnumerable<DongTaiKhoan> DocTaiKhoan() =>
+        Doc(@"SELECT HoTenNguoiDung, TenTaiKhoan, Email, SoDienThoai, LoaiTaiKhoan, CauHoiGoiY,
+                     CauTraLoiGoiY, DaXoa
+              FROM TaiKhoan")
+            .Select(r => new DongTaiKhoan(Chuoi(r[0]), Chuoi(r[1]) ?? "", Chuoi(r[2]), Chuoi(r[3]),
+                SoNull(r[4]) ?? 0, Chuoi(r[5]), Chuoi(r[6]), Bool(r[7])))
+            .ToList();
 }

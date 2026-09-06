@@ -25,6 +25,8 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
 
     public async Task<KetQuaChuyenDoi> Chay(IDuLieuNguon nguon, bool chayThu, CancellationToken ct)
     {
+        var giaoPhan = nguon.DocGiaoPhan().ToList();
+        var giaoHat = nguon.DocGiaoHat().ToList();
         var giaoXu = nguon.DocGiaoXu().ToList();
         var giaoHo = nguon.DocGiaoHo().ToList();
         var giaDinh = nguon.DocGiaDinh().ToList();
@@ -32,22 +34,36 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         var thanhVien = nguon.DocThanhVien().ToList();
         var honPhoi = nguon.DocHonPhoi().ToList();
         var giaoDanHonPhoi = nguon.DocGiaoDanHonPhoi().ToList();
+        var cauHinh = nguon.DocCauHinh().ToList();
+        var duLieuChung = nguon.DocDuLieuChung().ToList();
+        var vaiTro = nguon.DocVaiTro().ToList();
+        var tenLoaiTaiKhoan = nguon.DocTenLoaiTaiKhoan().ToList();
+        var taiKhoan = nguon.DocTaiKhoan().ToList();
 
         var soNguon = new Dictionary<string, int>
         {
+            ["giao_phan"] = giaoPhan.Count,
+            ["giao_hat"] = giaoHat.Count,
             ["giao_xu"] = giaoXu.Count,
             ["giao_ho"] = giaoHo.Count,
             ["gia_dinh"] = giaDinh.Count,
             ["giao_dan"] = giaoDan.Count,
             ["thanh_vien_gia_dinh"] = thanhVien.Count,
             ["hon_phoi"] = honPhoi.Count,
-            ["giao_dan_hon_phoi"] = giaoDanHonPhoi.Count
+            ["giao_dan_hon_phoi"] = giaoDanHonPhoi.Count,
+            ["cau_hinh"] = cauHinh.Count,
+            ["du_lieu_chung"] = duLieuChung.Count,
+            ["vai_tro"] = vaiTro.Count,
+            ["ten_loai_tai_khoan"] = tenLoaiTaiKhoan.Count,
+            ["tai_khoan"] = taiKhoan.Count
         };
 
         if (chayThu)
             return new KetQuaChuyenDoi(soNguon, new Dictionary<string, int>(), _canhBao);
 
-        // Thứ tự bắt buộc theo chiều phụ thuộc khoá ngoại
+        // Thứ tự bắt buộc theo chiều phụ thuộc khoá ngoại: GiaoPhan → GiaoHat → GiaoXu → ...
+        await GhiGiaoPhan(giaoPhan, ct);
+        await GhiGiaoHat(giaoHat, ct);
         await GhiGiaoXu(giaoXu, ct);
         await GhiGiaoHo(giaoHo, ct);
         await GhiGiaDinh(giaDinh, ct);
@@ -55,19 +71,66 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         await GhiThanhVien(thanhVien, ct);
         await GhiHonPhoi(honPhoi, ct);
         await GhiGiaoDanHonPhoi(giaoDanHonPhoi, ct);
+        await GhiCauHinh(cauHinh, ct);
+        await GhiDuLieuChung(duLieuChung, ct);
+        await GhiVaiTro(vaiTro, ct);
+        await GhiTenLoaiTaiKhoan(tenLoaiTaiKhoan, ct);
+        await GhiTaiKhoan(taiKhoan, ct);
 
+        var maGiaoPhanLanNay = giaoPhan.Select(d => d.MaGiaoPhan).ToHashSet();
+        var maGiaoHatLanNay = giaoHat.Select(d => d.MaGiaoHat).ToHashSet();
         var soDich = new Dictionary<string, int>
         {
+            // GiaoPhan/GiaoHat nằm trên cấp giáo xứ, không có GiaoXuId để lọc, và dùng chung
+            // giữa các giáo xứ (xem GiaoPhan.cs, GiaoHat.cs) — đếm tổng toàn bảng sẽ sai khi
+            // nhiều lần chuyển đổi (của nhiều giáo xứ khác) đã ghi thêm giáo phận/giáo hạt
+            // khác vào cùng database. Chỉ đếm đúng những mã mà LẦN CHẠY NÀY đưa tới.
+            ["giao_phan"] = await db.GiaoPhan.CountAsync(x => maGiaoPhanLanNay.Contains(x.MaGiaoPhanCu), ct),
+            ["giao_hat"] = await db.GiaoHat.CountAsync(x => maGiaoHatLanNay.Contains(x.MaGiaoHatCu), ct),
             ["giao_xu"] = await db.GiaoXu.CountAsync(x => x.Id == giaoXuId, ct),
             ["giao_ho"] = await db.GiaoHo.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
             ["gia_dinh"] = await db.GiaDinh.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
             ["giao_dan"] = await db.GiaoDan.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
             ["thanh_vien_gia_dinh"] = await db.ThanhVienGiaDinh.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
             ["hon_phoi"] = await db.HonPhoi.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
-            ["giao_dan_hon_phoi"] = await db.GiaoDanHonPhoi.CountAsync(x => x.GiaoXuId == giaoXuId, ct)
+            ["giao_dan_hon_phoi"] = await db.GiaoDanHonPhoi.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
+            ["cau_hinh"] = await db.CauHinh.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
+            ["du_lieu_chung"] = await db.DuLieuChung.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
+            ["vai_tro"] = await db.VaiTro.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
+            ["ten_loai_tai_khoan"] = await db.TenLoaiTaiKhoan.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
+            ["tai_khoan"] = await db.TaiKhoan.CountAsync(x => x.GiaoXuId == giaoXuId, ct)
         };
 
         return new KetQuaChuyenDoi(soNguon, soDich, _canhBao);
+    }
+
+    private async Task GhiGiaoPhan(List<DongGiaoPhan> dong, CancellationToken ct)
+    {
+        foreach (var d in dong)
+        {
+            var id = anhXa.Lay("giao_phan", d.MaGiaoPhan);
+            var e = await db.GiaoPhan.FindAsync([id], ct) ?? Them(new GiaoPhan { Id = id });
+            e.MaGiaoPhanCu = d.MaGiaoPhan;
+            e.TenGiaoPhan = d.TenGiaoPhan;
+            e.GhiChu = d.GhiChu;
+            e.MaGiaoPhanRieng = d.MaGiaoPhanRieng;
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    private async Task GhiGiaoHat(List<DongGiaoHat> dong, CancellationToken ct)
+    {
+        foreach (var d in dong)
+        {
+            var id = anhXa.Lay("giao_hat", d.MaGiaoHat);
+            var e = await db.GiaoHat.FindAsync([id], ct) ?? Them(new GiaoHat { Id = id });
+            e.MaGiaoHatCu = d.MaGiaoHat;
+            e.GiaoPhanId = anhXa.Lay("giao_phan", d.MaGiaoPhan);
+            e.TenGiaoHat = d.TenGiaoHat;
+            e.GhiChu = d.GhiChu;
+            e.MaGiaoHatRieng = d.MaGiaoHatRieng;
+        }
+        await db.SaveChangesAsync(ct);
     }
 
     private async Task GhiGiaoXu(List<DongGiaoXu> dong, CancellationToken ct)
@@ -86,6 +149,7 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
 
             e.MaGiaoXuCu = d.MaGiaoXu;
             e.MaGiaoHatCu = d.MaGiaoHat;
+            e.GiaoHatId = d.MaGiaoHat is > 0 ? anhXa.Lay("giao_hat", d.MaGiaoHat.Value) : null;
             e.MaGiaoXuRieng = d.MaGiaoXuRieng;
             e.TenGiaoXu = d.TenGiaoXu;
             e.DiaChi = d.DiaChi;
@@ -321,6 +385,94 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
                 GiaoXuId = giaoXuId, GiaoDanId = giaoDanId, HonPhoiId = honPhoiId,
                 SoThuTu = d.SoThuTu
             });
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    private async Task GhiCauHinh(List<DongCauHinh> dong, CancellationToken ct)
+    {
+        // TEMPLATE_FOLDER là đường dẫn thư mục cục bộ của máy chạy bản desktop — vẫn chuyển
+        // nguyên văn để không mất dữ liệu, nhưng máy chủ tập trung KHÔNG được dùng giá trị này
+        // để ghi file (xem ghi chú tại Qlgx.Domain.Entities.CauHinh và DongCauHinh).
+        foreach (var d in dong)
+        {
+            var id = anhXa.Lay("cau_hinh", d.MaCauHinh);
+            var e = await db.CauHinh.FindAsync([id], ct) ?? Them(new CauHinh { Id = id });
+            e.GiaoXuId = giaoXuId;
+            e.MaCauHinh = d.MaCauHinh;
+            e.GiaTri = d.GiaTri;
+            e.MoTa = d.MoTa;
+            e.SourceSystem = Nguon;
+        }
+        await db.SaveChangesAsync(ct);
+
+        foreach (var d in dong.Where(d => d.UpdateDate is not null))
+            await DatLaiUpdatedAt(db.CauHinh, anhXa.Lay("cau_hinh", d.MaCauHinh), d.UpdateDate!.Value, ct);
+    }
+
+    private async Task GhiDuLieuChung(List<DongDuLieuChung> dong, CancellationToken ct)
+    {
+        foreach (var d in dong)
+        {
+            var id = anhXa.Lay("du_lieu_chung", d.ID);
+            var e = await db.DuLieuChung.FindAsync([id], ct) ?? Them(new DuLieuChung { Id = id });
+            e.GiaoXuId = giaoXuId;
+            e.MaDuLieuChungCu = d.ID;
+            e.LoaiDuLieu = d.LoaiDuLieu;
+            e.MaDuLieu = d.MaDuLieu;
+            e.DuLieu1 = d.DuLieu1;
+            e.DuLieu2 = d.DuLieu2;
+            e.SourceSystem = Nguon;
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    private async Task GhiVaiTro(List<DongVaiTro> dong, CancellationToken ct)
+    {
+        foreach (var d in dong)
+        {
+            var id = anhXa.Lay("vai_tro", d.ID);
+            var e = await db.VaiTro.FindAsync([id], ct) ?? Them(new VaiTro { Id = id });
+            e.GiaoXuId = giaoXuId;
+            e.MaVaiTroCu = d.ID;
+            e.Value = d.Value;
+            e.SourceSystem = Nguon;
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    private async Task GhiTenLoaiTaiKhoan(List<DongTenLoaiTaiKhoan> dong, CancellationToken ct)
+    {
+        foreach (var d in dong)
+        {
+            var id = anhXa.Lay("ten_loai_tai_khoan", d.ID);
+            var e = await db.TenLoaiTaiKhoan.FindAsync([id], ct) ?? Them(new TenLoaiTaiKhoan { Id = id });
+            e.GiaoXuId = giaoXuId;
+            e.MaLoaiTaiKhoanCu = d.ID;
+            e.TenLoai = d.TenLoai;
+            e.SourceSystem = Nguon;
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    private async Task GhiTaiKhoan(List<DongTaiKhoan> dong, CancellationToken ct)
+    {
+        // KHÔNG chuyển cột MatKhau (quyết định bảo mật đã chốt) — MatKhauBam để trống, Task 14
+        // sẽ là nơi đầu tiên ghi vào cột này khi người dùng đặt lại mật khẩu lần đầu.
+        foreach (var d in dong)
+        {
+            var id = anhXa.Lay("tai_khoan", d.TenTaiKhoan);
+            var e = await db.TaiKhoan.FindAsync([id], ct) ?? Them(new TaiKhoan { Id = id });
+            e.GiaoXuId = giaoXuId;
+            e.HoTenNguoiDung = d.HoTenNguoiDung;
+            e.TenTaiKhoan = d.TenTaiKhoan;
+            e.Email = d.Email;
+            e.SoDienThoai = d.SoDienThoai;
+            e.LoaiTaiKhoan = d.LoaiTaiKhoan;
+            e.CauHoiGoiY = d.CauHoiGoiY;
+            e.CauTraLoiGoiY = d.CauTraLoiGoiY;
+            e.DaXoa = d.DaXoa;
+            e.SourceSystem = Nguon;
         }
         await db.SaveChangesAsync(ct);
     }

@@ -27,6 +27,17 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
     public DbSet<GiaoDanHonPhoi> GiaoDanHonPhoi => Set<GiaoDanHonPhoi>();
     public DbSet<BoDemMa> BoDemMa => Set<BoDemMa>();
 
+    // --- Trên cấp giáo xứ, không có GiaoXuId (xem GiaoPhan.cs, GiaoHat.cs) ---
+    public DbSet<GiaoPhan> GiaoPhan => Set<GiaoPhan>();
+    public DbSet<GiaoHat> GiaoHat => Set<GiaoHat>();
+
+    // --- Theo giáo xứ, có bộ lọc tenant bên dưới ---
+    public DbSet<CauHinh> CauHinh => Set<CauHinh>();
+    public DbSet<DuLieuChung> DuLieuChung => Set<DuLieuChung>();
+    public DbSet<VaiTro> VaiTro => Set<VaiTro>();
+    public DbSet<TenLoaiTaiKhoan> TenLoaiTaiKhoan => Set<TenLoaiTaiKhoan>();
+    public DbSet<TaiKhoan> TaiKhoan => Set<TaiKhoan>();
+
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.ApplyConfigurationsFromAssembly(typeof(QlgxDbContext).Assembly);
@@ -43,6 +54,12 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
         b.Entity<HonPhoi>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         b.Entity<GiaoDanHonPhoi>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         b.Entity<BoDemMa>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<CauHinh>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<DuLieuChung>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<VaiTro>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<TenLoaiTaiKhoan>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<TaiKhoan>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        // GiaoPhan và GiaoHat KHÔNG có bộ lọc — chúng nằm trên cấp giáo xứ (xem GiaoPhan.cs).
 
         DatTenSnakeCase(b);
     }

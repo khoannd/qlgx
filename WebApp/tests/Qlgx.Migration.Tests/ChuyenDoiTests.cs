@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Data.Tests;
 using Qlgx.Domain;
+using Qlgx.Domain.Entities;
 
 namespace Qlgx.Migration.Tests;
 
@@ -22,6 +23,13 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         public List<DongThanhVien> ThanhVien { get; } = [];
         public List<DongHonPhoi> HonPhoi { get; } = [];
         public List<DongGiaoDanHonPhoi> GiaoDanHonPhoi { get; } = [];
+        public List<DongGiaoPhan> GiaoPhan { get; } = [];
+        public List<DongGiaoHat> GiaoHat { get; } = [];
+        public List<DongCauHinh> CauHinh { get; } = [];
+        public List<DongDuLieuChung> DuLieuChung { get; } = [];
+        public List<DongVaiTro> VaiTro { get; } = [];
+        public List<DongTenLoaiTaiKhoan> TenLoaiTaiKhoan { get; } = [];
+        public List<DongTaiKhoan> TaiKhoan { get; } = [];
 
         IEnumerable<DongGiaoXu> IDuLieuNguon.DocGiaoXu() => GiaoXu;
         IEnumerable<DongGiaoHo> IDuLieuNguon.DocGiaoHo() => GiaoHo;
@@ -30,6 +38,13 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         IEnumerable<DongThanhVien> IDuLieuNguon.DocThanhVien() => ThanhVien;
         IEnumerable<DongHonPhoi> IDuLieuNguon.DocHonPhoi() => HonPhoi;
         IEnumerable<DongGiaoDanHonPhoi> IDuLieuNguon.DocGiaoDanHonPhoi() => GiaoDanHonPhoi;
+        IEnumerable<DongGiaoPhan> IDuLieuNguon.DocGiaoPhan() => GiaoPhan;
+        IEnumerable<DongGiaoHat> IDuLieuNguon.DocGiaoHat() => GiaoHat;
+        IEnumerable<DongCauHinh> IDuLieuNguon.DocCauHinh() => CauHinh;
+        IEnumerable<DongDuLieuChung> IDuLieuNguon.DocDuLieuChung() => DuLieuChung;
+        IEnumerable<DongVaiTro> IDuLieuNguon.DocVaiTro() => VaiTro;
+        IEnumerable<DongTenLoaiTaiKhoan> IDuLieuNguon.DocTenLoaiTaiKhoan() => TenLoaiTaiKhoan;
+        IEnumerable<DongTaiKhoan> IDuLieuNguon.DocTaiKhoan() => TaiKhoan;
     }
 
     /// <summary>
@@ -46,6 +61,13 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         var capNhat = new DateTime(2026, 9, 4, 21, 10, 17, DateTimeKind.Unspecified);
 
         var n = new NguonGia();
+        // Giáo phận/giáo hạt nằm trên cấp giáo xứ, dùng chung một mã (75/1) như dữ liệu thật
+        // (Giao phan Phan Thiet > Giao hat Dac Tanh) — nhiều test cùng ghi hai dòng này là an
+        // toàn vì BangAnhXaId sinh cùng UUID cho cùng mã, nên chỉ upsert lại đúng một dòng.
+        n.GiaoPhan.Add(new DongGiaoPhan(MaGiaoPhan: 75, TenGiaoPhan: "Phan Thiet", GhiChu: null,
+            MaGiaoPhanRieng: null));
+        n.GiaoHat.Add(new DongGiaoHat(MaGiaoHat: 1, MaGiaoPhan: 75, TenGiaoHat: "Dac Tanh",
+            GhiChu: null, MaGiaoHatRieng: null));
         n.GiaoXu.Add(new DongGiaoXu(MaGiaoXu: 1, MaGiaoHat: 1, TenGiaoXu: "Giao xu Thanh Tam",
             DiaChi: "1 Cong Truong Cong Xa Paris", DienThoai: "028 3822 0477",
             Email: "gx@example.com", Website: "https://gx.example.com", Hinh: null,
@@ -277,6 +299,8 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         // LastUpload — cả 11/11 cột của bảng Access GiaoXu phải sang được PostgreSQL, không
         // còn cột nào bị bỏ qua hay chỉ ghi cảnh báo.
         var mau = NguonMau(9);
+        mau.Nguon.GiaoHat.Add(new DongGiaoHat(MaGiaoHat: 7, MaGiaoPhan: 75, TenGiaoHat: "Giao hat khac",
+            GhiChu: null, MaGiaoHatRieng: null));
         mau.Nguon.GiaoXu[0] = mau.Nguon.GiaoXu[0] with
         {
             MaGiaoHat = 7, Hinh = "logo-giaoxu.jpg", LastUpload = new DateTime(2026, 1, 1)
@@ -291,5 +315,115 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         giaoXu.Hinh.Should().Be("logo-giaoxu.jpg");
         giaoXu.LastUpload.Should().Be(new DateTimeOffset(new DateTime(2026, 1, 1), TimeSpan.Zero));
         kq.CanhBao.Should().NotContain(c => c.Contains("giao_xu"));
+    }
+
+    [Fact]
+    public async Task Phan_cap_giao_phan_giao_hat_giao_xu_duoc_noi_dung()
+    {
+        // Dữ liệu thật: Giao phan Phan Thiet (75) > Giao hat Dac Tanh (1) > Giao xu Vo Nhiem.
+        // Test này chứng minh khoá ngoại GiaoXu.GiaoHatId và GiaoHat.GiaoPhanId nối đúng ba
+        // cấp, nền tảng cho chức năng quản lý danh sách giáo xứ theo giáo phận.
+        var mau = NguonMau(10);
+        await using var ctx = db.TaoContext();
+
+        await new ChuyenDoiDuLieu(ctx, db.GiaoXuId, new BangAnhXaId())
+            .Chay(mau.Nguon, false, CancellationToken.None);
+
+        var giaoXu = await ctx.GiaoXu
+            .Include(x => x.GiaoHat).ThenInclude(h => h!.GiaoPhan)
+            .SingleAsync(x => x.Id == db.GiaoXuId);
+
+        giaoXu.GiaoHat.Should().NotBeNull();
+        giaoXu.GiaoHat!.TenGiaoHat.Should().Be("Dac Tanh");
+        giaoXu.GiaoHat.MaGiaoHatCu.Should().Be(1);
+        giaoXu.GiaoHat.GiaoPhan.Should().NotBeNull();
+        giaoXu.GiaoHat.GiaoPhan!.TenGiaoPhan.Should().Be("Phan Thiet");
+        giaoXu.GiaoHat.GiaoPhan.MaGiaoPhanCu.Should().Be(75);
+    }
+
+    [Fact]
+    public async Task Chay_lai_giao_phan_giao_hat_khong_sinh_ban_ghi_trung()
+    {
+        var mau = NguonMau(11);
+        await using var ctx = db.TaoContext();
+        var anhXa = new BangAnhXaId();
+
+        await new ChuyenDoiDuLieu(ctx, db.GiaoXuId, anhXa).Chay(mau.Nguon, false, CancellationToken.None);
+        await new ChuyenDoiDuLieu(ctx, db.GiaoXuId, anhXa).Chay(mau.Nguon, false, CancellationToken.None);
+
+        (await ctx.GiaoPhan.CountAsync(x => x.MaGiaoPhanCu == 75)).Should().Be(1);
+        (await ctx.GiaoHat.CountAsync(x => x.MaGiaoHatCu == 1)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Chuyen_doi_nam_bang_tra_cuu_theo_giao_xu()
+    {
+        var mau = NguonMau(12);
+        var capNhat = new DateTime(2026, 9, 4, 21, 10, 17, DateTimeKind.Unspecified);
+        mau.Nguon.CauHinh.Add(new DongCauHinh("AUTO_UPDATE", "1", "Tu dong cap nhat", capNhat));
+        mau.Nguon.CauHinh.Add(new DongCauHinh("TEMPLATE_FOLDER", @"C:\QLGX\Template",
+            "Thu muc mau tren may cuc bo", capNhat));
+        mau.Nguon.DuLieuChung.Add(new DongDuLieuChung(1, 1, "01", "Maria", null));
+        mau.Nguon.VaiTro.Add(new DongVaiTro(0, "TenChong"));
+        mau.Nguon.TenLoaiTaiKhoan.Add(new DongTenLoaiTaiKhoan(0, "Quan tri vien"));
+        mau.Nguon.TaiKhoan.Add(new DongTaiKhoan("Nguyen Van Quan", "admin", "admin@example.com",
+            "0900000001", 0, "Ten truong tieu hoc?", "Bat ky", false));
+        // Dùng một GiaoXuId riêng (chưa từng ghi gì) như test Bao_cao_doi_chieu_so_khop..., vì
+        // SoDongDich đếm TỔNG số dòng của giáo xứ đó — nếu dùng db.GiaoXuId dùng chung, số dòng
+        // sẽ cộng dồn từ mọi test khác trong lớp này.
+        var giaoXuId = Guid.NewGuid();
+        await using var ctx = db.TaoContext();
+        ctx.GiaoXu.Add(new GiaoXu { Id = giaoXuId, TenGiaoXu = "Giao xu rieng cho test tra cuu", MaGiaoXuCu = 999 });
+        await ctx.SaveChangesAsync();
+
+        var kq = await new ChuyenDoiDuLieu(ctx, giaoXuId, new BangAnhXaId())
+            .Chay(mau.Nguon, false, CancellationToken.None);
+
+        BaoCaoDoiChieu.TimBangLech(kq).Should().BeEmpty();
+
+        var cauHinh = await ctx.CauHinh.SingleAsync(x => x.MaCauHinh == "AUTO_UPDATE" && x.GiaoXuId == giaoXuId);
+        cauHinh.GiaTri.Should().Be("1");
+        cauHinh.UpdatedAt.Should().Be(new DateTimeOffset(capNhat, TimeSpan.Zero));
+
+        // TEMPLATE_FOLDER vẫn được chuyển nguyên văn để không mất dữ liệu, dù vô nghĩa trên
+        // máy chủ tập trung (xem ghi chú tại ChuyenDoiDuLieu.GhiCauHinh).
+        var thuMuc = await ctx.CauHinh.SingleAsync(x => x.MaCauHinh == "TEMPLATE_FOLDER");
+        thuMuc.GiaTri.Should().Be(@"C:\QLGX\Template");
+
+        var duLieuChung = await ctx.DuLieuChung.SingleAsync(x => x.MaDuLieuChungCu == 1);
+        duLieuChung.DuLieu1.Should().Be("Maria");
+
+        var vaiTro = await ctx.VaiTro.SingleAsync(x => x.MaVaiTroCu == 0);
+        vaiTro.Value.Should().Be("TenChong");
+
+        var loaiTaiKhoan = await ctx.TenLoaiTaiKhoan.SingleAsync(x => x.MaLoaiTaiKhoanCu == 0);
+        loaiTaiKhoan.TenLoai.Should().Be("Quan tri vien");
+
+        var taiKhoan = await ctx.TaiKhoan.SingleAsync(x => x.TenTaiKhoan == "admin");
+        taiKhoan.HoTenNguoiDung.Should().Be("Nguyen Van Quan");
+        taiKhoan.Email.Should().Be("admin@example.com");
+        taiKhoan.CauHoiGoiY.Should().Be("Ten truong tieu hoc?");
+        // KHÔNG có cột MatKhau trên entity — chỉ có MatKhauBam, để trống khi chuyển đổi (xem
+        // Qlgx.Domain.Entities.TaiKhoan). Task 14 mới là nơi ghi giá trị này.
+        taiKhoan.MatKhauBam.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Chay_lai_bang_tra_cuu_khong_sinh_ban_ghi_trung()
+    {
+        var mau = NguonMau(13);
+        mau.Nguon.CauHinh.Add(new DongCauHinh("US_FORMAT_NAME", "0", null, null));
+        mau.Nguon.TaiKhoan.Add(new DongTaiKhoan("Tran Thi B", "nguoinhap1", null, null, 1, null, null, false));
+        var giaoXuId = Guid.NewGuid();
+        await using var ctx = db.TaoContext();
+        var anhXa = new BangAnhXaId();
+
+        await new ChuyenDoiDuLieu(ctx, giaoXuId, anhXa).Chay(mau.Nguon, false, CancellationToken.None);
+        await new ChuyenDoiDuLieu(ctx, giaoXuId, anhXa).Chay(mau.Nguon, false, CancellationToken.None);
+
+        (await ctx.CauHinh.CountAsync(x => x.GiaoXuId == giaoXuId && x.MaCauHinh == "US_FORMAT_NAME"))
+            .Should().Be(1);
+        (await ctx.TaiKhoan.CountAsync(x => x.GiaoXuId == giaoXuId && x.TenTaiKhoan == "nguoinhap1"))
+            .Should().Be(1);
     }
 }

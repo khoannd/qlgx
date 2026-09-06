@@ -12,7 +12,13 @@ public class BangAnhXaId
 {
     private readonly Dictionary<string, Guid> _bo = [];
 
-    public Guid Lay(string bang, int maCu)
+    public Guid Lay(string bang, int maCu) => Lay(bang, maCu.ToString());
+
+    /// <summary>
+    /// Bản nhận khoá chuỗi, dùng cho các bảng có khoá gốc không phải số nguyên (ví dụ
+    /// CauHinh.MaCauHinh là chuỗi, TaiKhoan không có cột số định danh nên dùng TenTaiKhoan).
+    /// </summary>
+    public Guid Lay(string bang, string maCu)
     {
         var khoa = bang + "#" + maCu;
         if (_bo.TryGetValue(khoa, out var da)) return da;

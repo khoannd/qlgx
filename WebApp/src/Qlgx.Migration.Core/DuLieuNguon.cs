@@ -52,6 +52,33 @@ public record DongHonPhoi(int MaHonPhoi, string? TenHonPhoi, string? SoHonPhoi, 
 /// <summary>Bảng nối giáo dân với hôn phối — khoá tổ hợp (MaGiaoDan, MaHonPhoi).</summary>
 public record DongGiaoDanHonPhoi(int MaGiaoDan, int MaHonPhoi, int SoThuTu);
 
+/// <summary>Giáo phận — trên cấp giáo xứ (xem Qlgx.Domain.Entities.GiaoPhan).</summary>
+public record DongGiaoPhan(int MaGiaoPhan, string TenGiaoPhan, string? GhiChu, int? MaGiaoPhanRieng);
+
+/// <summary>Giáo hạt — trên cấp giáo xứ, thuộc một giáo phận (xem Qlgx.Domain.Entities.GiaoHat).</summary>
+public record DongGiaoHat(int MaGiaoHat, int MaGiaoPhan, string TenGiaoHat, string? GhiChu,
+    int? MaGiaoHatRieng);
+
+/// <summary>
+/// Cấu hình theo giáo xứ. GiaTri là LongText trong Access (có thể dài, ví dụ TEMPLATE_FOLDER
+/// là đường dẫn thư mục cục bộ của máy chạy bản desktop) — vẫn chuyển nguyên văn để không mất
+/// dữ liệu, nhưng máy chủ tập trung KHÔNG được dùng giá trị đó để ghi file (xem ChuyenDoiDuLieu).
+/// </summary>
+public record DongCauHinh(string MaCauHinh, string? GiaTri, string? MoTa, DateTime? UpdateDate);
+
+public record DongDuLieuChung(int ID, int LoaiDuLieu, string? MaDuLieu, string? DuLieu1, string? DuLieu2);
+
+public record DongVaiTro(int ID, string? Value);
+
+public record DongTenLoaiTaiKhoan(int ID, string? TenLoai);
+
+/// <summary>
+/// KHÔNG có cột MatKhau — quyết định bảo mật đã chốt là không chuyển mật khẩu cũ sang hệ mới
+/// (xem Qlgx.Domain.Entities.TaiKhoan).
+/// </summary>
+public record DongTaiKhoan(string? HoTenNguoiDung, string TenTaiKhoan, string? Email,
+    string? SoDienThoai, int LoaiTaiKhoan, string? CauHoiGoiY, string? CauTraLoiGoiY, bool DaXoa);
+
 /// <summary>
 /// Trừu tượng hoá nguồn để bộ chuyển đổi kiểm thử được mà không cần file .mdb và Access
 /// Database Engine trên máy chạy test.
@@ -65,4 +92,11 @@ public interface IDuLieuNguon
     IEnumerable<DongThanhVien> DocThanhVien();
     IEnumerable<DongHonPhoi> DocHonPhoi();
     IEnumerable<DongGiaoDanHonPhoi> DocGiaoDanHonPhoi();
+    IEnumerable<DongGiaoPhan> DocGiaoPhan();
+    IEnumerable<DongGiaoHat> DocGiaoHat();
+    IEnumerable<DongCauHinh> DocCauHinh();
+    IEnumerable<DongDuLieuChung> DocDuLieuChung();
+    IEnumerable<DongVaiTro> DocVaiTro();
+    IEnumerable<DongTenLoaiTaiKhoan> DocTenLoaiTaiKhoan();
+    IEnumerable<DongTaiKhoan> DocTaiKhoan();
 }
