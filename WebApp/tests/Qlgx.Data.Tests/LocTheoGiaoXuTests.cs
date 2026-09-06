@@ -53,8 +53,23 @@ public class LocTheoGiaoXuTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieu
     {
         using var ctx = db.TaoContext();
 
-        var thieuBoLoc = ctx.Model.GetEntityTypes()
+        var ungVien = ctx.Model.GetEntityTypes()
             .Where(t => t.FindProperty("GiaoXuId") is not null)
+            .ToList();
+
+        // Neu tap ung vien rong (doi quy uoc dat ten, chuyen sang shadow property, doi cach
+        // anh xa...) thi thieuBoLoc ben duoi cung rong va test se xanh gia — khong kiem tra
+        // duoc gi ca. Phai chan dieu do truoc bang mot khang dinh rieng.
+        ungVien.Should().NotBeEmpty(
+            "neu khong tim thay thuc the nao co GiaoXuId thi chinh test nay da hong, khong phai he thong da an toan");
+
+        // Khoa cung so luong va ten sau bang: ai them bang moi co cot GiaoXuId phai chu dong
+        // cap nhat danh sach nay, khong duoc de troi qua im lang neu quen gan bo loc.
+        ungVien.Select(t => t.ClrType.Name).Should().BeEquivalentTo(
+            ["GiaoHo", "GiaDinh", "GiaoDan", "ThanhVienGiaDinh", "HonPhoi", "GiaoDanHonPhoi"],
+            "danh sach bang co GiaoXuId phai duoc ra soat co y thuc moi khi thay doi, khong duoc troi qua im lang");
+
+        var thieuBoLoc = ungVien
             .Where(t => t.GetDeclaredQueryFilters().Count == 0)
             .Select(t => t.ClrType.Name)
             .ToList();
