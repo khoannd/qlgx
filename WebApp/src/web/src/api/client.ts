@@ -52,13 +52,19 @@ async function goi<T>(duong: string, tuyChon?: RequestInit): Promise<T> {
   return than ? (JSON.parse(than) as T) : (undefined as T)
 }
 
-const thamSo = (giaoHoId?: string, chiKhongThongKe?: boolean) => {
+const thamSo = (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: boolean) => {
   const p = new URLSearchParams()
   if (giaoHoId) p.set('giaoHoId', giaoHoId)
   if (chiKhongThongKe) p.set('chiKhongThongKe', 'true')
+  if (hienCaDaMat) p.set('hienCaDaMat', 'true')
   const s = p.toString()
   return s ? `?${s}` : ''
 }
+
+/** Kết quả tạo/sửa một giáo dân — đúng KetQuaLuuGiaoDanDto phía backend. `id === null` nghĩa
+ * là còn cảnh báo (`canhBao`) chưa được xác nhận, CHƯA LƯU — gọi lại với `boQuaCanhBao: true`
+ * trong thân yêu cầu để lưu bất chấp cảnh báo. */
+export type KetQuaLuuGiaoDan = { id: string | null; canhBao: string[] }
 
 export const api = {
   giaDinh: {
@@ -70,11 +76,18 @@ export const api = {
     thanhVien: (id: string) => goi<GiaoDanListItem[]>(`/api/gia-dinh/${id}/thanh-vien`),
   },
   giaoDan: {
-    danhSach: (giaoHoId?: string, chiKhongThongKe?: boolean) =>
-      goi<GiaoDanListItem[]>(`/api/giao-dan${thamSo(giaoHoId, chiKhongThongKe)}`),
+    danhSach: (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: boolean) =>
+      goi<GiaoDanListItem[]>(`/api/giao-dan${thamSo(giaoHoId, chiKhongThongKe, hienCaDaMat)}`),
     chiTiet: (id: string) => goi<GiaoDanDetail>(`/api/giao-dan/${id}`),
+    // 201 (đã lưu) hoặc 200 (còn cảnh báo chưa xác nhận) — cả hai đọc cùng KetQuaLuuGiaoDan.
+    taoMoi: (than: unknown) =>
+      goi<KetQuaLuuGiaoDan>('/api/giao-dan', { method: 'POST', body: JSON.stringify(than) }),
     capNhat: (id: string, than: unknown) =>
-      goi<void>(`/api/giao-dan/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+      goi<KetQuaLuuGiaoDan>(`/api/giao-dan/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    // vinhVien=false (mặc định) = xoá mềm (đưa vào lưu trữ); vinhVien=true = xoá vĩnh viễn,
+    // có thể bị máy chủ chặn (409) nếu giáo dân đang thuộc gia đình nào.
+    xoa: (id: string, vinhVien: boolean) =>
+      goi<void>(`/api/giao-dan/${id}?vinhVien=${vinhVien}`, { method: 'DELETE' }),
     honPhoi: (id: string) => goi<HonPhoiCuaGiaoDan[]>(`/api/giao-dan/${id}/hon-phoi`),
     capNhatHonPhoi: (honPhoiId: string, than: unknown) =>
       goi<void>(`/api/giao-dan/hon-phoi/${honPhoiId}`, { method: 'PUT', body: JSON.stringify(than) }),

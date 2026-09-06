@@ -90,4 +90,92 @@ describe('GiaoDanList', () => {
     expect(await screen.findByText('Xem chi tiết')).toBeDefined()
     expect(screen.queryByText('Xem gia đình')).toBeNull()
   })
+
+  // --- Task "ghi giao dan": xoa giao dan --------------------------------------------------
+
+  it('nut Xoa giao dan bi vo hieu hoa khi chua chon dong nao', async () => {
+    render(<GiaoDanList rows={rows} moGiaoDan={vi.fn()} onXoa={vi.fn()} />)
+    await screen.findByText('Trần Văn Bình')
+
+    expect(screen.getByRole('button', { name: 'Xóa giáo dân' })).toHaveProperty('disabled', true)
+  })
+
+  it('chon mot dong roi bam Xoa hien hop thoai 3 lua chon dung ten giao dan', async () => {
+    render(<GiaoDanList rows={rows} moGiaoDan={vi.fn()} onXoa={vi.fn()} />)
+    const ten = await screen.findByText('Trần Văn Bình')
+    fireEvent.click(ten)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Xóa giáo dân' })).toHaveProperty('disabled', false))
+    await userEvent.click(screen.getByRole('button', { name: 'Xóa giáo dân' }))
+
+    const hopThoai = await screen.findByRole('alertdialog')
+    expect(hopThoai.textContent).toContain('Trần Văn Bình')
+    expect(screen.getByRole('button', { name: 'Xóa vĩnh viễn' })).toBeDefined()
+    expect(screen.getByRole('button', { name: 'Đưa vào lưu trữ' })).toBeDefined()
+    expect(screen.getByRole('button', { name: 'Hủy bỏ' })).toBeDefined()
+  })
+
+  it('bam Xoa vinh vien goi onXoa voi vinhVien=true', async () => {
+    const onXoa = vi.fn().mockResolvedValue(undefined)
+    render(<GiaoDanList rows={rows} moGiaoDan={vi.fn()} onXoa={onXoa} />)
+    const ten = await screen.findByText('Trần Văn Bình')
+    fireEvent.click(ten)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Xóa giáo dân' })).toHaveProperty('disabled', false))
+    await userEvent.click(screen.getByRole('button', { name: 'Xóa giáo dân' }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Xóa vĩnh viễn' }))
+
+    expect(onXoa).toHaveBeenCalledWith('p1', true)
+  })
+
+  it('bam Dua vao luu tru goi onXoa voi vinhVien=false', async () => {
+    const onXoa = vi.fn().mockResolvedValue(undefined)
+    render(<GiaoDanList rows={rows} moGiaoDan={vi.fn()} onXoa={onXoa} />)
+    const ten = await screen.findByText('Trần Văn Bình')
+    fireEvent.click(ten)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Xóa giáo dân' })).toHaveProperty('disabled', false))
+    await userEvent.click(screen.getByRole('button', { name: 'Xóa giáo dân' }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Đưa vào lưu trữ' }))
+
+    expect(onXoa).toHaveBeenCalledWith('p1', false)
+  })
+
+  it('bam Huy bo dong hop thoai khong goi onXoa', async () => {
+    const onXoa = vi.fn()
+    render(<GiaoDanList rows={rows} moGiaoDan={vi.fn()} onXoa={onXoa} />)
+    const ten = await screen.findByText('Trần Văn Bình')
+    fireEvent.click(ten)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Xóa giáo dân' })).toHaveProperty('disabled', false))
+    await userEvent.click(screen.getByRole('button', { name: 'Xóa giáo dân' }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Hủy bỏ' }))
+
+    expect(onXoa).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'Xóa vĩnh viễn' })).toBeNull()
+  })
+
+  it('loi tu onXoa hien thi lai trong hop thoai (khong dong lai)', async () => {
+    const onXoa = vi.fn().mockRejectedValue(new Error(
+      'Vui lòng xóa giáo dân ra khỏi gia đình trước khi xóa giáo dân này'))
+    render(<GiaoDanList rows={rows} moGiaoDan={vi.fn()} onXoa={onXoa} />)
+    const ten = await screen.findByText('Trần Văn Bình')
+    fireEvent.click(ten)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Xóa giáo dân' })).toHaveProperty('disabled', false))
+    await userEvent.click(screen.getByRole('button', { name: 'Xóa giáo dân' }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Xóa vĩnh viễn' }))
+
+    expect(await screen.findByText(/Vui lòng xóa giáo dân ra khỏi gia đình/)).toBeDefined()
+  })
+
+  it('o tick Hien ca da mat goi onDoiHienCaDaMat', async () => {
+    const onDoiHienCaDaMat = vi.fn()
+    render(<GiaoDanList rows={rows} moGiaoDan={vi.fn()} hienCaDaMat={false} onDoiHienCaDaMat={onDoiHienCaDaMat} />)
+    await screen.findByText('Trần Văn Bình')
+
+    await userEvent.click(screen.getByLabelText('Hiện cả người đã qua đời / đã chuyển xứ'))
+
+    expect(onDoiHienCaDaMat).toHaveBeenCalledWith(true)
+  })
 })

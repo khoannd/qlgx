@@ -223,6 +223,56 @@ Mọi chỗ như vậy phải:
 
 ---
 
+### 19. Tạo/xoá giáo dân qua web — các quy tắc chưa (hoặc không thể) tái hiện đầy đủ
+
+- **Việc đã làm**: `POST /api/giao-dan`, `DELETE /api/giao-dan/{id}` và
+  `GiaoDanService.KiemTraNghiepVu` (kiểm tra nghiệp vụ khi tạo/sửa) — xem
+  `giao-dan-chi-tiet.md` mục 4 và `giao-dan-danh-sach.md` mục 4.
+- **Rule 15 (`CheckTuoiChaMe`, tuổi cha/mẹ so với con) — CHƯA làm được**: quy tắc này cần biết
+  Tên Cha/Tên Mẹ là MỘT GIÁO DÂN CÓ SẴN (để tra `NgaySinh` của người đó), nhưng `HoTenCha`/
+  `HoTenMe` ở bản web hiện chỉ là ô văn bản tự do (`GxPicker` chỉ hiển thị, chưa có picker chọn
+  thật — xem `giao-dan-chi-tiet.md` mục 10, dòng "Tên Cha/Tên Mẹ"). Không có cách nào tra tuổi
+  cha/mẹ từ một chuỗi văn bản. Khi nào picker chọn giáo dân thật được làm, cần bổ sung lại quy
+  tắc 15 (chặn cứng, "Tuổi phụ huynh phải lớn hơn tuổi của giáo dân ít nhất là 15" —
+  `GxConstants.TUOI_CHO_PHEP_CO_CON`).
+- **Rule 8 (cảnh báo lệch Giáo họ/"không thống kê") — CHƯA làm**: cùng lý do — Giáo họ ở bản
+  web hiện là danh mục tạm hard-code theo TÊN (`data/giaoHoTam.ts`), không phải chọn thật một
+  `GiaoHoId`, và nút "Cập nhật"/"Thêm giáo dân" hiện tại còn giữ nguyên `giaoHoId` cũ (xem
+  `xuLySubmit` của `GiaoDanDetail.tsx` — trường `giaoHo` trên UI chưa thực sự gửi đi được).
+  Việc này thuộc phạm vi "Giáo họ chọn thật" đã ghi ở mục Ưu tiên khắc phục #6 của
+  `giao-dan-danh-sach.md`, ngoài phạm vi nhiệm vụ ghi giáo dân này.
+- **Rule 11 (trùng ngày chuyển xứ), khối "Thông tin chuyển xứ", tab Giáo lý (BD1/BD2/Vào
+  đời/GLHN) — CHƯA làm**: các trường liên quan (`ChuyenXu.NgayChuyen`, `NgayBD1`...) chưa có
+  trong `TaoGiaoDanRequest`/`CapNhatGiaoDanRequest` (xem `giao-dan-chi-tiet.md` mục 10, tab
+  Giáo lý "chỉ hiển thị UI tĩnh"). Không kiểm tra được cho tới khi các trường này được đưa vào
+  request.
+- **Rule 18 (không cho bỏ tick "Có gia đình" khi còn hôn phối hiệu lực) — CHƯA làm**: cần đọc
+  `HonPhoi`/`GiaoDanHonPhoi` và biết ai "còn sống" trong cặp vợ chồng — để trong phạm vi việc
+  sau, không thuộc "tạo mới/xoá" trọng tâm của nhiệm vụ này.
+- **Rule 22, 23 (tự động sửa `DaCoGiaDinh` của người vợ/chồng còn lại khi tick Qua đời) — CHƯA
+  làm**: hành vi ngầm này chưa được tái hiện; ghi lại để không quên, không phải quyết định có
+  chủ đích.
+
+### 20. Nhiều cảnh báo Yes/No liên tiếp của desktop được gộp thành MỘT lượt xác nhận trên web
+
+- **Bản desktop**: `checkInput()` hỏi từng cảnh báo (rule 8, 9, 10, 12, 13, 16) bằng một hộp
+  thoại `MessageBox` riêng, tuần tự — người dùng có thể trả lời Yes cho cảnh báo này, No cho
+  cảnh báo khác.
+- **Bản web**: `GiaoDanService.KiemTraNghiepVu` thu thập MỌI cảnh báo áp dụng được trong một
+  lần kiểm tra, trả về `KetQuaLuuGiaoDanDto.CanhBao` (mảng); front-end nối lại thành MỘT hộp
+  `window.confirm`, xác nhận (`BoQuaCanhBao=true`) là chấp nhận TẤT CẢ cảnh báo cùng lúc, không
+  chọn được "chấp nhận cảnh báo A nhưng không chấp nhận cảnh báo B".
+- **Vì sao không tái hiện y hệt**: mô hình yêu cầu/phản hồi HTTP không có khái niệm "hộp thoại
+  đồng bộ chờ người dùng trả lời giữa chừng một hàm đang chạy trên máy chủ" như WinForms — máy
+  chủ phải kiểm tra xong toàn bộ trong một lượt rồi trả kết quả. Không đổi bản chất "phải xác
+  nhận rõ ràng mới được lưu" của desktop, chỉ khác cách trình bày (một hộp gộp thay vì nhiều hộp
+  tuần tự).
+- **Câu hỏi cho người dùng**: xác nhận cách gộp này chấp nhận được, hay cần một luồng nhiều
+  bước (mỗi cảnh báo một bước xác nhận riêng) để giữ đúng khả năng "đồng ý một phần" của
+  desktop.
+
+---
+
 ## Chỗ bản WEB đang lệch so với desktop (khác loại với các mục trên)
 
 Các mục trên là *lỗi của bản desktop* mà ta cố ý tái hiện. Mục dưới đây ngược lại: **bản web

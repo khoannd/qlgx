@@ -107,9 +107,9 @@ public class GiaoDanTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
         var truoc = await client.GetFromJsonAsync<ChiTiet>($"/api/giao-dan/{id}");
 
         var lanDau = await client.PutAsJsonAsync($"/api/giao-dan/{id}",
-            new { HoTen = "Ten da sua", RowVersion = truoc!.RowVersion });
+            new { HoTen = "Ten da sua", Phai = "Nam", NgaySinh = "2000-01-01", RowVersion = truoc!.RowVersion });
         var lanHai = await client.PutAsJsonAsync($"/api/giao-dan/{id}",
-            new { HoTen = "Ten sua lan hai", RowVersion = truoc.RowVersion });
+            new { HoTen = "Ten sua lan hai", Phai = "Nam", NgaySinh = "2000-01-01", RowVersion = truoc.RowVersion });
 
         lanDau.StatusCode.Should().Be(HttpStatusCode.OK);
         lanHai.StatusCode.Should().Be(HttpStatusCode.Conflict);
@@ -289,7 +289,7 @@ public class GiaoDanTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
         var truoc = await client.GetFromJsonAsync<ChiTiet>($"/api/giao-dan/{id}");
 
         var res = await client.PutAsJsonAsync($"/api/giao-dan/{id}",
-            new { HoTen = "Ten da sua qua PUT", RowVersion = truoc!.RowVersion });
+            new { HoTen = "Ten da sua qua PUT", Phai = "Nam", NgaySinh = "2000-01-01", RowVersion = truoc!.RowVersion });
 
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         await using var dbSau = app.TaoContextThuan();

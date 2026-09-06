@@ -244,13 +244,13 @@ mỗi cột để lọc ngay trên lưới, độc lập với bộ lọc giáo 
 
 | Hành vi bản desktop | Bản web đã có? | Ghi chú |
 |---|---|---|
-| 29 cột đúng thứ tự | **Một phần — thiếu 5 cột** | `cotGiaoDan.ts` chỉ định nghĩa **25 cột**. Thiếu hẳn 5 cột đánh dấu: `DaCoGiaDinh` (Lập GĐ), `TanTong` (Tân tòng), `ConHoc` (Còn học), `DaChuyenXu` (Chuyển xứ), `QuaDoi` (Qua đời). Web có thêm 1 cột `quanHe` không có ở desktop (dùng cho ngữ cảnh lưới thành viên gia đình). 29 − 5 + 1 = 25. **Đã đếm lại trực tiếp bằng `grep -c "field: '"` trên `cotGiaoDan.ts` và đếm `Columns.Add` + `AddColumn` trong `FormatGrid()`.** Năm cột thiếu đều là thông tin trạng thái quan trọng — thiếu chúng người dùng không phân biệt được ai đã qua đời, ai đã chuyển xứ ngay trên lưới, càng nghiêm trọng khi kết hợp với lỗi ở dòng dưới (web không lọc sẵn hai nhóm này) |
+| 29 cột đúng thứ tự | **Có (đã sửa ở phiên "ghi giáo dân")** | `cotGiaoDan.ts` đã có đủ 29 cột đúng thứ tự, kể cả 5 cột đánh dấu `DaCoGiaDinh`/`TanTong`/`ConHoc`/`DaChuyenXu`/`QuaDoi` mà một bản đối chiếu trước đây ghi nhận là thiếu — hoá ra đã được bổ sung ở một task trước phiên này mà bản spec chưa cập nhật kịp. Đã đếm lại: `grep -c "field: '"` = 25, `grep -c "co("` = 5, tổng 30 dòng định nghĩa cột trong file, trừ 1 dòng thuộc `cotQuanHeGiaDinh` (mảng riêng, không thuộc `cotGiaoDan`) = đúng 29. Cột `quanHe` không tồn tại ở desktop vẫn còn, nhưng nằm trong `cotQuanHeGiaDinh`, chỉ chèn khi nhúng trong form gia đình — không tính vào 29 cột của `cotGiaoDan` |
 | Lọc theo giáo họ (kể cả giáo xóm con) | Một phần | Web lọc theo `tenGiaoHo` so khớp chuỗi ở client (`data/giaoHoTam.ts` — danh mục giáo họ **tạm, hard-code**, chưa có bảng `GiaoHo` thật kèm quan hệ cha/con); backend `LayDanhSach` hỗ trợ `giaoHoId` nhưng không lọc theo `MaGiaoHoCha` (giáo xóm con) như desktop |
-| Mặc định ẩn giáo dân đã qua đời/chuyển xứ/đã xóa | **Thiếu** | `GiaoDanService.LayDanhSach` chỉ lọc `!DaXoa`; không loại `QuaDoi`/`DaChuyenXu` như `GxGiaoHo.LoadGridData` (`AND DaXoa=0 AND DaChuyenXu=0 AND QuaDoi=0`) — danh sách web sẽ **hiện cả người đã mất và đã chuyển xứ** lẫn với người đang sinh hoạt, không giống desktop |
+| Mặc định ẩn giáo dân đã qua đời/chuyển xứ/đã xóa | **Đã sửa** | `GiaoDanService.LayDanhSach` nay lọc thêm `!QuaDoi` và `!GiaDinhThamGia.Any(DaChuyenXu)` khi `hienCaDaMat` là false (mặc định), đúng tinh thần `GxGiaoHo.LoadGridData`. Ô tick mới "Hiện cả người đã qua đời / đã chuyển xứ" ở `GiaoDanList.tsx` bật `hienCaDaMat=true` để bỏ qua bộ lọc này — desktop không có công tắc tương đương ngay trong màn hình này (chỉ xem được qua các màn hình Tìm kiếm riêng, ngoài phạm vi migrate), nên đây là khả năng MỚI có chủ đích để không mất hẳn cách xem nhóm này trên web |
 | Checkbox "Chỉ xem giáo dân không được thống kê" | Có | `chiKhongThongKe` lọc theo `khongThongKe`, đúng tinh thần tách biệt khỏi "Ngoài xứ" mà bản desktop có ghi tooltip sai |
 | Ghi nhớ giáo họ đã chọn giữa các lần mở (`Memory.CurrentGiaoHo`) | **Thiếu** | Web luôn mặc định "Tất cả" (`giaoHo = '-1'`) khi vào lại màn hình |
 | Nút Thêm giáo dân | **Thiếu chức năng thật** | Có nút "Thêm giáo dân" mở `GiaoDanDetail` rỗng, nhưng **không có API tạo mới** (`GiaoDanEndpoints` chỉ có GET/GET/PUT) — nút Cập nhật bị `disabled` khi `moi=true`; thông báo "Chưa hỗ trợ tạo mới giáo dân qua web ở giai đoạn này" |
-| Xóa giáo dân (mềm/vĩnh viễn) + chặn xóa khi đang trong gia đình | **Thiếu hoàn toàn** | Không có endpoint `DELETE`, không có nút xóa nào trong `GiaoDanList.tsx`/`GxGiaoDanList.tsx` |
+| Xóa giáo dân (mềm/vĩnh viễn) + chặn xóa khi đang trong gia đình | **Đã làm** | `DELETE /api/giao-dan/{id}` với tham số `vinhVien` (`GiaoDanService.Xoa`) — `vinhVien` bỏ trống hoặc false thì xoá mềm (`DaXoa=true`); `vinhVien=true` kiểm tra `ThanhVienGiaDinh` trước, chặn (409) kèm thông báo liệt kê từng gia đình đúng nguyên văn `checkGiaoDanTrongGiaDinh`, nếu không vướng thì xoá vĩnh viễn khỏi `GiaoDan`+`BiTichChiTiet`+`ChiTietLopGiaoLy` trong một transaction (desktop không dùng transaction — cải tiến hạ tầng thuần tuý, không đổi điều kiện chặn). `GiaoDanList.tsx` có nút "Xóa giáo dân" (vô hiệu tới khi chọn một dòng) mở hộp 3 lựa chọn Xoá vĩnh viễn/Đưa vào lưu trữ/Huỷ bỏ, thay cho `MessageBoxButtons.YesNoCancel` |
 | Sửa giáo dân | Có | Qua `GiaoDanDetailPage` (GET rồi PUT), có xử lý xung đột `RowVersion` (409) — desktop không có khái niệm này (single-user Access) nên đây là cải tiến hợp lý cho môi trường nhiều người dùng |
 | Menu chuột phải 12 mục | Có đủ nhãn, đúng thứ tự | `menuGiaoDanMacDinh` liệt kê đủ 12 mục |
 | — nhưng 10/12 mục có hành động thật | **Thiếu** | Chỉ "Xem chi tiết" và "Xem gia đình" có `chay` (handler); "In lý lịch cá nhân", "In chứng nhận bí tích", "In giới thiệu hôn phối", "In chứng nhận rửa tội", "In chứng nhận xưng tội - rước lễ", "In chứng nhận thêm sức", "In giấy giới thiệu..." (x3), "Xem vị trí" đều là **mục menu không làm gì** khi bấm |
@@ -262,13 +262,11 @@ mỗi cột để lọc ngay trên lưới, độc lập với bộ lọc giáo 
 
 ### Ưu tiên khắc phục (ảnh hưởng tới việc bỏ hẳn bản desktop)
 
-- **Cao — chặn hoàn toàn việc bỏ bản desktop:**
-  1. Không có chức năng **Thêm giáo dân** thật (không có API tạo mới) — giáo xứ không thể nhập
-     giáo dân mới nếu chỉ dùng web.
-  2. Không có chức năng **Xóa giáo dân** (mềm lẫn vĩnh viễn), kể cả điều kiện chặn xóa khi đang
-     thuộc gia đình.
-  3. Danh sách mặc định **không loại người đã qua đời/đã chuyển xứ** — sai lệch nghiệp vụ, gây khó
-     dùng ngay khi số liệu giáo xứ đủ lớn (danh sách sẽ lẫn lộn người còn/mất).
+- **Cao — chặn hoàn toàn việc bỏ bản desktop (3 mục dưới đã giải quyết ở phiên "ghi giáo
+  dân" — xem bảng đối chiếu ở trên):**
+  1. ~~Không có chức năng **Thêm giáo dân** thật~~ — **đã có** `POST /api/giao-dan`.
+  2. ~~Không có chức năng **Xóa giáo dân**~~ — **đã có** `DELETE /api/giao-dan/{id}`.
+  3. ~~Danh sách mặc định không loại người đã qua đời/đã chuyển xứ~~ — **đã sửa**.
 - **Trung bình:**
   4. 10/12 mục in ấn (chứng nhận bí tích, giới thiệu hôn phối, giấy giới thiệu...) chưa hoạt
      động — đây là các thao tác giáo xứ dùng thường xuyên khi làm hồ sơ cho giáo dân.

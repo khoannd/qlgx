@@ -11,15 +11,19 @@ import {
 } from './GiaoDanDetail'
 
 type Props = {
-  /** `null` = bản ghi mới (chưa có API tạo mới, xem GiaoDanDetail). */
+  /** `null` = bản ghi mới — form trống, nút "Thêm giáo dân" gọi `POST /api/giao-dan` (xem
+   * hàm `tao` bên dưới). */
   id: string | null
   moGiaDinh?: (id: string) => void
   moDanhSachGiaoDan?: () => void
+  /** Mở (một thẻ tài liệu mới cho) chi tiết giáo dân theo id — dùng để chuyển từ thẻ "nháp"
+   * sang thẻ thật ngay sau khi tạo mới thành công. */
+  moGiaoDan?: (id: string | null) => void
 }
 
 /** Container nối `GiaoDanDetail` với `GET`/`PUT /api/giao-dan/{id}` — cùng khuôn tải lại sau
  * khi lưu và xử lý xung đột RowVersion như `GiaDinhDetailPage`. */
-export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan }: Props) {
+export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan }: Props) {
   const [duLieu, setDuLieu] = useState<GiaoDanDetailDuLieu | null>(null)
   const [dangTai, setDangTai] = useState(id !== null)
   const [loi, setLoi] = useState<string | null>(null)
@@ -100,15 +104,63 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan }: Props) {
       .catch((e: unknown) => { console.error('Không tải được danh mục hội đoàn', e) })
   }, [])
 
+  // Gộp MỌI cảnh báo nghiệp vụ áp dụng được (xem TaoGiaoDanRequest.BoQuaCanhBao phía backend)
+  // thành MỘT hộp thoại xác nhận, thay vì chuỗi hộp thoại Yes/No tuần tự của desktop — cùng
+  // tinh thần "chặn tới khi được xác nhận rõ ràng", chỉ khác cách trình bày. Trả về `true` nếu
+  // đã lưu thành công (hoặc không có gì cần lưu thêm), `false` nếu người dùng huỷ.
+  function xacNhanCanhBao(canhBao: string[]): boolean {
+    return window.confirm(
+      canhBao.join('\n\n') + '\n\nBạn có chắc muốn lưu thông tin giáo dân này không?')
+  }
+
   if (id === null) {
-    return <GiaoDanDetail moGiaDinh={moGiaDinh} moDanhSachGiaoDan={moDanhSachGiaoDan} />
+    async function tao(payload: YeuCauCapNhatGiaoDan) {
+      setDangLuu(true)
+      setThongBaoLuu(null)
+      try {
+        let ket = await api.giaoDan.taoMoi(payload)
+        if (!ket.id && ket.canhBao.length > 0) {
+          if (!xacNhanCanhBao(ket.canhBao)) {
+            setThongBaoLuu('Đã hủy — chưa lưu giáo dân này.')
+            return
+          }
+          ket = await api.giaoDan.taoMoi({ ...payload, boQuaCanhBao: true })
+        }
+        if (ket.id) {
+          setThongBaoLuu('Đã tạo giáo dân mới.')
+          moGiaoDan?.(ket.id)
+        }
+      } catch (e) {
+        console.error('Không tạo được giáo dân mới', e)
+        setThongBaoLuu(e instanceof Error ? e.message : 'Lưu thất bại, thử lại sau.')
+      } finally {
+        setDangLuu(false)
+      }
+    }
+
+    return (
+      <GiaoDanDetail
+        moGiaDinh={moGiaDinh}
+        moDanhSachGiaoDan={moDanhSachGiaoDan}
+        onLuu={tao}
+        dangLuu={dangLuu}
+        thongBaoLuu={thongBaoLuu}
+      />
+    )
   }
 
   async function luu(payload: YeuCauCapNhatGiaoDan) {
     setDangLuu(true)
     setThongBaoLuu(null)
     try {
-      await api.giaoDan.capNhat(id as string, payload)
+      let ket = await api.giaoDan.capNhat(id as string, payload)
+      if (!ket.id && ket.canhBao.length > 0) {
+        if (!xacNhanCanhBao(ket.canhBao)) {
+          setThongBaoLuu('Đã hủy — thay đổi chưa được lưu.')
+          return
+        }
+        ket = await api.giaoDan.capNhat(id as string, { ...payload, boQuaCanhBao: true })
+      }
       setThongBaoLuu('Đã lưu thành công.')
       tai()
     } catch (e) {

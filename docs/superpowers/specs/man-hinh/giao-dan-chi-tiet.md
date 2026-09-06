@@ -360,11 +360,11 @@ khi xung đột) — bản desktop dùng Access đơn người dùng nên không
 | Ảnh đại diện | **Chưa làm** | Chỉ có khung tĩnh "Chưa có hình / Nhấp để tải ảnh lên" (dòng 180-182), không có `<input type="file">`, không upload, không hiển thị ảnh đã có |
 | Tên Cha/Tên Mẹ — picker chọn giáo dân có sẵn, tự đồng bộ 2 chiều, tự điền địa chỉ | **Chưa làm** | `GxPicker` chỉ hiển thị giá trị (`value={p.hoTenCha}`), không có ô nhập/chọn thật; giữ nguyên giá trị cũ khi lưu (comment ở đầu file xác nhận điều này) — mất hẳn liên động tự điền Tên Mẹ/Địa chỉ khi chọn Tên Cha |
 | Người ban bí tích (rửa tội/rước lễ/thêm sức/xức dầu) — picker chọn linh mục | **Chưa làm** | Cùng tình trạng `GxPicker` chỉ hiển thị, không chỉnh sửa được |
-| Validate: 24 quy tắc liệt kê ở mục 4 | **Thiếu gần như toàn bộ** | Không thấy validate phía client (không kiểm tra bắt buộc Họ tên/Giới tính/Ngày sinh/Giáo họ trước khi submit — form HTML không có `required`); phía server (`GiaoDanService.CapNhat`) chỉ gán giá trị thẳng vào entity, không có bất kỳ kiểm tra nghiệp vụ nào (không kiểm tra trùng mã, trùng họ tên+tên thánh+ngày sinh, thứ tự ngày, tuổi rước lễ, tuổi cha mẹ, tuổi kết hôn, chặn đổi giới tính, chặn bỏ tick có-gia-đình khi còn hôn phối...) |
+| Validate: 24 quy tắc liệt kê ở mục 4 | **Một phần — đã thêm ở phiên "ghi giáo dân"** | `GiaoDanService.KiemTraNghiepVu` (dùng chung cho `Tao`/`CapNhat`) nay kiểm tra: bắt buộc Họ tên/Giới tính/Ngày sinh (rule 4-6); tuổi kết hôn khi tick "Có gia đình" (rule 13, chặn cứng <14 tuổi, cảnh báo 14-17); Ngày sinh vs Ngày rửa tội bug-for-bug (rule 9); tuổi rước lễ (rule 10); rửa tội chưa có Tên thánh (rule 12); trùng Họ tên+Tên thánh+Ngày sinh (rule 16); chặn đổi giới tính khi đang là vợ/chồng (rule 17, `CapNhat` riêng). **Vẫn chưa làm được**: rule 8 (giáo họ/không thống kê — cần Giáo họ chọn thật), rule 11 (trùng ngày chuyển xứ), rule 15 (tuổi cha/mẹ — cần picker Tên Cha/Mẹ thật), rule 18 (chặn bỏ tick có-gia-đình), rule 22/23 (tự sửa DaCoGiaDinh người còn lại) — xem `can-review-sau.md` mục 19. Client vẫn không có validate HTML (`required`) — chỉ dựa vào máy chủ |
 | Liên động Qua đời ⇄ Còn học (loại trừ lẫn nhau) | **Có** | `doiQuaDoi`/`doiConHoc` trong `GiaoDanDetail.tsx:114-115`, đúng tinh thần 2 chiều của desktop |
 | Liên động chọn "Ngoài xứ" ẩn/hiện Giáo xứ, Giáo phận, khối Chuyển xứ | **Có** | `ngoaiXu` state điều khiển hiển thị (dòng 118, 160-166, 183-195) |
 | Liên động tick "không thống kê" → tự chọn Ngoài xứ | **Có** | `doiGiaoDanAo` (dòng 116) |
-| Thêm giáo dân mới | **Thiếu hoàn toàn** | Không có API tạo mới; nút Cập nhật bị khoá khi `moi=true`, thông báo "Chưa hỗ trợ tạo mới giáo dân qua web ở giai đoạn này" |
+| Thêm giáo dân mới | **Đã làm** | `POST /api/giao-dan` (`GiaoDanService.Tao`, mã cũ sinh qua `SinhMaService`, `MaNhanDang` mới sinh). Nút "Thêm giáo dân" ở `GiaoDanDetail.tsx` nay hoạt động thật, đi qua cùng `KiemTraNghiepVu`; còn cảnh báo chưa xác nhận thì `GiaoDanDetailPage` gộp lại thành một `window.confirm` — xem `can-review-sau.md` mục 20 |
 | Tab Giáo lý (Bao đồng 1/2, Vào đời, Giáo lý hôn nhân) | **Chỉ hiển thị UI tĩnh, không đọc/không ghi dữ liệu thật** | Toàn bộ input trong `tabGiaoLy` không có `defaultValue` từ `p.*` và không có `name` — không đọc dữ liệu đã lưu (`NgayBD1`, `NoiBD1`...) lên form dù `GiaoDanDetailDto`/`GiaoDanService.LayChiTiet` **đã có** các trường này (dòng 108-109 của `GiaoDanService.cs`); và `CapNhatGiaoDanRequest` **không có** các trường này nên dù có sửa cũng không lưu được |
 | Tab Hôn phối | **Chỉ là khung UI tĩnh** | Không gọi API hôn phối nào, không đọc/ghi `HonPhoi`; các ô Nơi hôn phối/Linh mục chứng không có `name` |
 | Tab Ơn gọi tận hiến | **Chỉ là khung UI tĩnh** | Tương tự — không có dữ liệu, không có API |
@@ -377,15 +377,17 @@ khi xung đột) — bản desktop dùng Access đơn người dùng nên không
 ### Ưu tiên khắc phục (ảnh hưởng tới việc bỏ hẳn bản desktop)
 
 - **Cao — chặn hoàn toàn việc bỏ bản desktop:**
-  1. **Không tạo được giáo dân mới qua web.**
+  1. ~~Không tạo được giáo dân mới qua web.~~ **Đã làm** ở phiên "ghi giáo dân" —
+     `POST /api/giao-dan`.
   2. **Tab Hôn phối, Ơn gọi tận hiến, Hội đoàn không đọc/không ghi dữ liệu thật** — đây là 3
      mảng nghiệp vụ lớn (tình trạng hôn nhân, ơn gọi tu trì, sinh hoạt hội đoàn) hoàn toàn không
-     dùng được trên web.
+     dùng được trên web. (Đã có API đọc/ghi từ Task 15/16 khác — xem `hon-phoi.md`/`tan-hien.md`/
+     `hoi-doan.md`; dòng này của bảng đối chiếu ở trên có thể đã lỗi thời, chưa xác nhận lại
+     trong phiên này.)
   3. **Tab Giáo lý không đọc/không ghi được** dù dữ liệu đã có sẵn trong CSDL và trong DTO đọc —
-     chỉ thiếu phần ghi và phần hiển thị giá trị đã lưu.
-  4. **Không có validate nghiệp vụ nào phía server** cho các quy tắc bắt buộc (Họ tên, Giới tính,
-     Ngày sinh, chọn Giáo họ, chặn mã trùng, chặn đổi giới tính khi đã có gia đình...) — nguy cơ
-     dữ liệu rác tăng nhanh nếu đưa vào dùng thật mà không bổ sung.
+     chỉ thiếu phần ghi và phần hiển thị giá trị đã lưu. (Ngoài phạm vi phiên "ghi giáo dân".)
+  4. ~~Không có validate nghiệp vụ nào phía server~~ — **đã thêm một phần** (xem hàng "Validate:
+     24 quy tắc" ở trên và `can-review-sau.md` mục 19 cho các quy tắc còn thiếu).
 - **Trung bình:**
   5. Không có picker chọn thật cho Tên Cha/Tên Mẹ/Người ban bí tích — mất khả năng liên kết
      đúng với hồ sơ giáo dân khác, dễ gõ sai chính tả so với desktop.

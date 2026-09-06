@@ -6,7 +6,24 @@ using Qlgx.Domain.Entities;
 
 namespace Qlgx.Api.Services;
 
-public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa)
+/// <summary>Kết quả tạo/sửa một giáo dân — xem KetQuaLuuGiaoDanDto để biết endpoint ánh xạ mã
+/// HTTP nào cho từng nhánh.</summary>
+public enum KetQuaLuuGiaoDan
+{
+    ThanhCong,
+    KhongTimThay,
+    /// <summary>Đụng RowVersion — chỉ có thể xảy ra khi sửa, không khi tạo mới.</summary>
+    DungPhienBan,
+    /// <summary>Vi phạm một quy tắc CHẶN CỨNG (bắt buộc, hoặc chặn đổi giới tính…) — không thể
+    /// bỏ qua bằng BoQuaCanhBao.</summary>
+    Loi,
+    /// <summary>Có ít nhất một CẢNH BÁO (bắt chước các hộp thoại Yes/No của desktop) mà
+    /// client chưa xác nhận bỏ qua (`BoQuaCanhBao=false`) — CHƯA LƯU, client cần hỏi lại
+    /// người dùng rồi gọi lại với BoQuaCanhBao=true.</summary>
+    CanhBaoChuaXacNhan,
+}
+
+public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoXu boiCanh)
 {
     /// <summary>
     /// Một dòng nguồn trước khi dựng DTO. Có thêm QuanHe vì lưới thành viên trong form gia
@@ -25,10 +42,24 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa)
     /// </summary>
     private record NguonDong(GiaoDan Gd, string? QuanHe, Guid? GiaDinhId, bool DaChuyenDi);
 
+    /// <summary>
+    /// `hienCaDaMat=false` (mặc định) tái hiện đúng nền lọc mặc định của
+    /// GxGiaoHo.LoadGridData (dòng 266: "AND DaXoa=0 AND DaChuyenXu=0 AND QuaDoi=0") — bản web
+    /// TRƯỚC bản sửa này chỉ lọc !DaXoa, khiến người đã qua đời/chuyển xứ trộn lẫn với người
+    /// đang sinh hoạt (xem giao-dan-danh-sach.md mục 10, "Ưu tiên khắc phục" #3).
+    ///
+    /// Bản desktop KHÔNG có công tắc nào trong chính frmGiaoDanList để tắt bộ lọc này (chỉ có
+    /// thể thấy người đã mất/chuyển xứ qua các màn hình Tìm kiếm riêng — frmTimGiaoDan/
+    /// frmTimGiaDinh — không thuộc phạm vi migrate của 2 màn hình được giao). `hienCaDaMat` là
+    /// một khả năng MỚI, có chủ đích, để bản web không mất hẳn cách xem những người này khi
+    /// chưa migrate màn hình Tìm kiếm.
+    /// </summary>
     public Task<List<GiaoDanListItemDto>> LayDanhSach(
-        Guid? giaoHoId, bool chiKhongThongKe, CancellationToken ct)
+        Guid? giaoHoId, bool chiKhongThongKe, bool hienCaDaMat, CancellationToken ct)
     {
         var truyVan = db.GiaoDan.Where(g => !g.DaXoa);
+        if (!hienCaDaMat)
+            truyVan = truyVan.Where(g => !g.QuaDoi && !g.GiaDinhThamGia.Any(tv => tv.GiaDinh!.DaChuyenXu));
         if (giaoHoId is { } id) truyVan = truyVan.Where(g => g.GiaoHoId == id);
         if (chiKhongThongKe) truyVan = truyVan.Where(g => g.KhongThongKe);
 
@@ -114,10 +145,177 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa)
             g.RowVersion);
     }
 
-    public async Task<bool?> CapNhat(Guid id, CapNhatGiaoDanRequest r, CancellationToken ct)
+    // --- Kiểm tra nghiệp vụ phía máy chủ (checkInput() của frmGiaoDan.cs) --------------------
+    //
+    // Ba hằng số dưới đây lấy nguyên từ Source/DBAccess/GxConstants.cs (đã đọc trực tiếp, UTF-16LE):
+    //   TUOI_RUOCLE = 7 (dòng 107), TUOI_CHO_PHEP_KET_HON = 18 (dòng 11),
+    //   TUOI_KHONG_CHO_PHEP_KET_HON = 14 (dòng 12).
+    private const int TuoiRuocLe = 7;
+    private const int TuoiChoPhepKetHon = 18;
+    private const int TuoiKhongChoPhepKetHon = 14;
+
+    /// <summary>
+    /// Cùng công thức của Memory.KiemTraTuoiKhongHopLe (CMemory.cs:1426-1441) — CHỈ so lệch
+    /// NĂM (ngaySau.Year - ngayTruoc.Year), không trừ đủ ngày/tháng. Giữ nguyên công thức thô
+    /// này (dù có thể lệch vài tháng so với tuổi thật) vì đây đúng là cách desktop tính — xem
+    /// "quy tắc chi phối" ở đầu nhiệm vụ: migrate y hệt, không tự ý làm chính xác hơn.
+    /// </summary>
+    private static bool TuoiKhongHopLe(DateOnly ngayTruoc, DateOnly ngaySau, int khoangCach) =>
+        ngaySau.Year - ngayTruoc.Year < khoangCach;
+
+    /// <summary>
+    /// Áp toàn bộ các quy tắc còn kiểm tra được với các trường hiện có trong
+    /// Tao/CapNhatGiaoDanRequest (loại: Tên Cha/Mẹ chỉ là text tự do, chưa có picker chọn giáo
+    /// dân thật nên KHÔNG kiểm tra được tuổi cha/mẹ — CheckTuoiChaMe của frmGiaoDan.cs:586-607;
+    /// Thông tin chuyển xứ/Giáo lý chưa có trong request nên bỏ qua các mốc ngày liên quan).
+    ///
+    /// Trả về (loiChan, canhBao): loiChan khác null nghĩa là VI PHẠM QUY TẮC CHẶN CỨNG (dừng
+    /// ngay, không đánh giá tiếp — đúng "return false" đầu tiên gặp phải của checkInput());
+    /// canhBao liệt kê MỌI cảnh báo kiểu Yes/No áp dụng được (bản desktop hỏi từng cái một,
+    /// bản web gộp lại — xem TaoGiaoDanRequest.BoQuaCanhBao).
+    /// </summary>
+    private async Task<(string? LoiChan, List<string> CanhBao)> KiemTraNghiepVu(
+        Guid? boQuaId, string hoTen, string? tenThanh, string? phai, DateOnly? ngaySinh,
+        DateOnly? ngayRuaToi, DateOnly? ngayRuocLe, bool daCoGiaDinh, CancellationToken ct)
+    {
+        // Rule 4 (frmGiaoDan.cs:294-299)
+        if (string.IsNullOrWhiteSpace(hoTen)) return ("Hãy nhập Họ tên", []);
+        // Rule 5 (dòng 301-306) — cbPhai chỉ có 2 lựa chọn cố định Nam/Nữ, string.IsNullOrEmpty
+        // là điều kiện gốc; bản web thêm kiểm tra đúng 1 trong 2 giá trị vì đây là input tự do
+        // (không phải combo cố định như desktop).
+        if (string.IsNullOrWhiteSpace(phai) || (phai != "Nam" && phai != "Nữ"))
+            return ("Hãy nhập giới tính", []);
+        // Rule 6 (dòng 308-313) — dtNgaySinh.CheckInput(false); DateOnly? luôn đúng định dạng
+        // nếu có giá trị nên chỉ còn ý nghĩa "bắt buộc phải nhập".
+        if (ngaySinh is not { } ns) return ("Hãy nhập ngày sinh hợp lệ", []);
+
+        // Rule 13 (dòng 431-434 + Memory.checkTuoiKetHon, CMemory.cs:1444-1460) — CHẶN CỨNG nếu
+        // dưới 14 tuổi, CẢNH BÁO nếu 14-17 tuổi, không đụng gì nếu >=18 hoặc không tick "Có gia
+        // đình". Theo đúng mã gốc: chỉ tính khi có Ngày sinh (đã đảm bảo ở rule 6).
+        var canhBao = new List<string>();
+        if (daCoGiaDinh)
+        {
+            var homNay = DateOnly.FromDateTime(DateTime.Now);
+            if (TuoiKhongHopLe(ns, homNay, TuoiChoPhepKetHon))
+            {
+                if (TuoiKhongHopLe(ns, homNay, TuoiKhongChoPhepKetHon))
+                    return ($"Giáo dân này hiện tại chưa đủ {TuoiKhongChoPhepKetHon} tuổi. Không thể kết hôn", []);
+                canhBao.Add(
+                    $"Giáo dân này hiện tại chưa đủ {TuoiChoPhepKetHon} tuổi để kết hôn. " +
+                    "Bạn có muốn tiếp tục không.\r\nChọn [Yes] để tiếp tục.\r\nChọn [No] để xem lại.");
+            }
+        }
+
+        // Rule 9 (dòng 371-382 + isValidDateInputRelations, frmGiaoDan.cs:467-479) — BUG đã xác
+        // nhận và ghi ở can-review-sau.md mục 1: chỉ thực sự so Ngày sinh với Ngày rửa tội (các
+        // tham số Ngày rước lễ/Ngày thêm sức của hàm gốc không hề được dùng do lỗi copy-paste).
+        // Bản web tái hiện ĐÚNG NHƯ VẬY — không tự ý kiểm tra đủ 4 mốc.
+        if (ngayRuaToi is { } rt && ns > rt)
+            canhBao.Add(
+                "Hãy đảm bảo Ngày sinh <= Ngày rửa tội <= Ngày rước lễ lần đầu <= Ngày thêm sức.\r\n" +
+                "Bạn có chắc muốn lưu thông tin giáo dân này không?");
+
+        // Rule 10 (dòng 391-396)
+        if (ngayRuocLe is { } rl && TuoiKhongHopLe(ns, rl, TuoiRuocLe))
+            canhBao.Add(
+                $"Giáo dân này rước lễ lần đầu khi chưa được {TuoiRuocLe} tuổi.\r\n" +
+                "Bạn có chắc muốn lưu thông tin giáo dân này không?");
+
+        // Rule 12 (dòng 417-424)
+        if (ngayRuaToi is not null && string.IsNullOrWhiteSpace(tenThanh))
+            canhBao.Add(
+                "Giáo dân này đã rửa tội nhưng chưa được nhập Tên Thánh.\r\n" +
+                "Bạn có chắc muốn lưu thông tin giáo dân này không?");
+
+        // Rule 16 (dòng 673-708) — bản gốc hỏi 3 lựa chọn Yes/No/Cancel (xem/lưu-mới/hủy); bản
+        // web đơn giản hoá còn 1 cảnh báo bỏ-qua-được (tương đương chọn "No" — lưu thành một
+        // giáo dân mới, chấp nhận trùng) vì phần "Yes: nạp lại bằng bản ghi cũ, hủy dữ liệu vừa
+        // nhập" không có ý nghĩa tương đương rõ ràng trong một request tạo/sửa qua API.
+        var trungId = await db.GiaoDan
+            .Where(x => !x.DaXoa && x.Id != (boQuaId ?? Guid.Empty)
+                        && x.HoTen == hoTen && x.TenThanh == tenThanh && x.NgaySinh == ngaySinh)
+            .Select(x => (Guid?)x.Id).FirstOrDefaultAsync(ct);
+        if (trungId is not null)
+            canhBao.Add(
+                "Đã có giáo dân cùng họ tên, tên thánh và ngày sinh trong hệ thống.\r\n" +
+                "Bạn có muốn xem lại thông tin của giáo dân đã lưu trong chương trình trùng thông tin bạn nhập?\r\n" +
+                " - Nhấp nút [Yes] để chương trình hiển thị thông tin của người đã tồn tại trong hệ thống có thông tin trùng thông tin bạn nhập, thông tin bạn vừa nhập sẽ bị bỏ qua\r\n" +
+                " - Nhấp nút [No] để lưu thông tin bạn vừa nhập thành một giáo dân mới và chấp nhận trùng thông tin giáo dân\r\n" +
+                " - Nhấp nút [Cancel] để quay lại màn hình nhập giáo dân để bạn kiểm tra lại thông tin và không lưu gì cả");
+
+        return (null, canhBao);
+    }
+
+    /// <summary>Chặn đổi giới tính nếu giáo dân đang là vợ/chồng trong một gia đình hoặc hôn
+    /// phối (cbPhai_SelectedIndexChanged, frmGiaoDan.cs:1482-1495) — chỉ có ý nghĩa khi SỬA
+    /// (Tạo mới chưa thể là vợ/chồng của ai).</summary>
+    private async Task<bool> DangLaVoChong(Guid giaoDanId, CancellationToken ct) =>
+        await db.ThanhVienGiaDinh.AnyAsync(tv =>
+            tv.GiaoDanId == giaoDanId && (tv.VaiTro == VaiTroGiaDinh.Chong || tv.VaiTro == VaiTroGiaDinh.Vo), ct)
+        || await db.GiaoDanHonPhoi.AnyAsync(x => x.GiaoDanId == giaoDanId, ct);
+
+    public async Task<(KetQuaLuuGiaoDan KetQua, Guid? Id, string? ThongBaoLoi, IReadOnlyList<string> CanhBao)>
+        Tao(TaoGiaoDanRequest r, CancellationToken ct)
+    {
+        var (loiChan, canhBao) = await KiemTraNghiepVu(
+            null, r.HoTen, r.TenThanh, r.Phai, r.NgaySinh, r.NgayRuaToi, r.NgayRuocLe, r.DaCoGiaDinh, ct);
+        if (loiChan is not null) return (KetQuaLuuGiaoDan.Loi, null, loiChan, []);
+        if (canhBao.Count > 0 && !r.BoQuaCanhBao) return (KetQuaLuuGiaoDan.CanhBaoChuaXacNhan, null, null, canhBao);
+
+        var giaoXuId = boiCanh.GiaoXuId;
+        var g = new GiaoDan
+        {
+            GiaoXuId = giaoXuId,
+            // Bản ghi tạo trực tiếp trên web, không có mã cũ thật — xem SinhMaService (KHÔNG
+            // tự viết MAX+1, đã có tiền lệ gây trùng khoá).
+            MaGiaoDanCu = await sinhMa.LayMaTiepTheo(giaoXuId, "giao_dan",
+                await db.GiaoDan.MaxAsync(x => (int?)x.MaGiaoDanCu, ct) ?? 0, ct),
+            // Bản ghi web tạo mới thì sinh MaNhanDang mới (đây là khoá nhận dạng đồng bộ hai
+            // chiều với bản desktop sau này) — KHÁC với CapNhat, nơi cố tình không đụng tới cột
+            // này của bản ghi đã có.
+            MaNhanDang = $"web::giao_dan::{Guid.NewGuid():N}",
+            HoTen = r.HoTen, TenThanh = r.TenThanh, Phai = r.Phai,
+            NgaySinh = r.NgaySinh, NoiSinh = r.NoiSinh, CMND = r.CMND, DanToc = r.DanToc,
+            GiaoHoId = r.GiaoHoId, DiaChi = r.DiaChi, DienThoai = r.DienThoai, Email = r.Email,
+            HoTenCha = r.HoTenCha, HoTenMe = r.HoTenMe,
+            SoRuaToi = r.SoRuaToi, NgayRuaToi = r.NgayRuaToi, NoiRuaToi = r.NoiRuaToi,
+            ChaRuaToi = r.ChaRuaToi, NguoiDoDauRuaToi = r.NguoiDoDauRuaToi,
+            SoRuocLe = r.SoRuocLe, NgayRuocLe = r.NgayRuocLe, NoiRuocLe = r.NoiRuocLe, ChaRuocLe = r.ChaRuocLe,
+            SoThemSuc = r.SoThemSuc, NgayThemSuc = r.NgayThemSuc, NoiThemSuc = r.NoiThemSuc,
+            ChaThemSuc = r.ChaThemSuc, NguoiDoDauThemSuc = r.NguoiDoDauThemSuc,
+            NgayXucDau = r.NgayXucDau, NguoiXucDau = r.NguoiXucDau,
+            TinhTrangXucDau = r.TinhTrangXucDau, GhiChuXucDau = r.GhiChuXucDau,
+            TrinhDoVanHoa = r.TrinhDoVanHoa, TrinhDoChuyenMon = r.TrinhDoChuyenMon,
+            BietNgoaiNgu = r.BietNgoaiNgu, NgheNghiep = r.NgheNghiep,
+            // Liên động của frmGiaoDan: tick "Qua đời" thì tự bỏ tick "Còn học"
+            ConHoc = r.QuaDoi ? false : r.ConHoc,
+            DaCoGiaDinh = r.DaCoGiaDinh, TanTong = r.TanTong, KhongThongKe = r.KhongThongKe,
+            QuaDoi = r.QuaDoi, NgayQuaDoi = r.NgayQuaDoi, NoiQuaDoi = r.NoiQuaDoi,
+            SoAnTang = r.SoAnTang, NoiAnTang = r.NoiAnTang, GhiChu = r.GhiChu,
+        };
+        db.GiaoDan.Add(g);
+        await db.SaveChangesAsync(ct);
+        return (KetQuaLuuGiaoDan.ThanhCong, g.Id, null, []);
+    }
+
+    public async Task<(KetQuaLuuGiaoDan KetQua, string? ThongBaoLoi, IReadOnlyList<string> CanhBao)>
+        CapNhat(Guid id, CapNhatGiaoDanRequest r, CancellationToken ct)
     {
         var g = await db.GiaoDan.SingleOrDefaultAsync(x => x.Id == id && !x.DaXoa, ct);
-        if (g is null) return null;
+        if (g is null) return (KetQuaLuuGiaoDan.KhongTimThay, null, []);
+
+        // Rule 17 (frmGiaoDan.cs:1482-1495) — CHẶN CỨNG, kiểm tra TRƯỚC các quy tắc chung vì
+        // thông báo của desktop dành riêng cho trường hợp này, không lẫn với các lỗi khác.
+        if (!string.IsNullOrWhiteSpace(r.Phai) && r.Phai != g.Phai && await DangLaVoChong(id, ct))
+            return (KetQuaLuuGiaoDan.Loi,
+                "Giáo dân này đã được nhập là vợ/chồng trong một gia đình hoặc hôn phối. " +
+                "Không thể thay đổi giới tính cho giáo dân này.\r\nĐể thay đổi giới tính, bạn phải tìm tất cả " +
+                "các gia đình hoặc hôn phối mà giáo dân này là vợ/chồng và bỏ đi quan hệ đó trước", []);
+
+        var (loiChan, canhBao) = await KiemTraNghiepVu(
+            id, r.HoTen, r.TenThanh, r.Phai, r.NgaySinh, r.NgayRuaToi, r.NgayRuocLe, r.DaCoGiaDinh, ct);
+        if (loiChan is not null) return (KetQuaLuuGiaoDan.Loi, loiChan, []);
+        if (canhBao.Count > 0 && !r.BoQuaCanhBao) return (KetQuaLuuGiaoDan.CanhBaoChuaXacNhan, null, canhBao);
 
         db.Entry(g).Property(x => x.RowVersion).OriginalValue = r.RowVersion;
 
@@ -144,8 +342,62 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa)
         // Liên động của frmGiaoDan: tick "Qua đời" thì tự bỏ tick "Còn học"
         if (g.QuaDoi) g.ConHoc = false;
 
-        try { await db.SaveChangesAsync(ct); return true; }
-        catch (DbUpdateConcurrencyException) { return false; }
+        try { await db.SaveChangesAsync(ct); return (KetQuaLuuGiaoDan.ThanhCong, null, []); }
+        catch (DbUpdateConcurrencyException) { return (KetQuaLuuGiaoDan.DungPhienBan, null, []); }
+    }
+
+    /// <summary>Kết quả xoá một giáo dân — xem GiaoDanEndpoints để biết ánh xạ mã HTTP.</summary>
+    public enum KetQuaXoaGiaoDan { ThanhCong, KhongTimThay, ChanVìThuocGiaDinh }
+
+    /// <summary>
+    /// Xoá một giáo dân — đúng 2 kiểu của gxAddEdit1_DeleteClick (frmGiaoDanList.cs:223-286):
+    ///   - `vinhVien=false` (nút [No] gốc — "đưa vào hồ sơ lưu trữ"): xoá MỀM, chỉ set DaXoa.
+    ///   - `vinhVien=true` (nút [Yes] gốc — "xóa vĩnh viễn"): trước tiên kiểm tra giáo dân có
+    ///     đang thuộc gia đình nào không (checkGiaoDanTrongGiaDinh, GxGiaoDanList.cs:915-945) —
+    ///     nếu có thì CHẶN, liệt kê từng gia đình; nếu không thì xoá vĩnh viễn khỏi GiaoDan +
+    ///     BiTichChiTiet + ChiTietLopGiaoLy (desktop xoá thêm ThanhVienGiaDinh nhưng ở nhánh này
+    ///     luôn rỗng vì vừa kiểm tra không thuộc gia đình nào).
+    ///     Bản desktop KHÔNG dùng transaction (4 lệnh SQL rời nhau) — bản web dùng transaction
+    ///     cho cả 3 bảng để tránh xoá dở dang giữa chừng nếu một lệnh lỗi; đây là cải tiến hạ
+    ///     tầng thuần tuý (không đổi bảng nào bị xoá hay điều kiện chặn), không phải "sửa lại
+    ///     logic nghiệp vụ" nên không cần ghi vào can-review-sau.md.
+    /// </summary>
+    public async Task<(KetQuaXoaGiaoDan KetQua, string? ThongBaoLoi)> Xoa(Guid id, bool vinhVien, CancellationToken ct)
+    {
+        var g = await db.GiaoDan.FirstOrDefaultAsync(x => x.Id == id && !x.DaXoa, ct);
+        if (g is null) return (KetQuaXoaGiaoDan.KhongTimThay, null);
+
+        if (!vinhVien)
+        {
+            g.DaXoa = true;
+            await db.SaveChangesAsync(ct);
+            return (KetQuaXoaGiaoDan.ThanhCong, null);
+        }
+
+        var giaDinhThamGia = await db.ThanhVienGiaDinh
+            .Where(tv => tv.GiaoDanId == id)
+            .Select(tv => new { tv.VaiTro, TenGiaDinh = tv.GiaDinh!.TenGiaDinh, tv.GiaDinh!.MaGiaDinhCu })
+            .ToListAsync(ct);
+        if (giaDinhThamGia.Count > 0)
+        {
+            var dong = giaDinhThamGia.Select(x =>
+            {
+                var vaiTro = x.VaiTro == VaiTroGiaDinh.Chong ? "người nam"
+                    : x.VaiTro == VaiTroGiaDinh.Vo ? "người nữ" : "thành viên gia đình";
+                return $"Giữ vai trò là {vaiTro} trong gia đình [{x.TenGiaDinh}] có mã gia đình là [{x.MaGiaDinhCu}]";
+            });
+            var thongBao = $"Giáo dân {g.HoTen}\r\n{string.Join("\r\n", dong)}\r\n" +
+                            "Vui lòng xóa giáo dân ra khỏi gia đình trước khi xóa giáo dân này";
+            return (KetQuaXoaGiaoDan.ChanVìThuocGiaDinh, thongBao);
+        }
+
+        await using var giaoDich = await db.Database.BeginTransactionAsync(ct);
+        await db.BiTichChiTiet.Where(b => b.GiaoDanId == id).ExecuteDeleteAsync(ct);
+        await db.ChiTietLopGiaoLy.Where(c => c.GiaoDanId == id).ExecuteDeleteAsync(ct);
+        db.GiaoDan.Remove(g);
+        await db.SaveChangesAsync(ct);
+        await giaoDich.CommitAsync(ct);
+        return (KetQuaXoaGiaoDan.ThanhCong, null);
     }
 
     /// <summary>

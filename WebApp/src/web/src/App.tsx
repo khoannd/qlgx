@@ -49,6 +49,7 @@ function App() {
           id={id}
           moGiaDinh={moChiTietGiaDinh}
           moDanhSachGiaoDan={moDanhSachGiaoDan}
+          moGiaoDan={moChiTietGiaoDan}
         />
       ),
     })

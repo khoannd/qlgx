@@ -501,6 +501,12 @@ export type YeuCauCapNhatGiaoDan = {
   noiAnTang: string | null
   ghiChu: string | null
   rowVersion: number
+  /** Máy chủ kiểm tra nghiệp vụ (checkInput() của frmGiaoDan.cs) trước khi lưu: một số quy
+   * tắc chặn cứng (400, không lưu gì); một số khác chỉ CẢNH BÁO kiểu Yes/No của desktop — nếu
+   * còn cảnh báo chưa xác nhận, máy chủ KHÔNG lưu và trả lại danh sách cảnh báo thay vì lưu
+   * luôn. `false` = lần gửi đầu (mặc định); container gửi lại `true` sau khi người dùng xác
+   * nhận muốn tiếp tục bất chấp cảnh báo — xem GiaoDanDetailPage.tao/luu. */
+  boQuaCanhBao: boolean
 }
 
 type Props = {
@@ -510,9 +516,9 @@ type Props = {
   /** "Quay về" và "← Danh sách" mở lại thẻ danh sách giáo dân — có thẻ thì chuyển tiêu
    * điểm, chưa có thì mở mới (quy tắc của `useTabDocs`), không quay về thẻ Tổng quan. */
   moDanhSachGiaoDan?: () => void
-  /** Nút "Cập nhật" gọi hàm này với payload dựng từ form — container (`GiaoDanDetailPage`)
-   * gọi API thật và xử lý xung đột RowVersion. Bản ghi mới chưa có API tạo nên nút bị vô hiệu
-   * hoá khi thiếu prop này. */
+  /** Nút "Cập nhật"/"Thêm giáo dân" gọi hàm này với payload dựng từ form — container
+   * (`GiaoDanDetailPage`) gọi API thật (POST khi bản ghi mới, PUT khi sửa), xử lý cảnh báo
+   * nghiệp vụ và xung đột RowVersion. */
   onLuu?: (payload: YeuCauCapNhatGiaoDan) => void
   dangLuu?: boolean
   thongBaoLuu?: string | null
@@ -920,6 +926,7 @@ export function GiaoDanDetail({
       noiAnTang: quaDoi ? chuoi('noiAnTang') : null,
       ghiChu: chuoi('ghiChu'),
       rowVersion: p.rowVersion,
+      boQuaCanhBao: false,
     })
   }
 
@@ -931,7 +938,7 @@ export function GiaoDanDetail({
         </button>
         <h1>{tenDayDu}</h1>
         <span className="head-sub">
-          {moi ? 'Chưa lưu · nhập thông tin rồi bấm Cập nhật'
+          {moi ? 'Chưa lưu · nhập thông tin rồi bấm Thêm giáo dân'
             : `${p.maGiaoDanCu} · ${ngoaiXu ? NGOAI_XU : giaoHo}${p.ngaySinh ? ' · sinh ' + p.ngaySinh : ''}`}
         </span>
         <div className="spacer" />
@@ -950,7 +957,7 @@ export function GiaoDanDetail({
 
       <div className="cmdbar">
         <span className="hint" role={thongBaoLuu ? 'status' : undefined}>
-          {thongBaoLuu ?? (moi ? 'Chưa hỗ trợ tạo mới giáo dân qua web ở giai đoạn này' : 'Thay đổi chưa được lưu')}
+          {thongBaoLuu ?? (moi ? 'Bản nháp chưa lưu' : 'Thay đổi chưa được lưu')}
         </span>
         <div className="spacer" />
         <button type="button" className="btn" disabled={!p.giaDinhId} onClick={() => p.giaDinhId && moGiaDinh?.(p.giaDinhId)}>
@@ -958,8 +965,8 @@ export function GiaoDanDetail({
         </button>
         <button type="button" className="btn">In lý lịch cá nhân</button>
         <button type="button" className="btn btn-quiet" onClick={() => moDanhSachGiaoDan?.()}>Quay về</button>
-        <button type="submit" className="btn btn-primary" disabled={moi || !onLuu || dangLuu}>
-          {dangLuu ? 'Đang lưu…' : 'Cập nhật'}
+        <button type="submit" className="btn btn-primary" disabled={!onLuu || dangLuu}>
+          {dangLuu ? 'Đang lưu…' : moi ? 'Thêm giáo dân' : 'Cập nhật'}
         </button>
       </div>
     </form>

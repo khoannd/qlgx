@@ -111,4 +111,37 @@ public record CapNhatGiaoDanRequest(
     string? TrinhDoVanHoa, string? TrinhDoChuyenMon, string? BietNgoaiNgu, string? NgheNghiep,
     bool ConHoc, bool DaCoGiaDinh, bool TanTong, bool KhongThongKe,
     bool QuaDoi, DateOnly? NgayQuaDoi, string? NoiQuaDoi, string? SoAnTang, string? NoiAnTang,
-    string? GhiChu, uint RowVersion);
+    string? GhiChu, uint RowVersion,
+    /// <summary>Xem TaoGiaoDanRequest.BoQuaCanhBao — cùng ý nghĩa, áp cho PUT.</summary>
+    bool BoQuaCanhBao = false);
+
+/// <summary>Tạo mới một giáo dân qua web (Task "ghi cho giáo dân"). Không có RowVersion (bản
+/// ghi chưa tồn tại) và không có MaGiaoDan (sinh tự động bằng SinhMaService, xem
+/// GiaoDanService.Tao — KHÔNG dùng MAX+1 tự viết, đã có tiền lệ gây trùng khoá).</summary>
+public record TaoGiaoDanRequest(
+    string HoTen, string? TenThanh, string? Phai, DateOnly? NgaySinh, string? NoiSinh,
+    string? CMND, string? DanToc, Guid? GiaoHoId, string? DiaChi, string? DienThoai, string? Email,
+    string? HoTenCha, string? HoTenMe,
+    string? SoRuaToi, DateOnly? NgayRuaToi, string? NoiRuaToi, string? ChaRuaToi, string? NguoiDoDauRuaToi,
+    string? SoRuocLe, DateOnly? NgayRuocLe, string? NoiRuocLe, string? ChaRuocLe,
+    string? SoThemSuc, DateOnly? NgayThemSuc, string? NoiThemSuc, string? ChaThemSuc, string? NguoiDoDauThemSuc,
+    DateOnly? NgayXucDau, string? NguoiXucDau, string? TinhTrangXucDau, string? GhiChuXucDau,
+    string? TrinhDoVanHoa, string? TrinhDoChuyenMon, string? BietNgoaiNgu, string? NgheNghiep,
+    bool ConHoc, bool DaCoGiaDinh, bool TanTong, bool KhongThongKe,
+    bool QuaDoi, DateOnly? NgayQuaDoi, string? NoiQuaDoi, string? SoAnTang, string? NoiAnTang,
+    string? GhiChu,
+    /// <summary>Bản desktop hỏi từng cảnh báo một bằng hộp thoại Yes/No liên tiếp
+    /// (checkInput() của frmGiaoDan.cs); bản web gộp MỌI cảnh báo áp dụng được vào một lượt
+    /// (xem GiaoDanService.KiemTraNghiepVu) rồi để người dùng xác nhận một lần — cùng tinh
+    /// thần "chặn cho tới khi được xác nhận rõ ràng" của desktop, chỉ khác ở chỗ gộp nhiều hộp
+    /// thoại tuần tự thành một lần xác nhận (không đổi kết quả nghiệp vụ: hard error vẫn luôn
+    /// chặn, warning vẫn luôn cần xác nhận trước khi lưu). Ghi ở đây thay vì
+    /// can-review-sau.md vì đây không phải hành vi sai của desktop được tái hiện nguyên vẹn,
+    /// mà là cách thích nghi hộp thoại đồng bộ của WinForms sang một lượt gọi HTTP.</summary>
+    bool BoQuaCanhBao = false);
+
+/// <summary>Kết quả tạo/sửa một giáo dân — endpoint tự ánh xạ sang mã HTTP (xem
+/// GiaoDanEndpoints). `Id` chỉ có giá trị khi đã LƯU THẬT; nếu còn cảnh báo chưa xác nhận thì
+/// `Id` là null và `CanhBao` liệt kê các cảnh báo (client hiện cho người dùng xác nhận rồi gọi
+/// lại với `BoQuaCanhBao = true`).</summary>
+public record KetQuaLuuGiaoDanDto(Guid? Id, IReadOnlyList<string> CanhBao);

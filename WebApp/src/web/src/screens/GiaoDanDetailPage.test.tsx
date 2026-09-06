@@ -11,7 +11,7 @@ vi.mock('../api/client', async () => {
     LoiXungDot: actual.LoiXungDot,
     api: {
       giaoDan: {
-        chiTiet: vi.fn(), capNhat: vi.fn(),
+        chiTiet: vi.fn(), capNhat: vi.fn(), taoMoi: vi.fn(), xoa: vi.fn(),
         honPhoi: vi.fn().mockResolvedValue([]), capNhatHonPhoi: vi.fn(),
         tanHien: vi.fn().mockResolvedValue([]), themTanHien: vi.fn(), capNhatTanHien: vi.fn(),
         hoiDoan: vi.fn().mockResolvedValue([]), themHoiDoan: vi.fn(), capNhatHoiDoan: vi.fn(),
@@ -51,7 +51,7 @@ describe('GiaoDanDetailPage', () => {
 
   it('luu thanh cong thi goi PUT va tai lai chi tiet', async () => {
     vi.mocked(api.giaoDan.chiTiet).mockResolvedValue(chiTiet())
-    vi.mocked(api.giaoDan.capNhat).mockResolvedValue(undefined)
+    vi.mocked(api.giaoDan.capNhat).mockResolvedValue({ id: 'p1', canhBao: [] })
 
     render(<GiaoDanDetailPage id="p1" />)
     await screen.findByRole('heading', { name: /Vũ Minh Trí/ })
@@ -263,5 +263,76 @@ describe('GiaoDanDetailPage', () => {
       expect.objectContaining({ hoiDoanId: 'hoidoan1' }))
     expect(await screen.findByText('Đã thêm hội đoàn mới.')).toBeDefined()
     expect(api.giaoDan.hoiDoan).toHaveBeenCalledTimes(2)
+  })
+
+  // --- Task "ghi giao dan": tao moi qua POST -----------------------------------------------
+
+  it('id=null hien form trong voi nut Them giao dan hoat dong duoc', () => {
+    render(<GiaoDanDetailPage id={null} />)
+
+    expect(screen.getByRole('button', { name: 'Thêm giáo dân' })).toHaveProperty('disabled', false)
+  })
+
+  it('tao moi thanh cong (khong canh bao) thi goi POST va mo the giao dan vua tao', async () => {
+    vi.mocked(api.giaoDan.taoMoi).mockResolvedValue({ id: 'gd-moi', canhBao: [] })
+    const moGiaoDan = vi.fn()
+
+    render(<GiaoDanDetailPage id={null} moGiaoDan={moGiaoDan} />)
+    await userEvent.type(screen.getByLabelText('Họ tên'), 'Nguyễn Văn Mới')
+    await userEvent.selectOptions(screen.getByLabelText('Giới tính'), 'Nam')
+    await userEvent.type(screen.getByLabelText('Ngày sinh'), '2000-01-01')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Thêm giáo dân' }))
+
+    expect(api.giaoDan.taoMoi).toHaveBeenCalledWith(expect.objectContaining({ hoTen: 'Nguyễn Văn Mới' }))
+    expect(await screen.findByText('Đã tạo giáo dân mới.')).toBeDefined()
+    expect(moGiaoDan).toHaveBeenCalledWith('gd-moi')
+  })
+
+  it('tao moi co canh bao: xac nhan thi goi lai POST voi boQuaCanhBao=true', async () => {
+    vi.mocked(api.giaoDan.taoMoi)
+      .mockResolvedValueOnce({ id: null, canhBao: ['Đã có giáo dân cùng họ tên, tên thánh và ngày sinh trong hệ thống.'] })
+      .mockResolvedValueOnce({ id: 'gd-moi', canhBao: [] })
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const moGiaoDan = vi.fn()
+
+    render(<GiaoDanDetailPage id={null} moGiaoDan={moGiaoDan} />)
+    await userEvent.type(screen.getByLabelText('Họ tên'), 'Nguyễn Văn Trùng')
+    await userEvent.selectOptions(screen.getByLabelText('Giới tính'), 'Nam')
+    await userEvent.type(screen.getByLabelText('Ngày sinh'), '2000-01-01')
+    await userEvent.click(screen.getByRole('button', { name: 'Thêm giáo dân' }))
+
+    await screen.findByText('Đã tạo giáo dân mới.')
+    expect(window.confirm).toHaveBeenCalled()
+    expect(api.giaoDan.taoMoi).toHaveBeenCalledTimes(2)
+    expect(api.giaoDan.taoMoi).toHaveBeenLastCalledWith(expect.objectContaining({ boQuaCanhBao: true }))
+    expect(moGiaoDan).toHaveBeenCalledWith('gd-moi')
+  })
+
+  it('tao moi co canh bao: huy thi KHONG goi lai POST va khong mo the moi', async () => {
+    vi.mocked(api.giaoDan.taoMoi).mockResolvedValueOnce({
+      id: null, canhBao: ['Giáo dân này hiện tại chưa đủ 18 tuổi để kết hôn.'],
+    })
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const moGiaoDan = vi.fn()
+
+    render(<GiaoDanDetailPage id={null} moGiaoDan={moGiaoDan} />)
+    await userEvent.type(screen.getByLabelText('Họ tên'), 'Nguyễn Văn Huy')
+    await userEvent.selectOptions(screen.getByLabelText('Giới tính'), 'Nam')
+    await userEvent.type(screen.getByLabelText('Ngày sinh'), '2000-01-01')
+    await userEvent.click(screen.getByRole('button', { name: 'Thêm giáo dân' }))
+
+    expect(await screen.findByText('Đã hủy — chưa lưu giáo dân này.')).toBeDefined()
+    expect(api.giaoDan.taoMoi).toHaveBeenCalledTimes(1)
+    expect(moGiaoDan).not.toHaveBeenCalled()
+  })
+
+  it('tao moi that bai (400) hien thong bao loi tra ve tu may chu', async () => {
+    vi.mocked(api.giaoDan.taoMoi).mockRejectedValue(new Error('Hãy nhập Họ tên'))
+
+    render(<GiaoDanDetailPage id={null} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Thêm giáo dân' }))
+
+    expect(await screen.findByText('Hãy nhập Họ tên')).toBeDefined()
   })
 })

@@ -298,4 +298,32 @@ describe('GiaoDanDetail', () => {
       hoiDoanId: 'hoidoan2', ngayVaoHoiDoan: '2020-01-01',
     }))
   })
+
+  // --- Task "ghi giao dan": tao moi ------------------------------------------------------
+
+  it('ban ghi moi (khong co duLieu) van cho phep bam nut Them giao dan khi co onLuu', () => {
+    render(<GiaoDanDetail onLuu={vi.fn()} />)
+
+    expect(screen.getByRole('button', { name: 'Thêm giáo dân' })).toHaveProperty('disabled', false)
+  })
+
+  it('nhap thong tin ban ghi moi roi bam Them giao dan thi goi onLuu voi payload dung', async () => {
+    const onLuu = vi.fn()
+    render(<GiaoDanDetail onLuu={onLuu} />)
+
+    await userEvent.type(screen.getByLabelText('Họ tên'), 'Nguyễn Văn Mới')
+    await userEvent.selectOptions(screen.getByLabelText('Giới tính'), 'Nam')
+    await userEvent.type(screen.getByLabelText('Ngày sinh'), '2000-01-01')
+    await userEvent.click(screen.getByRole('button', { name: 'Thêm giáo dân' }))
+
+    expect(onLuu).toHaveBeenCalledWith(expect.objectContaining({
+      hoTen: 'Nguyễn Văn Mới', phai: 'Nam', ngaySinh: '2000-01-01', boQuaCanhBao: false,
+    }))
+  })
+
+  it('khong co onLuu thi nut Them giao dan bi vo hieu hoa', () => {
+    render(<GiaoDanDetail />)
+
+    expect(screen.getByRole('button', { name: 'Thêm giáo dân' })).toHaveProperty('disabled', true)
+  })
 })

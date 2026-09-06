@@ -480,6 +480,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .btn-quiet:hover:not(:disabled) { background: rgba(255,255,255,.7); box-shadow: none; }
 .btn-sm { min-height: 30px; padding: 0 11px; font-size: 12.5px; }
+.btn-danger {
+  background: linear-gradient(145deg, #e0473a, #b8291e);
+  color: #fff;
+  border-color: rgba(255,255,255,.35);
+  font-weight: 600;
+}
+.btn-danger:hover:not(:disabled) { filter: brightness(1.05); }
 
 /* ============================ Trang danh sách ============================ */
 .list-page {
