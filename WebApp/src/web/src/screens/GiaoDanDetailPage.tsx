@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, LoiXungDot } from '../api/client'
-import type { GiaoDanDetail as GiaoDanDetailDuLieu, HonPhoiCuaGiaoDan } from '../api/types'
+import type {
+  GiaoDanDetail as GiaoDanDetailDuLieu, HoiDoanCuaGiaoDan, HoiDoanDanhMuc, HonPhoiCuaGiaoDan,
+  TanHienCuaGiaoDan,
+} from '../api/types'
 import { TrangThaiTai } from '../components/TrangThaiTai'
-import { GiaoDanDetail, type YeuCauCapNhatGiaoDan, type YeuCauCapNhatHonPhoi } from './GiaoDanDetail'
+import {
+  GiaoDanDetail, type YeuCauCapNhatGiaoDan, type YeuCauCapNhatHoiDoan, type YeuCauCapNhatHonPhoi,
+  type YeuCauLuuTanHien, type YeuCauThemHoiDoan,
+} from './GiaoDanDetail'
 
 type Props = {
   /** `null` = bản ghi mới (chưa có API tạo mới, xem GiaoDanDetail). */
@@ -21,6 +27,11 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan }: Props) {
   const [thongBaoLuu, setThongBaoLuu] = useState<string | null>(null)
   const [honPhoi, setHonPhoi] = useState<HonPhoiCuaGiaoDan[]>([])
   const [dangTaiHonPhoi, setDangTaiHonPhoi] = useState(id !== null)
+  const [tanHien, setTanHien] = useState<TanHienCuaGiaoDan[]>([])
+  const [dangTaiTanHien, setDangTaiTanHien] = useState(id !== null)
+  const [hoiDoan, setHoiDoan] = useState<HoiDoanCuaGiaoDan[]>([])
+  const [dangTaiHoiDoan, setDangTaiHoiDoan] = useState(id !== null)
+  const [danhMucHoiDoan, setDanhMucHoiDoan] = useState<HoiDoanDanhMuc[]>([])
 
   const tai = useCallback(() => {
     if (id === null) return
@@ -51,6 +62,43 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan }: Props) {
   }, [id])
 
   useEffect(taiHonPhoi, [taiHonPhoi])
+
+  // Tải riêng, độc lập — tab "Ơn gọi tận hiến" lưu qua endpoint riêng
+  // (`POST`/`PUT /api/giao-dan/(id/)tan-hien(/{id})`), cùng khuôn với hôn phối ở trên.
+  const taiTanHien = useCallback(() => {
+    if (id === null) return
+    setDangTaiTanHien(true)
+    api.giaoDan.tanHien(id)
+      .then(setTanHien)
+      .catch((e: unknown) => {
+        console.error(`Không tải được thông tin ơn gọi tận hiến của giáo dân ${id}`, e)
+      })
+      .finally(() => setDangTaiTanHien(false))
+  }, [id])
+
+  useEffect(taiTanHien, [taiTanHien])
+
+  // Tải riêng, độc lập — tab "Hội đoàn" lưu qua endpoint riêng
+  // (`POST`/`PUT /api/giao-dan/(id/)hoi-doan(/{id})`).
+  const taiHoiDoan = useCallback(() => {
+    if (id === null) return
+    setDangTaiHoiDoan(true)
+    api.giaoDan.hoiDoan(id)
+      .then(setHoiDoan)
+      .catch((e: unknown) => {
+        console.error(`Không tải được danh sách hội đoàn của giáo dân ${id}`, e)
+      })
+      .finally(() => setDangTaiHoiDoan(false))
+  }, [id])
+
+  useEffect(taiHoiDoan, [taiHoiDoan])
+
+  // Danh mục hội đoàn (combo "Tên hội đoàn" khi thêm mới) — không phụ thuộc `id`, tải một lần.
+  useEffect(() => {
+    api.hoiDoan.danhMuc()
+      .then(setDanhMucHoiDoan)
+      .catch((e: unknown) => { console.error('Không tải được danh mục hội đoàn', e) })
+  }, [])
 
   if (id === null) {
     return <GiaoDanDetail moGiaDinh={moGiaDinh} moDanhSachGiaoDan={moDanhSachGiaoDan} />
@@ -83,6 +131,28 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan }: Props) {
     taiHonPhoi()
   }
 
+  // Cùng khuôn với hôn phối: khối con tự quản lý trạng thái "đang lưu"/thông báo, hàm này chỉ
+  // gọi API thật rồi tải lại danh sách; lỗi (kể cả LoiXungDot) ném lại nguyên vẹn.
+  async function luuTanHien(tanHienId: string, payload: YeuCauLuuTanHien) {
+    await api.giaoDan.capNhatTanHien(tanHienId, payload)
+    taiTanHien()
+  }
+
+  async function themTanHien(payload: YeuCauLuuTanHien) {
+    await api.giaoDan.themTanHien(id as string, payload)
+    taiTanHien()
+  }
+
+  async function luuHoiDoan(chiTietId: string, payload: YeuCauCapNhatHoiDoan) {
+    await api.giaoDan.capNhatHoiDoan(chiTietId, payload)
+    taiHoiDoan()
+  }
+
+  async function themHoiDoan(payload: YeuCauThemHoiDoan) {
+    await api.giaoDan.themHoiDoan(id as string, payload)
+    taiHoiDoan()
+  }
+
   return (
     <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={tai}>
       {duLieu && (
@@ -96,6 +166,15 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan }: Props) {
           danhSachHonPhoi={honPhoi}
           dangTaiHonPhoi={dangTaiHonPhoi}
           onLuuHonPhoi={luuHonPhoi}
+          danhSachTanHien={tanHien}
+          dangTaiTanHien={dangTaiTanHien}
+          onLuuTanHien={luuTanHien}
+          onThemTanHien={themTanHien}
+          danhSachHoiDoan={hoiDoan}
+          dangTaiHoiDoan={dangTaiHoiDoan}
+          onLuuHoiDoan={luuHoiDoan}
+          onThemHoiDoan={themHoiDoan}
+          danhMucHoiDoan={danhMucHoiDoan}
         />
       )}
     </TrangThaiTai>

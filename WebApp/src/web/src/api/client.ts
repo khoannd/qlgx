@@ -1,5 +1,6 @@
 import type {
-  GiaDinhDetail, GiaDinhListItem, GiaoDanDetail, GiaoDanListItem, HonPhoiCuaGiaoDan,
+  GiaDinhDetail, GiaDinhListItem, GiaoDanDetail, GiaoDanListItem, HoiDoanCuaGiaoDan,
+  HoiDoanDanhMuc, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
 } from './types'
 
 class LoiXungDot extends Error {}
@@ -77,5 +78,18 @@ export const api = {
     honPhoi: (id: string) => goi<HonPhoiCuaGiaoDan[]>(`/api/giao-dan/${id}/hon-phoi`),
     capNhatHonPhoi: (honPhoiId: string, than: unknown) =>
       goi<void>(`/api/giao-dan/hon-phoi/${honPhoiId}`, { method: 'PUT', body: JSON.stringify(than) }),
+    tanHien: (id: string) => goi<TanHienCuaGiaoDan[]>(`/api/giao-dan/${id}/tan-hien`),
+    themTanHien: (id: string, than: unknown) =>
+      goi<{ id: string }>(`/api/giao-dan/${id}/tan-hien`, { method: 'POST', body: JSON.stringify(than) }),
+    capNhatTanHien: (tanHienId: string, than: unknown) =>
+      goi<void>(`/api/giao-dan/tan-hien/${tanHienId}`, { method: 'PUT', body: JSON.stringify(than) }),
+    hoiDoan: (id: string) => goi<HoiDoanCuaGiaoDan[]>(`/api/giao-dan/${id}/hoi-doan`),
+    themHoiDoan: (id: string, than: unknown) =>
+      goi<{ id: string }>(`/api/giao-dan/${id}/hoi-doan`, { method: 'POST', body: JSON.stringify(than) }),
+    capNhatHoiDoan: (chiTietId: string, than: unknown) =>
+      goi<void>(`/api/giao-dan/hoi-doan/${chiTietId}`, { method: 'PUT', body: JSON.stringify(than) }),
+  },
+  hoiDoan: {
+    danhMuc: () => goi<HoiDoanDanhMuc[]>('/api/hoi-doan'),
   },
 }

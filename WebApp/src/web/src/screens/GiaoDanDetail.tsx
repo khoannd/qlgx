@@ -1,5 +1,8 @@
 import { useRef, useState, type FormEvent } from 'react'
-import type { GiaoDanDetail as GiaoDanDetailDuLieu, HonPhoiCuaGiaoDan } from '../api/types'
+import type {
+  GiaoDanDetail as GiaoDanDetailDuLieu, HoiDoanCuaGiaoDan, HoiDoanDanhMuc, HonPhoiCuaGiaoDan,
+  TanHienCuaGiaoDan,
+} from '../api/types'
 import { GxField, GxInline } from '../components/GxField'
 import { GxFormTabs } from '../components/GxFormTabs'
 import { GxPicker } from '../components/GxPicker'
@@ -130,6 +133,324 @@ function KhoiHonPhoi({
   )
 }
 
+/** Các trường gửi lên `POST /api/giao-dan/{id}/tan-hien` và `PUT /api/giao-dan/tan-hien/{id}` —
+ * đúng `LuuTanHienRequest` phía backend. */
+export type YeuCauLuuTanHien = {
+  ngayBatDau: string | null
+  chucVu: string | null
+  noiTu: string | null
+  dongTu: string | null
+  noiPhucVu: string | null
+  diaChiPhucVu: string | null
+  dienThoaiPhucVu: string | null
+  emailPhucVu: string | null
+  ghiChu: string | null
+  daHoiTuc: boolean
+  ngayVaoDCV: string | null
+  ngayVaoNhaThu: string | null
+  ngayVaoNhaTap: string | null
+  ngayVaoKhanLanDau: string | null
+  ngayVaoKhanTronDoi: string | null
+  ngayPhoTe: string | null
+  ngayThuPhongLM: string | null
+  ngayBonMang: string | null
+  rowVersion: number
+}
+
+/** 7 giá trị cố định của `cbChucVu` bên `GxTanHien` (không đọc từ CSDL) — xem
+ * docs/superpowers/specs/man-hinh/tan-hien.md mục 4. */
+const CHUC_VU_TAN_HIEN = ['', 'Tu sĩ', 'Chủng sinh', 'Phó tế', 'Linh mục', 'Giám mục', 'Khấn trọn', 'Khác']
+
+const TAN_HIEN_RONG: Omit<TanHienCuaGiaoDan, 'id' | 'rowVersion'> = {
+  ngayBatDau: null, chucVu: null, noiTu: null, dongTu: null, noiPhucVu: null,
+  diaChiPhucVu: null, dienThoaiPhucVu: null, emailPhucVu: null, ghiChu: null, daHoiTuc: false,
+  ngayVaoDCV: null, ngayVaoNhaThu: null, ngayVaoNhaTap: null, ngayVaoKhanLanDau: null,
+  ngayVaoKhanTronDoi: null, ngayPhoTe: null, ngayThuPhongLM: null, ngayBonMang: null,
+}
+
+/**
+ * Một bản ghi Ơn gọi tận hiến — dùng chung cho khối "đã có" (sửa qua `onLuu`) và khối "thêm
+ * giai đoạn mới" (`th` = `undefined`, lưu qua `onThem`). Cùng lý do tránh lồng `<form>` như
+ * `KhoiHonPhoi` — xem chú thích ở đó.
+ */
+function KhoiTanHien({
+  th, thuTu, onLuu, onThem,
+}: {
+  th?: TanHienCuaGiaoDan
+  thuTu: number
+  onLuu?: (tanHienId: string, payload: YeuCauLuuTanHien) => Promise<void>
+  onThem?: (payload: YeuCauLuuTanHien) => Promise<void>
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [dangLuu, setDangLuu] = useState(false)
+  const [thongBao, setThongBao] = useState<string | null>(null)
+  const gt = th ?? { id: `moi-${thuTu}`, rowVersion: 0, ...TAN_HIEN_RONG }
+
+  function docChuoi(ten: string): string | null {
+    const el = containerRef.current?.querySelector<HTMLInputElement | HTMLSelectElement>(`[name="${ten}"]`)
+    return el?.value.trim() || null
+  }
+  function docBool(ten: string): boolean {
+    return containerRef.current?.querySelector<HTMLInputElement>(`[name="${ten}"]`)?.checked ?? false
+  }
+
+  function dungPayload(): YeuCauLuuTanHien {
+    return {
+      ngayBatDau: docChuoi('ngayBatDau'), chucVu: docChuoi('chucVu'), noiTu: docChuoi('noiTu'),
+      dongTu: docChuoi('dongTu'), noiPhucVu: docChuoi('noiPhucVu'),
+      diaChiPhucVu: docChuoi('diaChiPhucVu'), dienThoaiPhucVu: docChuoi('dienThoaiPhucVu'),
+      emailPhucVu: docChuoi('emailPhucVu'), ghiChu: docChuoi('ghiChu'), daHoiTuc: docBool('daHoiTuc'),
+      ngayVaoDCV: docChuoi('ngayVaoDCV'), ngayVaoNhaThu: docChuoi('ngayVaoNhaThu'),
+      ngayVaoNhaTap: docChuoi('ngayVaoNhaTap'), ngayVaoKhanLanDau: docChuoi('ngayVaoKhanLanDau'),
+      ngayVaoKhanTronDoi: docChuoi('ngayVaoKhanTronDoi'), ngayPhoTe: docChuoi('ngayPhoTe'),
+      ngayThuPhongLM: docChuoi('ngayThuPhongLM'), ngayBonMang: docChuoi('ngayBonMang'),
+      rowVersion: gt.rowVersion,
+    }
+  }
+
+  async function xuLyLuu() {
+    setDangLuu(true)
+    setThongBao(null)
+    try {
+      if (th && onLuu) {
+        await onLuu(th.id, dungPayload())
+        setThongBao('Đã lưu thành công.')
+      } else if (!th && onThem) {
+        await onThem(dungPayload())
+        setThongBao('Đã thêm giai đoạn mới.')
+      }
+    } catch (err) {
+      setThongBao(err instanceof Error ? err.message : 'Lưu thất bại, thử lại sau.')
+    } finally {
+      setDangLuu(false)
+    }
+  }
+
+  const idBase = `th-${gt.id}`
+  const coTheLuu = th ? !!onLuu : !!onThem
+  return (
+    <div className="card glass" ref={containerRef} style={{ marginBottom: 12 }}>
+      <div className="card-head">
+        <h2>{th ? `Ơn gọi tận hiến${gt.chucVu ? ' — ' + gt.chucVu : ''}` : 'Thêm giai đoạn mới'}</h2>
+      </div>
+      <div className="card-row">
+        <div>
+          <GxField label="Ngày nhập dòng" id={`${idBase}-batdau`}>
+            <input id={`${idBase}-batdau`} name="ngayBatDau" type="date" defaultValue={gt.ngayBatDau ?? ''} style={{ maxWidth: 180 }} />
+          </GxField>
+          <GxField label="Ngày vào nhà thử" id={`${idBase}-nhathu`}>
+            <input id={`${idBase}-nhathu`} name="ngayVaoNhaThu" type="date" defaultValue={gt.ngayVaoNhaThu ?? ''} style={{ maxWidth: 180 }} />
+          </GxField>
+          <GxField label="Ngày vào nhà tập" id={`${idBase}-nhatap`}>
+            <input id={`${idBase}-nhatap`} name="ngayVaoNhaTap" type="date" defaultValue={gt.ngayVaoNhaTap ?? ''} style={{ maxWidth: 180 }} />
+          </GxField>
+          <GxField label="Ngày vào ĐCV" id={`${idBase}-dcv`}>
+            <input id={`${idBase}-dcv`} name="ngayVaoDCV" type="date" defaultValue={gt.ngayVaoDCV ?? ''} style={{ maxWidth: 180 }} />
+          </GxField>
+          <GxField label="Ngày khấn lần đầu" id={`${idBase}-khan1`}>
+            <input id={`${idBase}-khan1`} name="ngayVaoKhanLanDau" type="date" defaultValue={gt.ngayVaoKhanLanDau ?? ''} style={{ maxWidth: 180 }} />
+          </GxField>
+          <GxField label="Ngày khấn vĩnh viễn" id={`${idBase}-khanvv`}>
+            <input id={`${idBase}-khanvv`} name="ngayVaoKhanTronDoi" type="date" defaultValue={gt.ngayVaoKhanTronDoi ?? ''} style={{ maxWidth: 180 }} />
+          </GxField>
+          <GxField label="Ngày lãnh chức phó tế" id={`${idBase}-phote`}>
+            <input id={`${idBase}-phote`} name="ngayPhoTe" type="date" defaultValue={gt.ngayPhoTe ?? ''} style={{ maxWidth: 180 }} />
+          </GxField>
+          <GxField label="Ngày thụ phong LM" id={`${idBase}-tplm`}>
+            <input id={`${idBase}-tplm`} name="ngayThuPhongLM" type="date" defaultValue={gt.ngayThuPhongLM ?? ''} style={{ maxWidth: 180 }} />
+          </GxField>
+          <GxField label="Ngày mừng bổn mạng" id={`${idBase}-bonmang`}>
+            <input id={`${idBase}-bonmang`} name="ngayBonMang" type="date" defaultValue={gt.ngayBonMang ?? ''} style={{ maxWidth: 180 }} />
+          </GxField>
+        </div>
+        <div>
+          {/* Nhãn "Địa chỉ" nhưng gắn với cột NoiTu — chép nguyên văn nhãn gốc của GxTanHien
+           * Designer, xem tan-hien.md mục 2 (khả năng cao là nhãn đặt sai/đổi ý giữa chừng). */}
+          <GxField label="Địa chỉ" id={`${idBase}-noitu`}>
+            <input id={`${idBase}-noitu`} name="noiTu" type="text" defaultValue={gt.noiTu ?? ''} />
+          </GxField>
+          <GxField label="Chức vụ" id={`${idBase}-chucvu`}>
+            <select id={`${idBase}-chucvu`} name="chucVu" defaultValue={gt.chucVu ?? ''}>
+              {CHUC_VU_TAN_HIEN.map((c) => <option key={c} value={c}>{c || '(chưa xác định)'}</option>)}
+            </select>
+          </GxField>
+          <GxField label="Dòng tu/chủng viện" id={`${idBase}-dongtu`}>
+            <input id={`${idBase}-dongtu`} name="dongTu" type="text" defaultValue={gt.dongTu ?? ''} />
+          </GxField>
+          <GxField label="Nơi phục vụ" id={`${idBase}-noiphucvu`}>
+            <input id={`${idBase}-noiphucvu`} name="noiPhucVu" type="text" defaultValue={gt.noiPhucVu ?? ''} />
+          </GxField>
+          <GxField label="Địa chỉ nơi phục vụ" id={`${idBase}-diachipv`}>
+            <input id={`${idBase}-diachipv`} name="diaChiPhucVu" type="text" defaultValue={gt.diaChiPhucVu ?? ''} />
+          </GxField>
+          <GxField label="Điện thoại nơi phục vụ" id={`${idBase}-dtpv`}>
+            <input id={`${idBase}-dtpv`} name="dienThoaiPhucVu" type="text" defaultValue={gt.dienThoaiPhucVu ?? ''} />
+          </GxField>
+          <GxField label="Email  nơi phục vụ" id={`${idBase}-emailpv`}>
+            <input id={`${idBase}-emailpv`} name="emailPhucVu" type="text" defaultValue={gt.emailPhucVu ?? ''} />
+          </GxField>
+          <GxField label="">
+            <label className="toggle">
+              <input type="checkbox" name="daHoiTuc" defaultChecked={gt.daHoiTuc} />
+              Đã hồi tục
+            </label>
+          </GxField>
+          <GxField label="Ghi chú" id={`${idBase}-ghichu`}>
+            <textarea id={`${idBase}-ghichu`} name="ghiChu" defaultValue={gt.ghiChu ?? ''} />
+          </GxField>
+        </div>
+      </div>
+      <div className="cmdbar">
+        <span className="hint" role={thongBao ? 'status' : undefined}>{thongBao}</span>
+        <div className="spacer" />
+        <button type="button" className="btn btn-primary" disabled={!coTheLuu || dangLuu} onClick={xuLyLuu}>
+          {dangLuu ? 'Đang lưu…' : th ? 'Cập nhật ơn gọi tận hiến' : 'Thêm giai đoạn mới'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/** Các trường gửi lên `POST /api/giao-dan/{id}/hoi-doan` — đúng `ThemHoiDoanRequest` phía
+ * backend (không có VaiTro: hard-code "Hội viên" ở tầng dịch vụ, giống `GxHistoryHoiDoan`, xem
+ * hoi-doan.md mục 2). */
+export type YeuCauThemHoiDoan = {
+  hoiDoanId: string
+  ngayVaoHoiDoan: string | null
+  ngayRaHoiDoan: string | null
+}
+
+/** Các trường gửi lên `PUT /api/giao-dan/hoi-doan/{id}` — đúng `CapNhatHoiDoanRequest`. */
+export type YeuCauCapNhatHoiDoan = {
+  ngayVaoHoiDoan: string | null
+  ngayRaHoiDoan: string | null
+  vaiTro: string | null
+  rowVersion: number
+}
+
+/** Một lượt tham gia hội đoàn đã có — sửa Ngày vào/Ngày ra/Vai trò (mở rộng có chủ đích so với
+ * bản desktop, nơi `GxHistoryHoiDoan` không cho sửa lượt đã lưu — xem hoi-doan.md mục 8). */
+function KhoiHoiDoan({
+  hd, onLuu,
+}: {
+  hd: HoiDoanCuaGiaoDan
+  onLuu?: (chiTietId: string, payload: YeuCauCapNhatHoiDoan) => Promise<void>
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [dangLuu, setDangLuu] = useState(false)
+  const [thongBao, setThongBao] = useState<string | null>(null)
+
+  function docGiaTri(ten: string): string | null {
+    const el = containerRef.current?.querySelector<HTMLInputElement>(`[name="${ten}"]`)
+    return el?.value.trim() || null
+  }
+
+  async function xuLyLuu() {
+    if (!onLuu) return
+    setDangLuu(true)
+    setThongBao(null)
+    try {
+      await onLuu(hd.id, {
+        ngayVaoHoiDoan: docGiaTri('ngayVaoHoiDoan'),
+        ngayRaHoiDoan: docGiaTri('ngayRaHoiDoan'),
+        vaiTro: docGiaTri('vaiTro'),
+        rowVersion: hd.rowVersion,
+      })
+      setThongBao('Đã lưu thành công.')
+    } catch (err) {
+      setThongBao(err instanceof Error ? err.message : 'Lưu thất bại, thử lại sau.')
+    } finally {
+      setDangLuu(false)
+    }
+  }
+
+  const idBase = `hd-${hd.id}`
+  return (
+    <div className="card glass" ref={containerRef} style={{ marginBottom: 12 }}>
+      <div className="card-head"><h2>{hd.tenHoiDoan}</h2></div>
+      <GxField label="Ngày vào hội đoàn" id={`${idBase}-vao`}>
+        <input id={`${idBase}-vao`} name="ngayVaoHoiDoan" type="date" defaultValue={hd.ngayVaoHoiDoan ?? ''} style={{ maxWidth: 180 }} />
+        <GxInline>Ngày ra hội đoàn</GxInline>
+        <input aria-label="Ngày ra hội đoàn" name="ngayRaHoiDoan" type="date" defaultValue={hd.ngayRaHoiDoan ?? ''} style={{ maxWidth: 180 }} />
+      </GxField>
+      <GxField label="Vai trò" id={`${idBase}-vaitro`}>
+        <input id={`${idBase}-vaitro`} name="vaiTro" type="text" defaultValue={hd.vaiTro ?? ''} style={{ maxWidth: 220 }} />
+      </GxField>
+      <div className="cmdbar">
+        <span className="hint" role={thongBao ? 'status' : undefined}>{thongBao}</span>
+        <div className="spacer" />
+        <button type="button" className="btn btn-primary" disabled={!onLuu || dangLuu} onClick={xuLyLuu}>
+          {dangLuu ? 'Đang lưu…' : 'Cập nhật hội đoàn'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/** Khối "Thêm hội đoàn" — chọn hội đoàn từ danh mục (đúng combo `cbTenHoiDoan` của
+ * `GxHistoryHoiDoan`, KHÔNG cho gõ tay), nhập Ngày vào/Ngày ra. Vai trò không có ở đây — hard-code
+ * "Hội viên" ở tầng dịch vụ, xem hoi-doan.md mục 2. */
+function KhoiThemHoiDoan({
+  danhMuc, onThem,
+}: {
+  danhMuc: HoiDoanDanhMuc[]
+  onThem?: (payload: YeuCauThemHoiDoan) => Promise<void>
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [dangLuu, setDangLuu] = useState(false)
+  const [thongBao, setThongBao] = useState<string | null>(null)
+
+  async function xuLyThem() {
+    if (!onThem) return
+    const hoiDoanId = containerRef.current?.querySelector<HTMLSelectElement>('[name="hoiDoanIdMoi"]')?.value
+    if (!hoiDoanId) {
+      setThongBao('Vui lòng chọn tên hội đoàn.')
+      return
+    }
+    const ngayVao = containerRef.current?.querySelector<HTMLInputElement>('[name="ngayVaoHoiDoanMoi"]')?.value.trim() || null
+    const ngayRa = containerRef.current?.querySelector<HTMLInputElement>('[name="ngayRaHoiDoanMoi"]')?.value.trim() || null
+    setDangLuu(true)
+    setThongBao(null)
+    try {
+      await onThem({ hoiDoanId, ngayVaoHoiDoan: ngayVao, ngayRaHoiDoan: ngayRa })
+      setThongBao('Đã thêm hội đoàn mới.')
+    } catch (err) {
+      setThongBao(err instanceof Error ? err.message : 'Thêm thất bại, thử lại sau.')
+    } finally {
+      setDangLuu(false)
+    }
+  }
+
+  return (
+    <div className="card glass" ref={containerRef}>
+      <div className="card-head"><h2>Thêm vào hội đoàn</h2></div>
+      <GxField label="Tên hội đoàn" id="gd-hd-ten">
+        {danhMuc.length === 0 ? (
+          <span className="hint">Hiện tại chưa có hội đoàn nào.</span>
+        ) : (
+          <select id="gd-hd-ten" name="hoiDoanIdMoi" defaultValue="" style={{ maxWidth: 320 }}>
+            <option value="" disabled>— Chọn hội đoàn —</option>
+            {danhMuc.map((h) => <option key={h.id} value={h.id}>{h.tenHoiDoan}</option>)}
+          </select>
+        )}
+      </GxField>
+      <GxField label="Ngày vào hội đoàn" id="gd-hd-vao">
+        <input id="gd-hd-vao" name="ngayVaoHoiDoanMoi" type="date" style={{ maxWidth: 190 }} />
+      </GxField>
+      <GxField label="Ngày ra hội đoàn" id="gd-hd-ra">
+        <input id="gd-hd-ra" name="ngayRaHoiDoanMoi" type="date" style={{ maxWidth: 190 }} />
+      </GxField>
+      <div className="cmdbar">
+        <span className="hint" role={thongBao ? 'status' : undefined}>{thongBao}</span>
+        <div className="spacer" />
+        <button type="button" className="btn btn-primary" disabled={!onThem || dangLuu || danhMuc.length === 0} onClick={xuLyThem}>
+          {dangLuu ? 'Đang thêm…' : 'Thêm hội đoàn'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /** Các trường gửi lên `PUT /api/giao-dan/{id}` — đúng `CapNhatGiaoDanRequest` phía backend.
  * Vài trường chỉ hiển thị qua `GxPicker` (tên cha mẹ, người ban bí tích…) chưa có ô nhập thật
  * ở Phase 1 nên giữ nguyên giá trị đã tải thay vì đọc từ DOM — xem chỗ dựng payload. */
@@ -204,6 +525,19 @@ type Props = {
    * (tách biệt hoàn toàn nút "Cập nhật" của form giáo dân chính) và xử lý xung đột RowVersion;
    * mỗi khối hôn phối tự quản lý trạng thái "đang lưu"/thông báo của riêng nó. */
   onLuuHonPhoi?: (honPhoiId: string, payload: YeuCauCapNhatHonPhoi) => Promise<void>
+  /** Danh sách Ơn gọi tận hiến của giáo dân này. Bản desktop chỉ hỗ trợ một bản ghi/giáo dân
+   * (xem tan-hien.md mục 3); bản web mở rộng có chủ đích thành danh sách. */
+  danhSachTanHien?: TanHienCuaGiaoDan[]
+  dangTaiTanHien?: boolean
+  onLuuTanHien?: (tanHienId: string, payload: YeuCauLuuTanHien) => Promise<void>
+  onThemTanHien?: (payload: YeuCauLuuTanHien) => Promise<void>
+  /** Danh sách lượt tham gia hội đoàn (lịch sử) của giáo dân này — xem hoi-doan.md. */
+  danhSachHoiDoan?: HoiDoanCuaGiaoDan[]
+  dangTaiHoiDoan?: boolean
+  onLuuHoiDoan?: (chiTietId: string, payload: YeuCauCapNhatHoiDoan) => Promise<void>
+  onThemHoiDoan?: (payload: YeuCauThemHoiDoan) => Promise<void>
+  /** Danh mục hội đoàn của giáo xứ — dùng cho combo chọn khi thêm một lượt tham gia mới. */
+  danhMucHoiDoan?: HoiDoanDanhMuc[]
 }
 
 const rong = (): GiaoDanDetailDuLieu => ({
@@ -236,6 +570,9 @@ const CHUYEN_XU = ['Ở tại xứ', 'Chuyển từ xứ khác đến', 'Đã ch
 export function GiaoDanDetail({
   duLieu, moGiaDinh, moDanhSachGiaoDan, onLuu, dangLuu, thongBaoLuu,
   danhSachHonPhoi = [], dangTaiHonPhoi = false, onLuuHonPhoi,
+  danhSachTanHien = [], dangTaiTanHien = false, onLuuTanHien, onThemTanHien,
+  danhSachHoiDoan = [], dangTaiHoiDoan = false, onLuuHoiDoan, onThemHoiDoan,
+  danhMucHoiDoan = [],
 }: Props) {
   const p = duLieu ?? rong()
   const moi = !duLieu?.id
@@ -500,29 +837,31 @@ export function GiaoDanDetail({
   )
 
   const tabOnGoi = (
-    <div className="card glass">
-      <div className="card-head"><h2>Thông tin ơn gọi</h2></div>
-      <div className="card-row">
-        <div>
-          <GxField label="Ngày nhập dòng" id="gd-og-nhapdong"><input id="gd-og-nhapdong" type="date" style={{ maxWidth: 190 }} /></GxField>
-          <GxField label="Ngày vào nhà tập" id="gd-og-nhatap"><input id="gd-og-nhatap" type="date" style={{ maxWidth: 190 }} /></GxField>
-        </div>
-        <div>
-          <GxField label="Ngày vào ĐCV" id="gd-og-dcv"><input id="gd-og-dcv" type="date" style={{ maxWidth: 190 }} /></GxField>
-          <GxField label="Ngày khấn lần đầu" id="gd-og-khan1"><input id="gd-og-khan1" type="date" style={{ maxWidth: 190 }} /></GxField>
-        </div>
-      </div>
-      <GxField label="Dòng tu / chủng viện" id="gd-og-dong"><input id="gd-og-dong" type="text" /></GxField>
-    </div>
+    <>
+      {dangTaiTanHien && <p className="hint">Đang tải thông tin ơn gọi tận hiến…</p>}
+      {!dangTaiTanHien && danhSachTanHien.map((th, i) => (
+        <KhoiTanHien key={th.id} th={th} thuTu={i} onLuu={onLuuTanHien} />
+      ))}
+      {!dangTaiTanHien && (
+        <KhoiTanHien thuTu={danhSachTanHien.length} onThem={onThemTanHien} />
+      )}
+    </>
   )
 
   const tabHoiDoan = (
-    <div className="card glass">
-      <div className="card-head"><h2>Thêm vào hội đoàn</h2></div>
-      <GxField label="Tên hội đoàn" id="gd-hd-ten"><input id="gd-hd-ten" type="text" style={{ maxWidth: 320 }} /></GxField>
-      <GxField label="Ngày vào hội đoàn" id="gd-hd-vao"><input id="gd-hd-vao" type="date" style={{ maxWidth: 190 }} /></GxField>
-      <GxField label="Ngày ra hội đoàn" id="gd-hd-ra"><input id="gd-hd-ra" type="date" style={{ maxWidth: 190 }} /></GxField>
-    </div>
+    <>
+      {dangTaiHoiDoan && <p className="hint">Đang tải danh sách hội đoàn…</p>}
+      {!dangTaiHoiDoan && danhSachHoiDoan.length === 0 && (
+        <div className="card glass">
+          <div className="card-head"><h2>Lịch sử hội đoàn</h2></div>
+          <p className="hint">Giáo dân này chưa tham gia hội đoàn nào.</p>
+        </div>
+      )}
+      {!dangTaiHoiDoan && danhSachHoiDoan.map((hd) => (
+        <KhoiHoiDoan key={hd.id} hd={hd} onLuu={onLuuHoiDoan} />
+      ))}
+      {!dangTaiHoiDoan && <KhoiThemHoiDoan danhMuc={danhMucHoiDoan} onThem={onThemHoiDoan} />}
+    </>
   )
 
   // Dựng payload từ form (input không kiểm soát — defaultValue) rồi giao cho container qua

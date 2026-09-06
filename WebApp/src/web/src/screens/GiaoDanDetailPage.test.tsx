@@ -13,6 +13,11 @@ vi.mock('../api/client', async () => {
       giaoDan: {
         chiTiet: vi.fn(), capNhat: vi.fn(),
         honPhoi: vi.fn().mockResolvedValue([]), capNhatHonPhoi: vi.fn(),
+        tanHien: vi.fn().mockResolvedValue([]), themTanHien: vi.fn(), capNhatTanHien: vi.fn(),
+        hoiDoan: vi.fn().mockResolvedValue([]), themHoiDoan: vi.fn(), capNhatHoiDoan: vi.fn(),
+      },
+      hoiDoan: {
+        danhMuc: vi.fn().mockResolvedValue([]),
       },
     },
   }
@@ -131,5 +136,132 @@ describe('GiaoDanDetailPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Cập nhật hôn phối' }))
 
     expect(await screen.findByText('Thông tin hôn phối này vừa được người khác cập nhật.')).toBeDefined()
+  })
+
+  // --- tab "Ơn gọi tận hiến" nối API thật ---
+
+  it('tai danh sach tan hien that tu API va hien trong tab', async () => {
+    vi.mocked(api.giaoDan.chiTiet).mockResolvedValue(chiTiet())
+    vi.mocked(api.giaoDan.tanHien).mockResolvedValue([{
+      id: 'th1', ngayBatDau: '2009-09-01', chucVu: 'Chủng sinh', noiTu: 'Dòng Tên', dongTu: 'Dòng Tên VN',
+      noiPhucVu: null, diaChiPhucVu: null, dienThoaiPhucVu: null, emailPhucVu: null, ghiChu: null,
+      daHoiTuc: false, ngayVaoDCV: null, ngayVaoNhaThu: null, ngayVaoNhaTap: null,
+      ngayVaoKhanLanDau: null, ngayVaoKhanTronDoi: null, ngayPhoTe: null, ngayThuPhongLM: null,
+      ngayBonMang: null, rowVersion: 1,
+    }])
+
+    render(<GiaoDanDetailPage id="p1" />)
+    await screen.findByRole('heading', { name: /Vũ Minh Trí/ })
+    await userEvent.click(screen.getByRole('tab', { name: 'Ơn gọi tận hiến' }))
+
+    expect(await screen.findByDisplayValue('Dòng Tên VN')).toBeDefined()
+    expect(api.giaoDan.tanHien).toHaveBeenCalledWith('p1')
+  })
+
+  it('luu on goi tan hien thanh cong thi goi PUT dung id va tai lai danh sach', async () => {
+    vi.mocked(api.giaoDan.chiTiet).mockResolvedValue(chiTiet())
+    vi.mocked(api.giaoDan.tanHien).mockResolvedValue([{
+      id: 'th1', ngayBatDau: null, chucVu: 'Tu sĩ', noiTu: null, dongTu: 'Dòng cũ',
+      noiPhucVu: null, diaChiPhucVu: null, dienThoaiPhucVu: null, emailPhucVu: null, ghiChu: null,
+      daHoiTuc: false, ngayVaoDCV: null, ngayVaoNhaThu: null, ngayVaoNhaTap: null,
+      ngayVaoKhanLanDau: null, ngayVaoKhanTronDoi: null, ngayPhoTe: null, ngayThuPhongLM: null,
+      ngayBonMang: null, rowVersion: 1,
+    }])
+    vi.mocked(api.giaoDan.capNhatTanHien).mockResolvedValue(undefined)
+
+    render(<GiaoDanDetailPage id="p1" />)
+    await screen.findByRole('heading', { name: /Vũ Minh Trí/ })
+    await userEvent.click(screen.getByRole('tab', { name: 'Ơn gọi tận hiến' }))
+    await screen.findByDisplayValue('Dòng cũ')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cập nhật ơn gọi tận hiến' }))
+
+    expect(api.giaoDan.capNhatTanHien).toHaveBeenCalledWith('th1',
+      expect.objectContaining({ dongTu: 'Dòng cũ', rowVersion: 1 }))
+    expect(await screen.findByText('Đã lưu thành công.')).toBeDefined()
+    expect(api.giaoDan.tanHien).toHaveBeenCalledTimes(2)
+  })
+
+  it('them giai doan tan hien moi thi goi POST roi tai lai danh sach', async () => {
+    vi.mocked(api.giaoDan.chiTiet).mockResolvedValue(chiTiet())
+    vi.mocked(api.giaoDan.tanHien).mockResolvedValue([])
+    vi.mocked(api.giaoDan.themTanHien).mockResolvedValue({ id: 'th-moi' })
+
+    render(<GiaoDanDetailPage id="p1" />)
+    await screen.findByRole('heading', { name: /Vũ Minh Trí/ })
+    await userEvent.click(screen.getByRole('tab', { name: 'Ơn gọi tận hiến' }))
+
+    await userEvent.type(screen.getByLabelText('Dòng tu/chủng viện'), 'Dòng mới')
+    await userEvent.click(screen.getByRole('button', { name: 'Thêm giai đoạn mới' }))
+
+    expect(api.giaoDan.themTanHien).toHaveBeenCalledWith('p1',
+      expect.objectContaining({ dongTu: 'Dòng mới' }))
+    expect(await screen.findByText('Đã thêm giai đoạn mới.')).toBeDefined()
+    expect(api.giaoDan.tanHien).toHaveBeenCalledTimes(2)
+  })
+
+  // --- tab "Hội đoàn" nối API thật ---
+
+  it('tai danh muc va danh sach hoi doan that tu API va hien trong tab', async () => {
+    vi.mocked(api.giaoDan.chiTiet).mockResolvedValue(chiTiet())
+    vi.mocked(api.giaoDan.hoiDoan).mockResolvedValue([{
+      id: 'hd1', hoiDoanId: 'hoidoan1', tenHoiDoan: 'Legio Mariae',
+      ngayVaoHoiDoan: '2015-01-01', ngayRaHoiDoan: null, vaiTro: 'Hội viên', rowVersion: 1,
+    }])
+    vi.mocked(api.hoiDoan.danhMuc).mockResolvedValue([
+      { id: 'hoidoan1', tenHoiDoan: 'Legio Mariae' },
+      { id: 'hoidoan2', tenHoiDoan: 'Gia trưởng' },
+    ])
+
+    render(<GiaoDanDetailPage id="p1" />)
+    await screen.findByRole('heading', { name: /Vũ Minh Trí/ })
+    await userEvent.click(screen.getByRole('tab', { name: 'Hội đoàn' }))
+
+    expect(await screen.findByRole('heading', { name: 'Legio Mariae' })).toBeDefined()
+    expect(api.giaoDan.hoiDoan).toHaveBeenCalledWith('p1')
+    expect(api.hoiDoan.danhMuc).toHaveBeenCalled()
+  })
+
+  it('luu hoi doan thanh cong thi goi PUT dung id va tai lai danh sach', async () => {
+    vi.mocked(api.giaoDan.chiTiet).mockResolvedValue(chiTiet())
+    vi.mocked(api.giaoDan.hoiDoan).mockResolvedValue([{
+      id: 'hd1', hoiDoanId: 'hoidoan1', tenHoiDoan: 'Legio Mariae',
+      ngayVaoHoiDoan: '2015-01-01', ngayRaHoiDoan: null, vaiTro: 'Hội viên', rowVersion: 1,
+    }])
+    vi.mocked(api.giaoDan.capNhatHoiDoan).mockResolvedValue(undefined)
+
+    render(<GiaoDanDetailPage id="p1" />)
+    await screen.findByRole('heading', { name: /Vũ Minh Trí/ })
+    await userEvent.click(screen.getByRole('tab', { name: 'Hội đoàn' }))
+    await screen.findByDisplayValue('Hội viên')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cập nhật hội đoàn' }))
+
+    expect(api.giaoDan.capNhatHoiDoan).toHaveBeenCalledWith('hd1',
+      expect.objectContaining({ vaiTro: 'Hội viên', rowVersion: 1 }))
+    expect(await screen.findByText('Đã lưu thành công.')).toBeDefined()
+    expect(api.giaoDan.hoiDoan).toHaveBeenCalledTimes(2)
+  })
+
+  it('them hoi doan moi thi goi POST roi tai lai danh sach', async () => {
+    vi.mocked(api.giaoDan.chiTiet).mockResolvedValue(chiTiet())
+    vi.mocked(api.giaoDan.hoiDoan).mockResolvedValue([])
+    vi.mocked(api.hoiDoan.danhMuc).mockResolvedValue([
+      { id: 'hoidoan1', tenHoiDoan: 'Legio Mariae' },
+    ])
+    vi.mocked(api.giaoDan.themHoiDoan).mockResolvedValue({ id: 'hd-moi' })
+
+    render(<GiaoDanDetailPage id="p1" />)
+    await screen.findByRole('heading', { name: /Vũ Minh Trí/ })
+    await userEvent.click(screen.getByRole('tab', { name: 'Hội đoàn' }))
+    await screen.findByLabelText('Tên hội đoàn')
+
+    await userEvent.selectOptions(screen.getByLabelText('Tên hội đoàn'), 'hoidoan1')
+    await userEvent.click(screen.getByRole('button', { name: 'Thêm hội đoàn' }))
+
+    expect(api.giaoDan.themHoiDoan).toHaveBeenCalledWith('p1',
+      expect.objectContaining({ hoiDoanId: 'hoidoan1' }))
+    expect(await screen.findByText('Đã thêm hội đoàn mới.')).toBeDefined()
+    expect(api.giaoDan.hoiDoan).toHaveBeenCalledTimes(2)
   })
 })

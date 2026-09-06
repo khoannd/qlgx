@@ -6,7 +6,7 @@ using Qlgx.Domain.Entities;
 
 namespace Qlgx.Api.Services;
 
-public class GiaoDanService(QlgxDbContext db)
+public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa)
 {
     /// <summary>
     /// Một dòng nguồn trước khi dựng DTO. Có thêm QuanHe vì lưới thành viên trong form gia
@@ -212,6 +212,131 @@ public class GiaoDanService(QlgxDbContext db)
         hp.CachThucHonPhoi = yc.CachThucHonPhoi;
         hp.GhiChu = yc.GhiChu;
         // Cố tình KHÔNG đụng tới hp.MaNhanDang — cùng lý do đã ghi ở CapNhat/GiaDinhService.
+
+        try { await db.SaveChangesAsync(ct); return true; }
+        catch (DbUpdateConcurrencyException) { return false; }
+    }
+
+    /// <summary>
+    /// Toàn bộ bản ghi Ơn gọi tận hiến của một giáo dân, mới nhất trước theo NgayBatDau. Bản
+    /// desktop (`GxTanHien`) chỉ hỗ trợ một dòng/giáo dân (xem tan-hien.md mục 3) — bản web trả
+    /// danh sách đầy đủ, cùng cách tiếp cận đã dùng cho Hôn phối.
+    /// </summary>
+    public Task<List<TanHienCuaGiaoDanDto>> LayTanHien(Guid giaoDanId, CancellationToken ct) =>
+        db.TanHien.Where(t => t.GiaoDanId == giaoDanId)
+            .OrderByDescending(t => t.NgayBatDau)
+            .Select(t => new TanHienCuaGiaoDanDto(
+                t.Id, t.NgayBatDau, t.ChucVu, t.NoiTu, t.DongTu,
+                t.NoiPhucVu, t.DiaChiPhucVu, t.DienThoaiPhucVu, t.EmailPhucVu,
+                t.GhiChu, t.DaHoiTuc,
+                t.NgayVaoDCV, t.NgayVaoNhaThu, t.NgayVaoNhaTap,
+                t.NgayVaoKhanLanDau, t.NgayVaoKhanTronDoi,
+                t.NgayPhoTe, t.NgayThuPhongLM, t.NgayBonMang,
+                t.RowVersion))
+            .ToListAsync(ct);
+
+    /// <summary>Tạo một bản ghi Ơn gọi tận hiến mới cho giáo dân này. null = không tìm thấy giáo
+    /// dân (tra bằng FirstOrDefaultAsync, không dùng Find()/FindAsync() — xem CapNhatHonPhoi).</summary>
+    public async Task<Guid?> ThemTanHien(Guid giaoDanId, LuuTanHienRequest yc, CancellationToken ct)
+    {
+        var g = await db.GiaoDan.FirstOrDefaultAsync(x => x.Id == giaoDanId && !x.DaXoa, ct);
+        if (g is null) return null;
+
+        var t = new Domain.Entities.TanHien
+        {
+            GiaoXuId = g.GiaoXuId, GiaoDanId = giaoDanId,
+            // Bản ghi tạo trực tiếp trên web, không có mã cũ thật — xem SinhMaService.
+            MaTanHienCu = await sinhMa.LayMaTiepTheo(g.GiaoXuId, "tan_hien",
+                await db.TanHien.MaxAsync(x => (int?)x.MaTanHienCu, ct) ?? 0, ct),
+            NgayBatDau = yc.NgayBatDau, ChucVu = yc.ChucVu, NoiTu = yc.NoiTu, DongTu = yc.DongTu,
+            NoiPhucVu = yc.NoiPhucVu, DiaChiPhucVu = yc.DiaChiPhucVu,
+            DienThoaiPhucVu = yc.DienThoaiPhucVu, EmailPhucVu = yc.EmailPhucVu,
+            GhiChu = yc.GhiChu, DaHoiTuc = yc.DaHoiTuc,
+            NgayVaoDCV = yc.NgayVaoDCV, NgayVaoNhaThu = yc.NgayVaoNhaThu, NgayVaoNhaTap = yc.NgayVaoNhaTap,
+            NgayVaoKhanLanDau = yc.NgayVaoKhanLanDau, NgayVaoKhanTronDoi = yc.NgayVaoKhanTronDoi,
+            NgayPhoTe = yc.NgayPhoTe, NgayThuPhongLM = yc.NgayThuPhongLM, NgayBonMang = yc.NgayBonMang,
+        };
+        db.TanHien.Add(t);
+        await db.SaveChangesAsync(ct);
+        return t.Id;
+    }
+
+    /// <summary>Sửa một bản ghi Ơn gọi tận hiến theo Id. null = không tìm thấy, false = đụng
+    /// RowVersion, true = thành công.</summary>
+    public async Task<bool?> CapNhatTanHien(Guid tanHienId, LuuTanHienRequest yc, CancellationToken ct)
+    {
+        var t = await db.TanHien.FirstOrDefaultAsync(x => x.Id == tanHienId, ct);
+        if (t is null) return null;
+
+        db.Entry(t).Property(x => x.RowVersion).OriginalValue = yc.RowVersion;
+
+        t.NgayBatDau = yc.NgayBatDau; t.ChucVu = yc.ChucVu; t.NoiTu = yc.NoiTu; t.DongTu = yc.DongTu;
+        t.NoiPhucVu = yc.NoiPhucVu; t.DiaChiPhucVu = yc.DiaChiPhucVu;
+        t.DienThoaiPhucVu = yc.DienThoaiPhucVu; t.EmailPhucVu = yc.EmailPhucVu;
+        t.GhiChu = yc.GhiChu; t.DaHoiTuc = yc.DaHoiTuc;
+        t.NgayVaoDCV = yc.NgayVaoDCV; t.NgayVaoNhaThu = yc.NgayVaoNhaThu; t.NgayVaoNhaTap = yc.NgayVaoNhaTap;
+        t.NgayVaoKhanLanDau = yc.NgayVaoKhanLanDau; t.NgayVaoKhanTronDoi = yc.NgayVaoKhanTronDoi;
+        t.NgayPhoTe = yc.NgayPhoTe; t.NgayThuPhongLM = yc.NgayThuPhongLM; t.NgayBonMang = yc.NgayBonMang;
+
+        try { await db.SaveChangesAsync(ct); return true; }
+        catch (DbUpdateConcurrencyException) { return false; }
+    }
+
+    /// <summary>Danh mục hội đoàn của giáo xứ — dùng cho combo "Tên hội đoàn" khi thêm một lượt
+    /// tham gia mới ở tab "Hội đoàn" (đúng danh sách `cbTenHoiDoan` của `GxHistoryHoiDoan`,
+    /// không lọc/sắp xếp gì thêm ở bản desktop; bản web sắp theo tên cho dễ tìm).</summary>
+    public Task<List<HoiDoanDanhMucDto>> DanhMucHoiDoan(CancellationToken ct) =>
+        db.HoiDoan.OrderBy(h => h.TenHoiDoan)
+            .Select(h => new HoiDoanDanhMucDto(h.Id, h.TenHoiDoan))
+            .ToListAsync(ct);
+
+    /// <summary>Toàn bộ lượt tham gia hội đoàn của một giáo dân (lịch sử), mới nhất trước theo
+    /// Ngày vào hội đoàn — xem hoi-doan.md mục 3 ("lịch sử", không phải một bản ghi).</summary>
+    public Task<List<HoiDoanCuaGiaoDanDto>> LayHoiDoan(Guid giaoDanId, CancellationToken ct) =>
+        db.ChiTietHoiDoan.Where(c => c.GiaoDanId == giaoDanId)
+            .OrderByDescending(c => c.NgayVaoHoiDoan)
+            .Select(c => new HoiDoanCuaGiaoDanDto(
+                c.Id, c.HoiDoanId, c.HoiDoan!.TenHoiDoan,
+                c.NgayVaoHoiDoan, c.NgayRaHoiDoan, c.VaiTro, c.RowVersion))
+            .ToListAsync(ct);
+
+    /// <summary>Thêm một lượt tham gia hội đoàn mới cho giáo dân này. `VaiTro` hard-code "Hội
+    /// viên" giống `GxHistoryHoiDoan.UpdateHoiDoan` (hoi-doan.md mục 2/4). null = không tìm thấy
+    /// giáo dân hoặc hội đoàn.</summary>
+    public async Task<Guid?> ThemHoiDoan(Guid giaoDanId, ThemHoiDoanRequest yc, CancellationToken ct)
+    {
+        var g = await db.GiaoDan.FirstOrDefaultAsync(x => x.Id == giaoDanId && !x.DaXoa, ct);
+        if (g is null) return null;
+        var hd = await db.HoiDoan.FirstOrDefaultAsync(x => x.Id == yc.HoiDoanId, ct);
+        if (hd is null) return null;
+
+        var c = new Domain.Entities.ChiTietHoiDoan
+        {
+            GiaoXuId = g.GiaoXuId, GiaoDanId = giaoDanId, HoiDoanId = yc.HoiDoanId,
+            // Bản ghi tạo trực tiếp trên web, không có mã cũ thật — xem SinhMaService.
+            MaChiTietHoiDoanCu = await sinhMa.LayMaTiepTheo(g.GiaoXuId, "chi_tiet_hoi_doan",
+                await db.ChiTietHoiDoan.MaxAsync(x => (int?)x.MaChiTietHoiDoanCu, ct) ?? 0, ct),
+            NgayVaoHoiDoan = yc.NgayVaoHoiDoan, NgayRaHoiDoan = yc.NgayRaHoiDoan,
+            VaiTro = "Hội viên",
+        };
+        db.ChiTietHoiDoan.Add(c);
+        await db.SaveChangesAsync(ct);
+        return c.Id;
+    }
+
+    /// <summary>Sửa một lượt tham gia hội đoàn đã có theo Id (không đổi được HoiDoanId — xem
+    /// CapNhatHoiDoanRequest). null = không tìm thấy, false = đụng RowVersion, true = thành
+    /// công.</summary>
+    public async Task<bool?> CapNhatHoiDoan(Guid chiTietId, CapNhatHoiDoanRequest yc, CancellationToken ct)
+    {
+        var c = await db.ChiTietHoiDoan.FirstOrDefaultAsync(x => x.Id == chiTietId, ct);
+        if (c is null) return null;
+
+        db.Entry(c).Property(x => x.RowVersion).OriginalValue = yc.RowVersion;
+
+        c.NgayVaoHoiDoan = yc.NgayVaoHoiDoan;
+        c.NgayRaHoiDoan = yc.NgayRaHoiDoan;
+        c.VaiTro = yc.VaiTro;
 
         try { await db.SaveChangesAsync(ct); return true; }
         catch (DbUpdateConcurrencyException) { return false; }

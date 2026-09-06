@@ -85,7 +85,8 @@ Cập nhật bảng này mỗi khi thêm spec.
 | Màn hình chính | `ChuongTrinh/frmMain.cs` | 993 | chưa | một phần |
 | Hôn phối | `GXControl/frmHonPhoi.cs` + `GXControl/GxHonPhoiGiaDinh.cs` | 422 + 300 | xong (`hon-phoi.md`) | một phần (xem mục 10) |
 | Rao hôn phối | `GXControl/frmRaoHonPhoi.cs` | 637 | chưa | chưa |
-| Hội đoàn | `GXControl/frmHoiDoan.cs` | 663 | chưa | chưa |
+| Ơn gọi tận hiến | `GXControl/GxTanHien.cs` | 291 | xong (`tan-hien.md`) | một phần (xem mục 10) |
+| Hội đoàn | `GXControl/frmHoiDoan.cs` + `GXControl/GxHistoryHoiDoan.cs` | 663 + 311 | xong (`hoi-doan.md`) | một phần (xem mục 10) |
 | Giáo họ | `ChuongTrinh/frmGiaoHo.cs` | 598 | chưa | chưa |
 | Bí tích chi tiết | `ChuongTrinh/frmBiTichChiTiet.cs` | 574 | chưa | chưa |
 | Lớp giáo lý | `Giaoly/frmLopGiaoLy.cs` | 724 | chưa | chưa |

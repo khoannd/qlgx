@@ -171,3 +171,50 @@ export type HonPhoiCuaGiaoDan = {
   tenVoChong: string | null
   rowVersion: number
 }
+
+/** Ánh xạ 1-1 với TanHienCuaGiaoDanDto phía backend — MỘT bản ghi Ơn gọi tận hiến của giáo dân
+ * đang xem. Bản desktop (`GxTanHien`) chỉ hỗ trợ MỘT dòng/giáo dân (xem
+ * docs/superpowers/specs/man-hinh/tan-hien.md mục 3), bản web mở rộng có chủ đích thành danh
+ * sách. */
+export type TanHienCuaGiaoDan = {
+  id: string
+  ngayBatDau: string | null
+  chucVu: string | null
+  noiTu: string | null
+  dongTu: string | null
+  noiPhucVu: string | null
+  diaChiPhucVu: string | null
+  dienThoaiPhucVu: string | null
+  emailPhucVu: string | null
+  ghiChu: string | null
+  daHoiTuc: boolean
+  ngayVaoDCV: string | null
+  ngayVaoNhaThu: string | null
+  ngayVaoNhaTap: string | null
+  ngayVaoKhanLanDau: string | null
+  ngayVaoKhanTronDoi: string | null
+  ngayPhoTe: string | null
+  ngayThuPhongLM: string | null
+  ngayBonMang: string | null
+  rowVersion: number
+}
+
+/** Ánh xạ 1-1 với HoiDoanDanhMucDto — một hội đoàn trong danh mục của giáo xứ, dùng cho combo
+ * "Tên hội đoàn" khi thêm một lượt tham gia mới. */
+export type HoiDoanDanhMuc = {
+  id: string
+  tenHoiDoan: string
+}
+
+/** Ánh xạ 1-1 với HoiDoanCuaGiaoDanDto phía backend — MỘT lượt tham gia hội đoàn của giáo dân
+ * đang xem. Bản desktop (`GxHistoryHoiDoan`) chỉ cho xem lịch sử và thêm mới (không sửa/xoá được
+ * lượt đã có) — bản web mở rộng có chủ đích cho sửa, xem hoi-doan.md mục 8. */
+export type HoiDoanCuaGiaoDan = {
+  id: string
+  hoiDoanId: string
+  tenHoiDoan: string | null
+  ngayVaoHoiDoan: string | null
+  ngayRaHoiDoan: string | null
+  vaiTro: string | null
+  rowVersion: number
+}

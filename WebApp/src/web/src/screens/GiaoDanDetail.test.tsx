@@ -2,7 +2,10 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { GiaoDanDetail } from './GiaoDanDetail'
-import type { GiaoDanDetail as ChiTiet, HonPhoiCuaGiaoDan } from '../api/types'
+import type {
+  GiaoDanDetail as ChiTiet, HoiDoanCuaGiaoDan, HoiDoanDanhMuc, HonPhoiCuaGiaoDan,
+  TanHienCuaGiaoDan,
+} from '../api/types'
 
 const honPhoi = (p: Partial<HonPhoiCuaGiaoDan> = {}): HonPhoiCuaGiaoDan => ({
   id: 'hp1', tenHonPhoi: 'Giuse Trí - Maria Thu', soHonPhoi: '12/2018',
@@ -11,6 +14,25 @@ const honPhoi = (p: Partial<HonPhoiCuaGiaoDan> = {}): HonPhoiCuaGiaoDan => ({
   ghiChu: 'Không có gì đặc biệt', voChongId: 'vc1', tenVoChong: 'Maria Thu',
   rowVersion: 1, ...p,
 })
+
+const tanHien = (p: Partial<TanHienCuaGiaoDan> = {}): TanHienCuaGiaoDan => ({
+  id: 'th1', ngayBatDau: '2009-09-01', chucVu: 'Chủng sinh', noiTu: 'Dòng Tên',
+  dongTu: 'Dòng Tên Việt Nam', noiPhucVu: 'Giáo xứ Thánh Tâm', diaChiPhucVu: '123 Nguyễn Trãi',
+  dienThoaiPhucVu: '0900000000', emailPhucVu: 'thay@dongten.vn', ghiChu: 'Đang học triết',
+  daHoiTuc: false, ngayVaoDCV: '2015-09-01', ngayVaoNhaThu: '2010-09-01',
+  ngayVaoNhaTap: '2011-09-01', ngayVaoKhanLanDau: '2012-09-01', ngayVaoKhanTronDoi: null,
+  ngayPhoTe: null, ngayThuPhongLM: null, ngayBonMang: '2023-03-19', rowVersion: 1, ...p,
+})
+
+const hoiDoan = (p: Partial<HoiDoanCuaGiaoDan> = {}): HoiDoanCuaGiaoDan => ({
+  id: 'hd1', hoiDoanId: 'hoidoan1', tenHoiDoan: 'Legio Mariae',
+  ngayVaoHoiDoan: '2015-01-01', ngayRaHoiDoan: null, vaiTro: 'Hội viên', rowVersion: 1, ...p,
+})
+
+const danhMucHD: HoiDoanDanhMuc[] = [
+  { id: 'hoidoan1', tenHoiDoan: 'Legio Mariae' },
+  { id: 'hoidoan2', tenHoiDoan: 'Gia trưởng' },
+]
 
 const chiTiet = (p: Partial<ChiTiet> = {}): ChiTiet => ({
   id: 'p1', maGiaoDanCu: 4511, hoTen: 'Vũ Minh Trí', tenThanh: 'Giuse', phai: 'Nam',
@@ -144,6 +166,136 @@ describe('GiaoDanDetail', () => {
 
     expect(onLuuHonPhoi).toHaveBeenCalledWith('hp1', expect.objectContaining({
       noiHonPhoi: 'Nhà thờ mới', rowVersion: 1,
+    }))
+  })
+
+  // --- tab "Ơn gọi tận hiến" nối API thật (trước đây chỉ là khung tĩnh) ---
+
+  it('chua co tan hien nao thi van hien khoi Them giai doan moi', async () => {
+    render(<GiaoDanDetail duLieu={chiTiet()} danhSachTanHien={[]} />)
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Ơn gọi tận hiến' }))
+
+    expect(screen.getByRole('button', { name: 'Thêm giai đoạn mới' })).toBeDefined()
+  })
+
+  it('hien du cac truong cua mot ban ghi tan hien da co', async () => {
+    render(<GiaoDanDetail duLieu={chiTiet()} danhSachTanHien={[tanHien()]} />)
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Ơn gọi tận hiến' }))
+
+    expect(screen.getByDisplayValue('Dòng Tên')).toBeDefined()
+    expect(screen.getByDisplayValue('Dòng Tên Việt Nam')).toBeDefined()
+    expect(screen.getByDisplayValue('Giáo xứ Thánh Tâm')).toBeDefined()
+    expect(screen.getByDisplayValue('123 Nguyễn Trãi')).toBeDefined()
+    expect(screen.getByDisplayValue('0900000000')).toBeDefined()
+    expect(screen.getByDisplayValue('thay@dongten.vn')).toBeDefined()
+    expect(screen.getByDisplayValue('Đang học triết')).toBeDefined()
+    expect(screen.getByDisplayValue('2009-09-01')).toBeDefined()
+    expect(screen.getByDisplayValue('2015-09-01')).toBeDefined()
+    expect(screen.getByDisplayValue('2023-03-19')).toBeDefined()
+  })
+
+  it('co nhieu giai doan tan hien thi hien het', async () => {
+    render(<GiaoDanDetail duLieu={chiTiet()} danhSachTanHien={[
+      tanHien({ id: 'th-cu', chucVu: 'Tu sĩ', dongTu: 'Dòng A' }),
+      tanHien({ id: 'th-moi', chucVu: 'Linh mục', dongTu: 'Dòng B' }),
+    ]} />)
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Ơn gọi tận hiến' }))
+
+    expect(screen.getByDisplayValue('Dòng A')).toBeDefined()
+    expect(screen.getByDisplayValue('Dòng B')).toBeDefined()
+  })
+
+  it('sua va bam Cap nhat on goi tan hien thi goi onLuuTanHien dung id va rowVersion', async () => {
+    const onLuuTanHien = vi.fn().mockResolvedValue(undefined)
+    render(<GiaoDanDetail duLieu={chiTiet()} danhSachTanHien={[tanHien()]} onLuuTanHien={onLuuTanHien} />)
+    await userEvent.click(screen.getByRole('tab', { name: 'Ơn gọi tận hiến' }))
+
+    const oDongTu = screen.getByDisplayValue('Dòng Tên Việt Nam')
+    await userEvent.clear(oDongTu)
+    await userEvent.type(oDongTu, 'Dòng mới')
+    await userEvent.click(screen.getByRole('button', { name: 'Cập nhật ơn gọi tận hiến' }))
+
+    expect(onLuuTanHien).toHaveBeenCalledWith('th1', expect.objectContaining({
+      dongTu: 'Dòng mới', rowVersion: 1,
+    }))
+  })
+
+  it('nhap khoi Them giai doan moi roi bam Them thi goi onThemTanHien', async () => {
+    const onThemTanHien = vi.fn().mockResolvedValue(undefined)
+    render(<GiaoDanDetail duLieu={chiTiet()} danhSachTanHien={[]} onThemTanHien={onThemTanHien} />)
+    await userEvent.click(screen.getByRole('tab', { name: 'Ơn gọi tận hiến' }))
+
+    await userEvent.type(screen.getByLabelText('Dòng tu/chủng viện'), 'Dòng Chúa Cứu Thế')
+    await userEvent.click(screen.getByRole('button', { name: 'Thêm giai đoạn mới' }))
+
+    expect(onThemTanHien).toHaveBeenCalledWith(expect.objectContaining({
+      dongTu: 'Dòng Chúa Cứu Thế',
+    }))
+  })
+
+  // --- tab "Hội đoàn" nối API thật (trước đây chỉ là khung tĩnh) ---
+
+  it('chua tham gia hoi doan nao thi bao chua co, van hien khoi Them hoi doan', async () => {
+    render(<GiaoDanDetail duLieu={chiTiet()} danhSachHoiDoan={[]} danhMucHoiDoan={danhMucHD} />)
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Hội đoàn' }))
+
+    expect(screen.getByText(/chưa tham gia hội đoàn nào/i)).toBeDefined()
+    expect(screen.getByText('Thêm vào hội đoàn')).toBeDefined()
+  })
+
+  it('hien du cac truong cua mot luot tham gia hoi doan da co', async () => {
+    render(<GiaoDanDetail duLieu={chiTiet()} danhSachHoiDoan={[hoiDoan()]} />)
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Hội đoàn' }))
+
+    expect(screen.getByText('Legio Mariae')).toBeDefined()
+    expect(screen.getByDisplayValue('2015-01-01')).toBeDefined()
+    expect(screen.getByDisplayValue('Hội viên')).toBeDefined()
+  })
+
+  it('tham gia nhieu hoi doan thi hien het', async () => {
+    render(<GiaoDanDetail duLieu={chiTiet()} danhSachHoiDoan={[
+      hoiDoan({ id: 'hd1', tenHoiDoan: 'Legio Mariae' }),
+      hoiDoan({ id: 'hd2', tenHoiDoan: 'Gia trưởng' }),
+    ]} />)
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Hội đoàn' }))
+
+    expect(screen.getByText('Legio Mariae')).toBeDefined()
+    expect(screen.getByText('Gia trưởng')).toBeDefined()
+  })
+
+  it('sua va bam Cap nhat hoi doan thi goi onLuuHoiDoan dung id va rowVersion', async () => {
+    const onLuuHoiDoan = vi.fn().mockResolvedValue(undefined)
+    render(<GiaoDanDetail duLieu={chiTiet()} danhSachHoiDoan={[hoiDoan()]} onLuuHoiDoan={onLuuHoiDoan} />)
+    await userEvent.click(screen.getByRole('tab', { name: 'Hội đoàn' }))
+
+    const oVaiTro = screen.getByDisplayValue('Hội viên')
+    await userEvent.clear(oVaiTro)
+    await userEvent.type(oVaiTro, 'Trưởng hội đoàn')
+    await userEvent.click(screen.getByRole('button', { name: 'Cập nhật hội đoàn' }))
+
+    expect(onLuuHoiDoan).toHaveBeenCalledWith('hd1', expect.objectContaining({
+      vaiTro: 'Trưởng hội đoàn', rowVersion: 1,
+    }))
+  })
+
+  it('chon hoi doan tu danh muc roi bam Them thi goi onThemHoiDoan', async () => {
+    const onThemHoiDoan = vi.fn().mockResolvedValue(undefined)
+    render(<GiaoDanDetail duLieu={chiTiet()} danhSachHoiDoan={[]}
+      danhMucHoiDoan={danhMucHD} onThemHoiDoan={onThemHoiDoan} />)
+    await userEvent.click(screen.getByRole('tab', { name: 'Hội đoàn' }))
+
+    await userEvent.selectOptions(screen.getByLabelText('Tên hội đoàn'), 'hoidoan2')
+    await userEvent.type(screen.getByLabelText('Ngày vào hội đoàn'), '2020-01-01')
+    await userEvent.click(screen.getByRole('button', { name: 'Thêm hội đoàn' }))
+
+    expect(onThemHoiDoan).toHaveBeenCalledWith(expect.objectContaining({
+      hoiDoanId: 'hoidoan2', ngayVaoHoiDoan: '2020-01-01',
     }))
   })
 })
