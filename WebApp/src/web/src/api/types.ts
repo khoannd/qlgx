@@ -242,3 +242,31 @@ export type GiaoDanTimKiem = {
   phai: string | null
   ngaySinh: string | null
 }
+
+/** Ánh xạ 1-1 với ThongTinNguoiDungDto (backend) — trả về sau đăng nhập thành công. */
+export type ThongTinNguoiDung = {
+  id: string
+  tenTaiKhoan: string
+  hoTen: string | null
+  loaiTaiKhoan: number
+  giaoXuId: string
+}
+
+/** Ánh xạ 1-1 với thân trả về của POST /api/auth/dang-nhap. */
+export type DangNhapKetQua = {
+  token: string
+  hetHanSau: number
+  nguoiDung: ThongTinNguoiDung
+}
+
+/** Ánh xạ 1-1 với TaiKhoanItemDto — một dòng lưới màn hình Quản lý tài khoản. */
+export type TaiKhoanItem = {
+  id: string
+  tenTaiKhoan: string
+  hoTenNguoiDung: string | null
+  email: string | null
+  soDienThoai: string | null
+  loaiTaiKhoan: number
+  tenLoai: string | null
+  rowVersion: number
+}

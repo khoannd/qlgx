@@ -63,13 +63,23 @@ const DANH_SACH_DIEU_HUONG: NhomDieuHuong[] = [
 type Props = {
   dangChonId: string
   onNavigate: (id: string) => void
+  /** Chỉ Quản trị viên thấy mục "Quản lý tài khoản" — xem policy "QuanTri" phía backend và
+   * quyết định ghi ở can-review-sau.md (bản desktop không chặn quyền này, bản web chặn). */
+  laQuanTri: boolean
 }
 
-export function SideNav({ dangChonId, onNavigate }: Props) {
+export function SideNav({ dangChonId, onNavigate, laQuanTri }: Props) {
+  const danhSachDieuHuong = laQuanTri
+    ? [
+        ...DANH_SACH_DIEU_HUONG,
+        { nhan: 'Hệ thống', muc: [{ id: 'taiKhoanList', nhan: 'Quản lý tài khoản' }] },
+      ]
+    : DANH_SACH_DIEU_HUONG
+
   return (
     <nav className="sidenav glass">
       <div className="nav-scroll">
-        {DANH_SACH_DIEU_HUONG.map((nhom) => (
+        {danhSachDieuHuong.map((nhom) => (
           <div className="nav-group" key={nhom.nhan}>
             <span className="eyebrow">{nhom.nhan}</span>
             {nhom.muc.map((m) => (

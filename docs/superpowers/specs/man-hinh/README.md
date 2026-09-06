@@ -90,5 +90,7 @@ Cập nhật bảng này mỗi khi thêm spec.
 | Giáo họ | `ChuongTrinh/frmGiaoHo.cs` | 598 | chưa | chưa |
 | Bí tích chi tiết | `ChuongTrinh/frmBiTichChiTiet.cs` | 574 | chưa | chưa |
 | Lớp giáo lý | `Giaoly/frmLopGiaoLy.cs` | 724 | chưa | chưa |
+| Quản lý tài khoản | `ChuongTrinh/frmAccoutList.cs` | 440 | xong (`quan-ly-tai-khoan.md`) | xong |
+| Đăng nhập | `ChuongTrinh/frmLogin.cs` | 89 | (gộp trong `quan-ly-tai-khoan.md` mục 8) | xong |
 
 Còn khoảng 60 màn hình nhỏ hơn — bổ sung dần theo thứ tự migrate.

@@ -1,10 +1,15 @@
 import type {
   GiaDinhDetail, GiaDinhListItem, GiaoDanDetail, GiaoDanListItem, GiaoDanTimKiem, GiaoHo,
   HoiDoanCuaGiaoDan, HoiDoanDanhMuc, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
+  TaiKhoanItem, DangNhapKetQua,
 } from './types'
+import { authStore } from './authStore'
 
 class LoiXungDot extends Error {}
 export { LoiXungDot }
+
+class ChuaDangNhap extends Error {}
+export { ChuaDangNhap }
 
 /** Đọc `{ thongBao }` từ thân lỗi JSON nếu có — endpoint trả 400/409 kèm thông báo tiếng
  * Việt sẵn (xem GiaDinhEndpoints/GiaoDanEndpoints); phần lớn lỗi khác (404, 500, lỗi mạng)
@@ -19,11 +24,19 @@ async function docThongBaoLoi(res: Response): Promise<string | null> {
 }
 
 async function goi<T>(duong: string, tuyChon?: RequestInit): Promise<T> {
+  // GiaoXuId của phiên KHÔNG BAO GIỜ đi qua tham số ở đây — nó nằm trong claim của token,
+  // đọc phía máy chủ (xem BoiCanhGiaoXuTuNguoiDung.cs). Ở đây chỉ đính token, không có chỗ
+  // nào trong toàn bộ client này được phép thêm giaoXuId vào query/body.
+  const token = authStore.layToken()
   let res: Response
   try {
     res = await fetch(duong, {
       ...tuyChon,
-      headers: { 'Content-Type': 'application/json', ...tuyChon?.headers },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...tuyChon?.headers,
+      },
     })
   } catch (loiMang) {
     // Lỗi mạng (server chưa chạy, mất kết nối…) KHÔNG được nuốt thành mảng rỗng — người dùng
@@ -32,6 +45,13 @@ async function goi<T>(duong: string, tuyChon?: RequestInit): Promise<T> {
     throw new Error(`Không kết nối được máy chủ khi gọi ${duong}. Kiểm tra Qlgx.Api đã chạy chưa.`)
   }
 
+  if (res.status === 401) {
+    // Token thiếu/hết hạn/sai — báo cho AuthProvider tự đăng xuất và hiện lại màn hình đăng
+    // nhập. KHÔNG xoá bản nháp form đang gõ (việc đó do cơ chế nháp localStorage của từng
+    // form chi tiết đảm nhiệm, độc lập với đăng nhập).
+    authStore.baoHet401()
+    throw new ChuaDangNhap('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+  }
   if (res.status === 409) {
     const thongBao = await docThongBaoLoi(res)
     throw new LoiXungDot(thongBao ?? 'Bản ghi vừa được người khác cập nhật.')
@@ -140,5 +160,32 @@ export const api = {
     // tải hết danh sách giáo dân về trình duyệt.
     giaoDan: (tuKhoa: string, limit = 20) =>
       goi<GiaoDanTimKiem[]>(`/api/giao-dan/tim?tuKhoa=${encodeURIComponent(tuKhoa)}&limit=${limit}`),
+  },
+  auth: {
+    /** KHÔNG dùng `goi()` — endpoint này chủ ý ẩn danh và một mật khẩu sai cũng trả về 401
+     * (đúng ngữ nghĩa HTTP), nhưng đó KHÔNG phải "token hết hạn" nên không được kích hoạt
+     * luồng tự đăng xuất của `goi()`. Xử lý status ngay tại đây. */
+    dangNhap: async (tenTaiKhoan: string, matKhau: string): Promise<DangNhapKetQua> => {
+      const res = await fetch('/api/auth/dang-nhap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenTaiKhoan, matKhau }),
+      })
+      if (res.status === 401) {
+        throw new Error('Tên đăng nhập hoặc mật khẩu không chính xác')
+      }
+      if (!res.ok) {
+        throw new Error(`Máy chủ trả lỗi ${res.status} khi đăng nhập`)
+      }
+      return (await res.json()) as DangNhapKetQua
+    },
+    toi: () => goi<{ tenTaiKhoan: string; hoTen: string | null; loaiTaiKhoan: number | null; giaoXuId: string | null }>('/api/auth/toi'),
+  },
+  taiKhoan: {
+    danhSach: () => goi<TaiKhoanItem[]>('/api/tai-khoan'),
+    tao: (than: unknown) => goi<{ id: string }>('/api/tai-khoan', { method: 'POST', body: JSON.stringify(than) }),
+    capNhat: (id: string, than: unknown) =>
+      goi<void>(`/api/tai-khoan/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoa: (id: string) => goi<void>(`/api/tai-khoan/${id}`, { method: 'DELETE' }),
   },
 }

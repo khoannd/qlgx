@@ -18,6 +18,6 @@ public static class GiaoHoEndpoints
             Results.Ok(await db.GiaoHo.Where(h => !h.DaXoa)
                 .OrderBy(h => h.MaGiaoHoCu)
                 .Select(h => new GiaoHoDto(h.Id, h.MaGiaoHoCu, h.TenGiaoHo, h.GiaoHoChaId))
-                .ToListAsync(ct)));
+                .ToListAsync(ct))).RequireAuthorization();
     }
 }

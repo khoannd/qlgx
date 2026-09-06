@@ -525,3 +525,103 @@ màn hình gia đình (thanh công cụ đó phục vụ Thêm/Sửa/Xóa/Lấy 
 xoá thành viên gia đình" — xem mục 8 đã xác nhận tooltip). Hành vi nghiệp vụ (hỏi xác nhận đúng
 nguyên văn, xoá vĩnh viễn) giữ nguyên y hệt — chỉ khác VỊ TRÍ nút bấm trên giao diện, không phải
 khác biệt nghiệp vụ.
+
+### 27. Task 14 — Xác thực và phân tách tenant theo claim: các quyết định tự đưa ra (2026-09-07)
+
+Task 14 là task bảo mật quan trọng nhất của dự án (chuyển `giao_xu_id` từ cấu hình máy chủ
+sang claim của người đăng nhập). Ghi lại các quyết định tự đưa ra ở chỗ mơ hồ, theo yêu cầu
+"chọn phương án an toàn nhất, làm tiếp, ghi rõ quyết định + lý do":
+
+**a) Đăng nhập cùng tên đăng nhập trùng giữa các giáo xứ khác nhau.** `TenTaiKhoan` chỉ duy
+nhất TRONG một giáo xứ (`TaiKhoanConfig`: chỉ mục `(GiaoXuId, TenTaiKhoan)`), không duy nhất
+toàn máy chủ — hợp lý vì trước đây mỗi giáo xứ là một bản cài độc lập, có thể trùng tên đăng
+nhập kiểu "vanphong". Khi đăng nhập chưa biết claim giáo xứ (đó chính là thứ cần xác định), nên
+`AuthService.DangNhap` tra CHÉO GIÁO XỨ theo tên đăng nhập (dùng `QlgxDbContext` dựng thủ công
+với `boiCanh: null`, cùng kiểu với công cụ chuyển đổi dữ liệu), rồi thử khớp mật khẩu với TỪNG
+ứng viên trùng tên cho tới khi khớp. Đây là truy vấn chéo giáo xứ DUY NHẤT được phép trong toàn
+hệ thống, và chỉ dùng để xác định tài khoản nào đăng nhập — sau bước này mọi thứ đi qua
+`BoiCanhGiaoXuTuNguoiDung` như bình thường. Rủi ro: nếu một giáo xứ có mật khẩu yếu và một
+giáo xứ khác trùng tên đăng nhập, kẻ tấn công có mật khẩu đúng của MỘT trong các tài khoản
+trùng tên sẽ đăng nhập vào ĐÚNG giáo xứ có mật khẩu đó khớp (không phải giáo xứ tuỳ chọn) —
+không phải lỗ hổng vì mật khẩu vẫn phải khớp chính xác cho tài khoản cụ thể, chỉ là tên đăng
+nhập không phải bí mật. Vẫn nên khuyến khích tên đăng nhập có tiền tố phân biệt giáo xứ khi
+giáo xứ thứ hai lên hệ thống thật.
+
+**b) Đăng xuất không thu hồi được token (JWT tự chứa, máy chủ không giữ trạng thái).** Theo
+đúng ràng buộc "API không giữ trạng thái trong tiến trình", đăng xuất chỉ xoá token phía trình
+duyệt (`authStore.xoaToken()`) — token cũ về mặt kỹ thuật vẫn hợp lệ tới khi hết hạn (8 tiếng,
+xem `TokenService.ThoiGianSong`) nếu bị đánh cắp trước đó. Đã cân nhắc bảng "token bị thu hồi"
+trong CSDL (không vi phạm "không giữ trạng thái trong tiến trình" vì trạng thái nằm ở CSDL) —
+KHÔNG làm ở Task 14 vì phạm vi đã rất lớn; ghi lại đây làm việc cần làm nếu triển khai thật với
+nhiều giáo xứ nhạy cảm. Giảm nhẹ bằng thời hạn token ngắn (8 tiếng thay vì vài ngày).
+
+**c) Không có cơ chế làm mới token (refresh token) — token hết hạn giữa chừng bắt đăng nhập
+lại.** `goi()` (client.ts) bắt mọi 401 và gọi `authStore.baoHet401()` → tự động về màn hình
+đăng nhập, KHÔNG xoá dữ liệu form đang gõ (đó là việc của cơ chế nháp `localStorage` từng form
+chi tiết, độc lập). Phương án an toàn hơn (refresh token xoay vòng) bị hoãn vì tăng đáng kể độ
+phức tạp bảo mật (cần nơi lưu refresh token, cơ chế thu hồi) cho một task đã rất lớn; 8 tiếng đủ
+một ca làm việc nên tần suất bị ngắt giữa chừng thấp.
+
+**d) Phân quyền màn hình Quản lý tài khoản bị SIẾT LẠI so với desktop.** Bản desktop
+`frmAccoutList.cs` không chặn quyền — bất kỳ ai mở được menu "Hệ thống" đều vào được, kể cả tự
+cấp quyền Quản trị viên cho tài khoản bất kỳ (xác nhận bằng `grep -rn IsAdmin Source/` — cờ
+`IsAdmin` được gán ở `frmLogin.cs` nhưng không nơi nào khác đọc lại để khoá chức năng). Đây là
+lỗ hổng của bản cũ, không phải hành vi cố ý cần giữ nguyên (nguyên tắc "ghi cả những chỗ bản
+desktop làm sai" áp dụng — xem `quan-ly-tai-khoan.md` mục 8). Bản web thêm policy "QuanTri"
+(`RequireClaim(loai_tai_khoan, "0")`) cho toàn bộ `/api/tai-khoan/*` — chỉ Quản trị viên (loại
+0) mới tạo/sửa/xoá được tài khoản. SideNav cũng chỉ hiện mục "Quản lý tài khoản" khi
+`loaiTaiKhoan === 0` (ẩn phía giao diện, KHÔNG phải cơ chế bảo mật — bảo mật thật nằm ở
+policy phía API, đã có test `Nguoi_dung_khong_phai_quan_tri_khong_vao_duoc_quan_ly_tai_khoan`).
+
+**e) Xoá tài khoản đổi từ xoá cứng (desktop, `DELETE_ACCOUNT`) sang xoá mềm (`DaXoa=true`).**
+Nhất quán với GiaoDan/GiaDinh/GiaoHo (mọi bảng có `DaXoa` đều xoá mềm ở bản web); tránh mất vết
+khi tài khoản đã dùng để tạo/sửa dữ liệu khác (dù Phase 1 chưa có audit log theo người dùng).
+
+**f) Kiểm trùng tên đăng nhập khi Thêm mới đổi phạm vi từ TOÀN CỤC (desktop) sang TRONG một
+giáo xứ (web).** Hệ quả trực tiếp của (a) — bản desktop chỉ có một giáo xứ nên "trùng toàn cục"
+và "trùng trong giáo xứ" là một; bản web tách hai khái niệm, chọn theo đúng chỉ mục CSDL đã có
+sẵn (`(GiaoXuId, TenTaiKhoan)` — xem `TaiKhoanConfig`).
+
+**g) Câu hỏi/câu trả lời bí mật (`CauHoiGoiY`/`CauTraLoiGoiY`) — GIỮ CỘT, KHÔNG dùng cho khôi
+phục mật khẩu, KHÔNG có UI nhập.** Yêu cầu người dùng đã chốt trước Task 14 (ghi ở `TaiKhoan.cs`
+và nhắc lại trong đề bài Task 14) — không phải quyết định mới, chỉ xác nhận đã tuân thủ: màn
+hình Quản lý tài khoản bản web không có hai ô này (khác desktop, xem `quan-ly-tai-khoan.md` mục
+8). Quên mật khẩu → nhờ Quản trị viên đặt mật khẩu mới trực tiếp qua form Sửa.
+
+**h) Băm mật khẩu bằng `PasswordHasher<TaiKhoan>` (`Microsoft.AspNetCore.Identity`, PBKDF2 +
+HMACSHA256, 100.000+ vòng lặp theo mặc định của thư viện).** Không dùng thuật toán tự viết —
+đây là lựa chọn "thuật toán chuẩn có sẵn của .NET" theo đúng yêu cầu đề bài, tránh mọi rủi ro tự
+implement PBKDF2/salt sai.
+
+**i) Khoá ký JWT (`Qlgx__JwtKey`) và toàn bộ bí mật liên quan đăng nhập LUÔN đọc từ biến môi
+trường, KHÔNG bao giờ có giá trị mặc định trong mã nguồn.** `TokenService` ném lỗi rõ ràng nếu
+thiếu, cùng phong cách với `QLGX_TEST_PG` đã có. Bộ test KHÔNG dùng khoá cố định — mỗi lần chạy
+`QlgxApiFactory` tự sinh khoá ngẫu nhiên 256-bit (`RandomNumberGenerator.GetBytes(32)`) để
+không có bất kỳ chuỗi bí mật tĩnh nào trong repo, kể cả trong mã test.
+
+**j) Tạo tài khoản quản trị đầu tiên bằng dòng lệnh (`dotnet run -- tao-tai-khoan-quan-tri`),
+đọc toàn bộ tham số từ biến môi trường (`QLGX_ADMIN_*`), KHÔNG có endpoint HTTP tương ứng.** Một
+endpoint "tạo admin" không cần xác thực là lỗ hổng nghiêm trọng (bất kỳ ai cũng tự cấp quyền
+quản trị được) — loại bỏ hẳn khả năng đó bằng cách không có endpoint nào cả; chỉ người vận hành
+có quyền truy cập biến môi trường của máy chủ mới chạy được. Xác định giáo xứ bằng
+`QLGX_ADMIN_GIAO_XU_ID` (GUID, ưu tiên) hoặc `QLGX_ADMIN_GIAO_XU_TEN` (tra theo `TenGiaoXu`,
+tiện cho giai đoạn thí điểm khi giáo xứ được chèn thẳng vào CSDL, xem mục "Thí điểm vài giáo xứ
+trước" trong tài liệu thiết kế).
+
+**k) Màn hình Quản lý tài khoản dùng bảng HTML thường thay vì AG Grid.** Danh sách tài khoản
+của một giáo xứ chỉ vài dòng (Quản trị viên + vài người nhập liệu) — không cần lọc/sắp
+xếp/nhóm/phân trang như các lưới nghiệp vụ chính (giáo dân, gia đình). Giảm độ phức tạp không
+cần thiết; có thể nâng cấp sau nếu một giáo xứ thật sự có nhiều tài khoản.
+
+**l) `/api/auth/toi` (lấy lại thông tin người dùng khi tải lại trang) đọc thẳng từ claim của
+token, KHÔNG truy vấn lại bảng `TaiKhoan`.** Nghĩa là nếu Quản trị viên đổi họ tên/loại tài
+khoản của một người đang có phiên đăng nhập, thay đổi đó chỉ có hiệu lực ở phiên đăng nhập MỚI
+(sau khi token cũ hết hạn hoặc người dùng đăng nhập lại) — chấp nhận được vì token chỉ sống 8
+tiếng và đây đúng tinh thần "token tự chứa, máy chủ không tra CSDL để xác thực mỗi request".
+
+**m) Không triển khai Row-Level Security (RLS) của PostgreSQL ở Task 14 dù tài liệu thiết kế
+nói "phải bật trước khi có giáo xứ thứ hai lên hệ thống".** Task 14 hoàn thành lớp phòng thủ
+thứ nhất (bộ lọc toàn cục EF Core + claim JWT, đã có test bảo mật xác nhận). RLS là lớp phòng
+thủ thứ hai, việc riêng cần thời gian khảo sát cách EF Core + Npgsql phối hợp với RLS (đặt
+`app.current_giao_xu_id` mỗi kết nối, v.v.) — ghi lại đây làm việc BẮT BUỘC phải làm trước khi
+onboard giáo xứ thứ hai lên cùng máy chủ thật, không phải "có thể làm sau nếu rảnh".

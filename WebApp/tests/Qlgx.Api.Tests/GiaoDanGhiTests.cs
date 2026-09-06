@@ -30,7 +30,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     [Fact]
     public async Task Tao_giao_dan_hop_le_tra_ve_201_va_sinh_ma_giao_dan_cu()
     {
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
 
         var res = await client.PostAsJsonAsync("/api/giao-dan", YeuCauToiThieu("Nguoi Tao Moi 1"));
 
@@ -49,7 +49,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     [Fact]
     public async Task Tao_giao_dan_hai_lan_khong_bi_trung_ma_giao_dan_cu()
     {
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
 
         var res1 = await client.PostAsJsonAsync("/api/giao-dan", YeuCauToiThieu("Nguoi A"));
         var res2 = await client.PostAsJsonAsync("/api/giao-dan", YeuCauToiThieu("Nguoi B"));
@@ -65,7 +65,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     [Fact]
     public async Task Tao_giao_dan_thieu_ho_ten_tra_ve_400_voi_thong_bao_dung_nguyen_van_desktop()
     {
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
 
         var res = await client.PostAsJsonAsync("/api/giao-dan", new { Phai = "Nam", NgaySinh = "2000-01-01" });
 
@@ -77,7 +77,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     [Fact]
     public async Task Tao_giao_dan_thieu_gioi_tinh_tra_ve_400()
     {
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
 
         var res = await client.PostAsJsonAsync("/api/giao-dan", new { HoTen = "Khong co gioi tinh", NgaySinh = "2000-01-01" });
 
@@ -88,7 +88,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     [Fact]
     public async Task Tao_giao_dan_thieu_ngay_sinh_tra_ve_400()
     {
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
 
         var res = await client.PostAsJsonAsync("/api/giao-dan", new { HoTen = "Khong co ngay sinh", Phai = "Nam" });
 
@@ -99,7 +99,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     [Fact]
     public async Task Tao_giao_dan_trung_ho_ten_ten_thanh_ngay_sinh_tra_ve_canh_bao_chua_luu()
     {
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         await client.PostAsJsonAsync("/api/giao-dan", new
         {
             HoTen = "Nguyen Van Trung", TenThanh = "Giuse", NgaySinh = "1990-05-05", Phai = "Nam",
@@ -123,7 +123,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     [Fact]
     public async Task Tao_giao_dan_trung_du_lieu_nhung_bo_qua_canh_bao_thi_van_luu_duoc()
     {
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         await client.PostAsJsonAsync("/api/giao-dan", new
         {
             HoTen = "Tran Thi Trung Duoc Bo Qua", TenThanh = "Maria", NgaySinh = "1985-01-01", Phai = "Nữ",
@@ -144,7 +144,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     public async Task Tao_giao_dan_ngay_rua_toi_truoc_ngay_sinh_tra_ve_canh_bao()
     {
         // Bug-for-bug: chỉ so Ngày sinh với Ngày rửa tội — xem can-review-sau.md mục 1.
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
 
         var res = await client.PostAsJsonAsync("/api/giao-dan", new
         {
@@ -159,7 +159,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     [Fact]
     public async Task Tao_giao_dan_ruoc_le_truoc_7_tuoi_tra_ve_canh_bao()
     {
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
 
         var res = await client.PostAsJsonAsync("/api/giao-dan", new
         {
@@ -173,7 +173,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     [Fact]
     public async Task Tao_giao_dan_da_rua_toi_ma_chua_ten_thanh_tra_ve_canh_bao()
     {
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
 
         var res = await client.PostAsJsonAsync("/api/giao-dan", new
         {
@@ -187,7 +187,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     [Fact]
     public async Task Tao_giao_dan_co_gia_dinh_duoi_14_tuoi_bi_chan_cung()
     {
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         var namNay = DateTime.Now.Year;
 
         var res = await client.PostAsJsonAsync("/api/giao-dan", new
@@ -203,7 +203,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     [Fact]
     public async Task Tao_giao_dan_co_gia_dinh_tu_14_den_17_tuoi_chi_la_canh_bao()
     {
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         var namNay = DateTime.Now.Year;
 
         var res = await client.PostAsJsonAsync("/api/giao-dan", new
@@ -240,7 +240,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
             await db.SaveChangesAsync();
             id = gd.Id;
         }
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         var truoc = await client.GetFromJsonAsync<System.Text.Json.JsonElement>($"/api/giao-dan/{id}");
         var rowVersion = truoc.GetProperty("rowVersion").GetUInt32();
 
@@ -267,7 +267,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
             await db.SaveChangesAsync();
             id = gd.Id;
         }
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
 
         var res = await client.DeleteAsync($"/api/giao-dan/{id}");
 
@@ -289,7 +289,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
             await db.SaveChangesAsync();
             id = gd.Id;
         }
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
 
         var res = await client.DeleteAsync($"/api/giao-dan/{id}?vinhVien=true");
 
@@ -315,7 +315,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
             await db.SaveChangesAsync();
             id = gd.Id;
         }
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
 
         var res = await client.DeleteAsync($"/api/giao-dan/{id}?vinhVien=true");
 
@@ -331,7 +331,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     [Fact]
     public async Task Xoa_giao_dan_khong_ton_tai_tra_ve_404()
     {
-        var res = await app.CreateClient().DeleteAsync($"/api/giao-dan/{Guid.NewGuid()}");
+        var res = await app.CreateAuthClient().DeleteAsync($"/api/giao-dan/{Guid.NewGuid()}");
         res.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
@@ -345,7 +345,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
             db.GiaoDan.Add(new GiaoDan { GiaoXuId = app.GiaoXuId, MaGiaoDanCu = 95000, HoTen = "Da Qua Doi", Phai = "Nam", QuaDoi = true });
             await db.SaveChangesAsync();
         }
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
 
         var macDinh = await client.GetFromJsonAsync<List<Item>>("/api/giao-dan");
         var hienCa = await client.GetFromJsonAsync<List<Item>>("/api/giao-dan?hienCaDaMat=true");
@@ -372,7 +372,7 @@ public class GiaoDanGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
             });
             await db.SaveChangesAsync();
         }
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
 
         var macDinh = await client.GetFromJsonAsync<List<Item>>("/api/giao-dan");
         var hienCa = await client.GetFromJsonAsync<List<Item>>("/api/giao-dan?hienCaDaMat=true");

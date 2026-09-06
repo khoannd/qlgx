@@ -39,7 +39,7 @@ public class GiaDinhListTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory
     {
         await TaoGiaDinhMau(ma: 12);
 
-        var ds = await app.CreateClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
+        var ds = await app.CreateAuthClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
 
         var dong = ds!.Single(x => x.MaGiaDinhCu == 12);
         dong.TenChong.Should().Be("Giuse Tran Van Binh");
@@ -59,7 +59,7 @@ public class GiaDinhListTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory
         var ma = 20 + gachMongDoi + 2;
         await TaoGiaDinhMau(chongMat, voMat, ma: ma);
 
-        var ds = await app.CreateClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
+        var ds = await app.CreateAuthClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
 
         ds!.Single(x => x.MaGiaDinhCu == ma).Gach.Should().Be(gachMongDoi);
     }
@@ -71,7 +71,7 @@ public class GiaDinhListTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory
         await using var db = app.TaoContextThuan();
         var giaoHoFatima = db.GiaoHo.Single(x => x.TenGiaoHo == "Giao ho Fatima");
 
-        var ds = await app.CreateClient()
+        var ds = await app.CreateAuthClient()
             .GetFromJsonAsync<List<Item>>($"/api/gia-dinh?giaoHoId={giaoHoFatima.Id}");
 
         ds!.Should().OnlyContain(x => x.TenGiaoHo == "Giao ho Fatima");
@@ -89,7 +89,7 @@ public class GiaDinhListTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory
             await db.SaveChangesAsync();
         }
 
-        var ds = await app.CreateClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
+        var ds = await app.CreateAuthClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
 
         ds!.Should().NotContain(x => x.MaGiaDinhCu == 99);
     }
@@ -99,7 +99,7 @@ public class GiaDinhListTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory
     {
         await TaoGiaDinhMau(ma: 41);
 
-        var ds = await app.CreateClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
+        var ds = await app.CreateAuthClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
 
         var dong = ds!.Single(x => x.MaGiaDinhCu == 41);
         dong.HonPhoiId.Should().BeNull();
@@ -127,7 +127,7 @@ public class GiaDinhListTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory
             honPhoiId = honPhoi.Id;
         }
 
-        var ds = await app.CreateClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
+        var ds = await app.CreateAuthClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
 
         var dong = ds!.Single(x => x.MaGiaDinhCu == 42);
         dong.HonPhoiId.Should().Be(honPhoiId);
@@ -165,7 +165,7 @@ public class GiaDinhListTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory
             honPhoiHienTaiId = hpHienTai.Id;
         }
 
-        var res = await app.CreateClient().GetAsync("/api/gia-dinh");
+        var res = await app.CreateAuthClient().GetAsync("/api/gia-dinh");
 
         res.StatusCode.Should().Be(HttpStatusCode.OK, "khong duoc gay loi voi du lieu hop le nay");
         var ds = await res.Content.ReadFromJsonAsync<List<Item>>();
@@ -190,7 +190,7 @@ public class GiaDinhListTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory
             await db.SaveChangesAsync();
         }
 
-        var ds = await app.CreateClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
+        var ds = await app.CreateAuthClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
 
         var dong = ds!.Single(x => x.MaGiaDinhCu == ma);
         dong.TenChong.Should().BeNull();
@@ -213,7 +213,7 @@ public class GiaDinhListTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory
             await db.SaveChangesAsync();
         }
 
-        var ds = await app.CreateClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
+        var ds = await app.CreateAuthClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
 
         var dong = ds!.Single(x => x.MaGiaDinhCu == ma);
         dong.TenVo.Should().BeNull();
@@ -231,7 +231,7 @@ public class GiaDinhListTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory
             await db.SaveChangesAsync();
         }
 
-        var ds = await app.CreateClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
+        var ds = await app.CreateAuthClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
 
         var dong = ds!.Single(x => x.MaGiaDinhCu == ma);
         dong.SoLuong.Should().Be(0);
@@ -255,7 +255,7 @@ public class GiaDinhListTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory
             await db.SaveChangesAsync();
         }
 
-        var ds = await app.CreateClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
+        var ds = await app.CreateAuthClient().GetFromJsonAsync<List<Item>>("/api/gia-dinh");
 
         var dong = ds!.Single(x => x.MaGiaDinhCu == ma);
         dong.TenChong.Should().Be("Le Van Cuong");

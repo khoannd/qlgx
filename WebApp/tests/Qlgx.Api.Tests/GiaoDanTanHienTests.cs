@@ -47,7 +47,7 @@ public class GiaoDanTanHienTests(QlgxApiFactory app) : IClassFixture<QlgxApiFact
     {
         var id = await TaoGiaoDan(9101, "Chua tan hien");
 
-        var ds = await app.CreateClient()
+        var ds = await app.CreateAuthClient()
             .GetFromJsonAsync<List<TanHienCuaGiaoDan>>($"/api/giao-dan/{id}/tan-hien");
 
         ds.Should().NotBeNull().And.BeEmpty();
@@ -57,7 +57,7 @@ public class GiaoDanTanHienTests(QlgxApiFactory app) : IClassFixture<QlgxApiFact
     public async Task Them_moi_tan_hien_thanh_cong_va_doc_lai_du_truong()
     {
         var id = await TaoGiaoDan(9110, "Thay Giuse");
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
 
         var res = await client.PostAsJsonAsync($"/api/giao-dan/{id}/tan-hien", Rong with
         {
@@ -99,7 +99,7 @@ public class GiaoDanTanHienTests(QlgxApiFactory app) : IClassFixture<QlgxApiFact
     [Fact]
     public async Task Them_tan_hien_cho_giao_dan_khong_ton_tai_thi_tra_404()
     {
-        var res = await app.CreateClient()
+        var res = await app.CreateAuthClient()
             .PostAsJsonAsync($"/api/giao-dan/{Guid.NewGuid()}/tan-hien", Rong);
 
         res.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -109,7 +109,7 @@ public class GiaoDanTanHienTests(QlgxApiFactory app) : IClassFixture<QlgxApiFact
     public async Task Nguoi_co_nhieu_giai_doan_tan_hien_thi_tra_ca_hai_sap_moi_nhat_truoc()
     {
         var id = await TaoGiaoDan(9120, "Nhieu giai doan");
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         await client.PostAsJsonAsync($"/api/giao-dan/{id}/tan-hien",
             Rong with { NgayBatDau = new DateOnly(2000, 1, 1), ChucVu = "Tu sĩ" });
         await client.PostAsJsonAsync($"/api/giao-dan/{id}/tan-hien",
@@ -126,7 +126,7 @@ public class GiaoDanTanHienTests(QlgxApiFactory app) : IClassFixture<QlgxApiFact
     public async Task Cap_nhat_thanh_cong_khi_dung_phien_ban()
     {
         var id = await TaoGiaoDan(9130, "Sua duoc");
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         await client.PostAsJsonAsync($"/api/giao-dan/{id}/tan-hien", Rong with { ChucVu = "Tu sĩ" });
         var truoc = (await client.GetFromJsonAsync<List<TanHienCuaGiaoDan>>($"/api/giao-dan/{id}/tan-hien"))!.Single();
 
@@ -144,7 +144,7 @@ public class GiaoDanTanHienTests(QlgxApiFactory app) : IClassFixture<QlgxApiFact
     public async Task Hai_nguoi_cung_sua_thi_nguoi_sau_nhan_409_voi_thong_bao_nhac_tan_hien()
     {
         var id = await TaoGiaoDan(9140, "Xung dot");
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         await client.PostAsJsonAsync($"/api/giao-dan/{id}/tan-hien", Rong with { ChucVu = "Tu sĩ" });
         var banA = (await client.GetFromJsonAsync<List<TanHienCuaGiaoDan>>($"/api/giao-dan/{id}/tan-hien"))!.Single();
         var banB = (await client.GetFromJsonAsync<List<TanHienCuaGiaoDan>>($"/api/giao-dan/{id}/tan-hien"))!.Single();
@@ -163,7 +163,7 @@ public class GiaoDanTanHienTests(QlgxApiFactory app) : IClassFixture<QlgxApiFact
     [Fact]
     public async Task Sua_tan_hien_khong_ton_tai_thi_tra_404()
     {
-        var res = await app.CreateClient().PutAsJsonAsync($"/api/giao-dan/tan-hien/{Guid.NewGuid()}", Rong);
+        var res = await app.CreateAuthClient().PutAsJsonAsync($"/api/giao-dan/tan-hien/{Guid.NewGuid()}", Rong);
 
         res.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }

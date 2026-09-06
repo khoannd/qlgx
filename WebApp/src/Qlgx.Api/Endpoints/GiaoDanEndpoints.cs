@@ -7,7 +7,7 @@ public static class GiaoDanEndpoints
 {
     public static void MapGiaoDan(this IEndpointRouteBuilder app)
     {
-        var nhom = app.MapGroup("/api/giao-dan");
+        var nhom = app.MapGroup("/api/giao-dan").RequireAuthorization();
 
         nhom.MapGet("", async (GiaoDanService dv, Guid? giaoHoId, bool? chiKhongThongKe,
             bool? hienCaDaMat, CancellationToken ct) =>
@@ -69,7 +69,7 @@ public static class GiaoDanEndpoints
         // Lưới thành viên trong form gia đình dùng chung bộ cột với danh sách giáo dân
         app.MapGet("/api/gia-dinh/{id:guid}/thanh-vien",
             async (GiaoDanService dv, Guid id, CancellationToken ct) =>
-                Results.Ok(await dv.LayThanhVien(id, ct)));
+                Results.Ok(await dv.LayThanhVien(id, ct))).RequireAuthorization();
 
         // Tab "Hôn phối" của màn hình chi tiết giáo dân (Task 15) — xem
         // docs/superpowers/specs/man-hinh/hon-phoi.md. Một giáo dân có thể có nhiều hôn phối
@@ -119,7 +119,7 @@ public static class GiaoDanEndpoints
         // (GxHistoryHoiDoan) chỉ cho xem lịch sử và thêm mới; GET trả danh sách, PUT cho sửa một
         // lượt tham gia đã có (mở rộng có chủ đích, xem mục 8 của spec).
         app.MapGet("/api/hoi-doan", async (GiaoDanService dv, CancellationToken ct) =>
-            Results.Ok(await dv.DanhMucHoiDoan(ct)));
+            Results.Ok(await dv.DanhMucHoiDoan(ct))).RequireAuthorization();
 
         nhom.MapGet("/{id:guid}/hoi-doan", async (GiaoDanService dv, Guid id, CancellationToken ct) =>
             Results.Ok(await dv.LayHoiDoan(id, ct)));

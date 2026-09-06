@@ -89,7 +89,7 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
     {
         var id = await TaoGiaDinh(300);
 
-        var ct = await app.CreateClient().GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
+        var ct = await app.CreateAuthClient().GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
 
         ct!.TenGiaDinh.Should().Be("Dung - Thu");
         ct.ThanhVien.Should().ContainSingle();
@@ -103,7 +103,7 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
     public async Task Cap_nhat_thanh_cong_khi_dung_phien_ban()
     {
         var id = await TaoGiaDinh(301);
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         var truoc = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
 
         var res = await client.PutAsJsonAsync($"/api/gia-dinh/{id}", new CapNhat(
@@ -119,7 +119,7 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
     public async Task Hai_nguoi_cung_sua_thi_nguoi_sau_nhan_409_thay_vi_ghi_de_im_lang()
     {
         var id = await TaoGiaDinh(302);
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         var banA = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
         var banB = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
 
@@ -141,7 +141,7 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
     [Fact]
     public async Task Khong_tim_thay_thi_tra_404()
     {
-        var res = await app.CreateClient().GetAsync($"/api/gia-dinh/{Guid.NewGuid()}");
+        var res = await app.CreateAuthClient().GetAsync($"/api/gia-dinh/{Guid.NewGuid()}");
 
         res.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -153,7 +153,7 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
     {
         var (id, _, _) = await TaoGiaDinhVoChong(310, coVo: true);
 
-        var ct = await app.CreateClient().GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
+        var ct = await app.CreateAuthClient().GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
 
         ct!.HonPhoi.Should().BeNull();
     }
@@ -180,7 +180,7 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
             honPhoiId = hp.Id;
         }
 
-        var ct = await app.CreateClient().GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
+        var ct = await app.CreateAuthClient().GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
 
         ct!.HonPhoi.Should().NotBeNull();
         ct.HonPhoi!.Id.Should().Be(honPhoiId);
@@ -199,7 +199,7 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
     public async Task Gui_khoi_hon_phoi_khi_gia_dinh_chua_co_thi_tao_moi_va_noi_ca_hai_vo_chong()
     {
         var (id, chongId, voId) = await TaoGiaDinhVoChong(312, coVo: true);
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         var truoc = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
         truoc!.HonPhoi.Should().BeNull();
 
@@ -225,7 +225,7 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
     public async Task Gui_khoi_hon_phoi_khi_gia_dinh_chi_co_mot_ben_thi_chi_noi_ben_do()
     {
         var (id, chongId, _) = await TaoGiaDinhVoChong(313, coVo: false);
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         var truoc = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
 
         var res = await client.PutAsJsonAsync($"/api/gia-dinh/{id}", new CapNhat(
@@ -258,7 +258,7 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
             await db.SaveChangesAsync();
             honPhoiId = hp.Id;
         }
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         var truoc = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
 
         var res = await client.PutAsJsonAsync($"/api/gia-dinh/{id}", new CapNhat(
@@ -287,7 +287,7 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
                 new GiaoDanHonPhoi { GiaoXuId = app.GiaoXuId, HonPhoi = hp, GiaoDanId = voId!.Value, SoThuTu = 2 });
             await db.SaveChangesAsync();
         }
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         var truoc = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
 
         var res = await client.PutAsJsonAsync($"/api/gia-dinh/{id}", new CapNhat(
@@ -313,7 +313,7 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
                 new GiaoDanHonPhoi { GiaoXuId = app.GiaoXuId, HonPhoi = hp, GiaoDanId = voId!.Value, SoThuTu = 2 });
             await db.SaveChangesAsync();
         }
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         var banA = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
         var banB = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
 
@@ -331,7 +331,7 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
         loi!.ThongBao.Should().Contain("hôn phối",
             "thong bao 409 phai phan biet dung ghi de o khoi hon phoi, khong phai o ban than gia dinh");
 
-        var cuoi = await app.CreateClient().GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
+        var cuoi = await app.CreateAuthClient().GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
         cuoi!.HonPhoi!.SoHonPhoi.Should().Be("Nguoi A sua");
     }
 
@@ -370,7 +370,7 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
             honPhoiHienTaiId = hpHienTai.Id;
         }
 
-        var res = await app.CreateClient().GetAsync($"/api/gia-dinh/{id}");
+        var res = await app.CreateAuthClient().GetAsync($"/api/gia-dinh/{id}");
 
         res.StatusCode.Should().Be(HttpStatusCode.OK,
             "nguoi chong tung co mot hon phoi truoc la du lieu HOP LE (goa roi tai hon), khong duoc gay loi 500");
@@ -393,7 +393,7 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
             await db.SaveChangesAsync();
             id = gd.Id;
         }
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         var truoc = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
 
         var res = await client.PutAsJsonAsync($"/api/gia-dinh/{id}", new CapNhat(
@@ -432,7 +432,7 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
             await db.SaveChangesAsync();
             honPhoiId = hp.Id;
         }
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         var truoc = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
 
         var res = await client.PutAsJsonAsync($"/api/gia-dinh/{id}", new CapNhat(

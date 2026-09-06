@@ -38,7 +38,7 @@ public class GiaoDanTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     {
         await TaoGiaoDan(8001, "Vu Minh Tri", ngaySinh: new DateOnly(1996, 4, 2));
 
-        var ds = await app.CreateClient().GetFromJsonAsync<List<Item>>("/api/giao-dan");
+        var ds = await app.CreateAuthClient().GetFromJsonAsync<List<Item>>("/api/giao-dan");
 
         ds!.Single(x => x.MaGiaoDanCu == 8001).NamSinh.Should().Be("1996");
     }
@@ -48,7 +48,7 @@ public class GiaoDanTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     {
         await TaoGiaoDan(8002, "Nguoi khong ro ngay sinh");
 
-        var ds = await app.CreateClient().GetFromJsonAsync<List<Item>>("/api/giao-dan");
+        var ds = await app.CreateAuthClient().GetFromJsonAsync<List<Item>>("/api/giao-dan");
 
         ds!.Single(x => x.MaGiaoDanCu == 8002).NamSinh.Should().BeEmpty();
     }
@@ -69,7 +69,7 @@ public class GiaoDanTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
             await db.SaveChangesAsync();
         }
 
-        var ct = await app.CreateClient().GetFromJsonAsync<ChiTiet>($"/api/giao-dan/{idNguoi}");
+        var ct = await app.CreateAuthClient().GetFromJsonAsync<ChiTiet>($"/api/giao-dan/{idNguoi}");
 
         ct!.TenGiaDinh.Should().Be("Dung - Thu");
         ct.VaiTro.Should().Be(0);
@@ -93,7 +93,7 @@ public class GiaoDanTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
             idGiaDinh = giaDinh.Id;
         }
 
-        var ds = await app.CreateClient()
+        var ds = await app.CreateAuthClient()
             .GetFromJsonAsync<List<Item>>($"/api/gia-dinh/{idGiaDinh}/thanh-vien");
 
         ds!.Should().ContainSingle().Which.HoTen.Should().Be("Vu Duc Duy");
@@ -103,7 +103,7 @@ public class GiaoDanTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     public async Task Cap_nhat_giao_dan_kiem_tra_phien_ban()
     {
         var id = await TaoGiaoDan(8005, "Nguoi se duoc sua");
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         var truoc = await client.GetFromJsonAsync<ChiTiet>($"/api/giao-dan/{id}");
 
         var lanDau = await client.PutAsJsonAsync($"/api/giao-dan/{id}",
@@ -148,7 +148,7 @@ public class GiaoDanTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
             idGiaDinh = giaDinh.Id;
         }
 
-        var ds = await app.CreateClient()
+        var ds = await app.CreateAuthClient()
             .GetFromJsonAsync<List<Item>>($"/api/gia-dinh/{idGiaDinh}/thanh-vien");
 
         ds!.Should().ContainSingle().Which.QuanHe.Should().Be("Con");
@@ -198,7 +198,7 @@ public class GiaoDanTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
             idGiaDinhRieng = nhaRieng.Id;
         }
 
-        var ct = await app.CreateClient().GetFromJsonAsync<ChiTiet>($"/api/giao-dan/{idNguoi}");
+        var ct = await app.CreateAuthClient().GetFromJsonAsync<ChiTiet>($"/api/giao-dan/{idNguoi}");
 
         ct!.GiaDinhId.Should().Be(idGiaDinhRieng);
         ct.TenGiaDinh.Should().Be("Nha rieng");
@@ -234,7 +234,7 @@ public class GiaoDanTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
             idGiaDinhRieng = nhaRieng.Id;
         }
 
-        var ds = await app.CreateClient().GetFromJsonAsync<List<Item>>("/api/giao-dan");
+        var ds = await app.CreateAuthClient().GetFromJsonAsync<List<Item>>("/api/giao-dan");
 
         ds!.Single(x => x.MaGiaoDanCu == 8210).GiaDinhId.Should().Be(idGiaDinhRieng);
     }
@@ -265,7 +265,7 @@ public class GiaoDanTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
             await db.SaveChangesAsync();
         }
 
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         var thanhVien = await client.GetFromJsonAsync<List<Item>>($"/api/gia-dinh/{idGiaDinh}/thanh-vien");
         var danhSach = await client.GetFromJsonAsync<List<Item>>("/api/giao-dan");
 
@@ -285,7 +285,7 @@ public class GiaoDanTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
             gd.MaNhanDang = "access-2026-09-06::giao_dan::8300";
             await db.SaveChangesAsync();
         }
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         var truoc = await client.GetFromJsonAsync<ChiTiet>($"/api/giao-dan/{id}");
 
         var res = await client.PutAsJsonAsync($"/api/giao-dan/{id}",

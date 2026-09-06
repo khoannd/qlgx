@@ -11,7 +11,7 @@ public static class GiaDinhEndpoints
 
     public static void MapGiaDinh(this IEndpointRouteBuilder app)
     {
-        var nhom = app.MapGroup("/api/gia-dinh");
+        var nhom = app.MapGroup("/api/gia-dinh").RequireAuthorization();
 
         nhom.MapGet("", async (GiaDinhService dichVu, Guid? giaoHoId,
             bool? chiKhongThongKe, CancellationToken ct) =>

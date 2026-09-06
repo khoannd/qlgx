@@ -6,6 +6,9 @@ import { GiaDinhListPage } from './screens/GiaDinhListPage'
 import { GiaDinhDetailPage } from './screens/GiaDinhDetailPage'
 import { GiaoDanListPage } from './screens/GiaoDanListPage'
 import { GiaoDanDetailPage } from './screens/GiaoDanDetailPage'
+import { TaiKhoanListPage } from './screens/TaiKhoanListPage'
+import { LoginPage } from './screens/LoginPage'
+import { useAuth } from './api/AuthContext'
 
 /** Chỗ giữ chỗ — màn hình Tổng quan thật sẽ được dựng ở task sau. */
 function TongQuan() {
@@ -13,6 +16,7 @@ function TongQuan() {
 }
 
 function App() {
+  const { dangKiemTraPhien, nguoiDung } = useAuth()
   const { danhSach, dangChon, mo, chon, dong } = useTabDocs()
   // Đếm số bản ghi mới đang mở dở, giống biến moiDem của bản mẫu — mỗi lần bấm "Thêm mới"
   // là một thẻ nháp riêng, không trùng khoá với thẻ nháp khác đang mở.
@@ -76,23 +80,36 @@ function App() {
     })
   }
 
+  function moQuanLyTaiKhoan() {
+    mo({ id: 'taiKhoanList', tieuDe: 'Quản lý tài khoản', noiDung: <TaiKhoanListPage /> })
+  }
+
   // Khởi động giống frmMain: mở "Tổng quan" (không đóng được), rồi mở và chọn
-  // "Danh sách gia đình" — xem cuối script của bản mẫu.
+  // "Danh sách gia đình" — xem cuối script của bản mẫu. CHỈ chạy sau khi đã đăng nhập —
+  // gọi API trước khi có token chỉ để bị 401 rồi tự đăng xuất lại, vô ích.
   useEffect(() => {
+    if (!nguoiDung) return
     mo({ id: 'home', tieuDe: 'Tổng quan', noiDung: <TongQuan />, dongDuoc: false })
     moDanhSachGiaDinh()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mo])
+  }, [mo, nguoiDung])
 
-  // Sidenav chỉ có hai mục đã nối được thẻ tài liệu thật ở task này; nút bấm còn lại là chỗ
-  // giữ chỗ (xem SideNav.tsx), nên chỉ hai id dưới đây thực sự gọi tới.
+  // Sidenav chỉ có các mục đã nối được thẻ tài liệu thật; nút bấm còn lại là chỗ giữ chỗ
+  // (xem SideNav.tsx).
   function moTheoDieuHuong(id: string) {
     if (id === 'giaDinhList') moDanhSachGiaDinh()
     else if (id === 'giaoDanList') moDanhSachGiaoDan()
+    else if (id === 'taiKhoanList') moQuanLyTaiKhoan()
   }
 
+  // Đang kiểm tra token cũ (tải lại trang) — không hiện gì để tránh giật từ màn hình đăng
+  // nhập sang màn hình chính hoặc ngược lại.
+  if (dangKiemTraPhien) return null
+
+  if (!nguoiDung) return <LoginPage />
+
   return (
-    <AppShell dangChonNav={dangChon} onNavigate={moTheoDieuHuong}>
+    <AppShell dangChonNav={dangChon} onNavigate={moTheoDieuHuong} nguoiDung={nguoiDung}>
       <TabDocs danhSach={danhSach} dangChon={dangChon} onChon={chon} onDong={dong} />
     </AppShell>
   )

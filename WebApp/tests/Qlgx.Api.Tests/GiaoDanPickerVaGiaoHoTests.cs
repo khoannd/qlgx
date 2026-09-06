@@ -37,7 +37,7 @@ public class GiaoDanPickerVaGiaoHoTests(QlgxApiFactory app) : IClassFixture<Qlgx
         await TaoGiaoDan("Nguyen Van Tim Kiem Ung Vien", "Nam", new DateOnly(1970, 1, 1));
         await TaoGiaoDan("Nguoi Khac Khong Lien Quan", "Nam", new DateOnly(1970, 1, 1));
 
-        var ket = await app.CreateClient()
+        var ket = await app.CreateAuthClient()
             .GetFromJsonAsync<List<TimKiemItem>>("/api/giao-dan/tim?tuKhoa=Tim Kiem Ung Vien");
 
         ket.Should().ContainSingle(x => x.HoTen == "Nguyen Van Tim Kiem Ung Vien");
@@ -46,7 +46,7 @@ public class GiaoDanPickerVaGiaoHoTests(QlgxApiFactory app) : IClassFixture<Qlgx
     [Fact]
     public async Task Tim_kiem_khong_tu_khoa_gioi_han_so_luong_ket_qua()
     {
-        var res = await app.CreateClient().GetAsync("/api/giao-dan/tim?limit=3");
+        var res = await app.CreateAuthClient().GetAsync("/api/giao-dan/tim?limit=3");
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         var ket = await res.Content.ReadFromJsonAsync<List<TimKiemItem>>();
         ket!.Count.Should().BeLessOrEqualTo(3);
@@ -63,7 +63,7 @@ public class GiaoDanPickerVaGiaoHoTests(QlgxApiFactory app) : IClassFixture<Qlgx
             await db.SaveChangesAsync();
         }
 
-        var ket = await app.CreateClient().GetFromJsonAsync<List<GiaoHoItem>>("/api/giao-ho");
+        var ket = await app.CreateAuthClient().GetFromJsonAsync<List<GiaoHoItem>>("/api/giao-ho");
 
         ket.Should().ContainSingle(x => x.TenGiaoHo == "Giáo họ Kiểm Thử");
     }
@@ -78,7 +78,7 @@ public class GiaoDanPickerVaGiaoHoTests(QlgxApiFactory app) : IClassFixture<Qlgx
             await db.SaveChangesAsync();
         }
 
-        var ket = await app.CreateClient().GetFromJsonAsync<List<GiaoHoItem>>("/api/giao-ho");
+        var ket = await app.CreateAuthClient().GetFromJsonAsync<List<GiaoHoItem>>("/api/giao-ho");
 
         ket.Should().NotContain(x => x.TenGiaoHo == "Giáo họ Đã Xoá");
     }
@@ -96,7 +96,7 @@ public class GiaoDanPickerVaGiaoHoTests(QlgxApiFactory app) : IClassFixture<Qlgx
         var homNay = DateOnly.FromDateTime(DateTime.Now);
         // Cha chi hon con 10 tuoi ( < 15 nam toi thieu theo TUOI_CHO_PHEP_CO_CON ).
         var chaId = await TaoGiaoDan("Ong Cha Qua Tre", "Nam", homNay.AddYears(-25));
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
 
         var res = await client.PostAsJsonAsync("/api/giao-dan",
             YeuCauToiThieu("Con Cua Ong Cha Qua Tre", homNay.AddYears(-15), chaId));
@@ -111,7 +111,7 @@ public class GiaoDanPickerVaGiaoHoTests(QlgxApiFactory app) : IClassFixture<Qlgx
     {
         var homNay = DateOnly.FromDateTime(DateTime.Now);
         var chaId = await TaoGiaoDan("Ong Cha Du Tuoi", "Nam", homNay.AddYears(-45));
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
 
         var res = await client.PostAsJsonAsync("/api/giao-dan",
             YeuCauToiThieu("Con Cua Ong Cha Du Tuoi", homNay.AddYears(-15), chaId));
@@ -123,7 +123,7 @@ public class GiaoDanPickerVaGiaoHoTests(QlgxApiFactory app) : IClassFixture<Qlgx
     public async Task Tao_giao_dan_khong_chon_ChaId_khong_bi_anh_huong_boi_rule_15()
     {
         var homNay = DateOnly.FromDateTime(DateTime.Now);
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
 
         var res = await client.PostAsJsonAsync("/api/giao-dan",
             YeuCauToiThieu("Giao Dan Khong Co Cha Chon Qua Picker", homNay.AddYears(-20)));

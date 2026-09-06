@@ -60,7 +60,7 @@ public class GiaoDanHonPhoiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFact
     {
         var id = await TaoGiaoDan(9001, "Chua ket hon");
 
-        var ds = await app.CreateClient()
+        var ds = await app.CreateAuthClient()
             .GetFromJsonAsync<List<HonPhoiCuaGiaoDan>>($"/api/giao-dan/{id}/hon-phoi");
 
         ds.Should().NotBeNull().And.BeEmpty();
@@ -84,7 +84,7 @@ public class GiaoDanHonPhoiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFact
             await db.SaveChangesAsync();
         }
 
-        var ds = await app.CreateClient()
+        var ds = await app.CreateAuthClient()
             .GetFromJsonAsync<List<HonPhoiCuaGiaoDan>>($"/api/giao-dan/{chongId}/hon-phoi");
 
         ds.Should().ContainSingle();
@@ -111,7 +111,7 @@ public class GiaoDanHonPhoiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFact
         var voId = await TaoGiaoDan(9021, "Pham Thi Vo", "Nu");
         await TaoHonPhoi(9020, chongId, voId);
 
-        var ds = await app.CreateClient()
+        var ds = await app.CreateAuthClient()
             .GetFromJsonAsync<List<HonPhoiCuaGiaoDan>>($"/api/giao-dan/{voId}/hon-phoi");
 
         ds.Should().ContainSingle();
@@ -131,7 +131,7 @@ public class GiaoDanHonPhoiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFact
         var hpCu = await TaoHonPhoi(9030, chongId, voCu, new DateOnly(2000, 1, 1), "HP-cu");
         var hpMoi = await TaoHonPhoi(9033, chongId, voMoi, new DateOnly(2020, 6, 6), "HP-moi");
 
-        var ds = await app.CreateClient()
+        var ds = await app.CreateAuthClient()
             .GetFromJsonAsync<List<HonPhoiCuaGiaoDan>>($"/api/giao-dan/{chongId}/hon-phoi");
 
         ds.Should().HaveCount(2);
@@ -146,7 +146,7 @@ public class GiaoDanHonPhoiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFact
         var chongId = await TaoGiaoDan(9040, "Chong sua duoc", "Nam");
         var voId = await TaoGiaoDan(9041, "Vo sua duoc", "Nu");
         await TaoHonPhoi(9040, chongId, voId);
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         var truoc = await client.GetFromJsonAsync<List<HonPhoiCuaGiaoDan>>($"/api/giao-dan/{chongId}/hon-phoi");
         var hp = truoc!.Single();
 
@@ -174,7 +174,7 @@ public class GiaoDanHonPhoiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFact
         var chongId = await TaoGiaoDan(9050, "Chong 409", "Nam");
         var voId = await TaoGiaoDan(9051, "Vo 409", "Nu");
         await TaoHonPhoi(9050, chongId, voId);
-        var client = app.CreateClient();
+        var client = app.CreateAuthClient();
         var banA = (await client.GetFromJsonAsync<List<HonPhoiCuaGiaoDan>>($"/api/giao-dan/{chongId}/hon-phoi"))!.Single();
         var banB = (await client.GetFromJsonAsync<List<HonPhoiCuaGiaoDan>>($"/api/giao-dan/{chongId}/hon-phoi"))!.Single();
 
@@ -192,7 +192,7 @@ public class GiaoDanHonPhoiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFact
     [Fact]
     public async Task Sua_hon_phoi_khong_ton_tai_thi_tra_404()
     {
-        var res = await app.CreateClient().PutAsJsonAsync($"/api/giao-dan/hon-phoi/{Guid.NewGuid()}",
+        var res = await app.CreateAuthClient().PutAsJsonAsync($"/api/giao-dan/hon-phoi/{Guid.NewGuid()}",
             new CapNhatHonPhoi(null, null, null, null, null, null, null, null, 0));
 
         res.StatusCode.Should().Be(HttpStatusCode.NotFound);

@@ -147,10 +147,43 @@ Ngày tháng hỏng (chỉ ghi năm, chuỗi rỗng) được giữ nguyên văn
 
 | Task | Nội dung | Ghi chú |
 |---|---|---|
-| 14 | Xác thực và phân tách tenant theo claim đăng nhập | **làm tiếp ngay** |
-| 13 | Kiểm thử đầu-cuối và **triển khai máy chủ** | đã đổi mục tiêu, không còn cài lên máy giáo xứ |
+| 14 | Xác thực và phân tách tenant theo claim đăng nhập | **xong (2026-09-07)** — xem mục dưới |
+| 13 | Kiểm thử đầu-cuối và **triển khai máy chủ** | đã đổi mục tiêu, không còn cài lên máy giáo xứ; nợ RLS (xem `can-review-sau.md` mục 27m) |
 | 15 | Giao diện hôn phối | task mới |
 | 16 | PWA và bản nháp ngoại tuyến | task mới |
+
+## Task 14 — Xác thực và phân tách tenant (2026-09-07)
+
+`giao_xu_id` của phiên giờ lấy từ claim JWT (`BoiCanhGiaoXuTuNguoiDung`), không còn từ cấu hình
+tĩnh — máy chủ đã sẵn sàng phục vụ nhiều giáo xứ. Đăng nhập bằng tên tài khoản/mật khẩu
+(`POST /api/auth/dang-nhap`), mật khẩu băm bằng `PasswordHasher<TaiKhoan>` (PBKDF2). Mọi
+endpoint nghiệp vụ đòi hỏi `RequireAuthorization()`; `/api/tai-khoan/*` (Quản lý tài khoản)
+thêm policy "QuanTri". Ba test bảo mật bắt buộc (giáo xứ A không thấy dữ liệu giáo xứ B, truyền
+`giaoXuId` qua query không đổi được kết quả, gọi khi chưa đăng nhập → 401) nằm trong
+`BaoMatTests.cs` (12 test, tổng 172 test backend). Quyết định chi tiết ở
+`docs/superpowers/specs/man-hinh/can-review-sau.md` mục 27.
+
+**Còn nợ, phải làm trước khi có giáo xứ thứ hai lên chung máy chủ thật:**
+- Row-Level Security của PostgreSQL (lớp phòng thủ thứ hai) — chưa làm, xem mục 27m.
+- Không có cơ chế thu hồi token đã phát hành (đăng xuất chỉ xoá phía trình duyệt) — xem mục 27b.
+
+**Tạo lại tài khoản quản trị (nếu cần)** — không có mật khẩu mặc định nào trong mã nguồn:
+
+```
+cd WebApp/src/Qlgx.Api
+export ConnectionStrings__Qlgx="Host=localhost;Database=<ten_db>;Username=postgres;Password=<mat_khau>"
+export Qlgx__JwtKey="<base64 32+ byte ngau nhien, dung chung khi chay API that>"
+export QLGX_ADMIN_TEN_TAI_KHOAN="<ten_dang_nhap>"
+export QLGX_ADMIN_MAT_KHAU="<mat_khau_it_nhat_8_ky_tu>"
+export QLGX_ADMIN_HO_TEN="<ho_ten_hien_thi>"
+export QLGX_ADMIN_GIAO_XU_TEN="<ten_giao_xu_dung_het>"   # hoac QLGX_ADMIN_GIAO_XU_ID=<guid>
+dotnet run -- tao-tai-khoan-quan-tri
+```
+
+Database `qlgx_thu` (dùng để kiểm thử thật Task 14) hiện có sẵn một tài khoản quản trị tên
+**`quantri`** — cố ý ĐỂ LẠI để lần sau còn đăng nhập được (không phải quên dọn dẹp). Mật khẩu
+không ghi ở đây; ai cần biết thì hỏi trực tiếp, hoặc dùng lệnh trên để tạo một tài khoản quản
+trị khác.
 
 ## Bốn thay đổi lớn đã chốt ngày 2026-09-06
 
