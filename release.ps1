@@ -322,6 +322,30 @@ else {
     Write-Ok 'Bien dich thanh cong'
 }
 
+# ------------------------------------------- 4b. Đưa các thư mục con vào bộ cài
+Write-Buoc '4b. Dua Template / Resources / help vao bo cai'
+if ($SkipInstaller -or $DryRun) { Write-Canh 'Bo qua' }
+else {
+    # Sinh lai tu noi dung BIN\ moi lan phat hanh, nen them bieu mau moi la tu co.
+    $scriptTM = Join-Path $Root 'them_thu_muc_vao_bo_cai.ps1'
+    if (-not (Test-Path $scriptTM)) { Write-Loi "Khong tim thay $scriptTM"; exit 1 }
+
+    $kqTM = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptTM 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Loi 'Dua thu muc vao bo cai that bai:'
+        $kqTM | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        exit 1
+    }
+    $kqTM | ForEach-Object { Write-Ok $_ }
+
+    $kqTM2 = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptTM -ChiKiemChung 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Loi 'Kiem chung danh sach thu muc that bai:'
+        $kqTM2 | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        exit 1
+    }
+}
+
 # ---------------------------------------------------------- 5. Cập nhật vdproj
 Write-Buoc '5. Cap nhat GXInstaller.vdproj'
 $vd = Doc-FileGiuBom $Vdproj
@@ -441,6 +465,26 @@ else {
     }
 }
 
+# ---------------------------------------------------------- 6a. Kiểm tra lối tắt
+Write-Buoc '6a. Kiem tra loi tat trong bo cai'
+if ($SkipInstaller -or $DryRun) { Write-Canh 'Bo qua' }
+else {
+    # Ban 4.0.0 co loi hai loi tat tro nham vao THU MUC chu khong phai GiaoXu.exe,
+    # nguoi cai moi bam vao bieu tuong chi mo ra cua so Explorer. Kiem tra moi lan
+    # phat hanh de khong tai dien.
+    $msiPath = Join-Path $InstOutDir $msiFileName
+    $scriptLt = Join-Path $Root 'kiem_tra_loi_tat.ps1'
+    if (-not (Test-Path $scriptLt)) { Write-Loi "Khong tim thay $scriptLt"; exit 1 }
+
+    $kqLt = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptLt -Msi $msiPath 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Loi 'Loi tat trong bo cai khong dung:'
+        $kqLt | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        exit 1
+    }
+    $kqLt | ForEach-Object { Write-Ok $_ }
+}
+
 # ---------------------------------------------------------- 6b. Ghi tiếng Việt vào MSI
 Write-Buoc '6b. Ghi ten tieng Viet co dau vao file MSI'
 if ($SkipInstaller -or $DryRun) { Write-Canh 'Bo qua' }
@@ -503,6 +547,57 @@ else {
     Write-Ok 'Uu tien 3: D:\QuanLyGiaoXu neu con ton tai'
     Write-Ok 'Neu khong thay gi: dung mac dinh C:\QuanLyGiaoXu'
     Write-Ok 'Da ghi ARPINSTALLLOCATION de cac ban sau tu do duoc chinh minh'
+}
+
+# ------------------------------------------ 6d. Dịch giao diện bộ cài sang tiếng Việt
+Write-Buoc '6d. Dich giao dien bo cai sang tieng Viet'
+if ($SkipInstaller -or $DryRun) { Write-Canh 'Bo qua' }
+else {
+    # Visual Studio khong co san giao dien cai dat tieng Viet (khong co ma 1066),
+    # nen phai ghi de chu tieng Viet vao file MSI sau khi build.
+    $scriptDich = Join-Path $Root 'dich_bo_cai_sang_tieng_viet.ps1'
+    if (-not (Test-Path $scriptDich)) { Write-Loi "Khong tim thay $scriptDich"; exit 1 }
+
+    $kqDich = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptDich -Msi $msiPath 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Loi 'Dich giao dien bo cai that bai:'
+        $kqDich | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        exit 1
+    }
+    $kqDich2 = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptDich -Msi $msiPath -ChiKiemChung 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Loi 'Kiem chung ban dich that bai:'
+        $kqDich2 | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        exit 1
+    }
+    $kqDich | ForEach-Object { Write-Ok $_ }
+    Write-Ok 'Da co man hinh Dieu khoan su dung nhu bo cai Inno cu'
+}
+
+# ------------------------------------------- 6e. Dọn dấu vết bản Inno cũ
+Write-Buoc '6e. Don dau vet ban cai cu (Inno Setup)'
+if ($SkipInstaller -or $DryRun) { Write-Canh 'Bo qua' }
+else {
+    # Xoa khoa dang ky va loi tat cua ban cu de may chi con MOT phan mem. Khong goi
+    # unins000.exe vi no se xoa luon giaoxu.mdb - tuc la xoa sach du lieu giao xu.
+    $scriptGo = Join-Path $Root 'go_dau_vet_ban_cu.ps1'
+    if (-not (Test-Path $scriptGo)) { Write-Loi "Khong tim thay $scriptGo"; exit 1 }
+
+    $kqGo = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptGo -Msi $msiPath 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Loi 'Them buoc don dau vet ban cu that bai:'
+        $kqGo | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        exit 1
+    }
+    $kqGo2 = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptGo -Msi $msiPath -ChiKiemChung 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Loi 'Kiem chung buoc don dau vet that bai:'
+        $kqGo2 | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        exit 1
+    }
+    Write-Ok 'Xoa khoa go cai dat cua Inno o ca hai nhanh registry'
+    Write-Ok 'Xoa nhom Start Menu va loi tat Desktop cu ten GiaoXu'
+    Write-Ok 'GIU NGUYEN moi file trong thu muc cai dat - khong dung toi giaoxu.mdb'
 }
 
 # ---------------------------------------------------------- 7. Gom file (staging)
