@@ -4,9 +4,9 @@
 
 **Mục tiêu:** Hoàn thành bốn màn hình lõi trên nền web — danh sách gia đình, chi tiết gia đình, danh sách giáo dân, chi tiết giáo dân — cùng toàn bộ nền tảng cần thiết để một giáo xứ thí điểm chạy được với dữ liệu thật.
 
-**Kiến trúc:** ASP.NET Core (.NET 8) Web API + PostgreSQL qua EF Core, phục vụ luôn static file của SPA React/TypeScript trong cùng một tiến trình chạy như Windows Service tại văn phòng giáo xứ. Mọi bảng nghiệp vụ dùng khoá chính UUID và mang cột `giao_xu_id` ngay từ đầu để sau này gom nhiều giáo xứ vào một database mà không phải đánh số lại. Dữ liệu từ Access được đưa sang bằng một công cụ dòng lệnh chạy một lần, tách rời hoàn toàn khỏi backend.
+**Kiến trúc:** ASP.NET Core (.NET 10) Web API + PostgreSQL qua EF Core, phục vụ luôn static file của SPA React/TypeScript trong cùng một tiến trình chạy như Windows Service tại văn phòng giáo xứ. Mọi bảng nghiệp vụ dùng khoá chính UUID và mang cột `giao_xu_id` ngay từ đầu để sau này gom nhiều giáo xứ vào một database mà không phải đánh số lại. Dữ liệu từ Access được đưa sang bằng một công cụ dòng lệnh chạy một lần, tách rời hoàn toàn khỏi backend.
 
-**Tech Stack:** .NET 8, ASP.NET Core, EF Core 8 + Npgsql, PostgreSQL 16, xUnit + FluentAssertions, React 18 + TypeScript + Vite, AG Grid Community 32, Vitest + Testing Library, Playwright.
+**Tech Stack:** .NET 10, ASP.NET Core, EF Core 10 + Npgsql, PostgreSQL 16, xUnit + FluentAssertions, React 18 + TypeScript + Vite, AG Grid Community 32, Vitest + Testing Library, Playwright.
 
 **Spec:** `docs/superpowers/specs/2026-09-06-qlgx-web-migration-design.md`
 
@@ -14,7 +14,7 @@
 
 Mọi task đều ngầm chịu các ràng buộc sau.
 
-- Backend target **`net8.0`**. Không tham chiếu thư viện chỉ chạy Windows (`System.Drawing.Common`, Office Interop, `System.Data.OleDb`) trong bất kỳ project nào **trừ** `Qlgx.Migration`.
+- Backend target **`net10.0`**. Không tham chiếu thư viện chỉ chạy Windows (`System.Drawing.Common`, Office Interop, `System.Data.OleDb`) trong bất kỳ project nào **trừ** `Qlgx.Migration`.
 - PostgreSQL **16 trở lên**. Tên bảng và cột dùng **snake_case không dấu**: `gia_dinh`, `giao_dan`, `thanh_vien_gia_dinh`. Tên lớp C# giữ **PascalCase tiếng Việt**: `GiaDinh`, `GiaoDan`, `ThanhVienGiaDinh`.
 - Mọi bảng nghiệp vụ bắt buộc có: `id uuid PK`, `giao_xu_id uuid NOT NULL`, `created_at timestamptz`, `updated_at timestamptz`, `row_version uint (xmin)`, `source_system text`.
 - Mọi truy vấn nghiệp vụ lọc theo `giao_xu_id`, kể cả khi database hiện chỉ chứa một giáo xứ.
@@ -91,10 +91,10 @@ Nguyên tắc chia file: **định nghĩa cột tách khỏi màn hình** (`src/
 ```bash
 cd WebApp
 dotnet new sln -n Qlgx
-dotnet new classlib -o src/Qlgx.Domain -f net8.0
-dotnet new classlib -o src/Qlgx.Data -f net8.0
-dotnet new web -o src/Qlgx.Api -f net8.0
-dotnet new xunit -o tests/Qlgx.Api.Tests -f net8.0
+dotnet new classlib -o src/Qlgx.Domain -f net10.0
+dotnet new classlib -o src/Qlgx.Data -f net10.0
+dotnet new web -o src/Qlgx.Api -f net10.0
+dotnet new xunit -o tests/Qlgx.Api.Tests -f net10.0
 rm src/Qlgx.Domain/Class1.cs src/Qlgx.Data/Class1.cs
 dotnet sln add src/Qlgx.Domain src/Qlgx.Data src/Qlgx.Api tests/Qlgx.Api.Tests
 dotnet add src/Qlgx.Data reference src/Qlgx.Domain
@@ -198,7 +198,7 @@ Bản Access lưu **mọi** ngày dưới dạng chuỗi `dd/MM/yyyy` trong cộ
 
 ```bash
 cd WebApp
-dotnet new xunit -o tests/Qlgx.Data.Tests -f net8.0
+dotnet new xunit -o tests/Qlgx.Data.Tests -f net10.0
 dotnet sln add tests/Qlgx.Data.Tests
 dotnet add tests/Qlgx.Data.Tests reference src/Qlgx.Data
 dotnet add tests/Qlgx.Data.Tests package FluentAssertions
@@ -2237,8 +2237,8 @@ Ba yêu cầu bắt buộc, xuất phát từ đặc điểm dữ liệu đã kh
 
 ```bash
 cd WebApp
-dotnet new console -o src/Qlgx.Migration -f net8.0
-dotnet new xunit -o tests/Qlgx.Migration.Tests -f net8.0
+dotnet new console -o src/Qlgx.Migration -f net10.0
+dotnet new xunit -o tests/Qlgx.Migration.Tests -f net10.0
 dotnet sln add src/Qlgx.Migration tests/Qlgx.Migration.Tests
 dotnet add src/Qlgx.Migration reference src/Qlgx.Data
 dotnet add src/Qlgx.Migration package System.Data.OleDb
@@ -2251,7 +2251,7 @@ Thêm vào `src/Qlgx.Migration/Qlgx.Migration.csproj` để nói rõ đây là p
 
 ```xml
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <Platforms>x86</Platforms>
     <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>

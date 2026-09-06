@@ -41,7 +41,7 @@ On-prem, **mỗi giáo xứ một instance độc lập** — giữ đúng tinh 
 [Trình duyệt trên các PC trong LAN văn phòng giáo xứ]
         │  HTTP/HTTPS nội bộ
         ▼
-[ASP.NET Core (.NET 8) — Web API + phục vụ static file của SPA]   ← chạy như Windows Service
+[ASP.NET Core (.NET 10) — Web API + phục vụ static file của SPA]   ← chạy như Windows Service
         │  EF Core + Npgsql
         ▼
 [PostgreSQL cài cục bộ]  ← một database riêng cho giáo xứ đó
@@ -51,7 +51,8 @@ On-prem, **mỗi giáo xứ một instance độc lập** — giữ đúng tinh 
   dùng đồng thời** là lợi ích chính so với bản Access hiện tại.
 - Không phụ thuộc internet để dùng hằng ngày. Server `qlgx.net` hiện có tiếp tục dùng cho
   cập nhật phiên bản và sao lưu đám mây tuỳ chọn.
-- Backend target .NET 8 nên **chạy được cả Linux** — cần thiết cho kịch bản gom cụm ở mục 2.
+- Backend target .NET 10 nên **chạy được cả Linux** — cần thiết cho kịch bản gom cụm ở mục 2.
+- Dùng **.NET 10 LTS** vì .NET 8 hết hạn hỗ trợ ngày 10/11/2026 — dự án mới khởi tạo không có lý do gì để bắt đầu trên một bản sắp hết hỗ trợ.
 
 ### 2. CSDL sẵn sàng gom cụm về sau
 
@@ -139,7 +140,7 @@ Thí điểm một giáo xứ trước. Các giáo xứ khác tiếp tục dùng
 
 ## Ràng buộc chung của dự án
 
-- Backend: .NET 8, ASP.NET Core, EF Core + Npgsql. Không phụ thuộc thư viện Windows-only
+- Backend: .NET 10, ASP.NET Core, EF Core + Npgsql. Không phụ thuộc thư viện Windows-only
   (`System.Drawing.Common`, Office Interop, OleDb) — trừ tool chuyển dữ liệu một lần.
 - CSDL: PostgreSQL 16 trở lên.
 - Frontend: React 18 + TypeScript, Vite, AG Grid Community.
