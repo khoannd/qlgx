@@ -151,6 +151,29 @@ export type GiaoDanDetail = {
   soAnTang: string | null
   noiAnTang: string | null
   ghiChu: string | null
+  // --- Tab "Giáo lý" (Bao đồng 1/2, Vào đời, Hôn nhân) — xem GiaoDanDetailDto phía backend.
+  ngayBD1: string | null
+  noiBD1: string | null
+  ngayBD2: string | null
+  noiBD2: string | null
+  ngayTHVaoDoi: string | null
+  noiTHVaoDoi: string | null
+  ngayGLHN1: string | null
+  ngayGLHN2: string | null
+  noiGLHN: string | null
+  nguoiChungNhanGLHN: string | null
+  xepLoaiGLHN: string | null
+  // --- Thông tin chuyển xứ (bảng `chuyen_xu`) — null nếu chưa từng chuyển xứ (mặc định "Ở tại
+  // xứ"). Xem ChuyenXuDto phía backend.
+  chuyenXu: {
+    id: string
+    /** 0 = Ở tại xứ, 1 = Chuyển đến, 2 = Chuyển đi — xem Qlgx.Domain.LoaiChuyenXu. */
+    loaiChuyen: number
+    ngayChuyen: string | null
+    noiChuyen: string | null
+    ghiChuChuyen: string | null
+    rowVersion: number
+  } | null
   giaDinhId: string | null
   tenGiaDinh: string | null
   vaiTro: number | null

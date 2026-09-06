@@ -28,20 +28,32 @@ export function GxPicker({ value, id, onChon, onThemMoi, onBoChon }: Props) {
   const [tuKhoa, setTuKhoa] = useState('')
   const [ketQua, setKetQua] = useState<GiaoDanTimKiem[]>([])
   const [dangTai, setDangTai] = useState(false)
+  // Lỗi mạng/máy chủ khi tìm — PHẢI hiện khác hẳn "không tìm thấy" (mảng rỗng hợp lệ). Nuốt lỗi
+  // thành "không tìm thấy giáo dân nào" từng khiến nhân viên tưởng người đó chưa có trong hệ
+  // thống lúc mạng chập chờn (Wi-Fi giáo xứ vùng xa) rồi tạo bản ghi trùng — xem review-frontend
+  // mục "Cao #1". `api.timKiem.giaoDan` đi qua `goi()` trong `api/client.ts`, nơi đã phân biệt
+  // lỗi mạng thật với lỗi HTTP và luôn ném `Error` có thông báo tiếng Việt sẵn dùng được thẳng.
+  const [loiTai, setLoiTai] = useState<string | null>(null)
+  // Tăng mỗi lần bấm "Thử lại" để buộc effect bên dưới chạy lại dù `tuKhoa` không đổi.
+  const [lanThu, setLanThu] = useState(0)
   const hopRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!dangMo) return
     const timer = setTimeout(() => {
       setDangTai(true)
+      setLoiTai(null)
       api.timKiem
         .giaoDan(tuKhoa, 20)
-        .then(setKetQua)
-        .catch(() => setKetQua([]))
+        .then((ds) => { setKetQua(ds); setLoiTai(null) })
+        .catch((e: unknown) => {
+          setKetQua([])
+          setLoiTai(e instanceof Error ? e.message : 'Không tìm kiếm được. Hãy thử lại.')
+        })
         .finally(() => setDangTai(false))
     }, 250)
     return () => clearTimeout(timer)
-  }, [dangMo, tuKhoa])
+  }, [dangMo, tuKhoa, lanThu])
 
   useEffect(() => {
     if (!dangMo) return
@@ -88,10 +100,19 @@ export function GxPicker({ value, id, onChon, onThemMoi, onBoChon }: Props) {
             style={{ width: '100%', boxSizing: 'border-box', marginBottom: 4 }}
           />
           {dangTai && <div className="muted" style={{ fontSize: 12.5, padding: 4 }}>Đang tìm…</div>}
-          {!dangTai && ketQua.length === 0 && (
+          {!dangTai && loiTai && (
+            <div role="alert" style={{ fontSize: 12.5, padding: 4, color: '#b91c1c' }}>
+              {loiTai}{' '}
+              <button type="button" className="mini" style={{ marginLeft: 4 }}
+                onClick={() => setLanThu((n) => n + 1)}>
+                Thử lại
+              </button>
+            </div>
+          )}
+          {!dangTai && !loiTai && ketQua.length === 0 && (
             <div className="muted" style={{ fontSize: 12.5, padding: 4 }}>Không tìm thấy giáo dân nào</div>
           )}
-          {!dangTai && ketQua.length > 0 && (
+          {!dangTai && !loiTai && ketQua.length > 0 && (
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, maxHeight: 220, overflowY: 'auto' }}>
               {ketQua.map((gd) => (
                 <li key={gd.id}>

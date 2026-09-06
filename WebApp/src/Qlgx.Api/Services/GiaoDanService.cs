@@ -128,6 +128,14 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
             .OrderBy(tv => tv.VaiTro > VaiTroGiaDinh.Vo ? 1 : 0)
             .FirstOrDefault();
 
+        // Bản desktop chỉ giữ một dòng ChuyenXu "hiện tại" mỗi giáo dân (xem ghi chú ở
+        // ChuyenXuDto) — dữ liệu di trú lý thuyết có thể có nhiều hơn một dòng cũ, lấy dòng mới
+        // nhất theo CreatedAt để không đoán sai khi có rác lịch sử.
+        var chuyenXu = await db.ChuyenXu
+            .Where(c => c.GiaoDanId == id)
+            .OrderByDescending(c => c.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
         return new GiaoDanDetailDto(
             g.Id, g.MaGiaoDanCu, g.HoTen, g.TenThanh, g.Phai, g.NgaySinh, g.NoiSinh, g.CMND, g.DanToc,
             g.GiaoHoId, g.ThuocGiaoXu, g.ThuocGiaoPhan, g.DiaChi, g.DienThoai, g.Email,
@@ -142,7 +150,10 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
             g.DaCoGiaDinh, g.TanTong, g.KhongThongKe,
             g.QuaDoi, g.NgayQuaDoi, g.NoiQuaDoi, g.SoAnTang, g.NoiAnTang, g.GhiChu,
             thamGia?.GiaDinhId, thamGia?.GiaDinh?.TenGiaDinh, thamGia is null ? null : (int)thamGia.VaiTro,
-            g.RowVersion);
+            g.RowVersion,
+            chuyenXu is null ? null : new ChuyenXuDto(
+                chuyenXu.Id, (int)chuyenXu.LoaiChuyen, chuyenXu.NgayChuyen, chuyenXu.NoiChuyen,
+                chuyenXu.GhiChuChuyen, chuyenXu.RowVersion));
     }
 
     // --- Kiểm tra nghiệp vụ phía máy chủ (checkInput() của frmGiaoDan.cs) --------------------
@@ -403,6 +414,11 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         g.DaCoGiaDinh = r.DaCoGiaDinh; g.TanTong = r.TanTong; g.KhongThongKe = r.KhongThongKe;
         g.QuaDoi = r.QuaDoi; g.NgayQuaDoi = r.NgayQuaDoi; g.NoiQuaDoi = r.NoiQuaDoi;
         g.SoAnTang = r.SoAnTang; g.NoiAnTang = r.NoiAnTang; g.GhiChu = r.GhiChu;
+        g.NgayBD1 = r.NgayBD1; g.NoiBD1 = r.NoiBD1;
+        g.NgayBD2 = r.NgayBD2; g.NoiBD2 = r.NoiBD2;
+        g.NgayTHVaoDoi = r.NgayTHVaoDoi; g.NoiTHVaoDoi = r.NoiTHVaoDoi;
+        g.NgayGLHN1 = r.NgayGLHN1; g.NgayGLHN2 = r.NgayGLHN2;
+        g.NoiGLHN = r.NoiGLHN; g.NguoiChungNhanGLHN = r.NguoiChungNhanGLHN; g.XepLoaiGLHN = r.XepLoaiGLHN;
         // Cố tình KHÔNG đụng tới g.MaNhanDang: đây là khoá nhận dạng dùng để đồng bộ hai chiều
         // với bản desktop sau này; request không mang trường này nên không được gán gì (kể cả
         // gán null) — property giữ nguyên giá trị đã tải từ CSDL.
@@ -410,8 +426,59 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         // Liên động của frmGiaoDan: tick "Qua đời" thì tự bỏ tick "Còn học"
         if (g.QuaDoi) g.ConHoc = false;
 
+        // r.ChuyenXu == null nghĩa là màn hình không gửi khối "Thông tin chuyển xứ" lên —
+        // "không gửi thì không sửa" (cùng quy ước với GiaDinhService.CapNhat/HonPhoi). Khối
+        // này bị bản web ẨN KHỎI DOM khi Ngoài xứ (đúng cbGiaoHo_SelectedIndexChanged của
+        // desktop), nhưng form vẫn giữ giá trị đã tải qua state — nơi gọi PHẢI tiếp tục gửi
+        // khối này với giá trị cũ thay vì bỏ trống, nếu không muốn bị hiểu nhầm là "không sửa".
+        if (r.ChuyenXu is { } chuyenXuYc)
+            await GhiChuyenXu(g.GiaoXuId, id, chuyenXuYc, ct);
+
         try { await db.SaveChangesAsync(ct); return (KetQuaLuuGiaoDan.ThanhCong, null, []); }
         catch (DbUpdateConcurrencyException) { return (KetQuaLuuGiaoDan.DungPhienBan, null, []); }
+    }
+
+    /// <summary>
+    /// Ghi khối "Thông tin chuyển xứ" — đúng hành vi GetChuyenXuInfo/Luu của
+    /// frmGiaoDan.cs:892-945,719-727: LoaiChuyen=0 (Ở tại xứ) XOÁ hẳn dòng ChuyenXu hiện có
+    /// (không giữ lại dòng "rỗng"); LoaiChuyen khác 0 thì tạo mới nếu chưa có, hoặc SỬA TẠI CHỖ
+    /// dòng đã có (desktop không tạo thêm dòng lịch sử mới mỗi lần đổi loại chuyển xứ).
+    /// RowVersion (`yc.RowVersion`) chỉ có ý nghĩa khi đang sửa dòng đã có; bỏ qua khi tạo mới
+    /// hoặc khi xoá.
+    /// </summary>
+    private async Task GhiChuyenXu(Guid giaoXuId, Guid giaoDanId, CapNhatChuyenXuRequest yc, CancellationToken ct)
+    {
+        var hienCo = await db.ChuyenXu
+            .Where(c => c.GiaoDanId == giaoDanId)
+            .OrderByDescending(c => c.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+        if (yc.LoaiChuyen == (int)LoaiChuyenXu.TaiXu)
+        {
+            if (hienCo is not null) db.ChuyenXu.Remove(hienCo);
+            return;
+        }
+
+        if (hienCo is null)
+        {
+            hienCo = new ChuyenXu
+            {
+                GiaoXuId = giaoXuId,
+                GiaoDanId = giaoDanId,
+                MaChuyenXuCu = await sinhMa.LayMaTiepTheo(giaoXuId, "chuyen_xu",
+                    await db.ChuyenXu.MaxAsync(c => (int?)c.MaChuyenXuCu, ct) ?? 0, ct),
+            };
+            db.ChuyenXu.Add(hienCo);
+        }
+        else
+        {
+            db.Entry(hienCo).Property(x => x.RowVersion).OriginalValue = yc.RowVersion ?? hienCo.RowVersion;
+        }
+
+        hienCo.LoaiChuyen = (LoaiChuyenXu)yc.LoaiChuyen;
+        hienCo.NgayChuyen = yc.NgayChuyen;
+        hienCo.NoiChuyen = yc.NoiChuyen;
+        hienCo.GhiChuChuyen = yc.GhiChuChuyen;
     }
 
     /// <summary>Kết quả xoá một giáo dân — xem GiaoDanEndpoints để biết ánh xạ mã HTTP.</summary>

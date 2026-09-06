@@ -31,6 +31,11 @@ export type YeuCauCapNhatGiaDinh = {
   khongThongKe: boolean
   rowVersion: number
   honPhoi: null
+  /** Chủ hộ CHỈ có thể là Người nam (0) hay Người nữ (1) — hai radio `name="chuho"` cạnh hai ô
+   * đó (xem `GiaDinhService.CapNhat`, chỉ ghi `ChuHo` vào dòng Chồng/Vợ). `null` = không radio
+   * nào được chọn (kể cả trường hợp cả hai đều bị disable vì chưa có Người nam/nữ) — máy chủ ghi
+   * đúng y giá trị này (kể cả "gỡ chủ hộ"), không tự đoán/giữ lại giá trị cũ. */
+  chuHoVaiTro: 0 | 1 | null
 }
 
 type Props = {
@@ -177,9 +182,12 @@ export function GiaDinhDetail({
   // nguyên giá trị cũ vì combobox chỉ liệt kê TÊN cứng không có Id.
   function dungPayloadTuForm(fd: FormData): YeuCauCapNhatGiaDinh {
     const chuoi = (ten: string) => (fd.get(ten) as string | null)?.trim() || null
+    const chuHoThoRaw = fd.get('chuho')
+    const chuHoVaiTro: 0 | 1 | null = chuHoThoRaw === '0' ? 0 : chuHoThoRaw === '1' ? 1 : null
     return {
       tenGiaDinh: chuoi('tenGiaDinh'),
       giaoHoId,
+      chuHoVaiTro,
       dienThoai: chuoi('dienThoai'),
       diaChi: chuoi('diaChi'),
       soHoKhau: chuoi('soHoKhau'),
@@ -251,13 +259,19 @@ export function GiaDinhDetail({
             <input id="gdinh-ma" type="text" value={moi ? '(tự sinh khi lưu)' : String(f.maGiaDinhCu)} disabled style={{ maxWidth: 150 }} />
           </GxField>
           <GxField label="Người nam" id="gdinh-nguoinam"
-            extra={<label className="seg"><input type="radio" name="chuho" defaultChecked={chuHo?.phai === 'Nam'} />Chủ hộ</label>}>
+            extra={<label className="seg">
+              <input type="radio" name="chuho" value="0" disabled={!nguoiNam}
+                defaultChecked={!!nguoiNam && chuHo?.giaoDanId === nguoiNam.giaoDanId} />Chủ hộ
+            </label>}>
             <GxPicker id="gdinh-nguoinam" value={nguoiNam ? `${nguoiNam.tenThanh ?? ''} ${nguoiNam.hoTen}`.trim() : null}
               onChon={moi ? undefined : (gd) => onGanVoChong?.(0, gd)}
               onBoChon={moi || !nguoiNam ? undefined : () => onBoChonVoChong?.(0)} />
           </GxField>
           <GxField label="Người nữ" id="gdinh-nguoinu"
-            extra={<label className="seg"><input type="radio" name="chuho" defaultChecked={chuHo?.phai === 'Nữ'} />Chủ hộ</label>}>
+            extra={<label className="seg">
+              <input type="radio" name="chuho" value="1" disabled={!nguoiNu}
+                defaultChecked={!!nguoiNu && chuHo?.giaoDanId === nguoiNu.giaoDanId} />Chủ hộ
+            </label>}>
             <GxPicker id="gdinh-nguoinu" value={nguoiNu ? `${nguoiNu.tenThanh ?? ''} ${nguoiNu.hoTen}`.trim() : null}
               onChon={moi ? undefined : (gd) => onGanVoChong?.(1, gd)}
               onBoChon={moi || !nguoiNu ? undefined : () => onBoChonVoChong?.(1)} />

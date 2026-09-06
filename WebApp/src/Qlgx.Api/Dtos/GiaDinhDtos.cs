@@ -78,10 +78,22 @@ public record HonPhoiCuaGiaoDanDto(
     Guid? VoChongId, string? TenVoChong,
     uint RowVersion);
 
+/// <summary>
+/// <c>ChuHoVaiTro</c>: chủ hộ CHỈ có thể là Người nam (0/Chồng) hay Người nữ (1/Vợ) — đúng hai
+/// radio `rdChuHoNam`/`rdChuHoNu` của bản desktop (frmGiaDinh.cs:1731,1739 chỉ ghi `ChuHo` vào
+/// dòng Chồng/Vợ, không có UI đặt chủ hộ cho vai trò nào khác). <c>null</c> = không ai được
+/// đánh dấu chủ hộ (cả hai radio đều bỏ trống) — hợp lệ, khớp trạng thái ban đầu của một gia
+/// đình mới chưa từng lưu chủ hộ. Bản desktop còn có một loạt hộp thoại Yes/No/Cancel GỢI Ý tự
+/// đổi chủ hộ khi người đang được chọn đã "Qua đời" (dòng 1377-1433) — đây là tiện ích UX, KHÔNG
+/// phải ràng buộc cứng (người dùng luôn có thể chọn [No] để giữ nguyên), nên KHÔNG migrate ở
+/// Phase 1 (xem can-review-sau.md mục 19 phần chủ hộ) — máy chủ ghi đúng y những gì client gửi,
+/// không tự đoán/chặn gì thêm.
+/// </summary>
 public record CapNhatGiaDinhRequest(
     string? TenGiaDinh, Guid? GiaoHoId, string? DienThoai, string? DiaChi, string? SoHoKhau,
     string? DienGiaDinh, string? GhiChu, bool DaChuyenXu, DateOnly? NgayChuyen,
-    string? NoiChuyen, bool KhongThongKe, uint RowVersion, CapNhatHonPhoiRequest? HonPhoi);
+    string? NoiChuyen, bool KhongThongKe, uint RowVersion, CapNhatHonPhoiRequest? HonPhoi,
+    int? ChuHoVaiTro = null);
 
 // --- Ghi (tạo mới / xoá / thành viên / vợ-chồng) — xem GiaDinhService và can-review-sau.md
 // mục 2, 3, 4, 5 (quyết định chi phối: migrate y hệt bản desktop, kể cả chỗ sai). ------------

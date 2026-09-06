@@ -40,7 +40,35 @@ public record GiaoDanDetailDto(
     bool QuaDoi, DateOnly? NgayQuaDoi, string? NoiQuaDoi, string? SoAnTang, string? NoiAnTang,
     string? GhiChu,
     Guid? GiaDinhId, string? TenGiaDinh, int? VaiTro,
+    uint RowVersion,
+    /// <summary>Khối "Thông tin chuyển xứ" (uiGroupBox6, ẩn khi Ngoài xứ) — null khi giáo dân
+    /// chưa có bản ghi ChuyenXu nào (đúng "Ở tại xứ" mặc định, xem <see cref="ChuyenXuDto"/>).
+    /// </summary>
+    ChuyenXuDto? ChuyenXu = null);
+
+/// <summary>
+/// Bản ghi ChuyenXu hiện có của một giáo dân — bản desktop chỉ giữ NHIỀU NHẤT một dòng/giáo dân
+/// hiệu lực tại một thời điểm (GetChuyenXuInfo cập nhật tại chỗ thay vì luôn insert mới, xem
+/// frmGiaoDan.cs:892-945), nên bản web cũng chỉ đọc/ghi một dòng "hiện tại", không phải danh
+/// sách lịch sử đầy đủ (khác Hôn phối/Tận hiến, nơi desktop vốn đã hỗ trợ nhiều dòng).
+/// `LoaiChuyen`: 0 = Ở tại xứ (TaiXu, xem Qlgx.Domain.LoaiChuyenXu), 1 = Chuyển đến, 2 = Chuyển
+/// đi — CÙNG chỉ số dùng làm value của `<select>` phía web, không cần ánh xạ lại.
+/// </summary>
+public record ChuyenXuDto(
+    Guid Id, int LoaiChuyen, DateOnly? NgayChuyen, string? NoiChuyen, string? GhiChuChuyen,
     uint RowVersion);
+
+/// <summary>
+/// Các trường sửa được của khối "Thông tin chuyển xứ" — gửi `null` (không gửi trường `ChuyenXu`
+/// trong <see cref="CapNhatGiaoDanRequest"/>) nghĩa là "không đụng gì" (cùng quy ước với
+/// <see cref="CapNhatHonPhoiRequest"/> ở GiaDinhDtos.cs); một khi ĐÃ gửi khối này thì
+/// `LoaiChuyen=0` (Ở tại xứ) xoá hẳn bản ghi ChuyenXu hiện có — đúng hành vi
+/// `cbChuyenXu.SelectedValue==0` của desktop (frmGiaoDan.cs:719-727: xoá dòng ChuyenXu khi
+/// người dùng chọn lại "Ở tại xứ"). `RowVersion` chỉ có ý nghĩa khi ĐANG SỬA một bản ghi đã có
+/// (client đọc lại từ <see cref="ChuyenXuDto"/>); bỏ qua khi tạo mới.
+/// </summary>
+public record CapNhatChuyenXuRequest(
+    int LoaiChuyen, DateOnly? NgayChuyen, string? NoiChuyen, string? GhiChuChuyen, uint? RowVersion);
 
 /// <summary>
 /// Chỉ những trường màn hình chi tiết cho sửa. Các trường còn lại của thực thể không nhận
@@ -113,7 +141,19 @@ public record CapNhatGiaoDanRequest(
     bool QuaDoi, DateOnly? NgayQuaDoi, string? NoiQuaDoi, string? SoAnTang, string? NoiAnTang,
     string? GhiChu, uint RowVersion,
     /// <summary>Xem TaoGiaoDanRequest.BoQuaCanhBao — cùng ý nghĩa, áp cho PUT.</summary>
-    bool BoQuaCanhBao = false);
+    bool BoQuaCanhBao = false,
+    /// <summary>Tab "Giáo lý" (Bao đồng 1/2, Vào đời, Hôn nhân) — trước đây UI hoàn toàn tĩnh,
+    /// không có trong request nào nên gõ vào rồi mất (xem review-frontend, can-review-sau.md
+    /// mục 19). Các trường này đã có sẵn trên `GiaoDan` (đọc được từ Task trước, xem
+    /// <see cref="GiaoDanDetailDto"/>) — chỉ còn thiếu đường ghi.</summary>
+    DateOnly? NgayBD1 = null, string? NoiBD1 = null,
+    DateOnly? NgayBD2 = null, string? NoiBD2 = null,
+    DateOnly? NgayTHVaoDoi = null, string? NoiTHVaoDoi = null,
+    DateOnly? NgayGLHN1 = null, DateOnly? NgayGLHN2 = null,
+    string? NoiGLHN = null, string? NguoiChungNhanGLHN = null, string? XepLoaiGLHN = null,
+    /// <summary>Khối "Thông tin chuyển xứ" — xem <see cref="CapNhatChuyenXuRequest"/>. Trước
+    /// đây UI hoàn toàn tĩnh (review-frontend), nay nối vào request.</summary>
+    CapNhatChuyenXuRequest? ChuyenXu = null);
 
 /// <summary>Tạo mới một giáo dân qua web (Task "ghi cho giáo dân"). Không có RowVersion (bản
 /// ghi chưa tồn tại) và không có MaGiaoDan (sinh tự động bằng SinhMaService, xem

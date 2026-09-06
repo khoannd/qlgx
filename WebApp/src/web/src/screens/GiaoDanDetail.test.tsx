@@ -299,6 +299,89 @@ describe('GiaoDanDetail', () => {
     }))
   })
 
+  // --- Tab Giao ly (review-frontend "chan cung #4"): truoc day cac o nay hoan toan tinh,
+  // khong name/khong defaultValue nen go vao roi mat. -------------------------------------
+
+  it('tab Giao ly hien dung du lieu da luu (khong con tinh)', async () => {
+    render(<GiaoDanDetail duLieu={chiTiet({
+      ngayBD1: '2010-06-01', noiBD1: 'GX Vo Nhiem',
+      ngayBD2: '2011-06-01', noiBD2: 'GX Vo Nhiem 2',
+      ngayTHVaoDoi: '2012-06-01', noiTHVaoDoi: 'GX Vo Nhiem 3',
+      ngayGLHN1: '2020-01-10', ngayGLHN2: '2020-02-10',
+      noiGLHN: 'GX Vo Nhiem 4', nguoiChungNhanGLHN: 'Cha Giuse', xepLoaiGLHN: 'Khá',
+    })} />)
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Giáo lý' }))
+
+    expect(screen.getByDisplayValue('GX Vo Nhiem')).toBeDefined()
+    expect(screen.getByDisplayValue('GX Vo Nhiem 2')).toBeDefined()
+    expect(screen.getByDisplayValue('GX Vo Nhiem 3')).toBeDefined()
+    expect(screen.getByDisplayValue('GX Vo Nhiem 4')).toBeDefined()
+    expect(screen.getByDisplayValue('Cha Giuse')).toBeDefined()
+    expect((screen.getByLabelText('Xếp loại') as HTMLSelectElement).value).toBe('Khá')
+  })
+
+  it('nhap tab Giao ly roi bam Cap nhat thi onLuu nhan dung cac truong da go', async () => {
+    const onLuu = vi.fn()
+    const nguoiDung = userEvent.setup()
+    const { container } = render(<GiaoDanDetail duLieu={chiTiet()} onLuu={onLuu} />)
+
+    await nguoiDung.click(screen.getByRole('tab', { name: 'Giáo lý' }))
+    await nguoiDung.type(container.querySelector('#gd-gl-bd1-gx')!, 'GX Thanh Tam')
+    await nguoiDung.type(screen.getByLabelText('Người cấp chứng nhận'), 'Cha Phêrô')
+    await nguoiDung.selectOptions(screen.getByLabelText('Xếp loại'), 'Giỏi')
+    await nguoiDung.click(screen.getByRole('button', { name: 'Cập nhật' }))
+
+    expect(onLuu).toHaveBeenCalledWith(expect.objectContaining({
+      noiBD1: 'GX Thanh Tam', nguoiChungNhanGLHN: 'Cha Phêrô', xepLoaiGLHN: 'Giỏi',
+    }))
+  })
+
+  // --- Thong tin chuyen xu (review-frontend "chan cung #4" phan con lai): truoc day chi co
+  // mot select khong ten, khong luu duoc gi. -----------------------------------------------
+
+  it('chua co ban ghi ChuyenXu thi mac dinh Cho tai xu, an cac o Ngay/Noi/Ghi chu', () => {
+    render(<GiaoDanDetail duLieu={chiTiet({ giaoHoId: 'gh1' })} />)
+
+    expect(screen.queryByLabelText('Ngày chuyển')).toBeNull()
+    expect(screen.queryByLabelText('Nơi chuyển')).toBeNull()
+  })
+
+  it('da co ban ghi Chuyen den thi hien dung du lieu o ba o con lai', () => {
+    render(<GiaoDanDetail duLieu={chiTiet({
+      giaoHoId: 'gh1',
+      chuyenXu: { id: 'cx1', loaiChuyen: 1, ngayChuyen: '2021-03-01', noiChuyen: 'GX Thanh Tam', ghiChuChuyen: 'Ghi chu X', rowVersion: 3 },
+    })} />)
+
+    expect(screen.getByLabelText('Nơi chuyển')).toHaveProperty('value', 'GX Thanh Tam')
+    expect(screen.getByLabelText('Ghi chú', { selector: '#gd-ghichuchuyenxu' })).toHaveProperty('value', 'Ghi chu X')
+  })
+
+  it('doi Thong tin hien tai sang Chuyen den thi hien them 3 o, bam Cap nhat gui dung chuyenXu', async () => {
+    const onLuu = vi.fn()
+    const nguoiDung = userEvent.setup()
+    render(<GiaoDanDetail duLieu={chiTiet({ giaoHoId: 'gh1' })} onLuu={onLuu} />)
+
+    await nguoiDung.selectOptions(screen.getByLabelText('Thông tin hiện tại'), '1')
+    await nguoiDung.type(screen.getByLabelText('Nơi chuyển'), 'GX Vo Nhiem')
+    await nguoiDung.click(screen.getByRole('button', { name: 'Cập nhật' }))
+
+    expect(onLuu).toHaveBeenCalledWith(expect.objectContaining({
+      chuyenXu: expect.objectContaining({ loaiChuyen: 1, noiChuyen: 'GX Vo Nhiem' }),
+    }))
+  })
+
+  it('Ngoai xu thi khong hien khoi Thong tin chuyen xu, onLuu nhan chuyenXu:null (khong dong toi)', async () => {
+    const onLuu = vi.fn()
+    render(<GiaoDanDetail duLieu={chiTiet({ giaoHoId: null })} onLuu={onLuu} />)
+
+    expect(screen.queryByText('Thông tin chuyển xứ')).toBeNull()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cập nhật' }))
+
+    expect(onLuu).toHaveBeenCalledWith(expect.objectContaining({ chuyenXu: null }))
+  })
+
   // --- Task "ghi giao dan": tao moi ------------------------------------------------------
 
   it('ban ghi moi (khong co duLieu) van cho phep bam nut Them giao dan khi co onLuu', () => {

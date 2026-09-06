@@ -114,6 +114,117 @@ describe('chayCayQuyetDinhNguoiCu', () => {
     expect(kq).toEqual({ nguoiCu: { xoa: false, vaiTroMoi: 100 } })
     expect(hoi).toHaveBeenCalledTimes(1)
   })
+
+  // --- Bổ sung: các đường trả lời "No" ở câu hỏi phụ (dòng 92/99/121) và nhánh dữ liệu bất
+  // thường (dòng 103-112 — người kia KHÔNG đúng vai trò mong đợi), review-frontend mục "Cao #2"
+  // chỉ ra 0% coverage. Xem báo cáo mutation-test: đảo `if(yes)` thành `if(!yes)` ở các dòng này
+  // (hoặc bỏ qua nhánh 103-112) từng khiến cả 183 test cũ vẫn xanh.
+
+  it('No o buoc 2 (con vo dung vai tro, nguoi moi tung la Con) -> Chua ro, KHONG doi hang loat', async () => {
+    const thanhVien: ThanhVienNhe[] = [
+      { giaoDanId: 'vo1', vaiTro: 1 },
+      { giaoDanId: 'moi1', vaiTro: 2 },
+    ]
+    const hoi = hoiTheoDay(false, false)
+    const kq = await chayCayQuyetDinhNguoiCu(
+      { vaiTroDangDoi: 0, tenNguoiCu: 'Ông A', idNguoiConLai: 'vo1', idNguoiMoi: 'moi1', thanhVien },
+      hoi,
+    )
+    expect(kq).toEqual({ nguoiCu: { xoa: false, vaiTroMoi: 100 } })
+    expect(kq.doiHangLoat).toBeUndefined()
+    expect(hoi).toHaveBeenCalledTimes(2)
+  })
+
+  it('No o buoc 2 (con vo dung vai tro, nguoi moi CHUA tung la Con) -> Chua ro, KHONG doi hang loat', async () => {
+    const thanhVien: ThanhVienNhe[] = [{ giaoDanId: 'vo1', vaiTro: 1 }]
+    const hoi = hoiTheoDay(false, false)
+    const kq = await chayCayQuyetDinhNguoiCu(
+      { vaiTroDangDoi: 0, tenNguoiCu: 'Ông A', idNguoiConLai: 'vo1', idNguoiMoi: 'moi1', thanhVien },
+      hoi,
+    )
+    expect(kq).toEqual({ nguoiCu: { xoa: false, vaiTroMoi: 100 } })
+    expect(kq.doiHangLoat).toBeUndefined()
+  })
+
+  it('No o buoc 2 (khong ai vai tro doi dien, nguoi moi tung la Con) -> Chua ro, KHONG thanh Cha, KHONG doi hang loat', async () => {
+    const hoi = hoiTheoDay(false, false)
+    const kq = await chayCayQuyetDinhNguoiCu(
+      { vaiTroDangDoi: 0, tenNguoiCu: 'Ông A', idNguoiConLai: null, idNguoiMoi: 'moi1', thanhVien: [{ giaoDanId: 'moi1', vaiTro: 2 }] },
+      hoi,
+    )
+    expect(kq).toEqual({ nguoiCu: { xoa: false, vaiTroMoi: 100 } })
+    expect(kq.doiHangLoat).toBeUndefined()
+  })
+
+  it('doi Nguoi nu (Vo), No o buoc 2 -> Chua ro, KHONG thanh Me', async () => {
+    const hoi = hoiTheoDay(false, false)
+    const kq = await chayCayQuyetDinhNguoiCu(
+      {
+        vaiTroDangDoi: 1, tenNguoiCu: 'Bà B', idNguoiConLai: 'chong1', idNguoiMoi: null,
+        thanhVien: [{ giaoDanId: 'chong1', vaiTro: 0 }, { giaoDanId: 'chong1', vaiTro: 2 }],
+      },
+      hoi,
+    )
+    expect(kq).toEqual({ nguoiCu: { xoa: false, vaiTroMoi: 100 } })
+  })
+
+  // --- Nhánh dữ liệu bất thường (dòng 103-112): còn người kia ở vai trò đối diện NHƯNG người
+  // đó KHÔNG đúng vai trò mong đợi (vd đang đổi Chồng mà "người còn lại" không có vai trò Vợ
+  // trong lưới — dữ liệu di trú từ Access cũ không sạch).
+
+  it('du lieu bat thuong: con nguoi kia nhung KHONG dung vai tro doi dien, khong ai tung la Con -> Chua ro thang, khong hoi', async () => {
+    const thanhVien: ThanhVienNhe[] = [{ giaoDanId: 'khac1', vaiTro: 8 }]
+    const hoi = hoiTheoDay(false)
+    const kq = await chayCayQuyetDinhNguoiCu(
+      { vaiTroDangDoi: 0, tenNguoiCu: 'Ông A', idNguoiConLai: 'khac1', idNguoiMoi: 'moi1', thanhVien },
+      hoi,
+    )
+    expect(kq).toEqual({ nguoiCu: { xoa: false, vaiTroMoi: 100 } })
+    expect(hoi).toHaveBeenCalledTimes(1) // chỉ câu hỏi đầu tiên — không rơi vào câu hỏi phụ
+  })
+
+  it('du lieu bat thuong: nguoi CON LAI tung la Con -> hoi rieng, Yes -> thanh Cha', async () => {
+    const thanhVien: ThanhVienNhe[] = [{ giaoDanId: 'khac1', vaiTro: 2 }]
+    const hoi = hoiTheoDay(false, true)
+    const kq = await chayCayQuyetDinhNguoiCu(
+      { vaiTroDangDoi: 0, tenNguoiCu: 'Ông A', idNguoiConLai: 'khac1', idNguoiMoi: 'moi1', thanhVien },
+      hoi,
+    )
+    expect(kq).toEqual({ nguoiCu: { xoa: false, vaiTroMoi: 4 } })
+    expect(kq.doiHangLoat).toBeUndefined()
+    expect(hoi.mock.calls[1][0]).toContain('thành cha trong gia đình không?')
+  })
+
+  it('du lieu bat thuong: nguoi MOI tung la Con -> hoi rieng, Yes -> thanh Cha', async () => {
+    const thanhVien: ThanhVienNhe[] = [{ giaoDanId: 'khac1', vaiTro: 8 }, { giaoDanId: 'moi1', vaiTro: 2 }]
+    const hoi = hoiTheoDay(false, true)
+    const kq = await chayCayQuyetDinhNguoiCu(
+      { vaiTroDangDoi: 0, tenNguoiCu: 'Ông A', idNguoiConLai: 'khac1', idNguoiMoi: 'moi1', thanhVien },
+      hoi,
+    )
+    expect(kq).toEqual({ nguoiCu: { xoa: false, vaiTroMoi: 4 } })
+  })
+
+  it('du lieu bat thuong: nguoi CON LAI tung la Con, tra loi No -> Chua ro (khong thanh Cha)', async () => {
+    const thanhVien: ThanhVienNhe[] = [{ giaoDanId: 'khac1', vaiTro: 2 }]
+    const hoi = hoiTheoDay(false, false)
+    const kq = await chayCayQuyetDinhNguoiCu(
+      { vaiTroDangDoi: 0, tenNguoiCu: 'Ông A', idNguoiConLai: 'khac1', idNguoiMoi: 'moi1', thanhVien },
+      hoi,
+    )
+    expect(kq).toEqual({ nguoiCu: { xoa: false, vaiTroMoi: 100 } })
+  })
+
+  it('du lieu bat thuong: doi Nguoi nu (Vo), nguoi con lai khong dung vai tro Chong, tung la Con -> thanh Me', async () => {
+    const thanhVien: ThanhVienNhe[] = [{ giaoDanId: 'khac1', vaiTro: 2 }]
+    const hoi = hoiTheoDay(false, true)
+    const kq = await chayCayQuyetDinhNguoiCu(
+      { vaiTroDangDoi: 1, tenNguoiCu: 'Bà B', idNguoiConLai: 'khac1', idNguoiMoi: 'moi1', thanhVien },
+      hoi,
+    )
+    expect(kq).toEqual({ nguoiCu: { xoa: false, vaiTroMoi: 5 } })
+    expect(hoi.mock.calls[1][0]).toContain('thành mẹ trong gia đình không?')
+  })
 })
 
 describe('apDungDoiHangLoat', () => {

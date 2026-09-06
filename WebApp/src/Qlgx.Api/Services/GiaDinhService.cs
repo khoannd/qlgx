@@ -173,6 +173,15 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         if (yeuCau.HonPhoi is { } honPhoiYeuCau)
             await GhiHonPhoi(g.GiaoXuId, chongId, voId, honPhoiYeuCau, ct);
 
+        // Chủ hộ — xem ghi chú ChuHoVaiTro ở CapNhatGiaDinhRequest: chỉ Chồng/Vợ mới có thể là
+        // chủ hộ, và giá trị gửi lên PHẢN ÁNH ĐÚNG trạng thái hai radio hiện tại của form (client
+        // luôn gửi FormData của radio dù người dùng có bấm hay không) — ghi lại y hệt, kể cả khi
+        // đó là "gỡ chủ hộ" (ChuHoVaiTro null trong khi trước đó có người là chủ hộ).
+        var rowChong = g.ThanhVien.FirstOrDefault(tv => tv.VaiTro == VaiTroGiaDinh.Chong);
+        var rowVo = g.ThanhVien.FirstOrDefault(tv => tv.VaiTro == VaiTroGiaDinh.Vo);
+        if (rowChong is not null) rowChong.ChuHo = yeuCau.ChuHoVaiTro == 0;
+        if (rowVo is not null) rowVo.ChuHo = yeuCau.ChuHoVaiTro == 1;
+
         try
         {
             await db.SaveChangesAsync(ct);

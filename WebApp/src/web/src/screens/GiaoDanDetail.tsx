@@ -509,6 +509,29 @@ export type YeuCauCapNhatGiaoDan = {
   soAnTang: string | null
   noiAnTang: string | null
   ghiChu: string | null
+  // --- Tab "Giáo lý" — trước đây UI hoàn toàn tĩnh (xem review-frontend, can-review-sau.md
+  // mục 19), nay nối vào payload lưu.
+  ngayBD1: string | null
+  noiBD1: string | null
+  ngayBD2: string | null
+  noiBD2: string | null
+  ngayTHVaoDoi: string | null
+  noiTHVaoDoi: string | null
+  ngayGLHN1: string | null
+  ngayGLHN2: string | null
+  noiGLHN: string | null
+  nguoiChungNhanGLHN: string | null
+  xepLoaiGLHN: string | null
+  // --- Thông tin chuyển xứ — `null` = "không đụng gì" (đúng khi Ngoài xứ, khối bị ẩn khỏi
+  // DOM); một khi ĐÃ gửi thì `loaiChuyen=0` xoá hẳn bản ghi hiện có (xem CapNhatChuyenXuRequest
+  // phía backend).
+  chuyenXu: {
+    loaiChuyen: number
+    ngayChuyen: string | null
+    noiChuyen: string | null
+    ghiChuChuyen: string | null
+    rowVersion?: number
+  } | null
   rowVersion: number
   /** Máy chủ kiểm tra nghiệp vụ (checkInput() của frmGiaoDan.cs) trước khi lưu: một số quy
    * tắc chặn cứng (400, không lưu gì); một số khác chỉ CẢNH BÁO kiểu Yes/No của desktop — nếu
@@ -583,11 +606,19 @@ const rong = (): GiaoDanDetailDuLieu => ({
   tinhTrangXucDau: null, ghiChuXucDau: null, trinhDoVanHoa: null, trinhDoChuyenMon: null,
   bietNgoaiNgu: null, ngheNghiep: null, conHoc: false, daCoGiaDinh: false, tanTong: false,
   khongThongKe: false, quaDoi: false, ngayQuaDoi: null, noiQuaDoi: null, soAnTang: null,
-  noiAnTang: null, ghiChu: null, giaDinhId: null, tenGiaDinh: null, vaiTro: null, rowVersion: 0,
+  noiAnTang: null, ghiChu: null,
+  ngayBD1: null, noiBD1: null, ngayBD2: null, noiBD2: null,
+  ngayTHVaoDoi: null, noiTHVaoDoi: null,
+  ngayGLHN1: null, ngayGLHN2: null, noiGLHN: null, nguoiChungNhanGLHN: null, xepLoaiGLHN: null,
+  chuyenXu: null,
+  giaDinhId: null, tenGiaDinh: null, vaiTro: null, rowVersion: 0,
 })
 
 const TINH_TRANG_XUC_DAU = ['', 'Nguy tử', 'Thông thường']
 const CHUYEN_XU = ['Ở tại xứ', 'Chuyển từ xứ khác đến', 'Đã chuyển đi xứ khác']
+/** Đúng 3 giá trị của `cbGLHNXepLoai` (frmGiaoDan.cs:108-111) — chuỗi hiển thị CHÍNH LÀ giá trị
+ * lưu (`cbGLHNXepLoai.Text`), không có mã số riêng. */
+const XEP_LOAI_GLHN = ['', 'Trung Bình', 'Khá', 'Giỏi']
 
 /**
  * Chi tiết giáo dân — dựng theo đúng 5 tab của `frmGiaoDan` bản desktop. Ba liên động bắt
@@ -623,6 +654,9 @@ export function GiaoDanDetail({
   const [chaId, setChaId] = useState(p.chaId)
   const [tenMe, setTenMe] = useState(p.hoTenMe)
   const [meId, setMeId] = useState(p.meId)
+  // Thông tin chuyển xứ (uiGroupBox6) — 0 = Ở tại xứ (xem CHUYEN_XU); điều khiển việc hiện/ẩn
+  // ba ô Ngày/Nơi/Ghi chú bên dưới, đúng `cbChuyenXu_SelectedIndexChanged`.
+  const [loaiChuyenXu, setLoaiChuyenXu] = useState(p.chuyenXu?.loaiChuyen ?? 0)
 
   const doiQuaDoi = (v: boolean) => { setQuaDoi(v); if (v) setConHoc(false) }
   const doiConHoc = (v: boolean) => { setConHoc(v); if (v) setQuaDoi(false) }
@@ -775,18 +809,37 @@ export function GiaoDanDetail({
         </div>
       </div>
 
-      {/* Đúng khối `uiGroupBox6` — chiếm trọn chiều ngang, ẩn khi Ngoài xứ (cbGiaoHo_SelectedIndexChanged).
-          Chỉ ô "Thông tin hiện tại": "Giáo xứ chuyển đi/đến" ở bản trước chưa có `name`, chưa
-          thật sự lưu được gì — bỏ khỏi bố cục theo đúng yêu cầu đối chiếu desktop, không phải
-          xoá dữ liệu (trường ChuyenXu.NoiChuyen chưa có trong request Phase 1). */}
+      {/* Đúng khối `uiGroupBox6` — chiếm trọn chiều ngang, ẩn khi Ngoài xứ
+          (cbGiaoHo_SelectedIndexChanged). Trước đây chỉ có ô "Thông tin hiện tại" mà không có
+          `name`, không lưu được gì (xem review-frontend, can-review-sau.md mục 19) — nay nối cả
+          ba ô còn lại (Ngày chuyển/Nơi chuyển/Ghi chú), hiện khi khác "Ở tại xứ" — đúng
+          `txtGiaoXuChuyen.Visible` của `cbChuyenXu_SelectedIndexChanged` (frmGiaoDan.cs:1248-
+          1260). Bản desktop có thêm hộp thoại Yes/No cảnh báo khi đổi TỪ một loại chuyển xứ đã
+          lưu VỀ "Ở tại xứ" — tiện ích UX, không phải ràng buộc cứng (chọn No chỉ phục hồi lựa
+          chọn cũ), cố ý CHƯA migrate ở lượt này, xem can-review-sau.md mục 19. */}
       {!ngoaiXu && (
         <div className="card glass">
           <div className="card-head"><h2>Thông tin chuyển xứ</h2></div>
           <GxField label="Thông tin hiện tại" id="gd-chuyenxu">
-            <select id="gd-chuyenxu" defaultValue={CHUYEN_XU[0]} style={{ maxWidth: 320 }}>
-              {CHUYEN_XU.map((c) => <option key={c} value={c}>{c}</option>)}
+            <select id="gd-chuyenxu" name="loaiChuyenXu" value={loaiChuyenXu}
+              onChange={(e) => setLoaiChuyenXu(Number(e.target.value))} style={{ maxWidth: 320 }}>
+              {CHUYEN_XU.map((c, i) => <option key={c} value={i}>{c}</option>)}
             </select>
           </GxField>
+          {loaiChuyenXu !== 0 && (
+            <>
+              <GxField label="Ngày chuyển" id="gd-ngaychuyenxu">
+                <GxDate id="gd-ngaychuyenxu" name="ngayChuyenXu" defaultValue={p.chuyenXu?.ngayChuyen ?? null} style={{ maxWidth: 180 }} />
+              </GxField>
+              <GxField label="Nơi chuyển" id="gd-noichuyenxu">
+                <input id="gd-noichuyenxu" name="noiChuyenXu" type="text" defaultValue={p.chuyenXu?.noiChuyen ?? ''}
+                  placeholder="Giáo xứ chuyển đi/đến…" />
+              </GxField>
+              <GxField label="Ghi chú" id="gd-ghichuchuyenxu">
+                <input id="gd-ghichuchuyenxu" name="ghiChuChuyenXu" type="text" defaultValue={p.chuyenXu?.ghiChuChuyen ?? ''} />
+              </GxField>
+            </>
+          )}
         </div>
       )}
 
@@ -858,29 +911,54 @@ export function GiaoDanDetail({
       <div className="card-row">
         <div className="card glass">
           <div className="card-head"><h2>Bao đồng 1</h2></div>
-          <GxField label="Ngày kết thúc khóa học" id="gd-gl-bd1"><GxDate id="gd-gl-bd1" style={{ maxWidth: 190 }} /></GxField>
-          <GxField label="Tại giáo xứ" id="gd-gl-bd1-gx"><input id="gd-gl-bd1-gx" type="text" /></GxField>
+          <GxField label="Ngày kết thúc khóa học" id="gd-gl-bd1">
+            <GxDate id="gd-gl-bd1" name="ngayBD1" defaultValue={p.ngayBD1} style={{ maxWidth: 190 }} />
+          </GxField>
+          <GxField label="Tại giáo xứ" id="gd-gl-bd1-gx">
+            <input id="gd-gl-bd1-gx" name="noiBD1" type="text" defaultValue={p.noiBD1 ?? ''} />
+          </GxField>
         </div>
         <div className="card glass">
           <div className="card-head"><h2>Bao đồng 2</h2></div>
-          <GxField label="Ngày rước lễ trọng thể" id="gd-gl-bd2"><GxDate id="gd-gl-bd2" style={{ maxWidth: 190 }} /></GxField>
-          <GxField label="Tại giáo xứ" id="gd-gl-bd2-gx"><input id="gd-gl-bd2-gx" type="text" /></GxField>
+          <GxField label="Ngày rước lễ trọng thể" id="gd-gl-bd2">
+            <GxDate id="gd-gl-bd2" name="ngayBD2" defaultValue={p.ngayBD2} style={{ maxWidth: 190 }} />
+          </GxField>
+          <GxField label="Tại giáo xứ" id="gd-gl-bd2-gx">
+            <input id="gd-gl-bd2-gx" name="noiBD2" type="text" defaultValue={p.noiBD2 ?? ''} />
+          </GxField>
         </div>
       </div>
       <div className="card glass">
         <div className="card-head"><h2>Vào đời</h2></div>
-        <GxField label="Ngày tuyên hứa" id="gd-gl-vd"><GxDate id="gd-gl-vd" style={{ maxWidth: 190 }} /></GxField>
-        <GxField label="Tại giáo xứ" id="gd-gl-vd-gx"><input id="gd-gl-vd-gx" type="text" /></GxField>
+        <GxField label="Ngày tuyên hứa" id="gd-gl-vd">
+          <GxDate id="gd-gl-vd" name="ngayTHVaoDoi" defaultValue={p.ngayTHVaoDoi} style={{ maxWidth: 190 }} />
+        </GxField>
+        <GxField label="Tại giáo xứ" id="gd-gl-vd-gx">
+          <input id="gd-gl-vd-gx" name="noiTHVaoDoi" type="text" defaultValue={p.noiTHVaoDoi ?? ''} />
+        </GxField>
       </div>
       <div className="card glass">
         <div className="card-head"><h2>Hôn nhân</h2></div>
         <GxField label="Khóa học từ ngày" id="gd-gl-hn-tu">
-          <GxDate id="gd-gl-hn-tu" style={{ maxWidth: 180 }} />
+          <GxDate id="gd-gl-hn-tu" name="ngayGLHN1" defaultValue={p.ngayGLHN1} style={{ maxWidth: 180 }} />
           <GxInline>đến ngày</GxInline>
-          <GxDate ariaLabel="Khóa học đến ngày" style={{ maxWidth: 180 }} />
+          <GxDate name="ngayGLHN2" ariaLabel="Khóa học đến ngày" defaultValue={p.ngayGLHN2} style={{ maxWidth: 180 }} />
         </GxField>
-        <GxField label="Tại giáo xứ" id="gd-gl-hn-gx"><input id="gd-gl-hn-gx" type="text" /></GxField>
-        <GxField label="Người cấp chứng nhận" id="gd-gl-hn-nguoicap"><GxPicker id="gd-gl-hn-nguoicap" /></GxField>
+        <GxField label="Tại giáo xứ" id="gd-gl-hn-gx">
+          <input id="gd-gl-hn-gx" name="noiGLHN" type="text" defaultValue={p.noiGLHN ?? ''} />
+        </GxField>
+        {/* Bản desktop dùng ô văn bản tự do (txtGLHNNguoiCap), KHÔNG phải liên kết tới một
+            giáo dân khác — GxPicker trước đây dựng ở đây không khớp kiểu dữ liệu thật
+            (string, không phải khoá ngoại) nên không thể có onChon hợp lệ; đổi thành input
+            văn bản thường để nối được vào payload. */}
+        <GxField label="Người cấp chứng nhận" id="gd-gl-hn-nguoicap">
+          <input id="gd-gl-hn-nguoicap" name="nguoiChungNhanGLHN" type="text" defaultValue={p.nguoiChungNhanGLHN ?? ''} />
+        </GxField>
+        <GxField label="Xếp loại" id="gd-gl-hn-xeploai">
+          <select id="gd-gl-hn-xeploai" name="xepLoaiGLHN" defaultValue={p.xepLoaiGLHN ?? ''} style={{ maxWidth: 180 }}>
+            {XEP_LOAI_GLHN.map((x) => <option key={x} value={x}>{x || 'Chưa xếp loại'}</option>)}
+          </select>
+        </GxField>
       </div>
     </>
   )
@@ -983,6 +1061,24 @@ export function GiaoDanDetail({
       soAnTang: quaDoi ? chuoi('soAnTang') : null,
       noiAnTang: quaDoi ? chuoi('noiAnTang') : null,
       ghiChu: chuoi('ghiChu'),
+      ngayBD1: chuoi('ngayBD1'),
+      noiBD1: chuoi('noiBD1'),
+      ngayBD2: chuoi('ngayBD2'),
+      noiBD2: chuoi('noiBD2'),
+      ngayTHVaoDoi: chuoi('ngayTHVaoDoi'),
+      noiTHVaoDoi: chuoi('noiTHVaoDoi'),
+      ngayGLHN1: chuoi('ngayGLHN1'),
+      ngayGLHN2: chuoi('ngayGLHN2'),
+      noiGLHN: chuoi('noiGLHN'),
+      nguoiChungNhanGLHN: chuoi('nguoiChungNhanGLHN'),
+      xepLoaiGLHN: chuoi('xepLoaiGLHN'),
+      chuyenXu: ngoaiXu ? null : {
+        loaiChuyen: loaiChuyenXu,
+        ngayChuyen: loaiChuyenXu !== 0 ? chuoi('ngayChuyenXu') : null,
+        noiChuyen: loaiChuyenXu !== 0 ? chuoi('noiChuyenXu') : null,
+        ghiChuChuyen: loaiChuyenXu !== 0 ? chuoi('ghiChuChuyenXu') : null,
+        rowVersion: p.chuyenXu?.rowVersion,
+      },
       rowVersion: p.rowVersion,
       boQuaCanhBao: false,
     }

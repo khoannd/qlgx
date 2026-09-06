@@ -58,4 +58,48 @@ describe('GxPicker', () => {
     rerender(<GxPicker value="Giuse Nguyễn Văn A" />)
     expect(screen.getByText('Giuse Nguyễn Văn A')).toBeDefined()
   })
+
+  // Review-frontend mục "Cao #1": lỗi mạng KHÔNG được hiện y hệt "không tìm thấy" — nếu không
+  // phân biệt, nhân viên tưởng người đó chưa có trong hệ thống rồi tạo bản ghi trùng.
+  it('loi mang khi tim PHAI hien thong bao loi ro rang, KHONG duoc hien "khong tim thay"', async () => {
+    vi.mocked(api.timKiem.giaoDan).mockRejectedValue(
+      new Error('Mất kết nối mạng. Dữ liệu bạn đã nhập vẫn được giữ nguyên trên máy — hãy thử lại khi có mạng.'),
+    )
+    const nguoiDung = userEvent.setup()
+
+    render(<GxPicker value={null} />)
+    await nguoiDung.click(screen.getByTitle('Chọn từ danh sách giáo dân'))
+    await nguoiDung.type(screen.getByPlaceholderText('Gõ tên hoặc mã cũ để tìm…'), 'Van A')
+
+    expect((await screen.findByRole('alert')).textContent).toContain('Mất kết nối mạng')
+    expect(screen.queryByText('Không tìm thấy giáo dân nào')).toBeNull()
+  })
+
+  it('tim that su khong ra ket qua (0 phan tu, khong loi) thi hien dung "khong tim thay"', async () => {
+    vi.mocked(api.timKiem.giaoDan).mockResolvedValue([])
+    const nguoiDung = userEvent.setup()
+
+    render(<GxPicker value={null} />)
+    await nguoiDung.click(screen.getByTitle('Chọn từ danh sách giáo dân'))
+    await nguoiDung.type(screen.getByPlaceholderText('Gõ tên hoặc mã cũ để tìm…'), 'Khong ai ten nay')
+
+    expect(await screen.findByText('Không tìm thấy giáo dân nào')).toBeDefined()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('bam Thu lai sau loi mang thi goi lai API tim kiem', async () => {
+    vi.mocked(api.timKiem.giaoDan).mockRejectedValueOnce(new Error('Không kết nối được máy chủ'))
+    const nguoiDung = userEvent.setup()
+
+    render(<GxPicker value={null} />)
+    await nguoiDung.click(screen.getByTitle('Chọn từ danh sách giáo dân'))
+    await nguoiDung.type(screen.getByPlaceholderText('Gõ tên hoặc mã cũ để tìm…'), 'Van A')
+    await screen.findByRole('alert')
+
+    vi.mocked(api.timKiem.giaoDan).mockResolvedValueOnce([ung()])
+    await nguoiDung.click(screen.getByText('Thử lại'))
+
+    expect(await screen.findByText(/Nguyễn Văn A/)).toBeDefined()
+    expect(api.timKiem.giaoDan).toHaveBeenCalledTimes(2)
+  })
 })

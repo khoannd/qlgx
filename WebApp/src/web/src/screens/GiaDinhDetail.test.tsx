@@ -155,6 +155,63 @@ describe('GiaDinhDetail', () => {
     expect(onXoaThanhVien).toHaveBeenCalledWith('p3', 4)
   })
 
+  // --- Chu ho (review-frontend "chan cung #1"): dungPayloadTuForm truoc day KHONG doc radio
+  // "chuho" — nguoi dung tuong da dat chu ho nhung bam Cap nhat thi khong luu gi ca. ------------
+
+  it('dang co Nguoi nam la chu ho thi radio Chu ho canh Nguoi nam duoc check san', () => {
+    render(<GiaDinhDetail duLieu={chiTiet({
+      thanhVien: [
+        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p2', vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
+      ],
+    })} />)
+
+    const radios = screen.getAllByRole('radio', { name: 'Chủ hộ' }) as HTMLInputElement[]
+    expect(radios[0].checked).toBe(true)
+    expect(radios[1].checked).toBe(false)
+  })
+
+  it('chua co Nguoi nam/nu thi radio Chu ho bi vo hieu hoa (khong ai de lam chu ho)', () => {
+    render(<GiaDinhDetail duLieu={chiTiet()} />)
+
+    const radios = screen.getAllByRole('radio', { name: 'Chủ hộ' }) as HTMLInputElement[]
+    expect(radios[0].disabled).toBe(true)
+    expect(radios[1].disabled).toBe(true)
+  })
+
+  it('bam Cap nhat sau khi chon radio Chu ho o Nguoi nu thi onLuu nhan dung chuHoVaiTro:1', async () => {
+    const onLuu = vi.fn()
+    const nguoiDung = userEvent.setup()
+    render(<GiaDinhDetail duLieu={chiTiet({
+      thanhVien: [
+        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p2', vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
+      ],
+    })} onLuu={onLuu} />)
+
+    const radios = screen.getAllByRole('radio', { name: 'Chủ hộ' })
+    await nguoiDung.click(radios[1])
+    await nguoiDung.click(screen.getByRole('button', { name: 'Cập nhật' }))
+
+    expect(onLuu).toHaveBeenCalledTimes(1)
+    expect(onLuu.mock.calls[0][0]).toMatchObject({ chuHoVaiTro: 1 })
+  })
+
+  it('khong dong nao duoc check thi onLuu nhan chuHoVaiTro:null', async () => {
+    const onLuu = vi.fn()
+    const nguoiDung = userEvent.setup()
+    render(<GiaDinhDetail duLieu={chiTiet({
+      thanhVien: [
+        { giaoDanId: 'p1', vaiTro: 0, chuHo: false, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p2', vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
+      ],
+    })} onLuu={onLuu} />)
+
+    await nguoiDung.click(screen.getByRole('button', { name: 'Cập nhật' }))
+
+    expect(onLuu.mock.calls[0][0]).toMatchObject({ chuHoVaiTro: null })
+  })
+
   it('gia dinh moi: bam Tao gia dinh khi chua nhap ten thi bao loi, khong goi onTaoMoi', async () => {
     const onTaoMoi = vi.fn()
     const baoLoi = vi.spyOn(window, 'alert').mockImplementation(() => {})

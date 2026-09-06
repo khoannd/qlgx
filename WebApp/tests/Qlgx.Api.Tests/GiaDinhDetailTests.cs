@@ -28,7 +28,7 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
     private sealed record CapNhat(string? TenGiaDinh, Guid? GiaoHoId, string? DienThoai,
         string? DiaChi, string? SoHoKhau, string? DienGiaDinh, string? GhiChu, bool DaChuyenXu,
         DateOnly? NgayChuyen, string? NoiChuyen, bool KhongThongKe, uint RowVersion,
-        CapNhatHonPhoi? HonPhoi = null);
+        CapNhatHonPhoi? HonPhoi = null, int? ChuHoVaiTro = null);
 
     private sealed record ThongBaoLoi(string ThongBao);
 
@@ -447,5 +447,58 @@ public class GiaDinhDetailTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
         (await dbSau.HonPhoi.SingleAsync(x => x.Id == honPhoiId)).MaNhanDang
             .Should().Be("access-2026-09-06::hon_phoi::322",
                 "MaNhanDang cua hon phoi cung khong duoc dong tay vao");
+    }
+
+    // --- Chu ho (review-frontend "chan cung #1"): dungPayloadTuForm/CapNhat truoc day khong
+    // doc/khong ghi ChuHo — nguoi dung tuong da dat chu ho nhung khong luu gi ca. ---------------
+
+    [Fact]
+    public async Task Dat_chu_ho_la_vo_thi_ghi_ChuHo_dung_vao_dong_vo_va_go_dong_chong()
+    {
+        var (id, _, _) = await TaoGiaDinhVoChong(340, coVo: true);
+        var client = app.CreateAuthClient();
+        var truoc = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
+        truoc!.ThanhVien.Single(t => t.VaiTro == 0).ChuHo.Should().BeTrue("TaoGiaDinhVoChong dat chong la chu ho ban dau");
+
+        var res = await client.PutAsJsonAsync($"/api/gia-dinh/{id}", new CapNhat(
+            "Ho gia dinh 340", null, null, null, null, null, null, false, null, null, false,
+            truoc.RowVersion, ChuHoVaiTro: 1));
+
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var sau = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
+        sau!.ThanhVien.Single(t => t.VaiTro == 0).ChuHo.Should().BeFalse("chu ho da chuyen sang vo");
+        sau.ThanhVien.Single(t => t.VaiTro == 1).ChuHo.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Go_chon_ca_hai_radio_chu_ho_thi_khong_ai_con_la_chu_ho()
+    {
+        var (id, _, _) = await TaoGiaDinhVoChong(341, coVo: true);
+        var client = app.CreateAuthClient();
+        var truoc = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
+
+        var res = await client.PutAsJsonAsync($"/api/gia-dinh/{id}", new CapNhat(
+            "Ho gia dinh 341", null, null, null, null, null, null, false, null, null, false,
+            truoc!.RowVersion, ChuHoVaiTro: null));
+
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var sau = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
+        sau!.ThanhVien.Single(t => t.VaiTro == 0).ChuHo.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Chua_co_vo_ma_gui_ChuHoVaiTro_1_thi_khong_lam_gi_vi_khong_co_dong_vo()
+    {
+        var (id, _, _) = await TaoGiaDinhVoChong(342, coVo: false);
+        var client = app.CreateAuthClient();
+        var truoc = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
+
+        var res = await client.PutAsJsonAsync($"/api/gia-dinh/{id}", new CapNhat(
+            "Ho gia dinh 342", null, null, null, null, null, null, false, null, null, false,
+            truoc!.RowVersion, ChuHoVaiTro: 1));
+
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var sau = await client.GetFromJsonAsync<ChiTiet>($"/api/gia-dinh/{id}");
+        sau!.ThanhVien.Single(t => t.VaiTro == 0).ChuHo.Should().BeFalse("gui ChuHoVaiTro=1 nhung gia dinh khong co vo");
     }
 }

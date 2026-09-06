@@ -266,11 +266,15 @@ Mọi chỗ như vậy phải:
   `xuLySubmit` của `GiaoDanDetail.tsx` — trường `giaoHo` trên UI chưa thực sự gửi đi được).
   Việc này thuộc phạm vi "Giáo họ chọn thật" đã ghi ở mục Ưu tiên khắc phục #6 của
   `giao-dan-danh-sach.md`, ngoài phạm vi nhiệm vụ ghi giáo dân này.
-- **Rule 11 (trùng ngày chuyển xứ), khối "Thông tin chuyển xứ", tab Giáo lý (BD1/BD2/Vào
-  đời/GLHN) — CHƯA làm**: các trường liên quan (`ChuyenXu.NgayChuyen`, `NgayBD1`...) chưa có
-  trong `TaoGiaoDanRequest`/`CapNhatGiaoDanRequest` (xem `giao-dan-chi-tiet.md` mục 10, tab
-  Giáo lý "chỉ hiển thị UI tĩnh"). Không kiểm tra được cho tới khi các trường này được đưa vào
-  request.
+- **Khối "Thông tin chuyển xứ" và tab Giáo lý (BD1/BD2/Vào đời/GLHN) — ĐÃ NỐI (2026-09-07,
+  task sửa review-frontend)**: cả hai đầu đọc/ghi đã hoạt động qua `PUT /api/giao-dan/{id}`
+  (`CapNhatGiaoDanRequest.NgayBD1..XepLoaiGLHN` và `.ChuyenXu`) — xem mục 30 bên dưới để biết
+  chi tiết quyết định (chỉ nối ở SỬA, không ở Tạo mới; bỏ hộp thoại cảnh báo Yes/No khi đổi về
+  "Ở tại xứ"; sửa tại chỗ một dòng ChuyenXu thay vì luôn tạo dòng lịch sử mới).
+- **Rule 11 (trùng ngày chuyển xứ) — VẪN CHƯA làm**: nay các trường `ChuyenXu.*` đã có trong
+  request nên về mặt kỹ thuật có thể cài đặt được, nhưng việc này nằm ngoài phạm vi nhiệm vụ
+  "sửa review-frontend" (chỉ yêu cầu nối dữ liệu, không yêu cầu thêm validate mới) — để lại cho
+  lượt sau.
 - **Rule 18 (không cho bỏ tick "Có gia đình" khi còn hôn phối hiệu lực) — CHƯA làm**: cần đọc
   `HonPhoi`/`GiaoDanHonPhoi` và biết ai "còn sống" trong cặp vợ chồng — để trong phạm vi việc
   sau, không thuộc "tạo mới/xoá" trọng tâm của nhiệm vụ này.
@@ -927,3 +931,77 @@ trong container xác nhận RLS thật sự bật trong môi trường Docker (k
 `dotnet run` trực tiếp), và route tĩnh (`/`) trả về `index.html` của SPA đã build. Đã dọn sạch
 sau khi thử (`docker compose down -v`, xoá image, xoá `.env` thử nghiệm) — không để lại
 container/volume/image nào chạy nền.
+
+### 30. Task "sửa các phát hiện từ review-frontend" (2026-09-07) — các quyết định tự đưa ra
+
+Bốn việc theo `review-frontend.md`: (1) `GxPicker` nuốt lỗi mạng, (2) độ phủ test của
+`nguoiCu.ts`, (3) Chủ hộ chưa nối, (4) tab Giáo lý + khối chuyển xứ tĩnh. Ghi lại các chỗ phải
+tự quyết vì không có ai hỏi được ngay lúc làm.
+
+**a) `GxPicker` — chỉ phân biệt lỗi/rỗng ở chính nó, KHÔNG lan việc này ra mọi `.catch` khác
+trong `src/`.** Rà toàn bộ `.catch` còn lại (`AuthContext.tsx:58`, các `.catch` tải danh mục
+Giáo họ/Hội đoàn ở `GiaDinhDetailPage.tsx`/`GiaDinhListPage.tsx`/`GiaoDanDetailPage.tsx`/
+`GiaoDanListPage.tsx`): tất cả đều CHỈ `console.error` rồi để state rỗng cho một DANH MỤC hỗ
+trợ (dropdown Giáo họ/Hội đoàn) — nếu lỗi, dropdown hiện trống nhưng KHÔNG hiển thị một thông
+điệp giả kiểu "0 kết quả hợp lệ" đánh lừa người dùng nghĩ đó là dữ liệu thật (khác hẳn kịch bản
+`GxPicker` gây ra thao tác nghiệp vụ sai — tạo bản ghi trùng). `AuthContext.tsx:58`
+(`.catch(() => authStore.xoaToken())`) có vẻ giống nhưng đổi ý sau khi đọc kỹ: một test đã có
+từ trước (`token cu khong con hop le thi xoa token...`) cố ý mock `api.auth.toi()` reject bằng
+`Error` chung (không phải lỗi mạng thật) và assert phải đăng xuất — đổi hành vi này (chỉ đăng
+xuất khi lỗi thật sự là 401) sẽ phá vỡ một quyết định thiết kế đã chốt trước đó ("mọi lỗi khi
+xác thực token cũ = coi như hết hạn, đăng xuất") mà không có bằng chứng nó sai. Quyết định: chỉ
+sửa `GxPicker`, không đụng các `.catch` khác — nếu người dùng thấy còn chỗ khác cần sửa, xin
+chỉ rõ để làm riêng, tránh đổi hành vi đã test mà không xin phép.
+
+**b) `nguoiCu.ts` — CHỈ thêm test, KHÔNG sửa file nguồn.** Review chỉ ra thiếu độ phủ, không
+chỉ ra lỗi logic; đối chiếu lại `Source/GXControl/frmGiaDinh.cs:649-919` (UTF-16LE) xác nhận
+cấu trúc if/else của `chayCayQuyetDinhNguoiCu` khớp đúng bản gốc. **Bằng chứng đảo điều kiện**
+(làm rồi khôi phục lại, không giữ trong commit): đảo `if (yes)` → `if (!yes)` lần lượt ở dòng
+92, 99, 121, và vô hiệu hoá điều kiện nhánh 103-112 (đổi thành `if (false)`) — cả 4 lần chạy lại
+`npx vitest run src/lib/nguoiCu.test.ts` đều cho ít nhất 1 test ĐỎ sau khi bổ sung test mới (2,
+2, 2, 3 test lần lượt thất bại), tất cả xanh trở lại sau khi khôi phục nguyên văn dòng đã sửa
+(xác nhận bằng `diff` với bản ở HEAD — không có sai khác).
+
+**c) Chủ hộ — chỉ ràng buộc "chỉ Chồng/Vợ được làm chủ hộ" (đúng desktop: hai radio
+`rdChuHoNam`/`rdChuHoNu` là cách DUY NHẤT gán `ChuHo`), KHÔNG migrate chuỗi hộp thoại Yes/No tự
+động sửa chủ hộ khi một bên "Qua đời" (`cbChuHoNam_CheckedChanged` cùng khối kiểm tra ở nút Lưu,
+`frmGiaDinh.cs:1360-1433`).** Đây là quyết định có chủ đích, không phải bỏ sót: chuỗi hộp thoại
+đó là GỢI Ý tiện lợi (chọn [No] vẫn giữ nguyên lựa chọn hiện tại, không có gì bị chặn nếu bỏ
+qua toàn bộ chuỗi hỏi), khác hẳn tính chất "chặn cứng" của chính việc có/không có chủ hộ. Ghi
+lại để review sau nếu người dùng muốn có đủ. Giá trị `chuHoVaiTro` gửi lên PHẢN ÁNH ĐÚNG trạng
+thái hiện tại của cặp radio (kể cả khi không ai được chọn) — máy chủ ghi lại y hệt, không tự
+suy đoán/giữ giá trị cũ, khớp đúng cách desktop ghi `rdChuHoNam.Checked`/`rdChuHoNu.Checked`
+KHÔNG ĐIỀU KIỆN vào mỗi lần Lưu (dòng 1731/1739).
+
+**d) Tab Giáo lý — đổi ô "Người cấp chứng nhận" từ `GxPicker` (chọn giáo dân) sang ô nhập văn
+bản thường.** Bản trước dựng nhầm bằng `GxPicker` dù `NguoiChungNhanGLHN` trên `GiaoDan`/
+`GiaoDanDetailDto` là `string?` (đối chiếu `txtGLHNNguoiCap.Text` ở `frmGiaoDan.cs:1038` — ô
+văn bản tự do, KHÔNG liên kết một giáo dân khác) — không có cách nào gắn `onChon` hợp lệ cho
+một picker khi giá trị lưu là chuỗi, không phải khoá ngoại. Đổi sang `<input type="text">` để
+nối được vào payload; đồng thời bổ sung ô "Xếp loại" (`cbGLHNXepLoai`: Trung Bình/Khá/Giỏi) mà
+bản trước thiếu hẳn (không tìm thấy trong bố cục cũ, dù trường `XepLoaiGLHN` đã có trong DTO).
+
+**e) Khối "Thông tin chuyển xứ" — chỉ nối SỬA (`PUT`), KHÔNG nối `TaoGiaoDanRequest` (tạo
+mới).** Một giáo dân mới tạo chưa có lịch sử chuyển xứ; nối được sau bằng một lượt Sửa. Sửa
+tại chỗ MỘT dòng `ChuyenXu` hiện có thay vì luôn tạo dòng lịch sử mới mỗi lần đổi loại — đúng
+`GetChuyenXuInfo` (`frmGiaoDan.cs:892-923`, cập nhật tại chỗ nếu `currentRow` đã có
+`MaChuyenXu`); chọn "Ở tại xứ" (`LoaiChuyen=0`) XOÁ HẲN dòng hiện có — đúng
+`cbChuyenXu.SelectedValue==0` (dòng 719-727 xoá hẳn khỏi bảng `ChuyenXu`), không giữ lại một
+dòng "rỗng". **Cố ý BỎ QUA** hộp thoại cảnh báo Yes/No/Cancel khi đổi TỪ một loại chuyển xứ đã
+lưu VỀ "Ở tại xứ" (`cbChuyenXu_SelectedIndexChanged`, dòng 1231-1245) — tiện ích UX (chọn [No]
+chỉ phục hồi lựa chọn cũ, không có gì bị mất nếu bỏ qua), không phải ràng buộc dữ liệu; xử lý
+phía máy chủ đã đúng bất kể có hộp thoại này hay không. **Cố ý ĐƠN GIẢN HOÁ** cách hiện/ẩn ba ô
+Ngày chuyển/Nơi chuyển/Ghi chú: cả ba cùng hiện khi khác "Ở tại xứ" — bản gốc có một lỗi/quái dị
+là `dtNgayChuyen`/`txtGhiChuChuyenXu` không được set lại `Visible=true` khi đổi từ "Ở tại xứ"
+sang loại khác (dòng lệnh bị comment, chỉ `txtGiaoXuChuyen.Visible=true` thật sự chạy) — tái
+hiện đúng lỗi này sẽ khiến người dùng không nhập được Ngày chuyển/Ghi chú sau khi từng chọn "Ở
+tại xứ" một lần, một cách hành xử gây khó chịu không có giá trị nghiệp vụ; chọn hành vi "hợp lý"
+(hiện đủ cả ba) thay vì tái hiện lỗi vô nghĩa này.
+
+**f) Xác nhận qua chạy thật (không chỉ test)**: đăng nhập bằng tài khoản quản trị TẠO RIÊNG cho
+lượt kiểm thử này (`claudetest`, xoá ngay sau khi xong — KHÔNG dùng/đụng tới mật khẩu của
+`quantri` có sẵn); đổi chủ hộ gia đình mã 4 (Giuse Phạm Văn Trường) từ Chồng sang Vợ, tải lại
+trang, xác nhận qua `psql` cột `chu_ho` đã đổi đúng, rồi ĐẶT LẠI như cũ; nhập tab Giáo lý và
+khối chuyển xứ cho giáo dân mã 1 (Nguyễn Đức Mạnh), xác nhận qua `psql`, rồi XÓA SẠCH dữ liệu
+thử để trả `qlgx_thu` về đúng 2050 giáo dân/40 gia đình/145 thành viên (xác nhận lại bằng
+`psql` sau khi dọn). Ảnh chụp: `WebApp/anh-chup-kiem-thu/42-44*.png`.
