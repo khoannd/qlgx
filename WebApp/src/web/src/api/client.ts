@@ -74,6 +74,11 @@ export const api = {
     capNhat: (id: string, than: unknown) =>
       goi<void>(`/api/gia-dinh/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
     thanhVien: (id: string) => goi<GiaoDanListItem[]>(`/api/gia-dinh/${id}/thanh-vien`),
+    /** Xoá gia đình — mềm (`vinhVien=false`, mặc định) hoặc vĩnh viễn, đúng 2 lựa chọn
+     * [No]/[Yes] của hộp thoại 3 nút gốc (xem `GiaDinhService.Xoa`, KHÔNG có điều kiện chặn
+     * nào khác giáo dân). */
+    xoa: (id: string, vinhVien: boolean) =>
+      goi<void>(`/api/gia-dinh/${id}?vinhVien=${vinhVien}`, { method: 'DELETE' }),
   },
   giaoDan: {
     danhSach: (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: boolean) =>

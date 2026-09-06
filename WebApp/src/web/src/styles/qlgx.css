@@ -489,9 +489,24 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .btn-danger:hover:not(:disabled) { filter: brightness(1.05); }
 
 /* ============================ Trang danh sách ============================ */
+/* Y HỆT cảnh báo ở `.table-card` phía trên: CSS Grid auto-placement chỉ đúng khi số HÀNG khai
+   báo khớp đúng số phần tử con thật sự render. `.list-page` từng có đúng 3 con cố định
+   (page-head/filters-bar/lưới) khớp `auto auto 1fr` — thêm thanh công cụ `GxToolbar` (mục 4,
+   thanh nút Tải lại/Xuất CSV/Thêm/Xóa/In) làm SỐ CON THAY ĐỔI theo trạng thái (có/không đang
+   hiện hộp thoại xác nhận xoá), phá vỡ giả định "số con cố định". Để không lặp lại đúng lỗi đã
+   từng gặp (lưới co về cao vài px, mọi dòng bị đẩy ra ngoài vùng nhìn thấy, CHỈ lộ ra khi chạy
+   thật với dữ liệu thật — bài test jsdom không bắt được), gom toàn bộ phần đầu trang (tiêu đề +
+   toolbar + hộp thoại xác nhận xoá nếu có + filters-bar) vào MỘT div `.list-page-head` duy nhất
+   — `.list-page` quay lại đúng 2 con cố định bất kể trạng thái bên trong đầu trang. */
 .list-page {
   display: grid;
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 12px;
+  min-height: 0;
+}
+.list-page-head {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   min-height: 0;
 }
@@ -609,6 +624,19 @@ input:disabled, textarea:disabled {
 }
 .table-toolbar .spacer { flex: 1; }
 
+/* Compact grid display (góp ý người dùng): thu nhỏ chữ và chiều cao dòng của MỌI lưới AG Grid
+   (danh sách giáo dân, danh sách gia đình, lưới thành viên nhúng trong form gia đình — tất cả
+   dùng chung `GxGrid`) để hiện được nhiều bản ghi hơn trong cùng một màn hình. Lưới dùng
+   `theme="legacy"` (AG Grid ≥33) nên cỡ chữ đặt qua biến CSS `--ag-*` thay vì API Theming.
+   Sàn 12px cho ô dữ liệu/tiêu đề để còn đọc được — đừng nhỏ hơn. */
+.ag-theme-quartz {
+  --ag-font-size: 12px;
+  --ag-row-height: 30px;
+  --ag-header-height: 32px;
+  --ag-list-item-height: 26px;
+}
+.ag-theme-quartz .ag-header-cell-text { font-size: 12px; font-weight: 600; }
+.ag-theme-quartz .ag-floating-filter-input input { font-size: 12px; min-height: 22px; }
 .grid-wrap { min-height: 0; overflow: auto; }
 .grid-wrap::-webkit-scrollbar { width: 10px; height: 10px; }
 .grid-wrap::-webkit-scrollbar-thumb { background: rgba(14,32,76,.16); border-radius: 99px; }
@@ -870,24 +898,25 @@ tbody tr[aria-selected="true"] .rowhead {
   .col-stack { grid-template-rows: auto auto; }
 }
 
-/* Khối "Thông tin cá nhân" của frmGiaoDan (bản desktop): BA cột trong CÙNG một khối, chiếm
-   trọn chiều ngang — ảnh đại diện nằm giữa hai cột chữ chứ không tách thành thẻ riêng nữa.
-   Bản web trước đây tách ảnh ra thẻ riêng bên phải, thấp hơn cột trái nên thừa một mảng trống
-   lớn bên dưới — đúng góp ý người dùng. `align-items: start` để cột ảnh (thấp hơn) không bị
-   kéo giãn theo hai cột chữ hai bên. */
+/* Khối "Thông tin cá nhân" của frmGiaoDan (bản desktop): bản desktop chia BA cột
+   (`grbCaNhan`), nhưng người dùng góp ý lệch trực quan so với hai tấm 50/50 ngay bên dưới
+   (Rửa tội ‖ Rước lễ lần đầu) nên CỐ Ý đổi thành HAI cột bằng nhau, cùng `grid-template-columns:
+   1fr 1fr` như `.card-row` để mép cột thẳng hàng suốt trang — xem
+   docs/superpowers/specs/man-hinh/can-review-sau.md mục "W2". Ảnh đại diện chuyển vào ĐẦU cột
+   trái, thu nhỏ và đặt cạnh hai ô đầu tiên (`.canhan-top`) thay vì có cả cột riêng — tránh lặp
+   lại khoảng trống lớn bên dưới ảnh mà người dùng đã phàn nàn một lần trước đó. */
 .canhan-cols {
   display: grid;
-  grid-template-columns: 1.15fr 148px 1.3fr;
+  grid-template-columns: 1fr 1fr;
   gap: 8px 20px;
   align-items: start;
 }
 .canhan-cols .frow { grid-template-columns: 96px 1fr; }
-.canhan-photo { display: flex; flex-direction: column; gap: 8px; }
-.canhan-photo h3 { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
-.canhan-photo .photo-slot { min-height: 128px; }
+.canhan-top { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 6px; flex-wrap: wrap; }
+.canhan-top .photo-slot { width: 92px; min-height: 92px; flex: none; font-size: 10.5px; padding: 4px; line-height: 1.4; }
+.canhan-top-fields { flex: 1; min-width: 160px; }
 @media (max-width: 980px) {
   .canhan-cols { grid-template-columns: 1fr; }
-  .canhan-photo { order: -1; max-width: 220px; }
 }
 
 .frow {
@@ -920,7 +949,7 @@ tbody tr[aria-selected="true"] .rowhead {
   background: rgba(255,255,255,.92);
 }
 .picker:hover { border-color: rgba(29,93,219,.35); }
-.picker .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.picker .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; }
 .picker .who.empty { color: var(--ink-faint); font-weight: 400; }
 .picker .mini {
   appearance: none;

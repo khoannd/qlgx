@@ -1,6 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { GiaoDanListItem, GiaoHo } from '../api/types'
+import type { GxGridHandle } from '../components/GxGrid'
 import { GxGiaoDanList, menuGiaoDanMacDinh } from '../components/GxGiaoDanList'
+import { GxToolbar } from '../components/GxToolbar'
+import { taiXuongCsv } from '../lib/csv'
+import { chuaHoTro } from '../lib/thongBao'
 
 /** Sentinel hiển thị cho "Ngoài xứ" — đúng quy ước `MaGiaoHo = 0` của bản desktop; ở bản web
  * ứng với `tenGiaoHo === "Ngoài xứ"` (xem GiaoDanService.DungDanhSach). */
@@ -23,6 +27,9 @@ type Props = {
    * hồ sơ lưu trữ"), `vinhVien=true` = xoá vĩnh viễn (có thể bị máy chủ chặn nếu đang thuộc
    * gia đình). */
   onXoa?: (id: string, vinhVien: boolean) => Promise<void>
+  /** Tải lại toàn bộ danh sách từ máy chủ — nút "Tải lại" trên thanh công cụ, tương đương
+   * `btnReload` của `GxAddEdit` bản desktop. */
+  onTaiLai?: () => void
 }
 
 /**
@@ -36,10 +43,12 @@ type Props = {
  */
 export function GiaoDanList({
   rows, moGiaoDan, moGiaDinh, hienCaDaMat = false, onDoiHienCaDaMat, onXoa, danhMucGiaoHo = [],
+  onTaiLai,
 }: Props) {
   const [giaoHo, setGiaoHo] = useState('-1')
   const [chiKhongThongKe, setChiKhongThongKe] = useState(false)
   const [dongChon, setDongChon] = useState<GiaoDanListItem | null>(null)
+  const luoiRef = useRef<GxGridHandle>(null)
   // 'hoi' = đang hiện 3 lựa chọn Xoá vĩnh viễn/Xoá mềm/Huỷ (thay cho MessageBoxButtons.YesNoCancel
   // của desktop, xem giao-dan-danh-sach.md mục 4); 'dang-xoa' = đã bấm, chờ máy chủ trả lời.
   const [trangThaiXoa, setTrangThaiXoa] = useState<'hoi' | 'dang-xoa' | null>(null)
@@ -83,19 +92,36 @@ export function GiaoDanList({
     [moGiaoDan, moGiaDinh],
   )
 
+  function xuatCsv() {
+    const csv = luoiRef.current?.layCsv()
+    if (!csv) return
+    taiXuongCsv(csv, `danh-sach-giao-dan-${new Date().toISOString().slice(0, 10)}.csv`)
+  }
+
   return (
     <section className="page list-page">
+      <div className="list-page-head">
       <div className="page-head">
         <h1>Danh sách giáo dân</h1>
         <div className="spacer" />
         <span className="count-pill"><b>{rowsLoc.length}</b> giáo dân</span>
-        <button type="button" className="btn" disabled={!dongChon || !onXoa} onClick={() => setTrangThaiXoa('hoi')}>
-          Xóa giáo dân
-        </button>
-        <button type="button" className="btn btn-primary" onClick={() => moGiaoDan(null)}>
-          Thêm giáo dân
-        </button>
       </div>
+
+      <GxToolbar
+        coDongDuocChon={!!dongChon}
+        items={[
+          { label: 'Tải lại', icon: 'reload', onClick: onTaiLai,
+            title: 'Lấy lại dữ liệu trong chương trình và hiện lên lưới như khi chưa thực hiện tìm kiếm' },
+          { label: 'Xuất dữ liệu (CSV)', icon: 'excel', onClick: xuatCsv,
+            title: 'Xuất danh sách đang hiện trên lưới ra tệp CSV' },
+          '|',
+          { label: 'Thêm giáo dân', icon: 'plus', kind: 'primary', onClick: () => moGiaoDan(null), title: 'Thêm' },
+          { label: 'Xóa giáo dân', icon: 'trash', needSel: true, onClick: () => setTrangThaiXoa('hoi'),
+            title: 'Loại bỏ khỏi danh sách trên lưới' },
+          '>',
+          { label: 'In danh sách', icon: 'print', onClick: chuaHoTro, title: 'In danh sách trên lưới' },
+        ]}
+      />
 
       {trangThaiXoa && dongChon && (
         <div className="card glass" role="alertdialog" style={{ marginBottom: 12 }}>
@@ -153,8 +179,9 @@ export function GiaoDanList({
           Nhấp đúp một dòng để mở chi tiết · chuột phải để xem thao tác in ấn
         </span>
       </div>
+      </div>
 
-      <GxGiaoDanList rows={rowsLoc} onMo={(d) => moGiaoDan(d.id)} onChon={setDongChon} menuChuotPhai={menu} />
+      <GxGiaoDanList ref={luoiRef} rows={rowsLoc} onMo={(d) => moGiaoDan(d.id)} onChon={setDongChon} menuChuotPhai={menu} />
     </section>
   )
 }

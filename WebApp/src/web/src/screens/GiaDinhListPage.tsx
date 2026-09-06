@@ -39,9 +39,20 @@ export function GiaDinhListPage({ moGiaDinh }: Props) {
 
   useEffect(tai, [tai])
 
+  async function xoa(id: string, vinhVien: boolean) {
+    await api.giaDinh.xoa(id, vinhVien)
+    tai()
+  }
+
   return (
     <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={tai}>
-      <GiaDinhList rows={rows ?? []} moGiaDinh={moGiaDinh} danhMucGiaoHo={danhMucGiaoHo} />
+      <GiaDinhList
+        rows={rows ?? []}
+        moGiaDinh={moGiaDinh}
+        danhMucGiaoHo={danhMucGiaoHo}
+        onXoa={xoa}
+        onTaiLai={tai}
+      />
     </TrangThaiTai>
   )
 }

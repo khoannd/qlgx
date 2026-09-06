@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { forwardRef, useMemo } from 'react'
+import type { Ref } from 'react'
 import type { GiaoDanListItem } from '../api/types'
 import { cotGiaoDan, cotQuanHeGiaDinh } from '../cot/cotGiaoDan'
-import { GxGrid, type MucMenu } from './GxGrid'
+import { GxGrid, type GxGridHandle, type MucMenu } from './GxGrid'
 
 type Props = {
   rows: GiaoDanListItem[]
@@ -38,8 +39,14 @@ export const menuGiaoDanMacDinh = (
  * Tương đương UserControl GxGiaoDanList. Tự sở hữu bộ cột, quy tắc tô đỏ và ghi chú chân
  * lưới, nên nơi nhúng chỉ truyền dữ liệu. Nhờ vậy lưới ở màn hình danh sách và lưới thành
  * viên trong form gia đình là cùng một component — kiểm thử một lần dùng được cả hai.
+ *
+ * Chuyển tiếp `ref` xuống `GxGrid` để nơi nhúng (thanh công cụ "Xuất dữ liệu") gọi được
+ * `layCsv()` mà không cần biết chi tiết AG Grid bên trong.
  */
-export function GxGiaoDanList({ rows, quanHeGiaDinh, ...phanConLai }: Props) {
+function GxGiaoDanListTrong(
+  { rows, quanHeGiaDinh, ...phanConLai }: Props,
+  ref: Ref<GxGridHandle>,
+) {
   const columnDefs = useMemo(
     () =>
       quanHeGiaDinh
@@ -50,6 +57,7 @@ export function GxGiaoDanList({ rows, quanHeGiaDinh, ...phanConLai }: Props) {
 
   return (
     <GxGrid<GiaoDanListItem>
+      ref={ref}
       columnDefs={columnDefs}
       rowData={rows}
       layId={(d) => d.id}
@@ -59,3 +67,5 @@ export function GxGiaoDanList({ rows, quanHeGiaDinh, ...phanConLai }: Props) {
     />
   )
 }
+
+export const GxGiaoDanList = forwardRef(GxGiaoDanListTrong)

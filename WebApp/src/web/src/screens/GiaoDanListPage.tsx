@@ -57,6 +57,7 @@ export function GiaoDanListPage({ moGiaoDan, moGiaDinh }: Props) {
         onDoiHienCaDaMat={setHienCaDaMat}
         onXoa={xoa}
         danhMucGiaoHo={danhMucGiaoHo}
+        onTaiLai={tai}
       />
     </TrangThaiTai>
   )

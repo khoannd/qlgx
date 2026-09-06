@@ -82,10 +82,35 @@ Mọi chỗ như vậy phải:
   Bản mẫu giao diện web đã duyệt có gạch ngang ở lưới gia đình — đúng. Lưới giáo dân thì không.
 - **Bản web phải làm**: giữ đúng như vậy.
 
-### 8. Tooltip gán nhầm nút
+### 8. Tooltip gán nhầm nút — ĐÃ XÁC NHẬN (2026-09-07)
 
-- **Bản desktop**: `frmGiaDinh.cs` — một tooltip có vẻ được gán cho nút khác với ý nghĩa của nó.
-  Chưa xác minh chắc chắn, xem mục "Chỗ chưa chắc" trong `gia-dinh-chi-tiet.md`.
+- **Bản desktop**: `Source/GXControl/GXAddEdit.Designer.cs` (tệp UTF-16, đọc bằng
+  `python -c "open(..., encoding='utf-16').read()"` vì công cụ text thường không đọc được).
+  Toàn bộ tooltip của thanh nút `GxAddEdit` (`toolTip1.SetToolTip`, dòng 67/105/131/156/181/
+  208/234):
+
+  | Nút | Dòng | Tooltip nguyên văn |
+  |---|---|---|
+  | `btnMap` | 67 | `"In danh sách trên lưới"` |
+  | `btnEdit` | 105 | `"Sửa"` |
+  | `btnNew` | 131 | `"Thêm"` |
+  | `btnDelete` | 156 | `"Loại bỏ khỏi danh sách trên lưới"` |
+  | `btnReload` | 181 | `"Lấy lại dữ liệu trong chương trình và hiện lên lưới như khi chưa thực hiện tìm ki…"` (chuỗi nối dòng, bị cắt trong Designer) |
+  | `btnPrint` | 208 | `"In danh sách trên lưới"` |
+  | `btnSelect` | 234 | `"Chọn"` |
+
+- **Xác nhận**: `btnMap` (dòng 67) và `btnPrint` (dòng 208) có **CÙNG MỘT chuỗi tooltip y hệt**
+  `"In danh sách trên lưới"` — không phải suy đoán nữa, đây đúng là tooltip gán nhầm (rất có
+  thể copy-paste khi thêm `btnMap` sau `btnPrint`, ý nghĩa hai nút chức năng khác nhau —
+  `btnMap` dùng ảnh `map.ico`/phím tắt `&M`, hẳn là "Xem vị trí" chứ không phải "In danh sách").
+- **Bản web đã làm**: không tái hiện lỗi này ở thanh công cụ `GxToolbar` mới (mục 4 vòng 2)
+  — mỗi nút có tooltip riêng đúng chức năng: "Thêm", "Loại bỏ khỏi danh sách trên lưới", "Lấy
+  lại dữ liệu…", "In danh sách trên lưới" (chỉ nút In dùng tooltip này, đúng nghĩa). Menu chuột
+  phải mục "Xem vị trí" (tương ứng `btnMap`) vẫn hiện thông báo "chưa hỗ trợ" giống các mục in
+  ấn khác, không gán nhầm tooltip.
+- **Câu hỏi cho người dùng**: không còn — mục này đã xác nhận là lỗi bản desktop, bản web migrate
+  đúng tinh thần từng nút (không tái hiện lỗi copy-paste tooltip vì đây thuộc UI mới hoàn toàn,
+  không phải hành vi nghiệp vụ cần giữ nguyên).
 
 ### 9. `frmHonPhoi.GetHonPhoi(maGiaoDan)` lấy bừa một bản ghi hôn phối khi người có nhiều hơn 1
 
@@ -312,6 +337,31 @@ Mọi chỗ như vậy phải:
   đúng nhưng chưa đối chiếu được 100% với SQL gốc.
 - **Câu hỏi cho người dùng**: xác nhận ba điểm suy diễn trên là chấp nhận được, hay cần đọc thêm
   mã nguồn (`GxGiaoDan.cs`, `SqlConstants.cs`) để làm đúng hơn.
+
+### 23. Khối "Thông tin cá nhân" đổi từ BA cột (desktop) sang HAI cột (web) — khác biệt có chủ đích theo yêu cầu người dùng (2026-09-07)
+
+- **Bản desktop**: `grbCaNhan` của `Source/GXControl/frmGiaoDan.Designer.cs` (dòng 1039-1337)
+  chia BA cột: trái (Mã giáo dân/Tên thánh/Họ tên/Giáo họ), giữa (ảnh đại diện), phải (Giới
+  tính+Ngày sinh/Nơi sinh/Tên Cha/Tên Mẹ/CMND).
+- **Người dùng góp ý (2026-09-07)**: bố cục ba cột này lệch trực quan so với hai tấm 50/50
+  ngay bên dưới cùng màn hình (`Rửa tội` ‖ `Rước lễ lần đầu`, `.card-row` với
+  `grid-template-columns: 1fr 1fr`) — *"bạn có thể chia box này thành 2 column như 2 panel bên
+  dưới cho cân đối"*.
+- **Bản web đã làm (CỐ Ý khác desktop theo đúng yêu cầu trực tiếp)**: đổi `.canhan-cols` (
+  `WebApp/src/web/src/styles/qlgx.css`) từ `1.15fr 148px 1.3fr` (ba cột) sang `1fr 1fr` (hai
+  cột bằng nhau, cùng tỉ lệ với `.card-row`) — cột trái gồm Mã giáo dân/Tên thánh (cạnh ảnh đại
+  diện thu nhỏ trong `.canhan-top`)/Họ tên/Giáo họ; cột phải gồm Giới tính+Ngày sinh/Nơi sinh/
+  Tên Cha/Tên Mẹ/CMND. Ảnh đại diện chuyển từ cột giữa riêng vào ĐẦU cột trái (nhỏ lại 92×92px)
+  thay vì có cả cột 148px riêng, để không tái tạo khoảng trống lớn dưới ảnh mà chính người dùng
+  đã phàn nàn một lần trước đó (xem commit `8e34da6`). Xem `GiaoDanDetail.tsx` (khối `tabCaNhan`)
+  và `giao-dan-chi-tiet.md` mục 2.
+- **Vì sao ghi vào đây dù đã có xác nhận rõ ràng của người dùng**: theo đúng quy ước của tệp này
+  — "hãy cứ migrate logic hoàn toàn giống app hiện tại rồi note lại để review sau" áp dụng cho
+  logic NGHIỆP VỤ; đây là bố cục GIAO DIỆN nên được phép đổi theo góp ý trực tiếp, nhưng vẫn ghi
+  lại vì nó khác `Designer.cs` gốc — để không ai sau này tưởng nhầm là bỏ sót khi đối chiếu bố
+  cục ba cột của desktop.
+- **Không cần review thêm**: đây không phải câu hỏi chờ quyết định — người dùng đã chốt trực
+  tiếp trong yêu cầu này.
 
 ---
 

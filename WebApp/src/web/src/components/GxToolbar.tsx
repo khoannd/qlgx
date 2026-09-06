@@ -7,10 +7,13 @@ export type MucToolbar =
   | {
       id?: string
       label: string
-      icon?: 'plus' | 'excel'
+      icon?: 'plus' | 'excel' | 'reload' | 'print' | 'trash'
       kind?: 'primary' | 'quiet'
       /** Nút tự tắt khi lưới chưa có dòng đang chọn — truyền `coDongDuocChon` cho GxToolbar. */
       needSel?: boolean
+      /** Tooltip tiếng Việt hiện khi rê chuột — theo đúng tinh thần tooltip của `GxAddEdit`
+       * bản desktop (Thêm/Sửa/Loại bỏ khỏi danh sách trên lưới/…). Mặc định dùng `label`. */
+      title?: string
       onClick?: () => void
     }
 
@@ -20,12 +23,15 @@ type Props = {
   coDongDuocChon?: boolean
 }
 
-const duongDan: Record<'plus' | 'excel', string> = {
+const duongDan: Record<'plus' | 'excel' | 'reload' | 'print' | 'trash', string> = {
   plus: 'M12 5v14M5 12h14',
   excel: 'M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2',
+  reload: 'M4 4v6h6M20 20v-6h-6M4 10a8 8 0 0 1 14.3-4.3M20 14a8 8 0 0 1-14.3 4.3',
+  print: 'M6 9V3h12v6M6 18h12v3H6v-3ZM4 9h16v7H4V9Z',
+  trash: 'M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13',
 }
 
-function IconSvg({ name }: { name: 'plus' | 'excel' }) {
+function IconSvg({ name }: { name: 'plus' | 'excel' | 'reload' | 'print' | 'trash' }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden="true">
       <path d={duongDan[name]} strokeLinecap="round" strokeLinejoin="round" />
@@ -51,6 +57,7 @@ export function GxToolbar({ items, coDongDuocChon }: Props) {
             key={it.id ?? it.label}
             type="button"
             className={lop}
+            title={it.title ?? it.label}
             disabled={it.needSel ? !coDongDuocChon : false}
             onClick={it.onClick}
           >

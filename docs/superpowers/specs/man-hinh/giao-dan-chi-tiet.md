@@ -31,6 +31,16 @@ Bảng dưới liệt kê các trường trong tab **Cá nhân** và **Giáo lý
 `AssignControlData`/`AssignDataSource`, `frmGiaoDan.cs:953-1040` và `1082-1208`, đối chiếu nhãn ở
 Designer). GiaoDan có 63 cột CSDL; nhóm theo nghiệp vụ:
 
+> **Bố cục khối "Thông tin cá nhân" trên bản WEB khác desktop có chủ đích (2026-09-07)**: bản
+> desktop (`grbCaNhan`, `frmGiaoDan.Designer.cs:1039-1337`) chia BA cột (trái: Mã giáo dân/Tên
+> thánh/Họ tên/Giáo họ · giữa: ảnh đại diện · phải: Giới tính+Ngày sinh/Nơi sinh/Tên Cha/Tên
+> Mẹ/CMND). Theo yêu cầu trực tiếp của người dùng (để thẳng hàng với hai tấm 50/50 "Rửa tội" ‖
+> "Rước lễ lần đầu" ngay bên dưới), bản web đổi thành HAI cột bằng nhau: ảnh đại diện chuyển
+> vào đầu cột trái (thu nhỏ, cạnh Mã giáo dân/Tên thánh) thay vì có cột riêng. Các trường và ý
+> nghĩa nghiệp vụ trong bảng dưới đây KHÔNG đổi — chỉ đổi vị trí hiển thị. Xem
+> `can-review-sau.md` mục 23 (khác biệt có chủ đích) và `WebApp/src/web/src/screens/
+> GiaoDanDetail.tsx` (khối `tabCaNhan`) + `WebApp/src/web/src/styles/qlgx.css` (`.canhan-cols`).
+
 ### Thông tin cá nhân cơ bản
 
 | Nhãn | Cột CSDL | Kiểu | Bắt buộc? | Mặc định | Ghi chú |

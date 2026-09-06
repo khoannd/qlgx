@@ -1,9 +1,10 @@
 import { AgGridReact } from 'ag-grid-react'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
-import type { ColDef, GetRowIdParams, RowClassParams } from 'ag-grid-community'
+import type { ColDef, GetRowIdParams, GridApi, RowClassParams } from 'ag-grid-community'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import type { Ref } from 'react'
 
 // ag-grid từ bản 33 trở đi nạp theo module: thiếu dòng này thì lưới không vẽ được
 // header/hàng và ném lỗi #200 (getRowClass, rowSelection, localeText…).
@@ -16,6 +17,14 @@ export type MucMenu<T> = {
    * không áp dụng được cho dòng đó (ví dụ "Xem gia đình" khi giáo dân chưa gắn với gia đình
    * nào), tránh gọi `chay` với giá trị rỗng/không hợp lệ. */
   an?: (dong: T) => boolean
+}
+
+/** Tay cầm lộ ra ngoài qua `ref` để nơi nhúng (thanh công cụ `GxToolbar`) gọi được thao tác
+ * trên lưới mà không cần biết chi tiết AG Grid bên trong. */
+export type GxGridHandle = {
+  /** Chuỗi CSV của dữ liệu đang hiển thị (đã áp bộ lọc/sắp xếp hiện tại trên lưới), dùng cho
+   * nút "Xuất dữ liệu (CSV)". Trả `null` nếu lưới chưa sẵn sàng. */
+  layCsv: () => string | null
 }
 
 type Props<T> = {
@@ -36,11 +45,17 @@ type Props<T> = {
  * sắp xếp theo header, chọn dòng, mở bằng nhấp đúp và menu chuột phải để các lưới nghiệp vụ
  * bên trên không phải khai báo lại.
  */
-export function GxGrid<T>({
-  columnDefs, rowData, layId, onMo, onChon, menuChuotPhai, toDo, ghiChuChan, hangLoc = true,
-}: Props<T>) {
+function GxGridTrong<T>(
+  { columnDefs, rowData, layId, onMo, onChon, menuChuotPhai, toDo, ghiChuChan, hangLoc = true }: Props<T>,
+  ref: Ref<GxGridHandle>,
+) {
   const [menu, setMenu] = useState<{ x: number; y: number; dong: T } | null>(null)
   const boc = useRef<HTMLDivElement>(null)
+  const apiRef = useRef<GridApi<T> | null>(null)
+
+  useImperativeHandle(ref, () => ({
+    layCsv: () => apiRef.current?.getDataAsCsv() ?? null,
+  }))
 
   const defaultColDef = useMemo<ColDef<T>>(
     () => ({
@@ -79,10 +94,11 @@ export function GxGrid<T>({
           columnDefs={columnDefs}
           rowData={rowData}
           defaultColDef={defaultColDef}
-          floatingFiltersHeight={hangLoc ? 36 : 0}
+          floatingFiltersHeight={hangLoc ? 30 : 0}
           getRowId={(p: GetRowIdParams<T>) => layId(p.data)}
           getRowClass={getRowClass}
           rowSelection="single"
+          onGridReady={(e) => { apiRef.current = e.api }}
           onRowDoubleClicked={(e) => e.data && onMo?.(e.data)}
           onSelectionChanged={(e) => onChon?.(e.api.getSelectedRows()[0] ?? null)}
           localeText={{ noRowsToShow: 'Không có dòng nào khớp điều kiện lọc.' }}
@@ -112,3 +128,9 @@ export function GxGrid<T>({
     </div>
   )
 }
+
+// `forwardRef` xoá mất tham số kiểu generic `T` của hàm gốc — ép kiểu lại để nơi gọi
+// (`GxGiaoDanList`, `GxGiaDinhList`) vẫn được suy luận `T` đúng theo `rowData` truyền vào.
+export const GxGrid = forwardRef(GxGridTrong) as <T>(
+  props: Props<T> & { ref?: Ref<GxGridHandle> },
+) => ReturnType<typeof GxGridTrong>

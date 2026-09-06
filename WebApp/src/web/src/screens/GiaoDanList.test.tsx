@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { GiaoDanList } from './GiaoDanList'
 import type { GiaoDanListItem } from '../api/types'
+import * as csv from '../lib/csv'
 
 const nguoi = (p: Partial<GiaoDanListItem> = {}): GiaoDanListItem => ({
   id: 'p1', maGiaoDanCu: 4401, tenThanh: 'Giuse', hoTen: 'Trần Văn Bình',
@@ -167,6 +168,41 @@ describe('GiaoDanList', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Xóa vĩnh viễn' }))
 
     expect(await screen.findByText(/Vui lòng xóa giáo dân ra khỏi gia đình/)).toBeDefined()
+  })
+
+  // --- Task "thanh cong cu": Tai lai + Xuat CSV -------------------------------------------
+
+  it('nut Tai lai goi onTaiLai', async () => {
+    const onTaiLai = vi.fn()
+    render(<GiaoDanList rows={rows} moGiaoDan={vi.fn()} onTaiLai={onTaiLai} />)
+    await screen.findByText('Trần Văn Bình')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tải lại' }))
+
+    expect(onTaiLai).toHaveBeenCalledOnce()
+  })
+
+  it('nut Xuat du lieu (CSV) goi taiXuongCsv voi noi dung tu luoi', async () => {
+    const spy = vi.spyOn(csv, 'taiXuongCsv').mockImplementation(() => {})
+    render(<GiaoDanList rows={rows} moGiaoDan={vi.fn()} />)
+    await screen.findByText('Trần Văn Bình')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Xuất dữ liệu (CSV)' }))
+
+    expect(spy).toHaveBeenCalledOnce()
+    const [noiDung, tenTep] = spy.mock.calls[0]
+    expect(typeof noiDung).toBe('string')
+    expect(tenTep).toMatch(/^danh-sach-giao-dan-.*\.csv$/)
+  })
+
+  it('nut In danh sach hien thong bao chua ho tro', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    render(<GiaoDanList rows={rows} moGiaoDan={vi.fn()} />)
+    await screen.findByText('Trần Văn Bình')
+
+    await userEvent.click(screen.getByRole('button', { name: 'In danh sách' }))
+
+    expect(alertSpy).toHaveBeenCalledOnce()
   })
 
   it('o tick Hien ca da mat goi onDoiHienCaDaMat', async () => {

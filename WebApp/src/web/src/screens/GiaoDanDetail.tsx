@@ -627,21 +627,27 @@ export function GiaoDanDetail({
 
   const tabCaNhan = (
     <>
-      {/* Đúng khối `grbCaNhan` của frmGiaoDan.Designer.cs (dòng 1039-1337): MỘT khối
-          "Thông tin cá nhân" chiếm trọn chiều ngang, chia ba cột — ảnh đại diện nằm giữa hai
-          cột chữ (không tách thẻ riêng như bản trước, vốn để lại một mảng trống lớn bên dưới
-          ảnh vì ảnh thấp hơn cột trái — đúng góp ý người dùng). Thứ tự từng cột lấy theo toạ độ
-          Location của Designer, không theo suy đoán. */}
+      {/* Bản desktop (`grbCaNhan` của frmGiaoDan.Designer.cs, dòng 1039-1337) chia BA cột.
+          Bản web CỐ Ý đổi thành HAI cột bằng nhau theo yêu cầu trực tiếp của người dùng, để
+          thẳng hàng với hai tấm 50/50 ngay bên dưới (Rửa tội ‖ Rước lễ lần đầu) — xem
+          can-review-sau.md mục "W2 — khác biệt có chủ đích". Ảnh đại diện chuyển vào đầu cột
+          trái (`.canhan-top`), thu nhỏ và đặt cạnh Mã giáo dân/Tên thánh thay vì có cả cột
+          riêng, để không lặp lại khoảng trống lớn mà người dùng đã phàn nàn một lần trước đó. */}
       <div className="card glass">
         <div className="card-head"><h2>Thông tin cá nhân</h2><span className="eyebrow">Hồ sơ giáo dân</span></div>
         <div className="canhan-cols">
           <div>
-            <GxField label="Mã giáo dân" id="gd-ma">
-              <input id="gd-ma" type="text" value={moi ? '(tự sinh khi lưu)' : String(p.maGiaoDanCu)} disabled />
-            </GxField>
-            <GxField label="Tên thánh" id="gd-tenthanh">
-              <input id="gd-tenthanh" name="tenThanh" type="text" defaultValue={p.tenThanh ?? ''} />
-            </GxField>
+            <div className="canhan-top">
+              <div className="photo-slot">Chưa có hình<br />Nhấp để tải ảnh lên</div>
+              <div className="canhan-top-fields">
+                <GxField label="Mã giáo dân" id="gd-ma">
+                  <input id="gd-ma" type="text" value={moi ? '(tự sinh khi lưu)' : String(p.maGiaoDanCu)} disabled />
+                </GxField>
+                <GxField label="Tên thánh" id="gd-tenthanh">
+                  <input id="gd-tenthanh" name="tenThanh" type="text" defaultValue={p.tenThanh ?? ''} />
+                </GxField>
+              </div>
+            </div>
             <GxField label="Họ tên" id="gd-hoten">
               <input id="gd-hoten" name="hoTen" type="text" defaultValue={p.hoTen} />
             </GxField>
@@ -658,11 +664,6 @@ export function GiaoDanDetail({
                 <input aria-label="Giáo phận" type="text" defaultValue="" />
               </GxField>
             )}
-          </div>
-
-          <div className="canhan-photo">
-            <h3>Ảnh đại diện (ảnh 3x4)</h3>
-            <div className="photo-slot">Chưa có hình<br />Nhấp để tải ảnh lên</div>
           </div>
 
           <div>
