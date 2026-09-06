@@ -232,4 +232,40 @@ public class DocAccess(string duongDanFile, string? matKhau = null, string nguoi
                 Chuoi(r[4]), Chuoi(r[5]), Chuoi(r[6]), Chuoi(r[7]), Chuoi(r[8]), Chuoi(r[9]),
                 Bool(r[10]), NgayGio(r[11])))
             .ToList();
+
+    public IEnumerable<DongKhoiGiaoLy> DocKhoiGiaoLy() =>
+        Doc("SELECT MaKhoi, TenKhoi, NguoiQuanLy, GhiChu FROM KhoiGiaoLy")
+            .Select(r => new DongKhoiGiaoLy(r.GetInt32(0), Chuoi(r[1]) ?? "", r.GetInt32(2), Chuoi(r[3])))
+            .ToList();
+
+    public IEnumerable<DongLopGiaoLy> DocLopGiaoLy() =>
+        Doc("SELECT MaLop, TenLop, MaKhoi, Nam, PhongHoc, GhiChu FROM LopGiaoLy")
+            .Select(r => new DongLopGiaoLy(r.GetInt32(0), Chuoi(r[1]) ?? "", r.GetInt32(2), SoNull(r[3]),
+                Chuoi(r[4]), Chuoi(r[5])))
+            .ToList();
+
+    public IEnumerable<DongChiTietLopGiaoLy> DocChiTietLopGiaoLy() =>
+        Doc("SELECT MaLop, MaGiaoDan, SoThuTu, HoanThanh, GhiChuGLy FROM ChiTietLopGiaoLy")
+            .Select(r => new DongChiTietLopGiaoLy(r.GetInt32(0), r.GetInt32(1), SoNull(r[2]), Bool(r[3]),
+                Chuoi(r[4])))
+            .ToList();
+
+    public IEnumerable<DongGiaoLyVien> DocGiaoLyVien() =>
+        Doc("SELECT MaLop, MaGiaoDan FROM GiaoLyVien")
+            .Select(r => new DongGiaoLyVien(r.GetInt32(0), r.GetInt32(1)))
+            .ToList();
+
+    public IEnumerable<DongHoiDoan> DocHoiDoan() =>
+        Doc(@"SELECT MaHoiDoan, TenHoiDoan, ThanhBonMang, NgayBonMang, NgayThanhLap, GhiChu
+              FROM HoiDoan")
+            .Select(r => new DongHoiDoan(r.GetInt32(0), Chuoi(r[1]) ?? "", Chuoi(r[2]), Chuoi(r[3]),
+                Chuoi(r[4]), Chuoi(r[5])))
+            .ToList();
+
+    public IEnumerable<DongChiTietHoiDoan> DocChiTietHoiDoan() =>
+        Doc(@"SELECT ID, MaHoiDoan, MaGiaoDan, NgayVaoHoiDoan, NgayRaHoiDoan, VaiTro
+              FROM ChiTietHoiDoan")
+            .Select(r => new DongChiTietHoiDoan(r.GetInt32(0), r.GetInt32(1), r.GetInt32(2),
+                Chuoi(r[3]), Chuoi(r[4]), Chuoi(r[5])))
+            .ToList();
 }

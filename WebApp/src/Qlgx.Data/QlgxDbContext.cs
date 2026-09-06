@@ -46,6 +46,14 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
     public DbSet<TanHien> TanHien => Set<TanHien>();
     public DbSet<LinhMuc> LinhMuc => Set<LinhMuc>();
 
+    // --- Giáo lý và hội đoàn, theo giáo xứ, có bộ lọc tenant bên dưới ---
+    public DbSet<KhoiGiaoLy> KhoiGiaoLy => Set<KhoiGiaoLy>();
+    public DbSet<LopGiaoLy> LopGiaoLy => Set<LopGiaoLy>();
+    public DbSet<ChiTietLopGiaoLy> ChiTietLopGiaoLy => Set<ChiTietLopGiaoLy>();
+    public DbSet<GiaoLyVien> GiaoLyVien => Set<GiaoLyVien>();
+    public DbSet<HoiDoan> HoiDoan => Set<HoiDoan>();
+    public DbSet<ChiTietHoiDoan> ChiTietHoiDoan => Set<ChiTietHoiDoan>();
+
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.ApplyConfigurationsFromAssembly(typeof(QlgxDbContext).Assembly);
@@ -73,6 +81,12 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
         b.Entity<RaoHonPhoi>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         b.Entity<TanHien>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         b.Entity<LinhMuc>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<KhoiGiaoLy>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<LopGiaoLy>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<ChiTietLopGiaoLy>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<GiaoLyVien>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<HoiDoan>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<ChiTietHoiDoan>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         // GiaoPhan và GiaoHat KHÔNG có bộ lọc — chúng nằm trên cấp giáo xứ (xem GiaoPhan.cs).
 
         DatTenSnakeCase(b);

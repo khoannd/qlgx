@@ -129,6 +129,42 @@ public record DongLinhMuc(int MaLinhMuc, string? TenThanh, string HoTen, string?
     string? Email, bool DaXoa, DateTime? UpdateDate);
 
 /// <summary>
+/// Khối giáo lý — 4 cột Access. KHÔNG có UpdateDate (xem schema-19-bang-con-lai.md).
+/// NguoiQuanLy là MaGiaoDan của người quản lý khối, -1 hoặc 0 nghĩa là chưa gán ai (xem
+/// Qlgx.Domain.Entities.KhoiGiaoLy).
+/// </summary>
+public record DongKhoiGiaoLy(int MaKhoi, string TenKhoi, int NguoiQuanLy, string? GhiChu);
+
+/// <summary>Lớp giáo lý — 6 cột Access, thuộc một khối. KHÔNG có UpdateDate.</summary>
+public record DongLopGiaoLy(int MaLop, string TenLop, int MaKhoi, int? Nam, string? PhongHoc,
+    string? GhiChu);
+
+/// <summary>
+/// Học viên trong một lớp giáo lý — 5 cột Access. Khoá gốc là cặp (MaLop, MaGiaoDan). KHÔNG có
+/// UpdateDate.
+/// </summary>
+public record DongChiTietLopGiaoLy(int MaLop, int MaGiaoDan, int? SoThuTu, bool HoanThanh,
+    string? GhiChuGLy);
+
+/// <summary>
+/// Giáo lý viên phụ trách lớp — chỉ 2 cột Access, khoá gốc là cặp (MaLop, MaGiaoDan). KHÔNG có
+/// UpdateDate.
+/// </summary>
+public record DongGiaoLyVien(int MaLop, int MaGiaoDan);
+
+/// <summary>Hội đoàn — 6 cột Access. KHÔNG có UpdateDate.</summary>
+public record DongHoiDoan(int MaHoiDoan, string TenHoiDoan, string? ThanhBonMang,
+    string? NgayBonMang, string? NgayThanhLap, string? GhiChu);
+
+/// <summary>
+/// Thành viên hội đoàn — 6 cột Access, có cột ID riêng (không phải khoá tổ hợp). VaiTro ở đây
+/// là Text (chức vụ trong hội đoàn) — KHÁC HẲN DongThanhVien.VaiTro (số, vai trò trong gia
+/// đình). KHÔNG có UpdateDate.
+/// </summary>
+public record DongChiTietHoiDoan(int ID, int MaHoiDoan, int MaGiaoDan, string? NgayVaoHoiDoan,
+    string? NgayRaHoiDoan, string? VaiTro);
+
+/// <summary>
 /// Trừu tượng hoá nguồn để bộ chuyển đổi kiểm thử được mà không cần file .mdb và Access
 /// Database Engine trên máy chạy test.
 /// </summary>
@@ -154,4 +190,10 @@ public interface IDuLieuNguon
     IEnumerable<DongRaoHonPhoi> DocRaoHonPhoi();
     IEnumerable<DongTanHien> DocTanHien();
     IEnumerable<DongLinhMuc> DocLinhMuc();
+    IEnumerable<DongKhoiGiaoLy> DocKhoiGiaoLy();
+    IEnumerable<DongLopGiaoLy> DocLopGiaoLy();
+    IEnumerable<DongChiTietLopGiaoLy> DocChiTietLopGiaoLy();
+    IEnumerable<DongGiaoLyVien> DocGiaoLyVien();
+    IEnumerable<DongHoiDoan> DocHoiDoan();
+    IEnumerable<DongChiTietHoiDoan> DocChiTietHoiDoan();
 }

@@ -45,6 +45,12 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         var raoHonPhoi = nguon.DocRaoHonPhoi().ToList();
         var tanHien = nguon.DocTanHien().ToList();
         var linhMuc = nguon.DocLinhMuc().ToList();
+        var khoiGiaoLy = nguon.DocKhoiGiaoLy().ToList();
+        var lopGiaoLy = nguon.DocLopGiaoLy().ToList();
+        var chiTietLopGiaoLy = nguon.DocChiTietLopGiaoLy().ToList();
+        var giaoLyVien = nguon.DocGiaoLyVien().ToList();
+        var hoiDoan = nguon.DocHoiDoan().ToList();
+        var chiTietHoiDoan = nguon.DocChiTietHoiDoan().ToList();
 
         var soNguon = new Dictionary<string, int>
         {
@@ -67,7 +73,13 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             ["chuyen_xu"] = chuyenXu.Count,
             ["rao_hon_phoi"] = raoHonPhoi.Count,
             ["tan_hien"] = tanHien.Count,
-            ["linh_muc"] = linhMuc.Count
+            ["linh_muc"] = linhMuc.Count,
+            ["khoi_giao_ly"] = khoiGiaoLy.Count,
+            ["lop_giao_ly"] = lopGiaoLy.Count,
+            ["chi_tiet_lop_giao_ly"] = chiTietLopGiaoLy.Count,
+            ["giao_ly_vien"] = giaoLyVien.Count,
+            ["hoi_doan"] = hoiDoan.Count,
+            ["chi_tiet_hoi_doan"] = chiTietHoiDoan.Count
         };
 
         if (chayThu)
@@ -101,6 +113,20 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         await GhiTanHien(tanHien, maGiaoDanHopLe, ct);
         await GhiLinhMuc(linhMuc, ct);
 
+        // Giáo lý và hội đoàn đều phụ thuộc GiaoDan; LopGiaoLy phụ thuộc KhoiGiaoLy;
+        // ChiTietLopGiaoLy/GiaoLyVien phụ thuộc LopGiaoLy; ChiTietHoiDoan phụ thuộc HoiDoan.
+        var maKhoiHopLe = khoiGiaoLy.Select(d => d.MaKhoi).ToHashSet();
+        await GhiKhoiGiaoLy(khoiGiaoLy, maGiaoDanHopLe, ct);
+        await GhiLopGiaoLy(lopGiaoLy, maKhoiHopLe, ct);
+
+        var maLopHopLe = lopGiaoLy.Select(d => d.MaLop).ToHashSet();
+        await GhiChiTietLopGiaoLy(chiTietLopGiaoLy, maLopHopLe, maGiaoDanHopLe, ct);
+        await GhiGiaoLyVien(giaoLyVien, maLopHopLe, maGiaoDanHopLe, ct);
+
+        var maHoiDoanHopLe = hoiDoan.Select(d => d.MaHoiDoan).ToHashSet();
+        await GhiHoiDoan(hoiDoan, ct);
+        await GhiChiTietHoiDoan(chiTietHoiDoan, maHoiDoanHopLe, maGiaoDanHopLe, ct);
+
         var maGiaoPhanLanNay = giaoPhan.Select(d => d.MaGiaoPhan).ToHashSet();
         var maGiaoHatLanNay = giaoHat.Select(d => d.MaGiaoHat).ToHashSet();
         var soDich = new Dictionary<string, int>
@@ -128,7 +154,13 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             ["chuyen_xu"] = await db.ChuyenXu.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
             ["rao_hon_phoi"] = await db.RaoHonPhoi.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
             ["tan_hien"] = await db.TanHien.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
-            ["linh_muc"] = await db.LinhMuc.CountAsync(x => x.GiaoXuId == giaoXuId, ct)
+            ["linh_muc"] = await db.LinhMuc.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
+            ["khoi_giao_ly"] = await db.KhoiGiaoLy.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
+            ["lop_giao_ly"] = await db.LopGiaoLy.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
+            ["chi_tiet_lop_giao_ly"] = await db.ChiTietLopGiaoLy.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
+            ["giao_ly_vien"] = await db.GiaoLyVien.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
+            ["hoi_doan"] = await db.HoiDoan.CountAsync(x => x.GiaoXuId == giaoXuId, ct),
+            ["chi_tiet_hoi_doan"] = await db.ChiTietHoiDoan.CountAsync(x => x.GiaoXuId == giaoXuId, ct)
         };
 
         return new KetQuaChuyenDoi(soNguon, soDich, _canhBao);
@@ -739,6 +771,171 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
 
         foreach (var d in dong.Where(d => d.UpdateDate is not null))
             await DatLaiUpdatedAt(db.LinhMuc, anhXa.Lay("linh_muc", d.MaLinhMuc), d.UpdateDate!.Value, ct);
+    }
+
+    /// <summary>
+    /// Khối giáo lý — 4 cột Access, KHÔNG có UpdateDate. NguoiQuanLy tham chiếu GiaoDan nhưng
+    /// là tuỳ chọn về mặt nghiệp vụ (control desktop mặc định MaGiaoDan=-1 khi chưa gán ai) —
+    /// giá trị không dương hoặc không tồn tại trong tập giáo dân của lần chạy này chỉ được đặt
+    /// null, KHÔNG làm bỏ qua cả dòng KhoiGiaoLy.
+    /// </summary>
+    private async Task GhiKhoiGiaoLy(List<DongKhoiGiaoLy> dong, HashSet<int> maGiaoDanHopLe,
+        CancellationToken ct)
+    {
+        foreach (var d in dong)
+        {
+            var id = anhXa.Lay("khoi_giao_ly", d.MaKhoi);
+            var e = await db.KhoiGiaoLy.FindAsync([id], ct) ?? Them(new KhoiGiaoLy { Id = id });
+
+            e.GiaoXuId = giaoXuId;
+            e.MaKhoiCu = d.MaKhoi;
+            e.TenKhoi = d.TenKhoi;
+            e.NguoiQuanLyId = d.NguoiQuanLy > 0 && maGiaoDanHopLe.Contains(d.NguoiQuanLy)
+                ? anhXa.Lay("giao_dan", d.NguoiQuanLy) : null;
+            e.GhiChu = d.GhiChu;
+            e.SourceSystem = Nguon;
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Lớp giáo lý — 6 cột Access, KHÔNG có UpdateDate. MaKhoi là khoá ngoại bắt buộc — dòng mồ
+    /// côi (MaKhoi không tồn tại trong tập khối giáo lý của lần chạy này) bị bỏ qua kèm cảnh
+    /// báo, không làm sập lần chuyển.
+    /// </summary>
+    private async Task GhiLopGiaoLy(List<DongLopGiaoLy> dong, HashSet<int> maKhoiHopLe, CancellationToken ct)
+    {
+        foreach (var d in dong)
+        {
+            if (!maKhoiHopLe.Contains(d.MaKhoi))
+            {
+                _canhBao.Add($"lop_giao_ly: bỏ qua dòng mồ côi MaLop={d.MaLop} " +
+                    $"(MaKhoi={d.MaKhoi} không tồn tại)");
+                continue;
+            }
+            var id = anhXa.Lay("lop_giao_ly", d.MaLop);
+            var e = await db.LopGiaoLy.FindAsync([id], ct) ?? Them(new LopGiaoLy { Id = id });
+
+            e.GiaoXuId = giaoXuId;
+            e.MaLopCu = d.MaLop;
+            e.TenLop = d.TenLop;
+            e.KhoiGiaoLyId = anhXa.Lay("khoi_giao_ly", d.MaKhoi);
+            e.Nam = d.Nam;
+            e.PhongHoc = d.PhongHoc;
+            e.GhiChu = d.GhiChu;
+            e.SourceSystem = Nguon;
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Học viên trong lớp giáo lý — 5 cột Access, khoá gốc là cặp (MaLop, MaGiaoDan), KHÔNG có
+    /// UpdateDate. Bỏ qua (đếm cảnh báo) dòng mồ côi về MaLop hoặc MaGiaoDan, giống BiTichChiTiet.
+    /// </summary>
+    private async Task GhiChiTietLopGiaoLy(List<DongChiTietLopGiaoLy> dong, HashSet<int> maLopHopLe,
+        HashSet<int> maGiaoDanHopLe, CancellationToken ct)
+    {
+        foreach (var d in dong)
+        {
+            if (!maLopHopLe.Contains(d.MaLop) || !maGiaoDanHopLe.Contains(d.MaGiaoDan))
+            {
+                _canhBao.Add($"chi_tiet_lop_giao_ly: bỏ qua dòng mồ côi MaLop={d.MaLop}, " +
+                    $"MaGiaoDan={d.MaGiaoDan} (khoá ngoại không tồn tại)");
+                continue;
+            }
+            var id = anhXa.Lay("chi_tiet_lop_giao_ly", $"{d.MaLop}:{d.MaGiaoDan}");
+            var e = await db.ChiTietLopGiaoLy.FindAsync([id], ct) ?? Them(new ChiTietLopGiaoLy { Id = id });
+
+            e.GiaoXuId = giaoXuId;
+            e.LopGiaoLyId = anhXa.Lay("lop_giao_ly", d.MaLop);
+            e.GiaoDanId = anhXa.Lay("giao_dan", d.MaGiaoDan);
+            e.SoThuTu = d.SoThuTu;
+            e.HoanThanh = d.HoanThanh;
+            e.GhiChuGLy = d.GhiChuGLy;
+            e.SourceSystem = Nguon;
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Giáo lý viên phụ trách lớp — chỉ 2 cột Access, khoá gốc là cặp (MaLop, MaGiaoDan), KHÔNG
+    /// có UpdateDate. Cùng cách xử lý mồ côi như ChiTietLopGiaoLy.
+    /// </summary>
+    private async Task GhiGiaoLyVien(List<DongGiaoLyVien> dong, HashSet<int> maLopHopLe,
+        HashSet<int> maGiaoDanHopLe, CancellationToken ct)
+    {
+        foreach (var d in dong)
+        {
+            if (!maLopHopLe.Contains(d.MaLop) || !maGiaoDanHopLe.Contains(d.MaGiaoDan))
+            {
+                _canhBao.Add($"giao_ly_vien: bỏ qua dòng mồ côi MaLop={d.MaLop}, " +
+                    $"MaGiaoDan={d.MaGiaoDan} (khoá ngoại không tồn tại)");
+                continue;
+            }
+            var id = anhXa.Lay("giao_ly_vien", $"{d.MaLop}:{d.MaGiaoDan}");
+            var e = await db.GiaoLyVien.FindAsync([id], ct) ?? Them(new GiaoLyVien { Id = id });
+
+            e.GiaoXuId = giaoXuId;
+            e.LopGiaoLyId = anhXa.Lay("lop_giao_ly", d.MaLop);
+            e.GiaoDanId = anhXa.Lay("giao_dan", d.MaGiaoDan);
+            e.SourceSystem = Nguon;
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Hội đoàn — 6 cột Access, KHÔNG có UpdateDate.</summary>
+    private async Task GhiHoiDoan(List<DongHoiDoan> dong, CancellationToken ct)
+    {
+        foreach (var d in dong)
+        {
+            var id = anhXa.Lay("hoi_doan", d.MaHoiDoan);
+            var e = await db.HoiDoan.FindAsync([id], ct) ?? Them(new HoiDoan { Id = id });
+            var loi = new Dictionary<string, string>();
+
+            e.GiaoXuId = giaoXuId;
+            e.MaHoiDoanCu = d.MaHoiDoan;
+            e.TenHoiDoan = d.TenHoiDoan;
+            e.ThanhBonMang = d.ThanhBonMang;
+            e.NgayBonMang = DocNgay(d.NgayBonMang, nameof(d.NgayBonMang), loi);
+            e.NgayThanhLap = DocNgay(d.NgayThanhLap, nameof(d.NgayThanhLap), loi);
+            e.GhiChu = d.GhiChu;
+            e.SourceSystem = Nguon;
+            GhiLoi(e, loi, "hoi_doan", d.MaHoiDoan);
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Thành viên hội đoàn — 6 cột Access, có cột ID riêng (không phải khoá tổ hợp), KHÔNG có
+    /// UpdateDate. VaiTro là Text (chức vụ trong hội đoàn) — khác ThanhVienGiaDinh.VaiTro (số).
+    /// Bỏ qua dòng mồ côi về MaHoiDoan hoặc MaGiaoDan, giống BiTichChiTiet.
+    /// </summary>
+    private async Task GhiChiTietHoiDoan(List<DongChiTietHoiDoan> dong, HashSet<int> maHoiDoanHopLe,
+        HashSet<int> maGiaoDanHopLe, CancellationToken ct)
+    {
+        foreach (var d in dong)
+        {
+            if (!maHoiDoanHopLe.Contains(d.MaHoiDoan) || !maGiaoDanHopLe.Contains(d.MaGiaoDan))
+            {
+                _canhBao.Add($"chi_tiet_hoi_doan: bỏ qua dòng mồ côi ID={d.ID}, " +
+                    $"MaHoiDoan={d.MaHoiDoan}, MaGiaoDan={d.MaGiaoDan} (khoá ngoại không tồn tại)");
+                continue;
+            }
+            var id = anhXa.Lay("chi_tiet_hoi_doan", d.ID);
+            var e = await db.ChiTietHoiDoan.FindAsync([id], ct) ?? Them(new ChiTietHoiDoan { Id = id });
+            var loi = new Dictionary<string, string>();
+
+            e.GiaoXuId = giaoXuId;
+            e.MaChiTietHoiDoanCu = d.ID;
+            e.HoiDoanId = anhXa.Lay("hoi_doan", d.MaHoiDoan);
+            e.GiaoDanId = anhXa.Lay("giao_dan", d.MaGiaoDan);
+            e.NgayVaoHoiDoan = DocNgay(d.NgayVaoHoiDoan, nameof(d.NgayVaoHoiDoan), loi);
+            e.NgayRaHoiDoan = DocNgay(d.NgayRaHoiDoan, nameof(d.NgayRaHoiDoan), loi);
+            e.VaiTro = d.VaiTro;
+            e.SourceSystem = Nguon;
+            GhiLoi(e, loi, "chi_tiet_hoi_doan", d.ID);
+        }
+        await db.SaveChangesAsync(ct);
     }
 
     /// <summary>
