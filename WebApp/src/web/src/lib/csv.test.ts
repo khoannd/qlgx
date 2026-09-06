@@ -11,8 +11,10 @@ describe('taiXuongCsv', () => {
     let tenTepDaTai: string | undefined
     const click = vi.fn()
 
-    vi.spyOn(URL, 'createObjectURL').mockImplementation((blob: Blob) => {
-      blobDaTao = blob
+    // URL.createObjectURL nhan Blob | MediaSource, nen mock phai khai bao dung kieu rong
+    // do roi thu hep lai — khai bao hep thang thanh Blob se lam `tsc -b` (va `npm run build`) do.
+    vi.spyOn(URL, 'createObjectURL').mockImplementation((obj: Blob | MediaSource) => {
+      blobDaTao = obj as Blob
       return 'blob:gia-lap'
     })
     const thuHoi = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
