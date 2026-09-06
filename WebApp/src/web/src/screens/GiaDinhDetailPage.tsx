@@ -4,7 +4,9 @@ import type { GiaDinhDetail as GiaDinhDetailDuLieu, GiaoDanTimKiem, GiaoHo } fro
 import { canQuyetDinhChuyenXu, canQuyetDinhNguoiCu } from '../lib/canhBaoGiaDinh'
 import { chayCayQuyetDinhNguoiCu, keHoachDoiHangLoat } from '../lib/nguoiCu'
 import { useHoiDap } from '../components/GxHoiDap'
+import { BanNhapBanner } from '../components/BanNhapBanner'
 import { TrangThaiTai } from '../components/TrangThaiTai'
+import { banNhapKhoa, docBanNhap, xoaBanNhap } from '../lib/banNhap'
 import { GiaDinhDetail, type YeuCauCapNhatGiaDinh } from './GiaDinhDetail'
 
 type Props = {
@@ -13,6 +15,8 @@ type Props = {
   id: string | null
   moGiaoDan?: (id: string) => void
   moDanhSachGiaDinh?: () => void
+  /** Tên tài khoản đang đăng nhập — xem chú thích cùng tên ở `GiaoDanDetailPage.Props`. */
+  tenTaiKhoan?: string | null
 }
 
 const tenHienThi = (nguoi: { tenThanh: string | null; hoTen: string }) =>
@@ -25,15 +29,43 @@ const tenHienThi = (nguoi: { tenThanh: string | null; hoTen: string }) =>
  * `window.confirm`/`alert` — bắt buộc cho chuỗi hỏi nhiều bước của `NguoiCu`, xem
  * docs/superpowers/specs/man-hinh/can-review-sau.md mục 3.
  */
-export function GiaDinhDetailPage({ id, moGiaoDan, moDanhSachGiaDinh }: Props) {
+export function GiaDinhDetailPage({ id, moGiaoDan, moDanhSachGiaDinh, tenTaiKhoan = null }: Props) {
   const [idThat, setIdThat] = useState(id)
   const [duLieu, setDuLieu] = useState<GiaDinhDetailDuLieu | null>(null)
   const [dangTai, setDangTai] = useState(idThat !== null)
   const [loi, setLoi] = useState<string | null>(null)
   const [dangLuu, setDangLuu] = useState(false)
   const [thongBaoLuu, setThongBaoLuu] = useState<string | null>(null)
+  const [luuThanhCongDem, setLuuThanhCongDem] = useState(0)
   const [danhMucGiaoHo, setDanhMucGiaoHo] = useState<GiaoHo[]>([])
   const { hoi, hoi3, bao, Dialog } = useHoiDap()
+
+  // Bản nháp ngoại tuyến (Task 16, xem lib/banNhap.ts và chú thích cùng tên ở
+  // GiaoDanDetailPage.tsx) — khoá theo `idThat` (mã THẬT sau khi tạo mới xong, không phải `id`
+  // ban đầu có thể là `null`) để bản nháp lúc "đang sửa" không lẫn với lúc "đang tạo mới".
+  const khoaBanNhap = tenTaiKhoan ? banNhapKhoa('giaDinh', idThat, tenTaiKhoan) : null
+  const [banNhapCho, setBanNhapCho] = useState<{ duLieu: YeuCauCapNhatGiaDinh; thoiDiem: string } | null>(null)
+  const [banNhapApDung, setBanNhapApDung] = useState<YeuCauCapNhatGiaDinh | null>(null)
+  const [remountKey, setRemountKey] = useState(0)
+
+  useEffect(() => {
+    setBanNhapApDung(null)
+    if (!khoaBanNhap || !tenTaiKhoan || idThat === null) { setBanNhapCho(null); return }
+    setBanNhapCho(docBanNhap<YeuCauCapNhatGiaDinh>(khoaBanNhap, tenTaiKhoan))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [khoaBanNhap, tenTaiKhoan, idThat])
+
+  function khoiPhucBanNhap() {
+    if (!banNhapCho) return
+    setBanNhapApDung(banNhapCho.duLieu)
+    setRemountKey((k) => k + 1)
+    setBanNhapCho(null)
+  }
+
+  function boQuaBanNhap() {
+    if (khoaBanNhap) xoaBanNhap(khoaBanNhap)
+    setBanNhapCho(null)
+  }
 
   useEffect(() => {
     api.giaoHo.danhMuc()
@@ -81,6 +113,7 @@ export function GiaDinhDetailPage({ id, moGiaoDan, moDanhSachGiaDinh }: Props) {
           danhMucGiaoHo={danhMucGiaoHo}
           onTaoMoi={taoMoi}
           dangLuu={dangLuu}
+          tenTaiKhoan={tenTaiKhoan}
         />
         {Dialog}
       </>
@@ -93,6 +126,7 @@ export function GiaDinhDetailPage({ id, moGiaoDan, moDanhSachGiaDinh }: Props) {
     try {
       await api.giaDinh.capNhat(idThat as string, payload)
       setThongBaoLuu('Đã lưu thành công.')
+      setLuuThanhCongDem((d) => d + 1)
       tai()
     } catch (e) {
       if (e instanceof LoiXungDot) {
@@ -267,8 +301,10 @@ export function GiaDinhDetailPage({ id, moGiaoDan, moDanhSachGiaDinh }: Props) {
 
   return (
     <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={tai}>
+      {banNhapCho && <BanNhapBanner thoiDiem={banNhapCho.thoiDiem} onKhoiPhuc={khoiPhucBanNhap} onBoQua={boQuaBanNhap} />}
       {duLieu && (
         <GiaDinhDetail
+          key={remountKey}
           duLieu={duLieu}
           moGiaoDan={moGiaoDan}
           moDanhSachGiaDinh={moDanhSachGiaDinh}
@@ -280,6 +316,10 @@ export function GiaDinhDetailPage({ id, moGiaoDan, moDanhSachGiaDinh }: Props) {
           onBoChonVoChong={boChonVoChong}
           onThemThanhVien={themThanhVien}
           onXoaThanhVien={xoaThanhVien}
+          khoaBanNhap={khoaBanNhap}
+          tenTaiKhoan={tenTaiKhoan}
+          banNhap={banNhapApDung}
+          luuThanhCongDem={luuThanhCongDem}
         />
       )}
       {Dialog}

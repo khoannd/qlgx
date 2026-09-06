@@ -625,3 +625,111 @@ thứ nhất (bộ lọc toàn cục EF Core + claim JWT, đã có test bảo m�
 thủ thứ hai, việc riêng cần thời gian khảo sát cách EF Core + Npgsql phối hợp với RLS (đặt
 `app.current_giao_xu_id` mỗi kết nối, v.v.) — ghi lại đây làm việc BẮT BUỘC phải làm trước khi
 onboard giáo xứ thứ hai lên cùng máy chủ thật, không phải "có thể làm sau nếu rảnh".
+
+### 28. Task 16 — PWA và bản nháp ngoại tuyến: các quyết định tự đưa ra (2026-09-07)
+
+Làm việc này trong lúc người dùng đi ngủ, tự quyết theo hướng an toàn nhất ở mọi chỗ mơ hồ, ghi
+lại đây theo đúng yêu cầu. Xem báo cáo đầy đủ ở
+`.superpowers/sdd/2026-09-06-qlgx-web-phase-1/task-16-report.md`.
+
+**a) `useAuth()` KHÔNG được gọi trực tiếp trong `GiaoDanDetailPage`/`GiaDinhDetailPage`.** Cả
+hai container này đã có bộ test dựng độc lập (không bọc `<AuthProvider>`) từ trước — gọi thẳng
+`useAuth()` sẽ ném lỗi "phải gọi bên trong AuthProvider" và làm hỏng TOÀN BỘ các bài test đó.
+Chọn phương án an toàn hơn: `App.tsx` (nơi đã có `useAuth()`) tính `tenTaiKhoan` MỘT LẦN rồi
+truyền xuống hai container qua prop `tenTaiKhoan?: string | null` — không đổi hành vi thật (vẫn
+lấy đúng tài khoản đang đăng nhập), chỉ đổi chỗ đọc, và giữ nguyên khả năng test độc lập.
+
+**b) Khoá bản nháp gắn theo `(loại form, id bản ghi, tên tài khoản)`, KHÔNG gắn `giaoXuId`.**
+Hai lý do: (1) một tài khoản đăng nhập chỉ thuộc một giáo xứ tại một thời điểm (xem Task 14),
+`tenTaiKhoan` đã đủ để không lẫn; (2) tránh phình thêm một chiều khoá mà `AuthContext` hiện chưa
+lộ `giaoXuId` ra props công khai. Nếu sau này một trình duyệt dùng để đăng nhập LUÂN PHIÊN vào
+nhiều giáo xứ khác nhau bằng CÙNG một tên tài khoản trùng (xem mục 27a — tên đăng nhập trùng
+giữa các giáo xứ là hợp lệ), nháp của giáo xứ này có thể hiện nhầm khi đăng nhập vào giáo xứ
+kia cùng tên tài khoản trùng — rủi ro RẤT hẹp (trùng cả tên đăng nhập lẫn việc dùng chung máy),
+chấp nhận được ở Phase 1; ghi lại để biết nếu cần xử lý sau.
+
+**c) Bản nháp của bản ghi MỚI ("Thêm giáo dân"/"Thêm gia đình", `id = null`) dùng CHUNG một
+khoá "moi" cho loại form đó — không phân biệt được nhiều thẻ "mới" đang mở song song.** Mở hai
+thẻ "Thêm giáo dân" cùng lúc, gõ dở cả hai, chỉ thẻ gõ SAU CÙNG mới thắng trong `localStorage`
+(thẻ kia vẫn hiển thị đúng nội dung nó đang gõ trên màn hình — chỉ mất nếu tải lại trang lúc
+đó). Coi là đánh đổi chấp nhận được vì mở nhiều thẻ "mới" cùng loại cùng lúc là thao tác hiếm;
+sửa đúng cần một id tạm sinh phía client cho mỗi thẻ nháp — để dành nếu có phàn nàn thật.
+
+**d) Form "Thêm gia đình" (chỉ 2 trường: Tên gia đình + Giáo họ) KHÔNG bật tự động lưu nháp,
+form giáo dân (60+ trường) VÀ form sửa gia đình đã có (nhiều trường hơn) THÌ có.** Rủi ro mất
+công gõ tỉ lệ thuận với số trường — 2 trường gõ lại mất vài giây, không đáng thêm một luồng
+autosave nữa cho một form đã đơn giản. Có thể bật thêm sau nếu cần.
+
+**e) `useTuDongLuuBanNhap` CHỐT "mốc gốc" (baseline) bằng chính `layPayload()` ở lần chạy đầu
+tiên sau khi mount, thay vì bắt đầu từ `null`.** Phát hiện bằng kiểm thử THẬT trên `qlgx_thu`
+(Playwright): mở một giáo dân, KHÔNG sửa gì, đợi hơn 5 giây rồi tải lại trang — nếu mốc gốc là
+`null`, lần hẹn giờ đầu tiên vẫn ghi một "bản nháp ma" giống hệt dữ liệu máy chủ (vì giá trị lúc
+đó ≠ `null`), khiến người dùng chỉ MỞ RA XEM cũng bị hỏi "khôi phục bản nháp" một cách vô nghĩa
+ở lần sau. Chốt mốc gốc bằng dữ liệu vừa tải giải quyết đúng gốc rễ: nháp chỉ thật sự được ghi
+khi nội dung khác mốc gốc, tức là có sửa thật. Đã thêm lại một bài test hồi quy riêng cho ca
+này (`GiaoDanDetailPage.test.tsx`, "ban nhap ma") — xem mục g bên dưới về khó khăn khi viết test
+này dưới đồng hồ giả.
+
+**f) Khôi phục bản nháp bằng CÁCH REMOUNT component (đổi `key`), KHÔNG bằng cách ghi thẳng vào
+DOM.** `GxDate` (ô ngày) là input CÓ KIỂM SOÁT nội bộ (state `iso`/`text` riêng, xem
+`GxDate.tsx`) — set `.value` thẳng lên phần tử DOM ẩn của nó sẽ bị React ghi đè lại ngay ở lần
+render kế tiếp, không thật sự khôi phục được ngày tháng. Giải pháp: `GiaoDanDetail`/
+`GiaDinhDetail` nhận thêm prop `banNhap` (đè lên `duLieu`/bản trống để dựng `p`/`f`), và
+container (`...Page.tsx`) đổi `key` mỗi khi áp dụng một bản nháp — buộc React dựng lại toàn bộ
+cây con từ đầu với giá trị mới, đúng cách `GxDate` (và mọi input không kiểm soát khác) đã dựa
+vào để nhận `defaultValue` mới (xem chú thích gốc trong `GxDate.tsx`).
+
+**g) Test tự động lưu nháp phải bật đồng hồ giả TRƯỚC `render()`, và chèn thêm một bước
+`advanceTimersByTimeAsync(0)` giữa lúc chờ dựng xong form và lúc giả lập gõ.** Dưới đồng hồ giả
+(`vi.useFakeTimers({ shouldAdvanceTime: true })`), hiệu ứng "chốt mốc gốc" (mục e) của
+`GiaoDanDetail` có thể bị hoãn sang một tác vụ hẹn giờ mà `screen.findByRole` không chờ, khiến
+nó vô tình chạy SAU bước giả lập gõ và chốt nhầm giá trị ĐÃ SỬA làm mốc gốc — chỉ là hiện tượng
+riêng của kiểm thử dưới đồng hồ giả (đã xác nhận KHÔNG xảy ra khi kiểm thử thật trên trình
+duyệt, xem ảnh `36`/`40` trong `WebApp/anh-chup-kiem-thu/`), không phải lỗi thật của ứng dụng.
+
+**h) Cải wording thông báo lỗi mạng ở `client.ts` để phân biệt "mất mạng thật" và "máy chủ
+Qlgx.Api chưa chạy" bằng `navigator.onLine`.** Trước Task 16, cả hai ca đều hiện chung một câu
+hướng dẫn cho lập trình viên ("Kiểm tra Qlgx.Api đã chạy chưa") — không sai về mặt kỹ thuật
+(request thật sự thất bại ở tầng mạng trong cả hai trường hợp) nhưng gây hoang mang cho người
+dùng cuối lúc mất mạng thật ở giáo xứ vùng xa. Giữ nguyên câu cũ cho ca `navigator.onLine ===
+true` (máy chủ không phản hồi dù có mạng — đúng tình huống dev hay gặp), thêm câu trấn an mới
+cho ca `navigator.onLine === false`.
+
+**i) KHÔNG cache bất kỳ phản hồi `/api/*` nào trong service worker — không khai báo
+`runtimeCaching` cho `/api`.** Đây là quyết định AN TOÀN NHẤT theo đúng cảnh báo của người dùng
+("đừng cache dữ liệu nghiệp vụ kiểu phục vụ dữ liệu cũ như thật"): mặc định của
+`vite-plugin-pwa`/Workbox chỉ tiền tải (precache) các tệp build tĩnh (JS/CSS/HTML/icon), hoàn
+toàn không đụng tới các lời gọi API lúc chạy trừ khi khai báo `runtimeCaching` — nên không khai
+báo gì cho `/api` nghĩa là mọi lời gọi API luôn đi thẳng ra mạng, lỗi mạng vẫn ném lỗi thật (xem
+mục h) thay vì âm thầm phục vụ dữ liệu cũ. Đã xác nhận bằng cách kiểm tra `dist/sw.js` sau khi
+build: chuỗi `api` DUY NHẤT xuất hiện trong tệp là ở `navigateFallbackDenylist` (chặn service
+worker trả `index.html` thay cho một request bắt đầu bằng `/api/`), không có route nào khác
+nhắc tới `/api`.
+
+**j) `registerType: 'prompt'` + `injectRegister: false`, tự đăng ký service worker bằng hook
+`useRegisterSW` (`virtual:pwa-register/react`) trong `CapNhatPWA.tsx`.** Đúng yêu cầu "báo có
+bản mới, tải lại" thay vì âm thầm chuyển bản — mặc định `registerType: 'autoUpdate'` của
+`vite-plugin-pwa` sẽ tự activate service worker mới và có thể làm mất trạng thái/bản nháp đang
+gõ dở ở một tab khác đang mở nếu tab đó tự reload theo. `CapNhatPWA` chỉ hiện dải nhỏ góc dưới
+bên phải, người dùng chủ động bấm "Tải lại" khi sẵn sàng (hoặc "Để sau").
+
+**k) Tạo icon PWA (`public/icons/*.png`) bằng script Python/Pillow tự vẽ (hình chữ thập trắng
+trên nền `#1d5ddb`), KHÔNG dùng logo thật của giáo xứ.** Chưa có bộ nhận diện thương hiệu chính
+thức nào cho QLGX ở giai đoạn này — icon tạm đủ để cài đặt PWA hoạt động đúng kỹ thuật (đúng
+kích thước 192/512, có bản "maskable" cho Android), nên thay bằng icon thật khi có.
+
+**l) Tài khoản kiểm thử `task16_kt` được tạo tạm trên `qlgx_thu` bằng
+`dotnet run -- tao-tai-khoan-quan-tri` (mật khẩu ngẫu nhiên, chỉ tồn tại trong biến môi trường
+của phiên chạy, KHÔNG ghi vào bất kỳ tệp nào) để không cần biết mật khẩu của tài khoản `quantri`
+đã có sẵn (không được ghi ở đâu, đúng quy định). Đã XOÁ tài khoản này khỏi `tai_khoan` ngay sau
+khi kiểm thử xong — xác nhận bằng truy vấn `select ten_tai_khoan from tai_khoan` chỉ còn lại
+`quantri`.
+
+**m) KHÔNG sửa lỗi `tsc` có sẵn từ trước ở `src/lib/csv.test.ts` (kiểu `Blob | MediaSource` của
+`URL.createObjectURL`), dù lỗi này chặn đứng toàn bộ `npm run build` (script chạy `tsc -b &&
+vite build`).** Xác nhận bằng `git stash` rồi chạy lại `tsc -b --noEmit`: lỗi đã tồn tại TRƯỚC
+Task 16, không phải do các thay đổi của task này gây ra — nằm ngoài phạm vi được giao. Đã kiểm
+chứng riêng phần Task 16 (PWA) bằng `npx vite build` (bỏ qua bước `tsc -b`), xác nhận
+`vite-plugin-pwa` sinh đúng `dist/sw.js`/`dist/manifest.webmanifest`/`dist/workbox-*.js`. **Việc
+cần làm trước khi ai đó thật sự chạy `npm run build` để triển khai:** sửa type test đó (đổi
+chữ ký `mockImplementation` cho khớp `Blob | MediaSource`, hoặc ép kiểu tường minh).

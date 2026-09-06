@@ -9,6 +9,8 @@ import { GiaoDanDetailPage } from './screens/GiaoDanDetailPage'
 import { TaiKhoanListPage } from './screens/TaiKhoanListPage'
 import { LoginPage } from './screens/LoginPage'
 import { useAuth } from './api/AuthContext'
+import { TrangThaiMangBanner } from './components/TrangThaiMangBanner'
+import { CapNhatPWA } from './components/CapNhatPWA'
 
 /** Chỗ giữ chỗ — màn hình Tổng quan thật sẽ được dựng ở task sau. */
 function TongQuan() {
@@ -28,6 +30,11 @@ function App() {
   // Tiêu đề thẻ chi tiết không còn biết trước tên bản ghi (dữ liệu giờ tải bất đồng bộ từ
   // API thay vì tra ngay trong mảng tĩnh) — dùng tiêu đề tạm rồi để chính `GiaDinhDetailPage`/
   // `GiaoDanDetailPage` hiển thị tên thật trong nội dung thẻ khi tải xong.
+  // Tên tài khoản đang đăng nhập — truyền xuống các form chi tiết để khoá bản nháp ngoại tuyến
+  // theo tài khoản (Task 16, xem lib/banNhap.ts). Component chi tiết không tự gọi useAuth() để
+  // giữ khả năng test độc lập (không bắt buộc bọc <AuthProvider> trong test).
+  const tenTaiKhoan = nguoiDung?.tenTaiKhoan ?? null
+
   function moChiTietGiaDinh(id: string | null) {
     const idThe = id ? `giaDinh:${id}` : `giaDinhMoi:${++moiDem.current}`
     mo({
@@ -38,6 +45,7 @@ function App() {
           id={id}
           moGiaoDan={moChiTietGiaoDan}
           moDanhSachGiaDinh={moDanhSachGiaDinh}
+          tenTaiKhoan={tenTaiKhoan}
         />
       ),
     })
@@ -54,6 +62,7 @@ function App() {
           moGiaDinh={moChiTietGiaDinh}
           moDanhSachGiaoDan={moDanhSachGiaoDan}
           moGiaoDan={moChiTietGiaoDan}
+          tenTaiKhoan={tenTaiKhoan}
         />
       ),
     })
@@ -106,12 +115,24 @@ function App() {
   // nhập sang màn hình chính hoặc ngược lại.
   if (dangKiemTraPhien) return null
 
-  if (!nguoiDung) return <LoginPage />
+  if (!nguoiDung) {
+    return (
+      <>
+        <TrangThaiMangBanner />
+        <LoginPage />
+        <CapNhatPWA />
+      </>
+    )
+  }
 
   return (
-    <AppShell dangChonNav={dangChon} onNavigate={moTheoDieuHuong} nguoiDung={nguoiDung}>
-      <TabDocs danhSach={danhSach} dangChon={dangChon} onChon={chon} onDong={dong} />
-    </AppShell>
+    <>
+      <TrangThaiMangBanner />
+      <AppShell dangChonNav={dangChon} onNavigate={moTheoDieuHuong} nguoiDung={nguoiDung}>
+        <TabDocs danhSach={danhSach} dangChon={dangChon} onChon={chon} onDong={dong} />
+      </AppShell>
+      <CapNhatPWA />
+    </>
   )
 }
 

@@ -4,7 +4,9 @@ import type {
   GiaoDanDetail as GiaoDanDetailDuLieu, GiaoHo, HoiDoanCuaGiaoDan, HoiDoanDanhMuc,
   HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
 } from '../api/types'
+import { BanNhapBanner } from '../components/BanNhapBanner'
 import { TrangThaiTai } from '../components/TrangThaiTai'
+import { banNhapKhoa, docBanNhap, xoaBanNhap } from '../lib/banNhap'
 import {
   GiaoDanDetail, type YeuCauCapNhatGiaoDan, type YeuCauCapNhatHoiDoan, type YeuCauCapNhatHonPhoi,
   type YeuCauLuuTanHien, type YeuCauThemHoiDoan,
@@ -19,11 +21,45 @@ type Props = {
   /** Mở (một thẻ tài liệu mới cho) chi tiết giáo dân theo id — dùng để chuyển từ thẻ "nháp"
    * sang thẻ thật ngay sau khi tạo mới thành công. */
   moGiaoDan?: (id: string | null) => void
+  /** Tên tài khoản đang đăng nhập — App.tsx truyền xuống từ `useAuth()` (không gọi thẳng
+   * `useAuth()` ở đây để component này không bắt buộc phải render trong `<AuthProvider>`, giữ
+   * nguyên khả năng test độc lập của các bài test hiện có). Dùng để khoá bản nháp ngoại tuyến
+   * theo tài khoản (Task 16, xem `lib/banNhap.ts`) — không truyền = tắt tính năng bản nháp. */
+  tenTaiKhoan?: string | null
 }
 
 /** Container nối `GiaoDanDetail` với `GET`/`PUT /api/giao-dan/{id}` — cùng khuôn tải lại sau
  * khi lưu và xử lý xung đột RowVersion như `GiaDinhDetailPage`. */
-export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan }: Props) {
+export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan, tenTaiKhoan = null }: Props) {
+  // Bản nháp ngoại tuyến (Task 16, xem lib/banNhap.ts) — khoá cố định cho suốt vòng đời thẻ
+  // này (không phụ thuộc dữ liệu đã tải), gắn kèm tài khoản đang đăng nhập để không lẫn nháp
+  // giữa hai người dùng chung một trình duyệt.
+  const khoaBanNhap = tenTaiKhoan ? banNhapKhoa('giaoDan', id, tenTaiKhoan) : null
+  const [banNhapCho, setBanNhapCho] = useState<{ duLieu: YeuCauCapNhatGiaoDan; thoiDiem: string } | null>(null)
+  const [banNhapApDung, setBanNhapApDung] = useState<YeuCauCapNhatGiaoDan | null>(null)
+  const [remountKey, setRemountKey] = useState(0)
+
+  // Kiểm tra một lần khi mở thẻ này (đổi tài khoản/id) — có bản nháp cũ nằm sẵn thì hỏi trước
+  // khi hiện form, KHÔNG tự động đè lên dữ liệu vừa/sắp tải từ máy chủ.
+  useEffect(() => {
+    setBanNhapApDung(null)
+    if (!khoaBanNhap || !tenTaiKhoan) { setBanNhapCho(null); return }
+    setBanNhapCho(docBanNhap<YeuCauCapNhatGiaoDan>(khoaBanNhap, tenTaiKhoan))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [khoaBanNhap, tenTaiKhoan])
+
+  function khoiPhucBanNhap() {
+    if (!banNhapCho) return
+    setBanNhapApDung(banNhapCho.duLieu)
+    setRemountKey((k) => k + 1)
+    setBanNhapCho(null)
+  }
+
+  function boQuaBanNhap() {
+    if (khoaBanNhap) xoaBanNhap(khoaBanNhap)
+    setBanNhapCho(null)
+  }
+
   const [duLieu, setDuLieu] = useState<GiaoDanDetailDuLieu | null>(null)
   const [dangTai, setDangTai] = useState(id !== null)
   const [loi, setLoi] = useState<string | null>(null)
@@ -153,15 +189,22 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan 
     }
 
     return (
-      <GiaoDanDetail
-        moGiaDinh={moGiaDinh}
-        moDanhSachGiaoDan={moDanhSachGiaoDan}
-        onLuu={tao}
-        dangLuu={dangLuu}
-        thongBaoLuu={thongBaoLuu}
-        loaiThongBao={loaiThongBao}
-        danhMucGiaoHo={danhMucGiaoHo}
-      />
+      <>
+        {banNhapCho && <BanNhapBanner thoiDiem={banNhapCho.thoiDiem} onKhoiPhuc={khoiPhucBanNhap} onBoQua={boQuaBanNhap} />}
+        <GiaoDanDetail
+          key={remountKey}
+          moGiaDinh={moGiaDinh}
+          moDanhSachGiaoDan={moDanhSachGiaoDan}
+          onLuu={tao}
+          dangLuu={dangLuu}
+          thongBaoLuu={thongBaoLuu}
+          loaiThongBao={loaiThongBao}
+          danhMucGiaoHo={danhMucGiaoHo}
+          khoaBanNhap={khoaBanNhap}
+          tenTaiKhoan={tenTaiKhoan}
+          banNhap={banNhapApDung}
+        />
+      </>
     )
   }
 
@@ -227,8 +270,10 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan 
 
   return (
     <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={tai}>
+      {banNhapCho && <BanNhapBanner thoiDiem={banNhapCho.thoiDiem} onKhoiPhuc={khoiPhucBanNhap} onBoQua={boQuaBanNhap} />}
       {duLieu && (
         <GiaoDanDetail
+          key={remountKey}
           duLieu={duLieu}
           moGiaDinh={moGiaDinh}
           moDanhSachGiaoDan={moDanhSachGiaoDan}
@@ -249,6 +294,9 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan 
           onThemHoiDoan={themHoiDoan}
           danhMucHoiDoan={danhMucHoiDoan}
           danhMucGiaoHo={danhMucGiaoHo}
+          khoaBanNhap={khoaBanNhap}
+          tenTaiKhoan={tenTaiKhoan}
+          banNhap={banNhapApDung}
         />
       )}
     </TrangThaiTai>

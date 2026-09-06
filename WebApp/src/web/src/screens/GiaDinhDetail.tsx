@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import type {
   GiaDinhDetail as GiaDinhDetailDuLieu, GiaoDanListItem, GiaoDanTimKiem, GiaoHo, ThanhVien,
 } from '../api/types'
@@ -7,6 +7,7 @@ import { GxDate } from '../components/GxDate'
 import { GxField, GxInline } from '../components/GxField'
 import { GxGiaoDanList, menuGiaoDanMacDinh } from '../components/GxGiaoDanList'
 import { GxPicker } from '../components/GxPicker'
+import { useTuDongLuuBanNhap, xoaBanNhap } from '../lib/banNhap'
 
 /** Sentinel hiển thị cho "Ngoài xứ" — ứng với `giaoHoId === null` (xem NGOAI_XU ở
  * GiaoDanDetail.tsx, cùng quy ước). */
@@ -67,6 +68,15 @@ type Props = {
    * xong, container chuyển sang chế độ sửa bình thường (có id thật) để dùng được các thao tác
    * Người nam/nữ/thành viên ở trên. */
   onTaoMoi?: (payload: { tenGiaDinh: string | null; giaoHoId: string | null }) => void
+  /** Khoá `localStorage` cho bản nháp ngoại tuyến của form này — xem cùng tên ở
+   * `GiaoDanDetail.Props` (`lib/banNhap.ts`). */
+  khoaBanNhap?: string | null
+  tenTaiKhoan?: string | null
+  banNhap?: YeuCauCapNhatGiaDinh | null
+  /** Đếm tăng dần mỗi lần container lưu THÀNH CÔNG (`PUT /api/gia-dinh/{id}`) — không dùng
+   * chuỗi `thongBaoLuu` để dò vì nội dung câu chữ có thể đổi; đổi giá trị này là tín hiệu đủ để
+   * xoá bản nháp tương ứng (xem effect bên dưới). */
+  luuThanhCongDem?: number
 }
 
 const rong = (): GiaDinhDetailDuLieu => ({
@@ -104,8 +114,11 @@ function tuThanhVien(tv: ThanhVien, giaDinhId: string): GiaoDanListItem {
 export function GiaDinhDetail({
   duLieu, moGiaoDan, moDanhSachGiaDinh, onLuu, dangLuu, thongBaoLuu, danhMucGiaoHo = [],
   onGanVoChong, onBoChonVoChong, onThemThanhVien, onXoaThanhVien, onTaoMoi,
+  khoaBanNhap = null, tenTaiKhoan = null, banNhap = null, luuThanhCongDem,
 }: Props) {
-  const f = duLieu ?? rong()
+  // banNhap đè lên dữ liệu gốc khi người dùng bấm "Khôi phục" ở BanNhapBanner — xem chú thích ở
+  // GiaoDanDetail.tsx (cùng cơ chế, container luôn đổi `key` kèm theo).
+  const f = { ...(duLieu ?? rong()), ...(banNhap ?? {}) }
   const moi = !duLieu?.id
   const formRef = useRef<HTMLFormElement>(null)
   // Thêm thành viên: chọn người qua GxPicker rồi chọn vai trò trước khi bấm "Thêm vào gia đình"
@@ -157,28 +170,14 @@ export function GiaDinhDetail({
     [moGiaoDan, onXoaThanhVien, f.thanhVien],
   )
 
-  // Dựng payload từ form (chủ yếu là input không kiểm soát — defaultValue) rồi giao cho
-  // container qua onLuu; container gọi API thật, xử lý thành công/lỗi/xung đột RowVersion.
-  // giaoHoId nay lấy từ state thật (danh mục GET /api/giao-ho, xem prop danhMucGiaoHo) — trước
-  // đây field này cố tình giữ nguyên giá trị cũ vì combobox chỉ liệt kê TÊN cứng không có Id.
-  function xuLySubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    if (!formRef.current) return
-    const fd = new FormData(formRef.current)
+  // Dựng payload từ form (chủ yếu là input không kiểm soát — defaultValue) — dùng chung cho
+  // việc lưu thật (xuLySubmit, chỉ ở chế độ sửa — chế độ tạo mới payload khác hẳn nên tách
+  // riêng bên dưới) VÀ tự lưu nháp định kỳ (useTuDongLuuBanNhap). giaoHoId lấy từ state thật
+  // (danh mục GET /api/giao-ho, xem prop danhMucGiaoHo) — trước đây field này cố tình giữ
+  // nguyên giá trị cũ vì combobox chỉ liệt kê TÊN cứng không có Id.
+  function dungPayloadTuForm(fd: FormData): YeuCauCapNhatGiaDinh {
     const chuoi = (ten: string) => (fd.get(ten) as string | null)?.trim() || null
-
-    if (moi) {
-      // Rule 6 (checkInput, dòng 1301): "Hãy nhập tên gia đình!" — chỉ kiểm tra tối thiểu này
-      // ở bước Tạo mới, các quy tắc còn lại (Giáo họ, chủ hộ...) chưa migrate đủ ở web (xem
-      // gia-dinh-chi-tiet.md mục 10, "Validate... Thiếu ở frontend").
-      const ten = chuoi('tenGiaDinh')
-      if (!ten) { window.alert('Hãy nhập tên gia đình!'); return }
-      onTaoMoi?.({ tenGiaDinh: ten, giaoHoId })
-      return
-    }
-
-    if (!onLuu) return
-    onLuu({
+    return {
       tenGiaDinh: chuoi('tenGiaDinh'),
       giaoHoId,
       dienThoai: chuoi('dienThoai'),
@@ -192,8 +191,41 @@ export function GiaDinhDetail({
       khongThongKe: fd.get('khongThongKe') === 'on',
       rowVersion: f.rowVersion,
       honPhoi: null,
-    })
+    }
   }
+
+  function xuLySubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!formRef.current) return
+    const fd = new FormData(formRef.current)
+
+    if (moi) {
+      // Rule 6 (checkInput, dòng 1301): "Hãy nhập tên gia đình!" — chỉ kiểm tra tối thiểu này
+      // ở bước Tạo mới, các quy tắc còn lại (Giáo họ, chủ hộ...) chưa migrate đủ ở web (xem
+      // gia-dinh-chi-tiet.md mục 10, "Validate... Thiếu ở frontend").
+      const ten = (fd.get('tenGiaDinh') as string | null)?.trim() || null
+      if (!ten) { window.alert('Hãy nhập tên gia đình!'); return }
+      onTaoMoi?.({ tenGiaDinh: ten, giaoHoId })
+      return
+    }
+
+    if (!onLuu) return
+    onLuu(dungPayloadTuForm(fd))
+  }
+
+  // Tự lưu nháp định kỳ (xem lib/banNhap.ts) — chỉ áp dụng cho chế độ SỬA (form tạo mới chỉ có
+  // hai trường tối thiểu, rủi ro mất công gõ thấp hơn nhiều so với 60+ trường của form giáo dân
+  // nên không bật ở đây để đỡ phức tạp — xem can-review-sau.md).
+  useTuDongLuuBanNhap(moi ? null : khoaBanNhap, tenTaiKhoan, () => {
+    if (moi || !formRef.current) return null
+    return dungPayloadTuForm(new FormData(formRef.current))
+  })
+
+  // Lưu thành công — xoá nháp ngay (xem chú thích cùng tên ở GiaoDanDetail.tsx).
+  useEffect(() => {
+    if (luuThanhCongDem !== undefined && luuThanhCongDem > 0 && khoaBanNhap) xoaBanNhap(khoaBanNhap)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [luuThanhCongDem])
 
   return (
     <form className="page detail-page" ref={formRef} onSubmit={xuLySubmit}>

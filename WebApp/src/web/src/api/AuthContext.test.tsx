@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider, useAuth } from './AuthContext'
 import { api } from './client'
 import { authStore } from './authStore'
+import { banNhapKhoa, docBanNhap, luuBanNhap } from '../lib/banNhap'
 
 vi.mock('./client', () => ({
   api: { auth: { dangNhap: vi.fn(), toi: vi.fn() } },
@@ -19,7 +20,7 @@ function ThamDo() {
     <div>
       <div>{nguoiDung ? `da-dang-nhap:${nguoiDung.tenTaiKhoan}` : 'chua-dang-nhap'}</div>
       <button onClick={() => dangNhap('vanphong', 'matkhau')}>dang-nhap</button>
-      <button onClick={dangXuat}>dang-xuat</button>
+      <button onClick={() => dangXuat()}>dang-xuat</button>
     </div>
   )
 }
@@ -103,5 +104,58 @@ describe('AuthContext', () => {
     authStore.baoHet401()
 
     expect(await screen.findByText('chua-dang-nhap')).toBeDefined()
+  })
+
+  // --- Task 16: bản nháp ngoại tuyến (lib/banNhap.ts) không được lẫn/mất khi đăng xuất ---
+
+  it('dang xuat CHU DONG (bam nut) xoa het ban nhap cua tai khoan dang dung', async () => {
+    vi.mocked(api.auth.dangNhap).mockResolvedValue({
+      token: 'token-moi', hetHanSau: 28800,
+      nguoiDung: { id: '1', tenTaiKhoan: 'vanphong', hoTen: null, loaiTaiKhoan: 1, giaoXuId: 'x' },
+    })
+    render(<AuthProvider><ThamDo /></AuthProvider>)
+    await screen.findByText('chua-dang-nhap')
+    await userEvent.click(screen.getByText('dang-nhap'))
+    await screen.findByText('da-dang-nhap:vanphong')
+
+    const khoa = banNhapKhoa('giaoDan', 'p1', 'vanphong')
+    luuBanNhap(khoa, 'vanphong', { hoTen: 'Đang gõ dở' })
+
+    await userEvent.click(screen.getByText('dang-xuat'))
+
+    expect(await screen.findByText('chua-dang-nhap')).toBeDefined()
+    expect(docBanNhap(khoa, 'vanphong')).toBeNull()
+  })
+
+  it('bi dang xuat BUOC vi token het han (401 luc mat mang) KHONG xoa ban nhap — dang nhap lai van khoi phuc duoc', async () => {
+    vi.mocked(api.auth.dangNhap).mockResolvedValue({
+      token: 'token-moi', hetHanSau: 28800,
+      nguoiDung: { id: '1', tenTaiKhoan: 'vanphong', hoTen: null, loaiTaiKhoan: 1, giaoXuId: 'x' },
+    })
+    render(<AuthProvider><ThamDo /></AuthProvider>)
+    await screen.findByText('chua-dang-nhap')
+    await userEvent.click(screen.getByText('dang-nhap'))
+    await screen.findByText('da-dang-nhap:vanphong')
+
+    // Người dùng đang gõ dở form chi tiết, tự lưu nháp — ĐÚNG LÚC token 8 tiếng hết hạn khi
+    // đang mất mạng (Task 14, JwtKey). goi() phát hiện 401 và gọi baoHet401() → dangXuat(false).
+    const khoa = banNhapKhoa('giaoDan', 'p1', 'vanphong')
+    luuBanNhap(khoa, 'vanphong', { hoTen: 'Đang gõ dở lúc hết hạn token' })
+
+    authStore.baoHet401()
+    expect(await screen.findByText('chua-dang-nhap')).toBeDefined()
+
+    // Bản nháp còn nguyên trong lúc "chưa đăng nhập lại" — không hiện được ở UI (đúng, tránh lộ
+    // dữ liệu trước khi xác thực lại) nhưng dữ liệu vẫn nằm đó chờ chủ nhân quay lại.
+    expect(docBanNhap<{ hoTen: string }>(khoa, 'vanphong')?.duLieu).toEqual({
+      hoTen: 'Đang gõ dở lúc hết hạn token',
+    })
+
+    // Đăng nhập lại — cùng tài khoản — bản nháp phải còn khôi phục được.
+    await userEvent.click(screen.getByText('dang-nhap'))
+    await screen.findByText('da-dang-nhap:vanphong')
+    expect(docBanNhap<{ hoTen: string }>(khoa, 'vanphong')?.duLieu).toEqual({
+      hoTen: 'Đang gõ dở lúc hết hạn token',
+    })
   })
 })

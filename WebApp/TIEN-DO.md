@@ -148,9 +148,40 @@ Ngày tháng hỏng (chỉ ghi năm, chuỗi rỗng) được giữ nguyên văn
 | Task | Nội dung | Ghi chú |
 |---|---|---|
 | 14 | Xác thực và phân tách tenant theo claim đăng nhập | **xong (2026-09-07)** — xem mục dưới |
+| 16 | PWA và bản nháp ngoại tuyến | **xong (2026-09-07)** — xem mục dưới |
 | 13 | Kiểm thử đầu-cuối và **triển khai máy chủ** | đã đổi mục tiêu, không còn cài lên máy giáo xứ; nợ RLS (xem `can-review-sau.md` mục 27m) |
 | 15 | Giao diện hôn phối | task mới |
-| 16 | PWA và bản nháp ngoại tuyến | task mới |
+
+## Task 16 — PWA và bản nháp ngoại tuyến (2026-09-07)
+
+Bản web giờ là PWA cài được lên máy/điện thoại (`vite-plugin-pwa`), có service worker cache vỏ
+ứng dụng (JS/CSS/HTML/icon) để mở được khi mất mạng — **không cache bất kỳ phản hồi `/api/*`
+nào** (không có `runtimeCaching` cho `/api`, xác nhận bằng cách đọc `dist/sw.js` sau khi build).
+Có bản mới thì báo qua dải nhỏ góc dưới phải ("Có bản cập nhật mới — Tải lại"), không tự ý
+reload để tránh mất dữ liệu form đang mở.
+
+Mỗi form chi tiết (giáo dân 60+ trường, gia đình) tự lưu nháp vào `localStorage` mỗi 5 giây
+(`lib/banNhap.ts`) — khoá theo tài khoản đăng nhập (không lẫn giữa hai người dùng chung máy),
+mọi thao tác đọc/ghi bọc try/catch (không sập nếu `localStorage` bị chặn), nháp mang số phiên
+bản (gặp nháp cũ thì bỏ qua an toàn). Mất mạng lúc bấm Lưu → dữ liệu đã gõ giữ nguyên trên form,
+thông báo rõ ràng ("Mất kết nối mạng..."), thử lại được khi có mạng. Mở lại form có nháp chưa
+lưu → hỏi khôi phục/bỏ qua, không tự động đè dữ liệu máy chủ. Token JWT hết hạn (8 tiếng, Task
+14) đúng lúc mất mạng KHÔNG xoá nháp (chỉ đăng xuất chủ động mới xoá) — đăng nhập lại vẫn khôi
+phục được, có test riêng cho ca này.
+
+Ba test bắt buộc theo yêu cầu gốc (lưu/khôi phục nháp, `localStorage` ném lỗi vẫn chạy, nháp
+lệch phiên bản bị bỏ qua an toàn, nháp không lẫn giữa hai tài khoản) đều có trong
+`src/lib/banNhap.test.ts` (13 test), cộng thêm test tích hợp ở `GiaoDanDetailPage.test.tsx`/
+`GiaDinhDetailPage.test.tsx`. Tổng test frontend tăng từ 157 lên **183**; backend giữ nguyên
+**172** (task này không đụng gì tới API/CSDL). Chi tiết ở
+`.superpowers/sdd/2026-09-06-qlgx-web-phase-1/task-16-report.md` và các quyết định tự đưa ra ở
+`can-review-sau.md` mục 28.
+
+**Nợ lại:** script `npm run build` (chạy `tsc -b && vite build`) hiện KHÔNG chạy được vì một lỗi
+kiểu có sẵn TỪ TRƯỚC task này ở `src/lib/csv.test.ts` (`URL.createObjectURL` mock lệch kiểu) —
+đã xác nhận bằng `git stash`, không phải do Task 16 gây ra. Đã kiểm chứng riêng phần PWA bằng
+`npx vite build` (bỏ qua `tsc -b`) — sinh đúng service worker. Cần sửa lỗi kiểu đó trước khi ai
+build thật để triển khai.
 
 ## Task 14 — Xác thực và phân tách tenant (2026-09-07)
 

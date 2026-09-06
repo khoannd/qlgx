@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { api } from './client'
 import { authStore } from './authStore'
+import { xoaTatCaBanNhapCuaTaiKhoan } from '../lib/banNhap'
 
 type NguoiDungHienTai = {
   tenTaiKhoan: string
@@ -14,7 +15,13 @@ type AuthContextValue = {
   dangKiemTraPhien: boolean
   nguoiDung: NguoiDungHienTai | null
   dangNhap: (tenTaiKhoan: string, matKhau: string) => Promise<void>
-  dangXuat: () => void
+  /** `xoaCaBanNhap` (mặc định `true`) quyết định có xoá bản nháp ngoại tuyến (`lib/banNhap.ts`)
+   * của tài khoản này hay không — `true` cho hành động đăng xuất CHỦ ĐỘNG (nút "Đăng xuất"),
+   * `false` khi bị đăng xuất BUỘC vì token hết hạn (401, xem `authStore.dangKy401` bên dưới):
+   * mất mạng đúng lúc token hết hạn 8 tiếng là ca có thật (JWT — Task 14), người dùng đăng
+   * nhập lại xong vẫn phải khôi phục được nháp, không được mất trắng vì bị đăng xuất ngoài ý
+   * muốn. */
+  dangXuat: (xoaCaBanNhap?: boolean) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -22,14 +29,19 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [dangKiemTraPhien, setDangKiemTraPhien] = useState(true)
   const [nguoiDung, setNguoiDung] = useState<NguoiDungHienTai | null>(null)
+  const nguoiDungRef = useRef<NguoiDungHienTai | null>(null)
+  useEffect(() => { nguoiDungRef.current = nguoiDung }, [nguoiDung])
 
-  const dangXuat = useCallback(() => {
+  const dangXuat = useCallback((xoaCaBanNhap = true) => {
+    if (xoaCaBanNhap && nguoiDungRef.current) xoaTatCaBanNhapCuaTaiKhoan(nguoiDungRef.current.tenTaiKhoan)
     authStore.xoaToken()
     setNguoiDung(null)
   }, [])
 
   useEffect(() => {
-    authStore.dangKy401(dangXuat)
+    // 401 từ goi() = bị máy chủ từ chối (hết hạn/thu hồi) — KHÔNG xoá bản nháp, xem chú thích
+    // ở kiểu dangXuat.
+    authStore.dangKy401(() => dangXuat(false))
     return () => authStore.huy401()
   }, [dangXuat])
 

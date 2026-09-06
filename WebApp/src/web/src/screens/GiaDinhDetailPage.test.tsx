@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { GiaDinhDetailPage } from './GiaDinhDetailPage'
 import { api, LoiXungDot } from '../api/client'
+import { banNhapKhoa, docBanNhap, luuBanNhap } from '../lib/banNhap'
 import type { GiaDinhDetail as ChiTiet, GiaoDanTimKiem } from '../api/types'
 
 vi.mock('../api/client', async () => {
@@ -33,6 +34,8 @@ const chiTiet = (p: Partial<ChiTiet> = {}): ChiTiet => ({
 } as ChiTiet)
 
 describe('GiaDinhDetailPage', () => {
+  afterEach(() => { localStorage.clear() })
+
   it('tai chi tiet that tu API va hien dung ten', async () => {
     vi.mocked(api.giaDinh.chiTiet).mockResolvedValue(chiTiet())
 
@@ -167,5 +170,49 @@ describe('GiaDinhDetailPage', () => {
 
     expect(api.giaDinh.xoaThanhVien).toHaveBeenCalledWith('g1', 'p3', 4)
     expect(api.giaDinh.chiTiet).toHaveBeenCalledTimes(2)
+  })
+
+  // --- Task 16: bản nháp ngoại tuyến (lib/banNhap.ts) ---------------------------------------
+
+  it('co ban nhap cu thi hien banner hoi khoi phuc, bam Khoi phuc thi ap dung vao form', async () => {
+    vi.mocked(api.giaDinh.chiTiet).mockResolvedValue(chiTiet())
+    const khoa = banNhapKhoa('giaDinh', 'g1', 'vanphong')
+    luuBanNhap(khoa, 'vanphong', { ghiChu: 'Ghi chú nháp gia đình' })
+
+    render(<GiaDinhDetailPage id="g1" tenTaiKhoan="vanphong" />)
+    await screen.findByRole('heading', { name: /Nguyễn Văn A/ })
+
+    expect(await screen.findByText(/Có bản nháp chưa lưu/)).toBeDefined()
+    expect(screen.getByLabelText('Ghi chú')).toHaveProperty('value', '')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Khôi phục' }))
+
+    expect(screen.getByLabelText('Ghi chú')).toHaveProperty('value', 'Ghi chú nháp gia đình')
+    expect(screen.queryByText(/Có bản nháp chưa lưu/)).toBeNull()
+  })
+
+  it('luu thanh cong thi xoa ban nhap gia dinh', async () => {
+    vi.mocked(api.giaDinh.chiTiet).mockResolvedValue(chiTiet())
+    vi.mocked(api.giaDinh.capNhat).mockResolvedValue(undefined)
+    const khoa = banNhapKhoa('giaDinh', 'g1', 'vanphong')
+    luuBanNhap(khoa, 'vanphong', { ghiChu: 'Nháp trước khi lưu' })
+
+    render(<GiaDinhDetailPage id="g1" tenTaiKhoan="vanphong" />)
+    await screen.findByRole('heading', { name: /Nguyễn Văn A/ })
+    await userEvent.click(screen.getByRole('button', { name: 'Cập nhật' }))
+
+    await screen.findByText('Đã lưu thành công.')
+    expect(docBanNhap(khoa, 'vanphong')).toBeNull()
+  })
+
+  it('khong truyen tenTaiKhoan thi tat tinh nang ban nhap, khong hien banner du co du lieu cu', async () => {
+    vi.mocked(api.giaDinh.chiTiet).mockResolvedValue(chiTiet())
+    const khoa = banNhapKhoa('giaDinh', 'g1', 'vanphong')
+    luuBanNhap(khoa, 'vanphong', { ghiChu: 'Nháp' })
+
+    render(<GiaDinhDetailPage id="g1" />)
+    await screen.findByRole('heading', { name: /Nguyễn Văn A/ })
+
+    expect(screen.queryByText(/Có bản nháp chưa lưu/)).toBeNull()
   })
 })

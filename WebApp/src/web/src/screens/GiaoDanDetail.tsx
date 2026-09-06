@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type {
   GiaoDanDetail as GiaoDanDetailDuLieu, GiaoDanTimKiem, GiaoHo, HoiDoanCuaGiaoDan,
   HoiDoanDanhMuc, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
@@ -8,6 +8,7 @@ import { GxField, GxInline } from '../components/GxField'
 import { GxFormTabs } from '../components/GxFormTabs'
 import { GxPicker } from '../components/GxPicker'
 import { dinhDangNgay } from '../lib/ngay'
+import { useTuDongLuuBanNhap, xoaBanNhap } from '../lib/banNhap'
 
 /** Sentinel hiển thị khi chưa chọn giáo họ nào — đúng quy ước "MaGiaoHo = 0 nghĩa là Ngoài xứ"
  * của `frmGiaoDan.cs`. Ở bản web, "Ngoài xứ" ứng với `giaoHoId === null` (không phải khoá
@@ -560,6 +561,16 @@ type Props = {
   /** Danh mục Giáo họ THẬT (GET /api/giao-ho) — thay `data/giaoHoTam.ts` hard-code theo tên
    * (xem docs/superpowers/specs/man-hinh/can-review-sau.md mục 19). */
   danhMucGiaoHo?: GiaoHo[]
+  /** Khoá `localStorage` cho bản nháp ngoại tuyến của CHÍNH form này (xem `lib/banNhap.ts`) —
+   * `null`/không truyền = tắt tự lưu nháp (ví dụ chưa xác định được tài khoản đăng nhập). Do
+   * container (`GiaoDanDetailPage`) tính sẵn vì nó biết cả tài khoản lẫn id bản ghi. */
+  khoaBanNhap?: string | null
+  tenTaiKhoan?: string | null
+  /** Dữ liệu bản nháp người dùng chọn "Khôi phục" ở `BanNhapBanner` — đè lên `duLieu` (hoặc
+   * bản trống nếu đang tạo mới) làm giá trị khởi tạo. Container phải đổi `key` của component
+   * này kèm theo để các input không kiểm soát/`GxDate` dựng lại từ đầu với giá trị mới — đổi
+   * `defaultValue` không tự cập nhật lại ô đã dựng (xem GxDate.tsx). */
+  banNhap?: YeuCauCapNhatGiaoDan | null
 }
 
 const rong = (): GiaoDanDetailDuLieu => ({
@@ -594,9 +605,12 @@ export function GiaoDanDetail({
   danhSachHonPhoi = [], dangTaiHonPhoi = false, onLuuHonPhoi,
   danhSachTanHien = [], dangTaiTanHien = false, onLuuTanHien, onThemTanHien,
   danhSachHoiDoan = [], dangTaiHoiDoan = false, onLuuHoiDoan, onThemHoiDoan,
-  danhMucHoiDoan = [], danhMucGiaoHo = [],
+  danhMucHoiDoan = [], danhMucGiaoHo = [], khoaBanNhap = null, tenTaiKhoan = null, banNhap = null,
 }: Props) {
-  const p = duLieu ?? rong()
+  // banNhap (nếu người dùng vừa bấm "Khôi phục" ở BanNhapBanner) đè lên dữ liệu gốc — xem chú
+  // thích ở Props.banNhap. Container LUÔN đổi `key` khi truyền banNhap mới nên các state dưới
+  // đây chỉ cần đọc đúng `p` một lần lúc dựng (mount), không cần đồng bộ lại sau đó.
+  const p = { ...(duLieu ?? rong()), ...(banNhap ?? {}) }
   const moi = !duLieu?.id
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -914,16 +928,14 @@ export function GiaoDanDetail({
     </>
   )
 
-  // Dựng payload từ form (input không kiểm soát — defaultValue) rồi giao cho container qua
-  // onLuu. Vài trường (tên cha/mẹ, người ban bí tích…) chỉ hiển thị qua GxPicker — chưa có ô
-  // nhập thật ở Phase 1 nên giữ nguyên giá trị đã tải thay vì đọc từ DOM.
-  function xuLySubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    if (!onLuu || !formRef.current) return
-    const fd = new FormData(formRef.current)
+  // Dựng payload từ form (input không kiểm soát — defaultValue) — dùng chung cho việc lưu thật
+  // (xuLySubmit) VÀ tự lưu nháp định kỳ (useTuDongLuuBanNhap ở dưới) để không lặp lại danh sách
+  // trường hai lần. Vài trường (tên cha/mẹ, người ban bí tích…) chỉ hiển thị qua GxPicker — chưa
+  // có ô nhập thật ở Phase 1 nên giữ nguyên giá trị đã tải thay vì đọc từ DOM.
+  function dungPayloadTuForm(fd: FormData): YeuCauCapNhatGiaoDan {
     const chuoi = (ten: string) => (fd.get(ten) as string | null)?.trim() || null
 
-    onLuu({
+    return {
       hoTen: chuoi('hoTen') ?? p.hoTen,
       tenThanh: chuoi('tenThanh'),
       phai: chuoi('phai'),
@@ -973,8 +985,28 @@ export function GiaoDanDetail({
       ghiChu: chuoi('ghiChu'),
       rowVersion: p.rowVersion,
       boQuaCanhBao: false,
-    })
+    }
   }
+
+  function xuLySubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!onLuu || !formRef.current) return
+    onLuu(dungPayloadTuForm(new FormData(formRef.current)))
+  }
+
+  // Tự lưu nháp định kỳ (xem lib/banNhap.ts) — đọc lại form MỖI LẦN chạy interval (không phải
+  // một lần lúc mount) để luôn bắt được giá trị mới nhất đang gõ.
+  useTuDongLuuBanNhap(khoaBanNhap, tenTaiKhoan, () => {
+    if (!formRef.current) return null
+    return dungPayloadTuForm(new FormData(formRef.current))
+  })
+
+  // Lưu thành công (loaiThongBao chuyển sang 'thanhcong') — xoá nháp ngay để lần mở lại không
+  // hỏi khôi phục nhầm dữ liệu đã lưu rồi.
+  useEffect(() => {
+    if (loaiThongBao === 'thanhcong' && khoaBanNhap) xoaBanNhap(khoaBanNhap)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaiThongBao])
 
   return (
     <form className="page detail-page" ref={formRef} onSubmit={xuLySubmit}>

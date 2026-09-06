@@ -40,9 +40,17 @@ async function goi<T>(duong: string, tuyChon?: RequestInit): Promise<T> {
     })
   } catch (loiMang) {
     // Lỗi mạng (server chưa chạy, mất kết nối…) KHÔNG được nuốt thành mảng rỗng — người dùng
-    // cần biết đây là sự cố kết nối, không phải "giáo xứ chưa có dữ liệu".
+    // cần biết đây là sự cố kết nối, không phải "giáo xứ chưa có dữ liệu". Phân biệt hai
+    // trường hợp bằng `navigator.onLine` (Task 16): mất mạng THẬT (giáo xứ vùng xa, đường
+    // truyền chập chờn) cần một câu trấn an — dữ liệu đang gõ không mất (xem `lib/banNhap.ts`)
+    // và thử lại được — khác với máy chủ chưa chạy lúc phát triển.
     console.error(`Lỗi mạng khi gọi ${duong}`, loiMang)
-    throw new Error(`Không kết nối được máy chủ khi gọi ${duong}. Kiểm tra Qlgx.Api đã chạy chưa.`)
+    const dangMatMang = typeof navigator !== 'undefined' && navigator.onLine === false
+    throw new Error(
+      dangMatMang
+        ? 'Mất kết nối mạng. Dữ liệu bạn đã nhập vẫn được giữ nguyên trên máy — hãy thử lại khi có mạng.'
+        : `Không kết nối được máy chủ khi gọi ${duong}. Kiểm tra Qlgx.Api đã chạy chưa.`,
+    )
   }
 
   if (res.status === 401) {

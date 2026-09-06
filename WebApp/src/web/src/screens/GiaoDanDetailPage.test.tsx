@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { GiaoDanDetailPage } from './GiaoDanDetailPage'
 import { api, LoiXungDot } from '../api/client'
+import { banNhapKhoa, docBanNhap, luuBanNhap } from '../lib/banNhap'
 import type { GiaoDanDetail as ChiTiet } from '../api/types'
 
 vi.mock('../api/client', async () => {
@@ -42,6 +43,11 @@ const chiTiet = (p: Partial<ChiTiet> = {}): ChiTiet => ({
 } as ChiTiet)
 
 describe('GiaoDanDetailPage', () => {
+  afterEach(() => {
+    localStorage.clear()
+    vi.useRealTimers()
+  })
+
   it('tai chi tiet that tu API va hien dung ten', async () => {
     vi.mocked(api.giaoDan.chiTiet).mockResolvedValue(chiTiet())
 
@@ -337,5 +343,102 @@ describe('GiaoDanDetailPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Thêm giáo dân' }))
 
     expect(await screen.findByText('Hãy nhập Họ tên')).toBeDefined()
+  })
+
+  // --- Task 16: PWA + bản nháp ngoại tuyến (lib/banNhap.ts) ---------------------------------
+
+  it('tu dong luu ban nhap dinh ky khi dang go (khong luu ngay tung phim go)', async () => {
+    vi.mocked(api.giaoDan.chiTiet).mockResolvedValue(chiTiet())
+    const khoa = banNhapKhoa('giaoDan', 'p1', 'vanphong')
+
+    // `shouldAdvanceTime` giữ đồng hồ giả chạy song song thời gian thật — findByRole (polling
+    // bằng setTimeout nội bộ của testing-library) vẫn hoạt động bình thường, nhưng advance thủ
+    // công bên dưới vẫn nhảy cóc được `setInterval` 5 giây của component mà không phải đợi thật.
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      render(<GiaoDanDetailPage id="p1" tenTaiKhoan="vanphong" />)
+      expect(await screen.findByRole('heading', { name: /Vũ Minh Trí/ })).toBeDefined()
+      // Để hiệu ứng "chốt mốc gốc" (xem banNhap.ts) của component vừa mount chạy xong TRƯỚC khi
+      // giả lập gõ — dưới đồng hồ giả, hiệu ứng có thể bị hoãn sang một tác vụ hẹn giờ (thấy
+      // được khi debug), khác hẳn trình duyệt thật (nơi nó luôn chạy xong trong vài mili giây
+      // ngay sau khi dựng xong, rất lâu trước khi người dùng kịp gõ gì).
+      await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+      fireEvent.change(screen.getByLabelText('Ghi chú chung'), { target: { value: 'Ghi chú đang gõ dở' } })
+
+      // Chưa tới chu kỳ (5s) — chưa có gì trong localStorage.
+      expect(docBanNhap(khoa, 'vanphong')).toBeNull()
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(5000) })
+
+      const ket = docBanNhap<{ ghiChu: string | null }>(khoa, 'vanphong')
+      expect(ket?.duLieu.ghiChu).toBe('Ghi chú đang gõ dở')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('co ban nhap cu thi hien banner hoi khoi phuc, KHONG tu dong ap dung', async () => {
+    vi.mocked(api.giaoDan.chiTiet).mockResolvedValue(chiTiet())
+    const khoa = banNhapKhoa('giaoDan', 'p1', 'vanphong')
+    luuBanNhap(khoa, 'vanphong', { ghiChu: 'Bản nháp cũ chưa lưu' })
+
+    render(<GiaoDanDetailPage id="p1" tenTaiKhoan="vanphong" />)
+    await screen.findByRole('heading', { name: /Vũ Minh Trí/ })
+
+    expect(await screen.findByText(/Có bản nháp chưa lưu/)).toBeDefined()
+    // Dữ liệu máy chủ vẫn hiện nguyên — KHÔNG bị đè bởi nháp khi chưa xác nhận.
+    expect(screen.getByLabelText('Ghi chú chung')).toHaveProperty('value', '')
+  })
+
+  it('bam Khoi phuc thi ap dung ban nhap vao form (khong dung dinh gia tri server)', async () => {
+    vi.mocked(api.giaoDan.chiTiet).mockResolvedValue(chiTiet())
+    const khoa = banNhapKhoa('giaoDan', 'p1', 'vanphong')
+    luuBanNhap(khoa, 'vanphong', { ghiChu: 'Bản nháp cũ chưa lưu' })
+
+    render(<GiaoDanDetailPage id="p1" tenTaiKhoan="vanphong" />)
+    await screen.findByRole('heading', { name: /Vũ Minh Trí/ })
+    await userEvent.click(await screen.findByRole('button', { name: 'Khôi phục' }))
+
+    expect(screen.getByLabelText('Ghi chú chung')).toHaveProperty('value', 'Bản nháp cũ chưa lưu')
+    expect(screen.queryByText(/Có bản nháp chưa lưu/)).toBeNull()
+  })
+
+  it('bam Bo qua thi xoa ban nhap va giu nguyen du lieu server', async () => {
+    vi.mocked(api.giaoDan.chiTiet).mockResolvedValue(chiTiet())
+    const khoa = banNhapKhoa('giaoDan', 'p1', 'vanphong')
+    luuBanNhap(khoa, 'vanphong', { ghiChu: 'Bản nháp cũ chưa lưu' })
+
+    render(<GiaoDanDetailPage id="p1" tenTaiKhoan="vanphong" />)
+    await screen.findByRole('heading', { name: /Vũ Minh Trí/ })
+    await userEvent.click(await screen.findByRole('button', { name: 'Bỏ qua' }))
+
+    expect(screen.getByLabelText('Ghi chú chung')).toHaveProperty('value', '')
+    expect(docBanNhap(khoa, 'vanphong')).toBeNull()
+  })
+
+  it('luu thanh cong thi xoa ban nhap (mo lai khong hoi khoi phuc nham)', async () => {
+    vi.mocked(api.giaoDan.chiTiet).mockResolvedValue(chiTiet())
+    vi.mocked(api.giaoDan.capNhat).mockResolvedValue({ id: 'p1', canhBao: [] })
+    const khoa = banNhapKhoa('giaoDan', 'p1', 'vanphong')
+    luuBanNhap(khoa, 'vanphong', { ghiChu: 'Nháp trước khi lưu' })
+
+    render(<GiaoDanDetailPage id="p1" tenTaiKhoan="vanphong" />)
+    await screen.findByRole('heading', { name: /Vũ Minh Trí/ })
+    await userEvent.click(screen.getByRole('button', { name: 'Cập nhật' }))
+
+    await screen.findByText('Đã lưu thành công.')
+    expect(docBanNhap(khoa, 'vanphong')).toBeNull()
+  })
+
+  it('ban nhap cua tai khoan khac khong hien banner (khong lo giua hai tai khoan chung may)', async () => {
+    vi.mocked(api.giaoDan.chiTiet).mockResolvedValue(chiTiet())
+    const khoa = banNhapKhoa('giaoDan', 'p1', 'nguoiKhac')
+    luuBanNhap(khoa, 'nguoiKhac', { ghiChu: 'Của người khác' })
+
+    render(<GiaoDanDetailPage id="p1" tenTaiKhoan="vanphong" />)
+    await screen.findByRole('heading', { name: /Vũ Minh Trí/ })
+
+    expect(screen.queryByText(/Có bản nháp chưa lưu/)).toBeNull()
   })
 })
