@@ -80,6 +80,55 @@ public record DongTaiKhoan(string? HoTenNguoiDung, string TenTaiKhoan, string? E
     string? SoDienThoai, int LoaiTaiKhoan, string? CauHoiGoiY, string? CauTraLoiGoiY, bool DaXoa);
 
 /// <summary>
+/// Đợt cử hành bí tích. Có 6 thuộc tính riêng vì UpdateDate ánh xạ vào ThucTheCoSo.UpdatedAt.
+/// LoaiBiTich là số nguyên thô khớp enum Qlgx.Domain.LoaiBiTich (đã đối chiếu Source/ để xác
+/// nhận: 0=RuaToi, 1=RuocLe, 2=ThemSuc).
+/// </summary>
+public record DongDotBiTich(int MaDotBiTich, string? NgayBiTich, string? MoTa, string? LinhMuc,
+    int LoaiBiTich, string? NoiBiTich, DateTime? UpdateDate);
+
+/// <summary>
+/// Bảng lớn nhất CSDL (6150 dòng thật) — ai nhận bí tích trong đợt nào. Khoá gốc Access là cặp
+/// (MaDotBiTich, MaGiaoDan), đã xác nhận không trùng lặp trên dữ liệu thật.
+/// </summary>
+public record DongBiTichChiTiet(int MaDotBiTich, int MaGiaoDan, string? GhiChu, DateTime? UpdateDate);
+
+/// <summary>
+/// Giáo dân chuyển xứ. LoaiChuyen khớp enum Qlgx.Domain.LoaiChuyenXu (đã đối chiếu Source/:
+/// 0=TaiXu, 1=ChuyenDen, 2=ChuyenDi).
+/// </summary>
+public record DongChuyenXu(int MaChuyenXu, int MaGiaoDan, string? NgayChuyen, string? NoiChuyen,
+    int LoaiChuyen, string? GhiChuChuyen, DateTime? UpdateDate);
+
+/// <summary>
+/// Rao hôn phối — 26 cột Access, có 25 thuộc tính riêng vì UpdateDate ánh xạ vào
+/// ThucTheCoSo.UpdatedAt. MaGiaoDan1/MaGiaoDan2 có thể null/0 khi một bên không phải giáo dân
+/// của xứ này (xem Qlgx.Domain.Entities.RaoHonPhoi).
+/// </summary>
+public record DongRaoHonPhoi(int MaRaoHonPhoi, string? TenRaoHonPhoi, int? MaGiaoDan1,
+    int? MaGiaoDan2, string? NgayRaoLan1, string? NgayRaoLan2, string? NgayRaoLan3,
+    string? GiaoXu1, string? GiaoPhan1, string? GiaoXuTruoc1, string? GiaoPhanTruoc1,
+    string? GiaoXu2, string? GiaoPhan2, string? GiaoXuTruoc2, string? GiaoPhanTruoc2,
+    string? LinhMucNhan, string? GiaoXuNhan, string? GhiChu, string? Tam1, string? Tam2,
+    string? Tam3, DateTime? UpdateDate, string? GiaoXuNQ1, string? GiaoPhanNQ1,
+    string? GiaoXuNQ2, string? GiaoPhanNQ2);
+
+/// <summary>
+/// Tận hiến (tu sĩ, linh mục xuất thân từ giáo xứ) — 20 cột Access. KHÔNG có UpdateDate trong
+/// Access (xem Qlgx.Domain.Entities.TanHien).
+/// </summary>
+public record DongTanHien(int MaTanHien, int MaGiaoDan, string? NgayBatDau, string? ChucVu,
+    string? NoiTu, string? DongTu, string? NoiPhucVu, string? DiaChiPhucVu,
+    string? DienThoaiPhucVu, string? EmailPhucVu, string? GhiChu, bool DaHoiTuc,
+    string? NgayVaoDCV, string? NgayVaoNhaThu, string? NgayVaoNhaTap, string? NgayVaoKhanLanDau,
+    string? NgayVaoKhanTronDoi, string? NgayPhoTe, string? NgayThuPhongLM, string? NgayBonMang);
+
+/// <summary>Danh sách linh mục của giáo xứ — 12 cột Access, 11 thuộc tính riêng (UpdateDate).</summary>
+public record DongLinhMuc(int MaLinhMuc, string? TenThanh, string HoTen, string? NgaySinh,
+    string? ChucVu, string? TuNgay, string? DenNgay, string? GhiChu, string? DienThoai,
+    string? Email, bool DaXoa, DateTime? UpdateDate);
+
+/// <summary>
 /// Trừu tượng hoá nguồn để bộ chuyển đổi kiểm thử được mà không cần file .mdb và Access
 /// Database Engine trên máy chạy test.
 /// </summary>
@@ -99,4 +148,10 @@ public interface IDuLieuNguon
     IEnumerable<DongVaiTro> DocVaiTro();
     IEnumerable<DongTenLoaiTaiKhoan> DocTenLoaiTaiKhoan();
     IEnumerable<DongTaiKhoan> DocTaiKhoan();
+    IEnumerable<DongDotBiTich> DocDotBiTich();
+    IEnumerable<DongBiTichChiTiet> DocBiTichChiTiet();
+    IEnumerable<DongChuyenXu> DocChuyenXu();
+    IEnumerable<DongRaoHonPhoi> DocRaoHonPhoi();
+    IEnumerable<DongTanHien> DocTanHien();
+    IEnumerable<DongLinhMuc> DocLinhMuc();
 }

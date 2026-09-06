@@ -180,4 +180,56 @@ public class DocAccess(string duongDanFile, string? matKhau = null, string nguoi
             .Select(r => new DongTaiKhoan(Chuoi(r[0]), Chuoi(r[1]) ?? "", Chuoi(r[2]), Chuoi(r[3]),
                 SoNull(r[4]) ?? 0, Chuoi(r[5]), Chuoi(r[6]), Bool(r[7])))
             .ToList();
+
+    public IEnumerable<DongDotBiTich> DocDotBiTich() =>
+        Doc("SELECT MaDotBiTich, NgayBiTich, MoTa, LinhMuc, LoaiBiTich, NoiBiTich, UpdateDate FROM DotBiTich")
+            .Select(r => new DongDotBiTich(r.GetInt32(0), Chuoi(r[1]), Chuoi(r[2]), Chuoi(r[3]),
+                SoNull(r[4]) ?? 0, Chuoi(r[5]), NgayGio(r[6])))
+            .ToList();
+
+    public IEnumerable<DongBiTichChiTiet> DocBiTichChiTiet() =>
+        Doc("SELECT MaDotBiTich, MaGiaoDan, GhiChu, UpdateDate FROM BiTichChiTiet")
+            .Select(r => new DongBiTichChiTiet(r.GetInt32(0), r.GetInt32(1), Chuoi(r[2]), NgayGio(r[3])))
+            .ToList();
+
+    public IEnumerable<DongChuyenXu> DocChuyenXu() =>
+        Doc(@"SELECT MaChuyenXu, MaGiaoDan, NgayChuyen, NoiChuyen, LoaiChuyen, GhiChuChuyen, UpdateDate
+              FROM ChuyenXu")
+            .Select(r => new DongChuyenXu(r.GetInt32(0), r.GetInt32(1), Chuoi(r[2]), Chuoi(r[3]),
+                SoNull(r[4]) ?? 0, Chuoi(r[5]), NgayGio(r[6])))
+            .ToList();
+
+    public IEnumerable<DongRaoHonPhoi> DocRaoHonPhoi() =>
+        Doc(@"SELECT MaRaoHonPhoi, TenRaoHonPhoi, MaGiaoDan1, MaGiaoDan2, NgayRaoLan1, NgayRaoLan2,
+                     NgayRaoLan3, GiaoXu1, GiaoPhan1, GiaoXuTruoc1, GiaoPhanTruoc1, GiaoXu2, GiaoPhan2,
+                     GiaoXuTruoc2, GiaoPhanTruoc2, LinhMucNhan, GiaoXuNhan, GhiChu, Tam1, Tam2, Tam3,
+                     UpdateDate, GiaoXuNQ1, GiaoPhanNQ1, GiaoXuNQ2, GiaoPhanNQ2
+              FROM RaoHonPhoi")
+            .Select(r => new DongRaoHonPhoi(r.GetInt32(0), Chuoi(r[1]), SoNull(r[2]), SoNull(r[3]),
+                Chuoi(r[4]), Chuoi(r[5]), Chuoi(r[6]), Chuoi(r[7]), Chuoi(r[8]), Chuoi(r[9]),
+                Chuoi(r[10]), Chuoi(r[11]), Chuoi(r[12]), Chuoi(r[13]), Chuoi(r[14]), Chuoi(r[15]),
+                Chuoi(r[16]), Chuoi(r[17]), Chuoi(r[18]), Chuoi(r[19]), Chuoi(r[20]), NgayGio(r[21]),
+                Chuoi(r[22]), Chuoi(r[23]), Chuoi(r[24]), Chuoi(r[25])))
+            .ToList();
+
+    public IEnumerable<DongTanHien> DocTanHien() =>
+        Doc(@"SELECT MaTanHien, MaGiaoDan, NgayBatDau, ChucVu, NoiTu, DongTu, NoiPhucVu, DiaChiPhucVu,
+                     DienThoaiPhucVu, EmailPhucVu, GhiChu, DaHoiTuc, NgayVaoDCV, NgayVaoNhaThu,
+                     NgayVaoNhaTap, NgayVaoKhanLanDau, NgayVaoKhanTronDoi, NgayPhoTe, NgayThuPhongLM,
+                     NgayBonMang
+              FROM TanHien")
+            .Select(r => new DongTanHien(r.GetInt32(0), r.GetInt32(1), Chuoi(r[2]), Chuoi(r[3]),
+                Chuoi(r[4]), Chuoi(r[5]), Chuoi(r[6]), Chuoi(r[7]), Chuoi(r[8]), Chuoi(r[9]),
+                Chuoi(r[10]), Bool(r[11]), Chuoi(r[12]), Chuoi(r[13]), Chuoi(r[14]), Chuoi(r[15]),
+                Chuoi(r[16]), Chuoi(r[17]), Chuoi(r[18]), Chuoi(r[19])))
+            .ToList();
+
+    public IEnumerable<DongLinhMuc> DocLinhMuc() =>
+        Doc(@"SELECT MaLinhMuc, TenThanh, HoTen, NgaySinh, ChucVu, TuNgay, DenNgay, GhiChu, DienThoai,
+                     Email, DaXoa, UpdateDate
+              FROM LinhMuc")
+            .Select(r => new DongLinhMuc(r.GetInt32(0), Chuoi(r[1]), Chuoi(r[2]) ?? "", Chuoi(r[3]),
+                Chuoi(r[4]), Chuoi(r[5]), Chuoi(r[6]), Chuoi(r[7]), Chuoi(r[8]), Chuoi(r[9]),
+                Bool(r[10]), NgayGio(r[11])))
+            .ToList();
 }

@@ -67,7 +67,8 @@ public class LocTheoGiaoXuTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieu
         // cap nhat danh sach nay, khong duoc de troi qua im lang neu quen gan bo loc.
         ungVien.Select(t => t.ClrType.Name).Should().BeEquivalentTo(
             ["GiaoHo", "GiaDinh", "GiaoDan", "ThanhVienGiaDinh", "HonPhoi", "GiaoDanHonPhoi", "BoDemMa",
-             "CauHinh", "DuLieuChung", "VaiTro", "TenLoaiTaiKhoan", "TaiKhoan"],
+             "CauHinh", "DuLieuChung", "VaiTro", "TenLoaiTaiKhoan", "TaiKhoan",
+             "DotBiTich", "BiTichChiTiet", "ChuyenXu", "RaoHonPhoi", "TanHien", "LinhMuc"],
             "danh sach bang co GiaoXuId phai duoc ra soat co y thuc moi khi thay doi, khong duoc troi qua im lang");
 
         var thieuBoLoc = ungVien

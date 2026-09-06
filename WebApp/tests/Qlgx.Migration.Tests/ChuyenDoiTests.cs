@@ -30,6 +30,12 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         public List<DongVaiTro> VaiTro { get; } = [];
         public List<DongTenLoaiTaiKhoan> TenLoaiTaiKhoan { get; } = [];
         public List<DongTaiKhoan> TaiKhoan { get; } = [];
+        public List<DongDotBiTich> DotBiTich { get; } = [];
+        public List<DongBiTichChiTiet> BiTichChiTiet { get; } = [];
+        public List<DongChuyenXu> ChuyenXu { get; } = [];
+        public List<DongRaoHonPhoi> RaoHonPhoi { get; } = [];
+        public List<DongTanHien> TanHien { get; } = [];
+        public List<DongLinhMuc> LinhMuc { get; } = [];
 
         IEnumerable<DongGiaoXu> IDuLieuNguon.DocGiaoXu() => GiaoXu;
         IEnumerable<DongGiaoHo> IDuLieuNguon.DocGiaoHo() => GiaoHo;
@@ -45,6 +51,12 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         IEnumerable<DongVaiTro> IDuLieuNguon.DocVaiTro() => VaiTro;
         IEnumerable<DongTenLoaiTaiKhoan> IDuLieuNguon.DocTenLoaiTaiKhoan() => TenLoaiTaiKhoan;
         IEnumerable<DongTaiKhoan> IDuLieuNguon.DocTaiKhoan() => TaiKhoan;
+        IEnumerable<DongDotBiTich> IDuLieuNguon.DocDotBiTich() => DotBiTich;
+        IEnumerable<DongBiTichChiTiet> IDuLieuNguon.DocBiTichChiTiet() => BiTichChiTiet;
+        IEnumerable<DongChuyenXu> IDuLieuNguon.DocChuyenXu() => ChuyenXu;
+        IEnumerable<DongRaoHonPhoi> IDuLieuNguon.DocRaoHonPhoi() => RaoHonPhoi;
+        IEnumerable<DongTanHien> IDuLieuNguon.DocTanHien() => TanHien;
+        IEnumerable<DongLinhMuc> IDuLieuNguon.DocLinhMuc() => LinhMuc;
     }
 
     /// <summary>

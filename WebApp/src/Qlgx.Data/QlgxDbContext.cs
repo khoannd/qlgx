@@ -38,6 +38,14 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
     public DbSet<TenLoaiTaiKhoan> TenLoaiTaiKhoan => Set<TenLoaiTaiKhoan>();
     public DbSet<TaiKhoan> TaiKhoan => Set<TaiKhoan>();
 
+    // --- Bí tích và di chuyển, theo giáo xứ, có bộ lọc tenant bên dưới ---
+    public DbSet<DotBiTich> DotBiTich => Set<DotBiTich>();
+    public DbSet<BiTichChiTiet> BiTichChiTiet => Set<BiTichChiTiet>();
+    public DbSet<ChuyenXu> ChuyenXu => Set<ChuyenXu>();
+    public DbSet<RaoHonPhoi> RaoHonPhoi => Set<RaoHonPhoi>();
+    public DbSet<TanHien> TanHien => Set<TanHien>();
+    public DbSet<LinhMuc> LinhMuc => Set<LinhMuc>();
+
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.ApplyConfigurationsFromAssembly(typeof(QlgxDbContext).Assembly);
@@ -59,6 +67,12 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
         b.Entity<VaiTro>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         b.Entity<TenLoaiTaiKhoan>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         b.Entity<TaiKhoan>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<DotBiTich>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<BiTichChiTiet>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<ChuyenXu>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<RaoHonPhoi>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<TanHien>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<LinhMuc>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         // GiaoPhan và GiaoHat KHÔNG có bộ lọc — chúng nằm trên cấp giáo xứ (xem GiaoPhan.cs).
 
         DatTenSnakeCase(b);
