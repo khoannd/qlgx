@@ -532,14 +532,18 @@ button, input, select, textarea { font: inherit; color: inherit; }
   font-size: 13px;
   color: var(--ink-soft);
 }
+/* Cỡ chữ và khoảng đệm trong ô nhập/dropdown — thu gọn cho gần bản desktop (Windows Forms,
+   font khoảng 8-9pt ~ 12px) theo góp ý người dùng "form nhìn compact hơn". KHÔNG áp cho nhãn,
+   tiêu đề, nút (những nơi đó có font-size riêng, xem .frow > label, .card-head h2, .btn) — chỉ
+   chữ hiển thị bên trong các ô nhập. Sàn 12px để còn đọc được (đừng nhỏ hơn). */
 select, input[type="text"], input[type="date"], textarea {
   border-radius: var(--r-field);
   border: 1px solid rgba(14,32,76,.13);
   background: rgba(255,255,255,.9);
-  padding: 6px 10px;
-  font-size: 13.5px;
+  padding: 5px 8px;
+  font-size: 12px;
   color: var(--ink);
-  min-height: 34px;
+  min-height: 30px;
   outline: none;
   transition: border-color .15s ease, box-shadow .15s ease;
 }
@@ -866,6 +870,26 @@ tbody tr[aria-selected="true"] .rowhead {
   .col-stack { grid-template-rows: auto auto; }
 }
 
+/* Khối "Thông tin cá nhân" của frmGiaoDan (bản desktop): BA cột trong CÙNG một khối, chiếm
+   trọn chiều ngang — ảnh đại diện nằm giữa hai cột chữ chứ không tách thành thẻ riêng nữa.
+   Bản web trước đây tách ảnh ra thẻ riêng bên phải, thấp hơn cột trái nên thừa một mảng trống
+   lớn bên dưới — đúng góp ý người dùng. `align-items: start` để cột ảnh (thấp hơn) không bị
+   kéo giãn theo hai cột chữ hai bên. */
+.canhan-cols {
+  display: grid;
+  grid-template-columns: 1.15fr 148px 1.3fr;
+  gap: 8px 20px;
+  align-items: start;
+}
+.canhan-cols .frow { grid-template-columns: 96px 1fr; }
+.canhan-photo { display: flex; flex-direction: column; gap: 8px; }
+.canhan-photo h3 { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
+.canhan-photo .photo-slot { min-height: 128px; }
+@media (max-width: 980px) {
+  .canhan-cols { grid-template-columns: 1fr; }
+  .canhan-photo { order: -1; max-width: 220px; }
+}
+
 .frow {
   display: grid;
   grid-template-columns: 132px 1fr;
@@ -973,6 +997,21 @@ tbody tr[aria-selected="true"] .rowhead {
 }
 .cmdbar .spacer { flex: 1; }
 .cmdbar .hint { font-size: 12.5px; color: var(--ink-faint); }
+/* Cảnh báo nghiệp vụ ở đáy form — trước đây cùng màu xám nhạt như thông báo trung tính nên dễ
+   bị bỏ qua (góp ý người dùng). `hint-loi` = quy tắc CHẶN CỨNG (ví dụ tuổi cha/mẹ không hợp lệ)
+   và `hint-canhbao` = huỷ/cảnh báo có thể bỏ qua dùng hai màu khác nhau (đỏ/cam, đã có sẵn
+   trong bảng màu) để còn phân biệt được mức độ nghiêm trọng; `hint-thanhcong` dịu hơn hẳn. */
+.cmdbar .hint-loi, .cmdbar .hint-canhbao {
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.cmdbar .hint-loi { color: var(--rose-ink); }
+.cmdbar .hint-loi::before { content: "⛔"; font-size: 12px; }
+.cmdbar .hint-canhbao { color: var(--amber-ink); }
+.cmdbar .hint-canhbao::before { content: "⚠️"; font-size: 12px; }
+.cmdbar .hint-thanhcong { color: var(--mint-ink); font-weight: 600; }
 
 /* ---- Tab bên trong form (frmGiaoDan có 5 tab: Cá nhân, Giáo lý, Hôn phối,
    Ơn gọi tận hiến, Hội đoàn). Khác với thẻ tài liệu ở trên: đây là tab nội

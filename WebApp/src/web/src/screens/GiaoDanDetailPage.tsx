@@ -29,6 +29,8 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan 
   const [loi, setLoi] = useState<string | null>(null)
   const [dangLuu, setDangLuu] = useState(false)
   const [thongBaoLuu, setThongBaoLuu] = useState<string | null>(null)
+  // Màu của `thongBaoLuu` ở thanh lệnh cuối form — xem GiaoDanDetail.Props.loaiThongBao.
+  const [loaiThongBao, setLoaiThongBao] = useState<'thanhcong' | 'canhbao' | 'loi' | null>(null)
   const [honPhoi, setHonPhoi] = useState<HonPhoiCuaGiaoDan[]>([])
   const [dangTaiHonPhoi, setDangTaiHonPhoi] = useState(id !== null)
   const [tanHien, setTanHien] = useState<TanHienCuaGiaoDan[]>([])
@@ -125,22 +127,26 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan 
     async function tao(payload: YeuCauCapNhatGiaoDan) {
       setDangLuu(true)
       setThongBaoLuu(null)
+      setLoaiThongBao(null)
       try {
         let ket = await api.giaoDan.taoMoi(payload)
         if (!ket.id && ket.canhBao.length > 0) {
           if (!xacNhanCanhBao(ket.canhBao)) {
             setThongBaoLuu('Đã hủy — chưa lưu giáo dân này.')
+            setLoaiThongBao('canhbao')
             return
           }
           ket = await api.giaoDan.taoMoi({ ...payload, boQuaCanhBao: true })
         }
         if (ket.id) {
           setThongBaoLuu('Đã tạo giáo dân mới.')
+          setLoaiThongBao('thanhcong')
           moGiaoDan?.(ket.id)
         }
       } catch (e) {
         console.error('Không tạo được giáo dân mới', e)
         setThongBaoLuu(e instanceof Error ? e.message : 'Lưu thất bại, thử lại sau.')
+        setLoaiThongBao('loi')
       } finally {
         setDangLuu(false)
       }
@@ -153,6 +159,7 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan 
         onLuu={tao}
         dangLuu={dangLuu}
         thongBaoLuu={thongBaoLuu}
+        loaiThongBao={loaiThongBao}
         danhMucGiaoHo={danhMucGiaoHo}
       />
     )
@@ -161,16 +168,19 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan 
   async function luu(payload: YeuCauCapNhatGiaoDan) {
     setDangLuu(true)
     setThongBaoLuu(null)
+    setLoaiThongBao(null)
     try {
       let ket = await api.giaoDan.capNhat(id as string, payload)
       if (!ket.id && ket.canhBao.length > 0) {
         if (!xacNhanCanhBao(ket.canhBao)) {
           setThongBaoLuu('Đã hủy — thay đổi chưa được lưu.')
+          setLoaiThongBao('canhbao')
           return
         }
         ket = await api.giaoDan.capNhat(id as string, { ...payload, boQuaCanhBao: true })
       }
       setThongBaoLuu('Đã lưu thành công.')
+      setLoaiThongBao('thanhcong')
       tai()
     } catch (e) {
       if (e instanceof LoiXungDot) {
@@ -179,6 +189,7 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan 
         console.error(`Không lưu được giáo dân ${id}`, e)
         setThongBaoLuu(e instanceof Error ? e.message : 'Lưu thất bại, thử lại sau.')
       }
+      setLoaiThongBao('loi')
     } finally {
       setDangLuu(false)
     }
@@ -224,6 +235,7 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan 
           onLuu={luu}
           dangLuu={dangLuu}
           thongBaoLuu={thongBaoLuu}
+          loaiThongBao={loaiThongBao}
           danhSachHonPhoi={honPhoi}
           dangTaiHonPhoi={dangTaiHonPhoi}
           onLuuHonPhoi={luuHonPhoi}
