@@ -78,10 +78,10 @@ Cập nhật bảng này mỗi khi thêm spec.
 
 | Màn hình | Tệp nguồn | Dòng | Spec | Migrate |
 |---|---|---|---|---|
-| Chi tiết gia đình | `GXControl/frmGiaDinh.cs` | 2101 | chưa | xong |
-| Chi tiết giáo dân | `GXControl/frmGiaoDan.cs` | 1547 | chưa | xong |
-| Danh sách gia đình | `ChuongTrinh/frmGiaDinhList.cs` | 386 | chưa | xong |
-| Danh sách giáo dân | `ChuongTrinh/frmGiaoDanList.cs` | 357 | chưa | xong |
+| Chi tiết gia đình | `GXControl/frmGiaDinh.cs` | 2101 | xong (`gia-dinh-chi-tiet.md`) | xong |
+| Chi tiết giáo dân | `GXControl/frmGiaoDan.cs` | 1547 | xong (`giao-dan-chi-tiet.md`) | xong |
+| Danh sách gia đình | `ChuongTrinh/frmGiaDinhList.cs` | 386 | xong (`gia-dinh-danh-sach.md`) | xong |
+| Danh sách giáo dân | `ChuongTrinh/frmGiaoDanList.cs` | 357 | xong (`giao-dan-danh-sach.md`) | xong |
 | Màn hình chính | `ChuongTrinh/frmMain.cs` | 993 | chưa | một phần |
 | Hôn phối | `GXControl/frmHonPhoi.cs` | 422 | chưa | chưa |
 | Rao hôn phối | `GXControl/frmRaoHonPhoi.cs` | 637 | chưa | chưa |
