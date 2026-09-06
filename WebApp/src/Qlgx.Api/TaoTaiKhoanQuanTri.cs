@@ -39,8 +39,10 @@ public static class TaoTaiKhoanQuanTri
             throw new InvalidOperationException(
                 "Can mot trong hai bien: QLGX_ADMIN_GIAO_XU_ID (GUID) hoac QLGX_ADMIN_GIAO_XU_TEN (ten giao xu).");
 
+        // Dung chuoi ket noi QUAN TRI (vai tro co BYPASSRLS) — tao tai khoan dau tien khong the
+        // di qua vai tro bi RLS han che, xem ChuoiKetNoiQuanTri.
         var options = new DbContextOptionsBuilder<QlgxDbContext>()
-            .UseNpgsql(cauHinh.GetConnectionString("Qlgx"))
+            .UseNpgsql(ChuoiKetNoiQuanTri.Doc(cauHinh))
             .Options;
         await using var db = new QlgxDbContext(options);
 

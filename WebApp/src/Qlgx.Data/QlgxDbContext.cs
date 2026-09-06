@@ -18,6 +18,16 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
     /// </summary>
     private Guid? BoiCanhGiaoXuId => _boiCanh?.GiaoXuId;
 
+    /// <summary>
+    /// Gắn interceptor đặt tham số phiên PostgreSQL cho Row-Level Security (lớp phòng thủ thứ
+    /// hai — xem BoiCanhGiaoXuConnectionInterceptor). Gắn ở đây thay vì lúc đăng ký DbContext
+    /// trong Program.cs vì interceptor cần chính _boiCanh của INSTANCE này (mỗi request một
+    /// bối cảnh giáo xứ khác nhau); EF Core gộp thêm interceptor khai báo ở OnConfiguring vào
+    /// các tuỳ chọn đã cấu hình sẵn qua constructor (AddDbContext), không ghi đè chuỗi kết nối.
+    /// </summary>
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        => optionsBuilder.AddInterceptors(new BoiCanhGiaoXuConnectionInterceptor(_boiCanh));
+
     public DbSet<GiaoXu> GiaoXu => Set<GiaoXu>();
     public DbSet<GiaoHo> GiaoHo => Set<GiaoHo>();
     public DbSet<GiaDinh> GiaDinh => Set<GiaDinh>();

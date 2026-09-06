@@ -1,0 +1,65 @@
+# Môi trường pilot: API + PostgreSQL. KHÔNG có giá trị bí mật nào viết cứng ở đây — mọi mật
+# khẩu/khoá đọc từ biến môi trường (đặt trong tệp ".env" cạnh tệp này, KHÔNG commit — xem
+# ".env.example" chỉ liệt kê TÊN biến, không có giá trị thật) hoặc từ biến môi trường của máy
+# chủ/hệ thống điều phối container thật khi triển khai chính thức (Docker Compose không phải
+# công cụ HA — dùng cho pilot một nút; khi cần nhiều bản API, dùng Kubernetes/Swarm/… với cùng
+# image này, cùng bộ biến môi trường).
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-qlgx}
+      POSTGRES_USER: ${POSTGRES_USER:?bat buoc dat trong .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?bat buoc dat trong .env}
+    volumes:
+      - qlgx-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # KHÔNG map cổng ra ngoài host trong triển khai thật — chỉ API mới cần nói chuyện với
+    # PostgreSQL, cả hai đã ở chung mạng docker-compose nội bộ. Bỏ comment dòng dưới CHỈ khi cần
+    # nối trực tiếp bằng psql từ máy chủ lúc gỡ rối, và đóng lại ngay sau đó.
+    # ports: ["5432:5432"]
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      # Vai trò RLS-hạn chế (KHÔNG BYPASSRLS) — phục vụ toàn bộ nghiệp vụ đã xác thực. Xem
+      # TRIEN-KHAI.md mục "Row-Level Security" để tạo hai vai trò trước khi triển khai thật.
+      ConnectionStrings__Qlgx: >-
+        Host=postgres;Database=${POSTGRES_DB:-qlgx};Username=${QLGX_APP_DB_USER:?bat buoc dat trong .env};Password=${QLGX_APP_DB_PASSWORD:?bat buoc dat trong .env}
+      # Vai trò có BYPASSRLS — CHỈ dùng cho đăng nhập (tra cứu chéo giáo xứ trước khi biết
+      # claim), tạo tài khoản quản trị đầu tiên, công cụ chuyển dữ liệu. Có thể để trống lúc
+      # pilot một giáo xứ duy nhất (sẽ dùng lại ConnectionStrings__Qlgx) nhưng BẮT BUỘC đặt khác
+      # ConnectionStrings__Qlgx trước khi có giáo xứ thứ hai — xem TRIEN-KHAI.md.
+      ConnectionStrings__QlgxQuanTri: >-
+        Host=postgres;Database=${POSTGRES_DB:-qlgx};Username=${QLGX_ADMIN_DB_USER:-${QLGX_APP_DB_USER}};Password=${QLGX_ADMIN_DB_PASSWORD:-${QLGX_APP_DB_PASSWORD}}
+      # Chạy migration lúc khởi động, khoá bằng pg_advisory_lock — an toàn khi nhiều bản API
+      # khởi động cùng lúc (xem Program.cs). Đây là image DUY NHẤT chạy migration; nếu triển
+      # khai kiểu "chạy migration như một bước riêng", đặt biến này = false ở mọi nơi và chạy
+      # `dotnet Qlgx.Api.dll` một lần bằng tay/CI trước khi rollout — xem TRIEN-KHAI.md.
+      Qlgx__ChayMigrationKhiKhoiDong: "true"
+      # Khoá ký JWT — BẮT BUỘC, tối thiểu 32 byte ngẫu nhiên dạng base64. KHÔNG BAO GIỜ đặt giá
+      # trị mẫu/cố định ở đây hay trong .env.example.
+      Qlgx__JwtKey: ${QLGX_JWT_KEY:?bat buoc dat trong .env}
+    ports:
+      - "${QLGX_API_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/suc-khoe"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  qlgx-postgres-data:

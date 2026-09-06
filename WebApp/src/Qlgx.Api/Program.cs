@@ -49,6 +49,60 @@ builder.Services.AddScoped<GiaoDanService>();
 
 var app = builder.Build();
 
+// Chay migration CSDL luc khoi dong — CHI KHI bat rieng qua cau hinh "Qlgx:ChayMigrationKhiKhoiDong"
+// (bien moi truong Qlgx__ChayMigrationKhiKhoiDong=true), mac dinh TAT. Ly do tat mac dinh: rat
+// nhieu tinh huong khoi dong host (moi test dung WebApplicationFactory<Program> thuan, mot host
+// chi de kiem tra /api/suc-khoe chang han) khong co CSDL that phia sau va khong nen bi buoc phai
+// co — health-check/lien tuc song (liveness) khong nen phu thuoc CSDL. Anh Docker chinh thuc
+// (xem Dockerfile/docker-compose.yml) BAT co nay, vi do la noi duy nhat ta muon "khoi dong xong
+// la CSDL da dung schema".
+//
+// Boc trong advisory lock cua PostgreSQL vi kien truc HA (nhieu ban API khoi dong CUNG LUC sau
+// bo can bang tai, xem thiet ke muc 1): neu moi ban tu chay Migrate() khong khoa gi, hai tien
+// trinh cung ALTER TABLE mot luc se dua nhau va mot ben loi (Postgres khoa DDL o muc bang,
+// khong phai loi logic nhung se lam mot ban API sap ngay luc khoi dong). pg_advisory_lock xep
+// hang moi ban cho luot minh; ban da chay xong thi Migrate() la no-op ngay lap tuc cho cac ban
+// den sau. Dung MOT khoa co dinh (so bat ky, chi can duy nhat trong pham vi ung dung nay) vi
+// chi co MOT database dung chung cho moi giao xu — khong can khoa rieng theo giao xu.
+if (builder.Configuration.GetValue<bool>("Qlgx:ChayMigrationKhiKhoiDong"))
+{
+    const long KhoaMigrationAdvisory = 725_190_001;
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<QlgxDbContext>();
+    var ketNoi = db.Database.GetDbConnection();
+    await ketNoi.OpenAsync();
+    try
+    {
+        await using (var khoa = ketNoi.CreateCommand())
+        {
+            khoa.CommandText = $"SELECT pg_advisory_lock({KhoaMigrationAdvisory})";
+            await khoa.ExecuteNonQueryAsync();
+        }
+
+        await db.Database.MigrateAsync();
+    }
+    finally
+    {
+        await using var moKhoa = ketNoi.CreateCommand();
+        moKhoa.CommandText = $"SELECT pg_advisory_unlock({KhoaMigrationAdvisory})";
+        await moKhoa.ExecuteNonQueryAsync();
+    }
+}
+
+// Phuc vu tep tinh cua SPA (React) tu chinh image nay khi co — quyet dinh MOT image chung cho
+// API va web thay vi tach rieng, de giam boi tiet trien khai cho ban pilot vai giao xu (mot
+// container, mot health check, mot phien ban duy nhat khong the lech nhau giua API/web). Chi
+// bat khi wwwroot/index.html thuc su ton tai (anh Docker build web roi COPY vao wwwroot — xem
+// Dockerfile) — moi truong dev/test khong co thu muc nay nen khong doi hanh vi gi (van 172/183
+// test nhu cu). MapFallbackToFile CHI dang ky khi co index.html vi ly do tuong tu.
+var duongDanIndexHtml = Path.Combine(app.Environment.WebRootPath ?? "wwwroot", "index.html");
+var coSpaTinh = File.Exists(duongDanIndexHtml);
+if (coSpaTinh)
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -67,6 +121,12 @@ app.MapGiaDinh();
 app.MapGiaoDan();
 app.MapGiaoHo();
 app.MapTaiKhoan();
+
+// Fallback SPA: moi GET khong khop route API/tep tinh nao o tren tra ve index.html de React
+// Router tu xu ly duong dan phia trinh duyet. Loai tru "/api" bang rang buoc regex phu dinh de
+// mot duong dan API go sai (vd /api/khong-ton-tai) van tra 404 that thay vi am tham tra HTML.
+if (coSpaTinh)
+    app.MapFallbackToFile("{*duongDan:regex(^(?!api).*$)}", "index.html").AllowAnonymous();
 
 app.Run();
 

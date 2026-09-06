@@ -2,6 +2,9 @@ bin/
 obj/
 *.user
 
+# Bien moi truong that cho docker-compose (mat khau CSDL, khoa ky JWT) — xem .env.example.
+.env
+
 # Cau hinh phat trien co the chua chuoi ket noi/mat khau that cua may local — khong dua len
 # git. Khi thieu file nay, Qlgx.Api van chay duoc nho doc chuoi ket noi tu bien moi truong
 # (ConnectionStrings__Qlgx, Qlgx__GiaoXuId).

@@ -149,8 +149,67 @@ Ngày tháng hỏng (chỉ ghi năm, chuỗi rỗng) được giữ nguyên văn
 |---|---|---|
 | 14 | Xác thực và phân tách tenant theo claim đăng nhập | **xong (2026-09-07)** — xem mục dưới |
 | 16 | PWA và bản nháp ngoại tuyến | **xong (2026-09-07)** — xem mục dưới |
-| 13 | Kiểm thử đầu-cuối và **triển khai máy chủ** | đã đổi mục tiêu, không còn cài lên máy giáo xứ; nợ RLS (xem `can-review-sau.md` mục 27m) |
+| 13 | Kiểm thử đầu-cuối và **triển khai máy chủ** | **xong (2026-09-07)** — xem mục dưới |
 | 15 | Giao diện hôn phối | task mới |
+
+## Task 13 — Kiểm thử đầu-cuối và triển khai máy chủ (2026-09-07)
+
+**Row-Level Security đã bật thật** (migration `BatRlsChoBangTheoGiaoXu`, 22 bảng có
+`giao_xu_id`) — nợ ghi ở Task 14 (`can-review-sau.md` mục 27m) coi như đã trả. Chính sách so
+sánh `giao_xu_id::text = current_setting('app.giao_xu_id', true)` (ép kiểu chiều CỘT sang text,
+không ép ngược — ép `''::uuid` khi chưa đặt tham số ném lỗi thay vì trả `NULL`, xem
+`can-review-sau.md` mục 29d), đóng mặc định (không đặt tham số phiên = không đọc được dòng
+nào). `BoiCanhGiaoXuConnectionInterceptor` (mới, `Qlgx.Data`) tự đặt tham số phiên
+`app.giao_xu_id` mỗi lần mở kết nối, gắn qua `QlgxDbContext.OnConfiguring`. Hai vai trò CSDL
+cần thiết cho triển khai thật: `qlgx_app` (không `BYPASSRLS`, dùng cho nghiệp vụ hằng ngày) và
+`qlgx_admin` (có `BYPASSRLS`, chỉ cho đăng nhập/tạo tài khoản quản trị/chuyển dữ liệu — khoá
+cấu hình mới `ConnectionStrings:QlgxQuanTri`, fallback về `ConnectionStrings:Qlgx` nếu không
+đặt). **Bằng chứng RLS có tác dụng thật:** `RlsTests.cs` (2 test mới, `Qlgx.Data.Tests`) dùng
+Npgsql thô + một vai trò CSDL không `BYPASSRLS` tạo/xoá ngay trong test — chứng minh giáo xứ A
+không đọc được dòng của giáo xứ B, và một kết nối không đặt tham số phiên không đọc được gì
+(đóng mặc định), cả hai đều KHÔNG đi qua EF Core.
+
+**Triển khai Docker đã kiểm chứng THẬT** (không chỉ đọc code rồi suy luận) — `WebApp/Dockerfile`
+(một image cho cả API và web, multi-stage), `WebApp/docker-compose.yml` (API + PostgreSQL),
+`.env.example` (không giá trị thật). Đã build + `docker compose up` với `.env` thử nghiệm, xác
+nhận `/api/suc-khoe` trả `ok`, migration (kể cả RLS) tự chạy đúng lúc khởi động (khoá bằng
+`pg_advisory_lock`, chỉ bật qua cờ `Qlgx__ChayMigrationKhiKhoiDong=true` — TẮT mặc định để
+không phá `WebApplicationFactory` không có CSDL thật của test cũ, xem mục 29c), `relrowsecurity
+= t` xác nhận RLS bật thật trong container, route tĩnh trả về SPA đã build. Đã dọn sạch
+container/volume/image thử nghiệm sau khi kiểm chứng.
+
+**Bộ e2e Playwright thật (`WebApp/e2e`, npm project riêng), 7/7 test xanh, chạy ổn định qua hai
+lần lặp lại liên tiếp:** đăng nhập sai → thông báo tiếng Việt; chưa đăng nhập/token bị xoá →
+quay về màn hình đăng nhập; tạo giáo dân → sửa → lưu → tải lại thấy giá trị mới; tạo giáo dân →
+thấy trong danh sách → xoá; mở gia đình mới tạo → thêm/xoá thành viên; vi phạm quy tắc nghiệp vụ
+(xoá vĩnh viễn giáo dân đang thuộc gia đình) → thông báo tiếng Việt đúng nguyên văn, không phải
+lỗi 500. Bộ e2e tự tạo MỘT database riêng (`qlgx_e2e_<hex ngẫu nhiên>`) qua `dotnet ef database
+update`, tự tạo tài khoản quản trị bằng đúng lệnh vận hành thật (`dotnet run --
+tao-tai-khoan-quan-tri`), và tự xoá database khi xong (`globalTeardown.ts`) — **không đụng
+`qlgx_thu`**, đã xác nhận sau mỗi lần chạy không còn database `qlgx_e2e_*` nào sót lại.
+
+**Sự cố đáng chú ý lúc viết bộ e2e — CHƯA DỌN XONG, cần người có quyền xử lý:** một lần chạy
+`dotnet ef database update` bị cấu hình sai biến môi trường đã vô tình tạo 28 bảng RỖNG (đã xác
+nhận từng bảng 0 dòng) trong database `postgres` mặc định của cụm PostgreSQL trên máy chuẩn bị
+tài liệu này — gốc rễ đã sửa (xem `can-review-sau.md` mục 29j để biết chi tiết và tại sao),
+nhưng lệnh dọn dẹp (`DROP TABLE ... CASCADE`) bị hệ thống permission của phiên làm việc chặn cả
+qua `psql` lẫn `dotnet ef database update 0`, và đã CHỦ ĐỘNG KHÔNG lách qua công cụ khác để né
+chặn đó. Danh sách 28 bảng cần xoá nằm ở `can-review-sau.md` mục 29j.
+
+**`TRIEN-KHAI.md` (mới, ở gốc `WebApp/`)** — hướng dẫn vận hành tiếng Việt: yêu cầu máy chủ,
+biến môi trường, các bước triển khai, tạo tài khoản quản trị đầu tiên, thêm giáo xứ mới, chuyển
+dữ liệu Access, sao lưu/phục hồi, nâng cấp phiên bản, và mục riêng "chưa kiểm chứng được" (nêu
+rõ: chưa thử managed PostgreSQL, chưa thử HA nhiều bản API thật, chưa dựng reverse proxy thật).
+
+**Chưa kiểm chứng được trên máy này (nói thẳng, không giả vờ):** HA thật với nhiều bản API sau
+một bộ cân bằng tải; PostgreSQL quản lý (managed service, ví dụ RDS/Cloud SQL) — cách tạo vai
+trò `BYPASSRLS` có thể khác trên các dịch vụ đó; reverse proxy/HTTPS thật (chỉ có cấu hình mẫu).
+
+Test hai phía không đổi số so với Task 16 ở phần .NET/React thuần (172 .NET, 183 React vẫn
+xanh) — Task 13 CHỈ thêm 2 test .NET mới (`RlsTests.cs`) nên tổng backend tăng lên **174**, và
+thêm bộ e2e HOÀN TOÀN MỚI (7 test, đếm riêng, không nằm trong `dotnet test`/`npm test`). Chi
+tiết đầy đủ ở `.superpowers/sdd/2026-09-06-qlgx-web-phase-1/task-13-report.md` và các quyết
+định tự đưa ra ở `can-review-sau.md` mục 29.
 
 ## Task 16 — PWA và bản nháp ngoại tuyến (2026-09-07)
 

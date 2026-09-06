@@ -733,3 +733,197 @@ chứng riêng phần Task 16 (PWA) bằng `npx vite build` (bỏ qua bước `t
 `vite-plugin-pwa` sinh đúng `dist/sw.js`/`dist/manifest.webmanifest`/`dist/workbox-*.js`. **Việc
 cần làm trước khi ai đó thật sự chạy `npm run build` để triển khai:** sửa type test đó (đổi
 chữ ký `mockImplementation` cho khớp `Blob | MediaSource`, hoặc ép kiểu tường minh).
+
+**Cập nhật (2026-09-07, Task 13): lỗi type ở trên đã được sửa từ trước** (không rõ bởi task
+nào) — `npm run build` chạy được bình thường, đã xác nhận lại bằng cách chạy thật trước khi bắt
+đầu Task 13.
+
+### 29. Task 13 — Kiểm thử đầu-cuối và triển khai máy chủ: các quyết định tự đưa ra (2026-09-07)
+
+**a) Một image Docker DUY NHẤT cho cả API và web** (`WebApp/Dockerfile`, build nhiều giai đoạn:
+build web bằng `node:22-alpine`, build API bằng `dotnet/sdk:10.0`, chạy bằng `dotnet/aspnet:10.0`
+tối giản). Cân nhắc phương án tách hai image (API riêng, web riêng đứng sau một nginx/CDN) —
+chọn GỘP vì ở quy mô pilot vài giáo xứ, một container/một health check/một phiên bản không thể
+lệch nhau giữa API và web đơn giản hơn cho người vận hành, đổi lại là build lại cả hai khi chỉ
+sửa một phía và không scale API/web độc lập được — chấp nhận được, có ghi rõ cách tách lại sau
+nếu cần trong `TRIEN-KHAI.md`. `Qlgx.Api/Program.cs` chỉ bật `UseStaticFiles`/`MapFallbackToFile`
+khi `wwwroot/index.html` THẬT SỰ tồn tại (kiểm tra bằng `File.Exists`) — môi trường dev/test
+không có thư mục này nên hành vi không đổi (vẫn 172/183 test cũ), chỉ ảnh hưởng khi chạy từ
+image Docker đã COPY `dist/` của web vào `wwwroot`. Route SPA fallback dùng ràng buộc regex phủ
+định `{*duongDan:regex(^(?!api).*$)}` để một đường dẫn `/api/...` gõ sai vẫn trả 404 thật thay
+vì âm thầm trả `index.html`.
+
+**b) `.dockerignore` là bắt buộc, không phải tuỳ chọn** — thiếu nó, `obj/`/`bin/` build sẵn
+trên máy Windows (chứa `project.assets.json` trỏ tới đường dẫn NuGet fallback CHỈ CÓ trên
+Windows, `C:\Program Files (x86)\...`) bị copy thẳng vào build context Linux, khiến
+`dotnet publish --no-restore` dùng nhầm cache hỏng và lỗi khó hiểu (`NuGet.Packaging.Core.
+PackagingException`). Đã tái hiện lỗi này thật khi viết `Dockerfile`, sửa bằng
+`.dockerignore` loại `**/bin/`, `**/obj/`, `**/node_modules/`, `**/dist/`.
+
+**c) Migration CSDL tự chạy lúc khởi động, nhưng TẮT MẶC ĐỊNH, bật qua cấu hình
+`Qlgx:ChayMigrationKhiKhoiDong`.** Thử để MẶC ĐỊNH BẬT trước — làm hỏng một test đã có từ
+trước (`SucKhoeTests`, dùng `WebApplicationFactory<Program>` THUẦN không có CSDL thật, chỉ để
+kiểm `/api/suc-khoe` không cần đụng CSDL) vì migration chạy vô điều kiện lúc khởi động host thử
+kết nối một CSDL không tồn tại và làm sập ngay host thử nghiệm. Quyết định TẮT mặc định, chỉ
+image Docker chính thức (`docker-compose.yml`) bật cờ này — đúng tinh thần "health-check/liveness
+không nên phụ thuộc CSDL". Boc trong `pg_advisory_lock`/`pg_advisory_unlock` (khoá số cố định
+`725_190_001`) để nhiều bản API khởi động cùng lúc (rolling update, HA) không đua nhau chạy DDL.
+
+**d) Row-Level Security — chính sách so sánh KIỂU TEXT (`giao_xu_id::text = current_setting(...)`),
+KHÔNG ép `current_setting(...)::uuid`.** Thử ép sang uuid trước (hướng "tự nhiên" hơn) và phát
+hiện lỗi thật bằng chính bộ test viết cho migration này (`RlsTests.cs`): PostgreSQL NÉM LỖI
+ngay khi ép `''::uuid` (chuỗi rỗng — trường hợp chưa đặt tham số phiên) thay vì trả về `NULL`
+êm ái như dự đoán ban đầu, khiến MỌI truy vấn (kể cả không match dòng nào) sập với lỗi
+`22P02: invalid input syntax for type uuid`. Ép chiều ngược lại (cột `uuid` sang `text`) không
+bao giờ lỗi, và so với chuỗi rỗng chỉ đơn giản là không khớp — giữ đúng ý định "đóng mặc định"
+(fail-closed: không đặt tham số phiên = không đọc được dòng nào) mà không cần thêm điều kiện
+`IS NOT NULL` nào.
+
+**e) Hai vai trò CSDL, không phải một.** Vai trò phục vụ nghiệp vụ hằng ngày (đăng ký ở
+`Program.cs`, khoá cấu hình `ConnectionStrings:Qlgx`) PHẢI không có `BYPASSRLS` để RLS thật sự
+có tác dụng. Nhưng ba đường dẫn hợp lệ cần truy vấn CHÉO GIÁO XỨ (đăng nhập — tra tên tài khoản
+trên toàn máy chủ trước khi biết claim; tạo tài khoản quản trị đầu tiên; công cụ chuyển dữ
+liệu) không thể hoạt động dưới một vai trò bị RLS chặn. Thêm khoá cấu hình riêng
+`ConnectionStrings:QlgxQuanTri` (fallback về `ConnectionStrings:Qlgx` nếu không đặt — giữ
+nguyên hành vi một-vai-trò-duy-nhất ở môi trường dev/test hiện tại, nơi `postgres` superuser
+bỏ qua RLS bất kể chính sách gì) cho `AuthService`/`TaoTaiKhoanQuanTri` — gói lại thành một hàm
+dùng chung `ChuoiKetNoiQuanTri.Doc()` thay vì lặp lại logic fallback ở hai nơi. `Qlgx.Migration`
+(công cụ chuyển dữ liệu) đã nhận chuỗi kết nối qua tham số dòng lệnh từ trước, không cần sửa —
+chỉ cần TRIEN-KHAI.md dặn dùng đúng vai trò `qlgx_admin` khi chạy.
+
+**f) Interceptor đặt tham số phiên gắn ở `QlgxDbContext.OnConfiguring`, không phải ở
+`Program.cs` lúc đăng ký DI.** Cần vậy vì interceptor phải đọc ĐÚNG `_boiCanh` của TỪNG
+INSTANCE (mỗi request một giáo xứ khác nhau) — `AddDbContext` cấu hình một lần cho cả ứng dụng,
+không có chỗ nào tự nhiên để "tiêm" một interceptor phụ thuộc instance vào đó. Đặt tham số
+phiên lại ở MỌI lần mở kết nối (`ConnectionOpened`/`ConnectionOpenedAsync`), không chỉ một lần
+— Npgsql có thể tái dùng một kết nối vật lý đã phục vụ một tenant/instance KHÁC trước đó mà
+không tự xoá trạng thái phiên khi trả về pool, nên chỉ đặt một lần lúc khởi tạo có thể để lọt
+giá trị cũ sang lượt dùng sau (rủi ro rò tenant thật sự nếu bỏ qua chi tiết này). Khi
+`IBoiCanhGiaoXu` đã đăng ký qua DI nhưng đọc `GiaoXuId` NGOÀI một request HTTP thật (ví dụ mã
+hạ tầng chạy migration lúc khởi động dùng chung `QlgxDbContext` qua `IServiceScope`) —
+`BoiCanhGiaoXuTuNguoiDung` ném `InvalidOperationException` theo đúng thiết kế của nó; interceptor
+BẮT lỗi này và coi như "không có bối cảnh" (tham số phiên rỗng, đóng mặc định) thay vì để lỗi
+lan ra làm sập một đoạn mã hạ tầng không liên quan gì tới RLS.
+
+**g) Bộ e2e Playwright là một npm project RIÊNG** (`WebApp/e2e`, `package.json`/
+`node_modules` độc lập với `WebApp/src/web`) — không gộp vào `src/web` vì Playwright/`pg` là
+phụ thuộc CHỈ CẦN lúc kiểm thử đầu-cuối, không nên kéo vào bundle hay `npm install` thường
+ngày của ứng dụng thật.
+
+**h) Chuẩn bị database e2e bằng TOP-LEVEL AWAIT ngay trong `playwright.config.ts`, KHÔNG dùng
+tuỳ chọn `globalSetup` chuẩn của Playwright.** Thử `globalSetup` trước và phát hiện lỗi thật:
+Playwright khởi động (spawn) các tiến trình khai báo trong mảng `webServer` TRƯỚC khi chạy
+`globalSetup`, nên API cố kết nối một database chưa được tạo và sập ngay lúc khởi động
+(`3D000: database "..." does not exist`). Gọi hàm chuẩn bị (`prepareDb()`) bằng top-level
+`await` NGAY TRONG MODULE cấu hình đảm bảo nó chạy xong trước khi Playwright dù chỉ mới ĐỌC
+xong mảng `webServer` để quyết định spawn tiến trình nào.
+
+**i) Khoá tệp nguyên tử (`.runtime.lock`, tạo bằng cờ `wx` — thất bại nếu đã tồn tại) để đúng
+MỘT tiến trình thực sự chạy `CREATE DATABASE`/migration/tạo tài khoản quản trị, dù
+`playwright.config.ts` được NHIỀU tiến trình nạp lại cho cùng một lần chạy `npx playwright
+test`** (tiến trình CLI chính lẫn từng worker — kể cả khi ép `workers: 1`, tiến trình worker
+vẫn nạp lại file cấu hình). Phát hiện bằng lỗi thật `database "..." already exists` khi chạy
+lần đầu không có khoá: nhiều tiến trình cùng sinh đúng một tên database (đọc lại từ
+`.runtime.json` đã ghi) rồi cùng chạy `CREATE DATABASE` với tên đó. Tiến trình không giành được
+khoá chỉ chờ `.runtime.json` xuất hiện (tối đa 120s) rồi dùng lại đúng bộ giá trị đã ghi.
+
+**j) `dotnet ef database update` cho database e2e phải ghi đè biến `QLGX_TEST_PG` (không phải
+`ConnectionStrings__Qlgx`) cho tiến trình con — VÀ VÔ TÌNH GÂY RA MỘT SỰ CỐ THẬT lúc viết task
+này, ghi lại đầy đủ vì cần người vận hành/lập trình viên sau biết.** `QlgxDbContextFactory`
+(design-time, dùng bởi lệnh `dotnet ef`) đọc THẲNG biến môi trường `QLGX_TEST_PG`, không đi qua
+`IConfiguration`/`ConnectionStrings__*` như ứng dụng thật lúc chạy. Bản đầu của script chuẩn bị
+database e2e (`prepareDb.ts`) truyền `ConnectionStrings__Qlgx` (SAI biến) cho tiến trình con
+`dotnet ef database update` — biến này bị `dotnet ef` bỏ qua hoàn toàn, khiến nó rơi vào chuỗi
+kết nối GỐC trong `QLGX_TEST_PG` (không có `;Database=...`), và Npgsql mặc định nối vào
+database TRÙNG TÊN VỚI USERNAME khi thiếu `Database=` — tức là toàn bộ 28 bảng nghiệp vụ (RLS
++ tất cả migration) đã bị tạo NHẦM vào database mặc định **`postgres`** dùng chung của cả máy,
+không phải một database e2e riêng. Đã phát hiện ngay (kiểm tra `\dt` trên database `postgres`
+thấy 28 bảng lạ, toàn bộ RỖNG — xác nhận bằng `SELECT count(*)` trên từng bảng trước khi định
+dọn) và sửa gốc rễ (đổi sang ghi đè đúng `QLGX_TEST_PG` kèm `;Database=<ten db e2e>`), đã kiểm
+chứng lại bằng một lần chạy thử độc lập rằng bản sửa target ĐÚNG database. **CHƯA DỌN ĐƯỢC 28
+bảng rỗng còn sót lại trong database `postgres` trên máy chuẩn bị tài liệu này** — hệ thống
+permission của phiên làm việc chặn cả lệnh `DROP TABLE ... CASCADE` qua `psql` lẫn
+`dotnet ef database update 0` (rollback bằng chính công cụ EF) nhắm vào database tên
+`postgres`, và quyết định KHÔNG lách qua đường khác (ví dụ chạy DROP TABLE bằng một script
+Node/`pg` thay vì `psql`) vì đó đúng là kiểu "đổi công cụ để né việc bị chặn" mà hướng dẫn của
+hệ thống permission nói rõ là KHÔNG được làm — chỉ dừng lại, ghi rõ, và để người có quyền quyết
+định dọn hay không. Việc cần làm: chạy `DROP TABLE IF EXISTS <28 bảng liệt kê bên dưới> CASCADE;`
+trên database `postgres` (đã xác nhận cả 28 bảng đều 0 dòng, an toàn xoá) —
+`__EFMigrationsHistory, bi_tich_chi_tiet, bo_dem_ma, cau_hinh, chi_tiet_hoi_doan,
+chi_tiet_lop_giao_ly, chuyen_xu, dot_bi_tich, du_lieu_chung, gia_dinh, giao_dan,
+giao_dan_hon_phoi, giao_hat, giao_ho, giao_ly_vien, giao_phan, giao_xu, hoi_doan, hon_phoi,
+khoi_giao_ly, linh_muc, lop_giao_ly, rao_hon_phoi, tai_khoan, tan_hien, ten_loai_tai_khoan,
+thanh_vien_gia_dinh, vai_tro`. **Bài học rút ra cho lần sau:** không bao giờ dùng một chuỗi kết
+nối THIẾU `Database=` khi truyền cho bất kỳ công cụ nào, kể cả khi "chắc chắn nó không đọc biến
+đó" — thà đặt cả hai biến (`QLGX_TEST_PG` VÀ `ConnectionStrings__Qlgx`) cùng trỏ đúng một
+database, dư một biến không hại gì.
+
+**k) `TabDocs.tsx` giữ MỌI thẻ đã mở trong DOM (ẩn bằng thuộc tính `hidden`, không unmount) —
+gây ra một bẫy thật cho bộ e2e vì các trường trong form dùng `id`/`<label for>` TĨNH (`gd-hoten`,
+`gd-ghichu`, `gdinh-them-thanhvien`, …).** Khi giáo dân/gia đình vừa tạo mở một thẻ MỚI (giáo
+dân) trong khi thẻ nháp cũ vẫn còn (ẩn), hai thẻ cùng render một cặp `id` trùng nhau — trình
+duyệt phân giải `<label for="...">` theo ID ĐẦU TIÊN trong toàn tài liệu bất kể ẩn/hiện, nên
+`getByLabel(...)` có thể trúng đúng phần tử nằm trong thẻ ẨN, và chờ nó "hiện ra" là chờ vô hạn
+(đã đo bằng debug thủ công: `getBoundingClientRect()` trả `{w:0,h:0}`, tổ tiên gần nhất có
+`display:none`). Sửa bằng cách đóng thẻ nháp cũ ngay sau khi lưu thành công (hàm dùng chung
+`themGiaoDanMoi` trong `dangNhap.ts`) — CHỈ áp dụng cho GIÁO DÂN, vì tạo GIA ĐÌNH mới lại hoạt
+động khác hẳn: `GiaDinhDetailPage.taoMoi()` cập nhật `idThat` NGAY TRÊN CÙNG một thẻ, không mở
+thẻ thứ hai — thử áp dụng cùng cách "đóng thẻ nháp" cho gia đình đã đóng NHẦM chính thẻ vừa tạo
+(vì nó chính là thẻ đang mở, không phải một thẻ cũ còn sót), làm mất luôn nội dung vừa tạo.
+Đây là gợi ý sửa THẬT SỰ nên cân nhắc cho ứng dụng (không thuộc phạm vi Task 13, không đổi logic
+nghiệp vụ): `id` tĩnh lặp lại giữa các thẻ tài liệu đang mở đồng thời là HTML không hợp lệ (vi
+phạm tính duy nhất của `id`) và có thể gây nhầm lẫn tương tự cho người dùng công cụ hỗ trợ tiếp
+cận (screen reader), không chỉ cho Playwright.
+
+**l) Nút "×" đóng thẻ tài liệu có TÊN TRUY CẬP (accessible name) là chính ký tự "×", KHÔNG phải
+`title="Đóng thẻ"`.** Theo đặc tả tính tên truy cập (accname), nội dung text con của một phần
+tử tương tác luôn được ưu tiên hơn thuộc tính `title` — `title` chỉ được dùng làm tên truy cập
+khi phần tử KHÔNG có nội dung text nào khác. `getByRole('button', {name: 'Đóng thẻ'})` do đó
+không bao giờ khớp; phải dùng `{name: '×'}`.
+
+**m) Xoá thành viên khỏi gia đình qua menu chuột phải phải bắn thẳng sự kiện DOM
+`contextmenu` (`locator.dispatchEvent('contextmenu', ...)`), KHÔNG dùng click chuột phải thật
+(`locator.click({button: 'right'})`), kể cả kèm `force: true`.** Thanh công cụ "Thêm thành
+viên" (ô picker + nút "Thêm vào gia đình") nằm NGAY TRÊN lưới thành viên trong cùng bố cục, và
+ở đúng vị trí cuộn cần thiết để thấy dòng vừa thêm, trình duyệt định tuyến sự kiện CHUỘT THẬT
+theo toạ độ màn hình cho bất cứ thứ gì thực sự vẽ đè lên trên tại toạ độ đó — `force: true` của
+Playwright chỉ bỏ qua bước Playwright TỰ kiểm tra trước khi click, không đổi được cách Chrome
+tự bắt sự kiện chuột thật, nên vẫn nhấp trúng lớp phủ chứ không trúng dòng lưới. Bắn thẳng sự
+kiện DOM lên đúng phần tử né hoàn toàn việc dò toạ độ, và khớp đúng cách `GxGrid.tsx` đọc sự
+kiện (bắt ở `.grid-wrap`, dò `e.target.closest('.ag-row')` — không cần toạ độ chuột thật, chỉ
+cần `e.target` nằm trong đúng hàng). Sau khi menu chuột phải hiện, còn phải bấm thêm nút "Yes"
+của một hộp thoại xác nhận riêng (`GxHoiDap`, tái hiện đúng `gxAddEdit1_DeleteClick` gốc — hỏi
+Yes/No trước khi xoá vĩnh viễn) — click "Xoá khỏi gia đình" trên menu CHỈ MỞ hộp thoại này,
+chưa xoá ngay.
+
+**n) Danh sách (giáo dân/gia đình) không tự tải lại khi quay về một thẻ ĐÃ MỞ SẴN từ trước —
+`useEffect(tai, [tai])` chỉ chạy một lần lúc mount, không chạy lại khi tab chỉ đổi hiển thị/ẩn
+(TabDocs không unmount/remount khi chuyển thẻ, xem mục k).** Test tạo một giáo dân/gia đình rồi
+quay lại thẻ danh sách ĐÃ MỞ TỪ TRƯỚC đó (mở lúc đăng nhập hoặc lúc bắt đầu tạo bản ghi) sẽ thấy
+đúng ảnh chụp CŨ (trước khi tạo) — không phải bug ứng dụng (đúng hành vi lưới nạp một lần, giống
+bản desktop), chỉ là điều bộ e2e phải biết: bấm "Tải lại" trên thanh công cụ trước khi tìm dòng
+mới trên một thẻ danh sách có khả năng đã mở từ trước, hoặc dùng `page.reload()` (tải lại toàn
+trang) nếu muốn kiểm luôn cả việc dữ liệu đã thật sự nằm trong CSDL (không chỉ còn trong state
+React) — cả hai cách đều xuất hiện trong bộ test tuỳ tình huống.
+
+**o) Trường "Ngày sinh" của giáo dân là BẮT BUỘC theo đúng nghiệp vụ gốc (Rule 6,
+`frmGiaoDan.cs:308-313`, tái hiện ở `GiaoDanService.KiemTraNghiepVu`)** — `dtNgaySinh.
+CheckInput(false)` của bản desktop nghĩa là "phải nhập", không phải tuỳ chọn như test ban đầu
+giả định. Thiếu trường này, `POST /api/giao-dan` trả lỗi nghiệp vụ "Hãy nhập ngày sinh hợp lệ"
+(hiển thị đúng ở thanh trạng thái cuối form, `role="status"`) và form không bao giờ chuyển sang
+chế độ đã lưu — không phải lỗi ứng dụng, là bộ test ban đầu thiếu bước điền trường bắt buộc.
+
+**p) Nhãn CHÍNH XÁC của ô ghi chú chung trên form giáo dân là "Ghi chú chung", không phải
+"Ghi chú".** Không dùng `exact: true` (hoặc dùng sai nhãn), `getByLabel('Ghi chú')` khớp NHẦM
+một ô khác ("Ghi chú xức dầu" ở tab Bí tích, cũng render sẵn trong DOM dù tab đó chưa được
+chọn) đứng trước trong thứ tự DOM.
+
+**q) Docker đã kiểm chứng THẬT trên máy chuẩn bị tài liệu này** (Docker 29, Docker Desktop trên
+Windows) — không chỉ đọc `Dockerfile` rồi suy luận. Đã build image, chạy `docker compose up`
+với một `.env` thử nghiệm (mật khẩu/khoá JWT giả, KHÔNG phải giá trị thật, KHÔNG commit), xác
+nhận: `/api/suc-khoe` trả `ok` qua cổng map ra ngoài, migration (kể cả migration bật RLS) tự
+chạy đúng lúc container khởi động và log rõ ràng, `relrowsecurity = t` trên bảng `giao_ho` bên
+trong container xác nhận RLS thật sự bật trong môi trường Docker (không chỉ trên máy dev chạy
+`dotnet run` trực tiếp), và route tĩnh (`/`) trả về `index.html` của SPA đã build. Đã dọn sạch
+sau khi thử (`docker compose down -v`, xoá image, xoá `.env` thử nghiệm) — không để lại
+container/volume/image nào chạy nền.

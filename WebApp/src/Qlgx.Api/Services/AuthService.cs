@@ -32,9 +32,10 @@ public class AuthService(IConfiguration cauHinh, TokenService tokenService)
     public async Task<DangNhapKetQua> DangNhap(string tenTaiKhoan, string matKhau, CancellationToken ct)
     {
         // Boi canh = null (khong dung DI) — day la truy van duy nhat trong he thong duoc phep
-        // bo qua bo loc tenant, vi luc nay chua biet nguoi dung thuoc giao xu nao.
+        // bo qua bo loc tenant, vi luc nay chua biet nguoi dung thuoc giao xu nao. Dung chuoi
+        // ket noi QUAN TRI (vai tro co BYPASSRLS) — xem ChuoiKetNoiQuanTri.
         var options = new DbContextOptionsBuilder<QlgxDbContext>()
-            .UseNpgsql(cauHinh.GetConnectionString("Qlgx"))
+            .UseNpgsql(ChuoiKetNoiQuanTri.Doc(cauHinh))
             .Options;
         await using var db = new QlgxDbContext(options);
 
