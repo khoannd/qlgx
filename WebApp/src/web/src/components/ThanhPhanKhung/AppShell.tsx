@@ -48,7 +48,7 @@ export function AppShell({ dangChonNav, onNavigate, children }: Props) {
         <button className="menubtn" type="button" data-menu="m2" aria-expanded="false">Công cụ</button>
         <button className="menubtn" type="button" data-menu="m3" aria-expanded="false">Trợ giúp</button>
 
-        <span className="demo-chip">Bản mẫu · dữ liệu minh hoạ</span>
+        <span className="demo-chip">Môi trường thử nghiệm</span>
         <span className="avatar" title="Quản trị viên: vanphong">VP</span>
 
         <div className="menu-pop" id="m1" hidden>

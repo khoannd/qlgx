@@ -8,15 +8,33 @@ namespace Qlgx.Domain.Entities;
 public class GiaoXu
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    // --- Các cột đến từ Access (bảng GiaoXu, 11 cột gốc) ---
     public int MaGiaoXuCu { get; set; }
-    public int? MaGiaoXuRieng { get; set; }
+    public int? MaGiaoHatCu { get; set; }
     public string TenGiaoXu { get; set; } = "";
-    public string? TenGiaoHat { get; set; }
-    public string? TenGiaoPhan { get; set; }
     public string? DiaChi { get; set; }
     public string? DienThoai { get; set; }
     public string? Email { get; set; }
     public string? Website { get; set; }
+
+    /// <summary>
+    /// Cột "Hinh" trong Access là adVarWChar (văn bản), KHÔNG phải ảnh nhị phân — ánh xạ
+    /// thành chuỗi thay vì byte[]. Hiện rỗng trong dữ liệu thật nhưng vẫn giữ để không mất cột.
+    /// </summary>
+    public string? Hinh { get; set; }
+
     public string? GhiChu { get; set; }
+    public int? MaGiaoXuRieng { get; set; }
+
+    /// <summary>
+    /// Cột "LastUpload" trong Access là adDate (ngày giờ thật), khác với các cột ngày dạng
+    /// chuỗi dd/MM/yyyy khác trong hệ cũ — ánh xạ trực tiếp sang DateTimeOffset?.
+    /// </summary>
+    public DateTimeOffset? LastUpload { get; set; }
+
+    // --- Các cột mới của bản web, KHÔNG có trong Access ---
+    public string? TenGiaoHat { get; set; }
+    public string? TenGiaoPhan { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

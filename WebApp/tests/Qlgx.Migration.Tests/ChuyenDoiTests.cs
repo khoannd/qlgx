@@ -271,10 +271,11 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
     }
 
     [Fact]
-    public async Task Cot_giaoxu_khong_co_thuoc_tinh_dich_duoc_bao_thanh_canh_bao_khong_bi_bo_qua()
+    public async Task Ca_ba_cot_giao_xu_MaGiaoHat_Hinh_LastUpload_duoc_chuyen_du_khong_bi_bo_qua()
     {
-        // Entity GiaoXu chưa có thuộc tính cho MaGiaoHat/Hinh/LastUpload (xem ghi chú trong
-        // GhiGiaoXu). Khi các cột này có dữ liệu thật, công cụ phải cảnh báo thay vì im lặng bỏ.
+        // Entity GiaoXu nay có đủ thuộc tính đích cho MaGiaoHat (MaGiaoHatCu), Hinh và
+        // LastUpload — cả 11/11 cột của bảng Access GiaoXu phải sang được PostgreSQL, không
+        // còn cột nào bị bỏ qua hay chỉ ghi cảnh báo.
         var mau = NguonMau(9);
         mau.Nguon.GiaoXu[0] = mau.Nguon.GiaoXu[0] with
         {
@@ -285,7 +286,10 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         var kq = await new ChuyenDoiDuLieu(ctx, db.GiaoXuId, new BangAnhXaId())
             .Chay(mau.Nguon, false, CancellationToken.None);
 
-        kq.CanhBao.Should().Contain(c => c.Contains("giao_xu") && c.Contains("MaGiaoHat")
-            && c.Contains("Hinh") && c.Contains("LastUpload"));
+        var giaoXu = await ctx.GiaoXu.SingleAsync(x => x.Id == db.GiaoXuId);
+        giaoXu.MaGiaoHatCu.Should().Be(7);
+        giaoXu.Hinh.Should().Be("logo-giaoxu.jpg");
+        giaoXu.LastUpload.Should().Be(new DateTimeOffset(new DateTime(2026, 1, 1), TimeSpan.Zero));
+        kq.CanhBao.Should().NotContain(c => c.Contains("giao_xu"));
     }
 }

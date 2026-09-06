@@ -77,32 +77,26 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         // BangAnhXaId — bản ghi đích coi như đã tồn tại (do người vận hành tạo trước) hoặc
         // được tạo mới đúng bằng giaoXuId đó.
         //
-        // GHI CHÚ VỀ CỘT KHÔNG CÓ NƠI CHỨA: entity GiaoXu không có thuộc tính cho MaGiaoHat
-        // (khoá tới danh mục giáo hạt, ngoài phạm vi 7 bảng này), Hinh (ảnh đại diện giáo xứ,
-        // dạng văn bản) và LastUpload (mốc đồng bộ desktop, khác ngữ nghĩa UpdatedAt vì GiaoXu
-        // không kế thừa ThucTheCoSo). Ba cột này ĐƯỢC ĐỌC từ Access nhưng không có cột đích để
-        // ghi — nếu có giá trị thật, việc đó được cảnh báo ở đây thay vì bỏ qua trong im lặng.
+        // Cả 11 cột Access đều có cột đích tương ứng trên entity GiaoXu (MaGiaoHat →
+        // MaGiaoHatCu, Hinh và LastUpload ánh xạ trực tiếp) — không còn cột nào bị bỏ qua.
         foreach (var d in dong)
         {
             var e = await db.GiaoXu.FindAsync([giaoXuId], ct);
             if (e is null) { e = new GiaoXu { Id = giaoXuId }; db.GiaoXu.Add(e); }
 
             e.MaGiaoXuCu = d.MaGiaoXu;
+            e.MaGiaoHatCu = d.MaGiaoHat;
             e.MaGiaoXuRieng = d.MaGiaoXuRieng;
             e.TenGiaoXu = d.TenGiaoXu;
             e.DiaChi = d.DiaChi;
             e.DienThoai = d.DienThoai;
             e.Email = d.Email;
             e.Website = d.Website;
+            e.Hinh = d.Hinh;
             e.GhiChu = d.GhiChu;
-
-            var khongCoCotDich = new List<string>();
-            if (d.MaGiaoHat is not null) khongCoCotDich.Add($"MaGiaoHat={d.MaGiaoHat}");
-            if (!string.IsNullOrEmpty(d.Hinh)) khongCoCotDich.Add("Hinh (có dữ liệu)");
-            if (d.LastUpload is not null) khongCoCotDich.Add($"LastUpload={d.LastUpload:O}");
-            if (khongCoCotDich.Count > 0)
-                _canhBao.Add("giao_xu mã cũ " + d.MaGiaoXu + ": đọc được nhưng entity GiaoXu " +
-                    "chưa có cột đích cho " + string.Join(", ", khongCoCotDich));
+            e.LastUpload = d.LastUpload is not null
+                ? new DateTimeOffset(d.LastUpload.Value, TimeSpan.Zero)
+                : null;
         }
         await db.SaveChangesAsync(ct);
     }

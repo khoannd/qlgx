@@ -1,9 +1,11 @@
 namespace Qlgx.Migration;
 
 /// <summary>
-/// Ánh xạ 11 cột thật của bảng GiaoXu. KHÔNG có cột TenGiaoHat/TenGiaoPhan trong Access —
-/// hai tên đó không tồn tại; cột thật là MaGiaoHat (số, khoá tới danh mục giáo hạt không có
-/// trong phạm vi chuyển đổi này). Xem schema-access-that.md.
+/// Ánh xạ đủ 11 cột thật của bảng GiaoXu. KHÔNG có cột TenGiaoHat/TenGiaoPhan trong Access —
+/// hai tên đó không tồn tại; cột thật là MaGiaoHat (số, ánh xạ vào GiaoXu.MaGiaoHatCu — khoá
+/// tới danh mục giáo hạt hệ cũ, không tách bảng riêng trong phạm vi chuyển đổi này). Hinh là
+/// văn bản (không phải ảnh nhị phân); LastUpload là ngày giờ thật của Access. Xem
+/// schema-access-that.md.
 /// </summary>
 public record DongGiaoXu(int MaGiaoXu, int? MaGiaoHat, string TenGiaoXu, string? DiaChi,
     string? DienThoai, string? Email, string? Website, string? Hinh, string? GhiChu,
