@@ -3020,7 +3020,7 @@ liệu**, đúng như bản desktop nhúng cùng một `GxGiaoDanList` ở hai n
 - Create: `WebApp/src/web/src/components/GxGrid.tsx`
 - Create: `WebApp/src/web/src/cot/cotGiaoDan.ts`, `cotGiaDinh.ts`
 - Create: `WebApp/src/web/src/components/GxGiaoDanList.tsx`, `GxGiaDinhList.tsx`
-- Test: `WebApp/src/web/src/components/GxGiaoDanList.test.tsx`
+- Test: `WebApp/src/web/src/components/GxGiaoDanList.test.tsx`, `GxGiaDinhList.test.tsx`
 
 **Interfaces:**
 - Consumes: DTO của Task 6 và 8 (`GiaDinhListItemDto`, `GiaoDanListItemDto`).
@@ -3236,7 +3236,7 @@ export const api = {
 Tạo `WebApp/src/web/src/components/GxGiaoDanList.test.tsx`:
 
 ```tsx
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { GxGiaoDanList } from './GxGiaoDanList'
@@ -3253,20 +3253,23 @@ const nguoi = (p: Partial<GiaoDanListItem> = {}): GiaoDanListItem => ({
   noiRuaToi: null, noiRuocLe: null, noiThemSuc: null, quanHe: null, ...p,
 })
 
+// ag-grid dựng header/hàng qua setTimeout(0) nội bộ (dồn sự kiện để tối ưu hiệu năng) nên
+// dưới jsdom nội dung lưới chưa có ngay sau render() — phải chờ bằng findByText/waitFor
+// thay vì getByText/queryByText đồng bộ.
 describe('GxGiaoDanList', () => {
-  it('hien du 29 cot cua ban desktop khi dung o man hinh danh sach', () => {
+  it('hien du 29 cot cua ban desktop khi dung o man hinh danh sach', async () => {
     render(<GxGiaoDanList rows={[nguoi()]} />)
 
-    expect(screen.getByText('Mã GD')).toBeDefined()
+    expect(await screen.findByText('Mã GD')).toBeDefined()
     expect(screen.getByText('Tên thánh')).toBeDefined()
     expect(screen.getByText('Nơi thêm sức')).toBeDefined()
     expect(screen.queryByText('Quan hệ GĐ')).toBeNull()
   })
 
-  it('them cot Quan he GD va bo cot Dien thoai khi nhung trong form gia dinh', () => {
+  it('them cot Quan he GD va bo cot Dien thoai khi nhung trong form gia dinh', async () => {
     render(<GxGiaoDanList rows={[nguoi()]} quanHeGiaDinh />)
 
-    expect(screen.getByText('Quan hệ GĐ')).toBeDefined()
+    expect(await screen.findByText('Quan hệ GĐ')).toBeDefined()
     expect(screen.queryByText('Điện thoại')).toBeNull()
   })
 
@@ -3274,17 +3277,34 @@ describe('GxGiaoDanList', () => {
     const onMo = vi.fn()
     render(<GxGiaoDanList rows={[nguoi()]} onMo={onMo} />)
 
-    await userEvent.dblClick(screen.getByText('Trần Thị Khánh Ngọc'))
+    await userEvent.dblClick(await screen.findByText('Trần Thị Khánh Ngọc'))
 
     expect(onMo).toHaveBeenCalledWith(expect.objectContaining({ maGiaoDanCu: 4412 }))
   })
 
-  it('to do dong cua nguoi da qua doi, chuyen xu hoac lap gia dinh rieng', () => {
+  it('to do dong cua nguoi da qua doi, chuyen xu hoac lap gia dinh rieng', async () => {
     const { container } = render(
       <GxGiaoDanList rows={[nguoi({ quaDoi: true }), nguoi({ id: 'a2', maGiaoDanCu: 1, quaDoi: false })]} />,
     )
 
-    expect(container.querySelectorAll('.dong-gach-do')).toHaveLength(1)
+    await screen.findByText('Mã GD')
+    await waitFor(() => expect(container.querySelectorAll('.dong-gach-do')).toHaveLength(1))
+  })
+
+  it('mac dinh (hangLoc) thi hien hang loc duoi moi tieu de cot', async () => {
+    const { container } = render(<GxGiaoDanList rows={[nguoi()]} />)
+
+    await screen.findByText('Mã GD')
+    // Ag-grid (bản legacy theme) đánh dấu ô lọc nổi bằng class `ag-floating-filter` —
+    // đủ 29 cột thì phải có đủ 29 ô lọc.
+    await waitFor(() => expect(container.querySelectorAll('.ag-floating-filter')).toHaveLength(29))
+  })
+
+  it('hangLoc=false thi khong hien hang loc', async () => {
+    const { container } = render(<GxGiaoDanList rows={[nguoi()]} hangLoc={false} />)
+
+    await screen.findByText('Mã GD')
+    await waitFor(() => expect(container.querySelectorAll('.ag-floating-filter')).toHaveLength(0))
   })
 })
 ```
@@ -3300,10 +3320,18 @@ Tạo `WebApp/src/web/src/components/GxGrid.tsx`:
 
 ```tsx
 import { AgGridReact } from 'ag-grid-react'
+import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import type { ColDef, GetRowIdParams, RowClassParams } from 'ag-grid-community'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
 import { useCallback, useMemo, useRef, useState } from 'react'
+
+// ag-grid từ bản 33 trở đi nạp theo kiến trúc mô-đun và mặc định dùng "Theming API" mới
+// (đối tượng theme JS) thay vì theme dựa trên class CSS — thiếu registerModules() thì
+// getRowClass/rowSelection/localeText không hoạt động (lỗi #200), và thiếu theme="legacy"
+// bên dưới thì việc import CSS theo class (ag-theme-quartz.css) sẽ đụng độ với theme JS
+// mặc định khiến lưới không vẽ được cột/hàng nào.
+ModuleRegistry.registerModules([AllCommunityModule])
 
 export type MucMenu<T> = { nhan: string; chay?: (dong: T) => void }
 
@@ -3332,7 +3360,15 @@ export function GxGrid<T>({
   const boc = useRef<HTMLDivElement>(null)
 
   const defaultColDef = useMemo<ColDef<T>>(
-    () => ({ sortable: true, resizable: true, filter: hangLoc ? 'agTextColumnFilter' : false }),
+    () => ({
+      sortable: true,
+      resizable: true,
+      filter: hangLoc ? 'agTextColumnFilter' : false,
+      // `floatingFiltersHeight` bên dưới chỉ đặt chiều cao vùng hàng lọc; phải bật riêng
+      // `floatingFilter` trên từng cột thì ô lọc mới thực sự hiện ra dưới mỗi tiêu đề,
+      // đúng như FilterMode.Automatic của Janus GridEX ở bản desktop.
+      floatingFilter: hangLoc,
+    }),
     [hangLoc],
   )
 
@@ -3356,6 +3392,7 @@ export function GxGrid<T>({
         }}
       >
         <AgGridReact<T>
+          theme="legacy"
           columnDefs={columnDefs}
           rowData={rowData}
           defaultColDef={defaultColDef}
@@ -3541,10 +3578,25 @@ không tô cả dòng — chỉ ô Người nam hoặc Người nữ bị gạch
 `In chứng nhận hôn phối`, `In phiếu gia đình`, `In lý lịch cá nhân`, `In giới thiệu chuyển xứ`,
 `Xem vị trí`.
 
+Viết thêm `WebApp/src/web/src/components/GxGiaDinhList.test.tsx` theo cùng khuôn của
+`GxGiaoDanList.test.tsx`: hiện đủ 12 cột với đúng nhãn, `gach: 0` gạch ô Người nam mà không
+gạch ô Người nữ, `gach: 1` thì ngược lại, `gach: 2` gạch cả hai ô, `gach: -1` không gạch ô
+nào, và nhấp đúp một dòng gọi `onMo` với đúng bản ghi.
+
+**Lưu ý khi viết test cho cả hai file:** `ag-grid-react` dồn việc dựng header/hàng qua
+`window.setTimeout(fn, 0)` để tối ưu hiệu năng, nên ngay sau `render()` nội dung lưới chưa
+có trong DOM — mọi khẳng định "có xuất hiện" phải dùng `await screen.findByText(...)` (hoặc
+bọc trong `waitFor(...)`) thay vì `screen.getByText(...)` đồng bộ. Khẳng định "không xuất
+hiện" (`queryByText(...).toBeNull()`) vẫn dùng được đồng bộ, miễn là đặt sau một
+`findByText` đã xác nhận lưới dựng xong. jsdom cũng không có `ResizeObserver` và mọi phần
+tử đều báo kích thước bằng 0 — cần polyfill trong `test.setupFiles` (xem
+`WebApp/src/web/src/test-setup.ts`) thì ag-grid mới vẽ được gì đó.
+
 - [ ] **Bước 7: Chạy test để xác nhận pass**
 
 Chạy: `cd WebApp/src/web && npm test`
-Kỳ vọng: PASS, 7 test.
+Kỳ vọng: PASS, 17 test (5 test cũ của `useTabDocs.test.ts` từ Task 10 + 6 test của
+`GxGiaoDanList.test.tsx` + 6 test của `GxGiaDinhList.test.tsx`).
 
 - [ ] **Bước 8: Commit**
 

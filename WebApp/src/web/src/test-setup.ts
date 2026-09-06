@@ -2,6 +2,13 @@
 // định vẽ cột/dòng nào. jsdom không có layout engine: không có ResizeObserver và mọi phần
 // tử đều rộng/cao bằng 0, nên lưới không vẽ được gì trong môi trường test nếu thiếu phần
 // giả lập dưới đây.
+//
+// File này được nạp qua `test.setupFiles` trong vite.config.ts nên áp dụng cho MỌI file
+// test trong dự án, không riêng gì các lưới ag-grid: mọi `HTMLElement` (kể cả trong các
+// test không dùng ag-grid) sẽ luôn trả về offsetWidth=1000, offsetHeight=600 và
+// getBoundingClientRect() cố định như trên, bất kể CSS/inline style thật đặt gì. Nếu sau
+// này có test cần đo kích thước thật (ví dụ test responsive dựa trên kích thước phần tử),
+// phải override lại riêng trong test đó.
 class ResizeObserverGia {
   observe() {}
   unobserve() {}

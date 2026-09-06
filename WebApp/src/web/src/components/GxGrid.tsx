@@ -36,7 +36,15 @@ export function GxGrid<T>({
   const boc = useRef<HTMLDivElement>(null)
 
   const defaultColDef = useMemo<ColDef<T>>(
-    () => ({ sortable: true, resizable: true, filter: hangLoc ? 'agTextColumnFilter' : false }),
+    () => ({
+      sortable: true,
+      resizable: true,
+      filter: hangLoc ? 'agTextColumnFilter' : false,
+      // `floatingFiltersHeight` bên dưới chỉ đặt chiều cao vùng hàng lọc; phải bật riêng
+      // `floatingFilter` trên từng cột thì ô lọc mới thực sự hiện ra dưới mỗi tiêu đề,
+      // đúng như FilterMode.Automatic của Janus GridEX ở bản desktop.
+      floatingFilter: hangLoc,
+    }),
     [hangLoc],
   )
 

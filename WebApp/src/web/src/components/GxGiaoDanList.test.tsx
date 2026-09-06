@@ -52,4 +52,20 @@ describe('GxGiaoDanList', () => {
     await screen.findByText('Mã GD')
     await waitFor(() => expect(container.querySelectorAll('.dong-gach-do')).toHaveLength(1))
   })
+
+  it('mac dinh (hangLoc) thi hien hang loc duoi moi tieu de cot', async () => {
+    const { container } = render(<GxGiaoDanList rows={[nguoi()]} />)
+
+    await screen.findByText('Mã GD')
+    // Ag-grid (bản legacy theme) đánh dấu ô lọc nổi bằng class `ag-floating-filter` —
+    // đủ 29 cột thì phải có đủ 29 ô lọc.
+    await waitFor(() => expect(container.querySelectorAll('.ag-floating-filter')).toHaveLength(29))
+  })
+
+  it('hangLoc=false thi khong hien hang loc', async () => {
+    const { container } = render(<GxGiaoDanList rows={[nguoi()]} hangLoc={false} />)
+
+    await screen.findByText('Mã GD')
+    await waitFor(() => expect(container.querySelectorAll('.ag-floating-filter')).toHaveLength(0))
+  })
 })
