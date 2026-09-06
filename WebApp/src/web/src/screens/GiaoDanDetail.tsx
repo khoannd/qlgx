@@ -1,9 +1,134 @@
 import { useRef, useState, type FormEvent } from 'react'
-import type { GiaoDanDetail as GiaoDanDetailDuLieu } from '../api/types'
+import type { GiaoDanDetail as GiaoDanDetailDuLieu, HonPhoiCuaGiaoDan } from '../api/types'
 import { GxField, GxInline } from '../components/GxField'
 import { GxFormTabs } from '../components/GxFormTabs'
 import { GxPicker } from '../components/GxPicker'
 import { DANH_SACH_GIAO_HO_TAM, NGOAI_XU } from '../data/giaoHoTam'
+
+/** Các trường gửi lên `PUT /api/giao-dan/hon-phoi/{honPhoiId}` — đúng `CapNhatHonPhoiRequest`
+ * phía backend (dùng lại nguyên type đã có từ Task 7, xem GiaDinhDtos.cs). */
+export type YeuCauCapNhatHonPhoi = {
+  soHonPhoi: string | null
+  ngayHonPhoi: string | null
+  noiHonPhoi: string | null
+  linhMucChung: string | null
+  nguoiChung1: string | null
+  nguoiChung2: string | null
+  cachThucHonPhoi: string | null
+  ghiChu: string | null
+  rowVersion: number
+}
+
+/** Danh sách "Tình trạng hôn phối" — lấy bản 9 giá trị của `GxCachThucHonPhoi` (dùng trong
+ * khối hôn phối nhúng ở form gia đình bản desktop), KHÔNG dùng bản 6 giá trị cũ hơn của
+ * `frmHonPhoi` (thiếu Ly thân/Ly dị/Đã được tháo gỡ) — quyết định có ý thức, xem
+ * docs/superpowers/specs/man-hinh/hon-phoi.md mục 8 và can-review-sau.md mục 12. */
+const CACH_THUC_HON_PHOI = [
+  '', 'Hợp pháp', 'Hợp thức hóa', 'Chuẩn', 'Không theo phép đạo',
+  'Ly thân', 'Ly dị', 'Đã được tháo gỡ', 'Không xác định',
+]
+
+/**
+ * Một hôn phối trong tab "Hôn phối" — form riêng, lưu độc lập với form giáo dân chính (gọi
+ * `PUT /api/giao-dan/hon-phoi/{id}` riêng, không đi qua nút "Cập nhật" ở cuối trang). Chưa hỗ
+ * trợ đổi Người nam/Người nữ (cần picker + toàn bộ kiểm tra nghiệp vụ của `frmHonPhoi`, xem
+ * hon-phoi.md mục 8) — chỉ xem tên người phối ngẫu và sửa các trường còn lại.
+ */
+function KhoiHonPhoi({
+  hp, thuTu, onLuu,
+}: {
+  hp: HonPhoiCuaGiaoDan
+  thuTu: number
+  onLuu?: (honPhoiId: string, payload: YeuCauCapNhatHonPhoi) => Promise<void>
+}) {
+  // KHÔNG dùng thẻ <form> ở đây: toàn bộ tab này được `GxFormTabs` render bên trong thẻ
+  // <form> duy nhất bọc cả trang của `GiaoDanDetail` (dùng cho nút "Cập nhật" chính) — lồng
+  // một <form> thứ hai bên trong là HTML không hợp lệ, và đã đo được hậu quả thật: trình
+  // duyệt bỏ qua thẻ <form> lồng, khiến nút submit của khối này kích hoạt submit của form
+  // NGOÀI CÙNG (điều hướng GET với toàn bộ giá trị input dồn vào query string thay vì gọi
+  // API). Dùng <div> + đọc giá trị input qua querySelector theo `name`, nút kiểu "button".
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [dangLuu, setDangLuu] = useState(false)
+  const [thongBao, setThongBao] = useState<string | null>(null)
+
+  function docGiaTri(ten: string): string | null {
+    const el = containerRef.current?.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(`[name="${ten}"]`)
+    return el?.value.trim() || null
+  }
+
+  async function xuLyLuu() {
+    if (!onLuu) return
+    setDangLuu(true)
+    setThongBao(null)
+    try {
+      await onLuu(hp.id, {
+        soHonPhoi: docGiaTri('soHonPhoi'),
+        ngayHonPhoi: docGiaTri('ngayHonPhoi'),
+        noiHonPhoi: docGiaTri('noiHonPhoi'),
+        linhMucChung: docGiaTri('linhMucChung'),
+        nguoiChung1: docGiaTri('nguoiChung1'),
+        nguoiChung2: docGiaTri('nguoiChung2'),
+        cachThucHonPhoi: docGiaTri('cachThucHonPhoi'),
+        ghiChu: docGiaTri('ghiChu'),
+        rowVersion: hp.rowVersion,
+      })
+      setThongBao('Đã lưu thành công.')
+    } catch (err) {
+      setThongBao(err instanceof Error ? err.message : 'Lưu thất bại, thử lại sau.')
+    } finally {
+      setDangLuu(false)
+    }
+  }
+
+  const idBase = `hp-${hp.id}`
+  return (
+    <div className="card glass" ref={containerRef} style={{ marginBottom: 12 }}>
+      <div className="card-head">
+        <h2>{hp.tenHonPhoi || `Đôi hôn phối #${thuTu + 1}`}</h2>
+        <span className="eyebrow">Người phối ngẫu: <strong>{hp.tenVoChong ?? 'chưa rõ'}</strong></span>
+      </div>
+      <div className="card-row">
+        <div>
+          <GxField label="Số hôn phối" id={`${idBase}-so`}>
+            <input id={`${idBase}-so`} name="soHonPhoi" type="text" defaultValue={hp.soHonPhoi ?? ''} />
+          </GxField>
+          <GxField label="Ngày hôn phối" id={`${idBase}-ngay`}>
+            <input id={`${idBase}-ngay`} name="ngayHonPhoi" type="date" defaultValue={hp.ngayHonPhoi ?? ''} style={{ maxWidth: 180 }} />
+          </GxField>
+          <GxField label="Nơi hôn phối" id={`${idBase}-noi`}>
+            <input id={`${idBase}-noi`} name="noiHonPhoi" type="text" defaultValue={hp.noiHonPhoi ?? ''} />
+          </GxField>
+          <GxField label="Linh mục chứng" id={`${idBase}-lm`}>
+            <input id={`${idBase}-lm`} name="linhMucChung" type="text" defaultValue={hp.linhMucChung ?? ''} />
+          </GxField>
+        </div>
+        <div>
+          <GxField label="Người chứng 1" id={`${idBase}-c1`}>
+            <input id={`${idBase}-c1`} name="nguoiChung1" type="text" defaultValue={hp.nguoiChung1 ?? ''} />
+          </GxField>
+          <GxField label="Người chứng 2" id={`${idBase}-c2`}>
+            <input id={`${idBase}-c2`} name="nguoiChung2" type="text" defaultValue={hp.nguoiChung2 ?? ''} />
+          </GxField>
+          <GxField label="Tình trạng hôn phối" id={`${idBase}-ct`}>
+            <select id={`${idBase}-ct`} name="cachThucHonPhoi" defaultValue={hp.cachThucHonPhoi ?? ''}>
+              {CACH_THUC_HON_PHOI.map((c) => <option key={c} value={c}>{c || '(chưa xác định)'}</option>)}
+            </select>
+          </GxField>
+          <GxField label="Ghi chú" id={`${idBase}-ghichu`}>
+            <textarea id={`${idBase}-ghichu`} name="ghiChu" defaultValue={hp.ghiChu ?? ''} />
+          </GxField>
+        </div>
+      </div>
+      <div className="cmdbar">
+        <span className="hint" role={thongBao ? 'status' : undefined}>{thongBao}</span>
+        <div className="spacer" />
+        <button type="button" className="btn btn-primary" disabled={!onLuu || dangLuu} onClick={xuLyLuu}>
+          {dangLuu ? 'Đang lưu…' : 'Cập nhật hôn phối'}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 /** Các trường gửi lên `PUT /api/giao-dan/{id}` — đúng `CapNhatGiaoDanRequest` phía backend.
  * Vài trường chỉ hiển thị qua `GxPicker` (tên cha mẹ, người ban bí tích…) chưa có ô nhập thật
@@ -70,6 +195,15 @@ type Props = {
   onLuu?: (payload: YeuCauCapNhatGiaoDan) => void
   dangLuu?: boolean
   thongBaoLuu?: string | null
+  /** Danh sách hôn phối của giáo dân này (có thể nhiều bản ghi — goá rồi tái hôn), xem
+   * tab "Hôn phối" và `hon-phoi.md`. Mặc định rỗng khi chưa truyền (bản ghi mới, hoặc màn
+   * hình gọi component này mà chưa tải xong). */
+  danhSachHonPhoi?: HonPhoiCuaGiaoDan[]
+  dangTaiHonPhoi?: boolean
+  /** Lưu một bản ghi hôn phối — container gọi API thật `PUT /api/giao-dan/hon-phoi/{id}`
+   * (tách biệt hoàn toàn nút "Cập nhật" của form giáo dân chính) và xử lý xung đột RowVersion;
+   * mỗi khối hôn phối tự quản lý trạng thái "đang lưu"/thông báo của riêng nó. */
+  onLuuHonPhoi?: (honPhoiId: string, payload: YeuCauCapNhatHonPhoi) => Promise<void>
 }
 
 const rong = (): GiaoDanDetailDuLieu => ({
@@ -101,6 +235,7 @@ const CHUYEN_XU = ['Ở tại xứ', 'Chuyển từ xứ khác đến', 'Đã ch
  */
 export function GiaoDanDetail({
   duLieu, moGiaDinh, moDanhSachGiaoDan, onLuu, dangLuu, thongBaoLuu,
+  danhSachHonPhoi = [], dangTaiHonPhoi = false, onLuuHonPhoi,
 }: Props) {
   const p = duLieu ?? rong()
   const moi = !duLieu?.id
@@ -350,20 +485,18 @@ export function GiaoDanDetail({
   )
 
   const tabHonPhoi = (
-    <div className="card glass">
-      <div className="card-head"><h2>Thông tin đôi hôn phối</h2></div>
-      <div className="card-row">
-        <div>
-          <GxField label="Người nam" id="gd-hp-nam"><GxPicker id="gd-hp-nam" value={p.phai === 'Nam' ? `${p.tenThanh ?? ''} ${p.hoTen}`.trim() : null} /></GxField>
-          <GxField label="Người nữ" id="gd-hp-nu"><GxPicker id="gd-hp-nu" value={p.phai === 'Nữ' ? `${p.tenThanh ?? ''} ${p.hoTen}`.trim() : null} /></GxField>
-          <GxField label="Đôi hôn phối" id="gd-hp-doi"><input id="gd-hp-doi" type="text" defaultValue={p.tenGiaDinh ?? ''} disabled /></GxField>
+    <>
+      {dangTaiHonPhoi && <p className="hint">Đang tải danh sách hôn phối…</p>}
+      {!dangTaiHonPhoi && danhSachHonPhoi.length === 0 && (
+        <div className="card glass">
+          <div className="card-head"><h2>Thông tin đôi hôn phối</h2></div>
+          <p className="hint">Giáo dân này chưa có bản ghi hôn phối nào.</p>
         </div>
-        <div>
-          <GxField label="Nơi hôn phối" id="gd-hp-noi"><input id="gd-hp-noi" type="text" /></GxField>
-          <GxField label="Linh mục chứng" id="gd-hp-lm"><GxPicker id="gd-hp-lm" /></GxField>
-        </div>
-      </div>
-    </div>
+      )}
+      {danhSachHonPhoi.map((hp, i) => (
+        <KhoiHonPhoi key={hp.id} hp={hp} thuTu={i} onLuu={onLuuHonPhoi} />
+      ))}
+    </>
   )
 
   const tabOnGoi = (

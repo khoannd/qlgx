@@ -60,6 +60,24 @@ public record CapNhatHonPhoiRequest(
     string? LinhMucChung, string? NguoiChung1, string? NguoiChung2,
     string? CachThucHonPhoi, string? GhiChu, uint RowVersion);
 
+/// <summary>
+/// Một hôn phối của một GIÁO DÂN cụ thể — dùng cho tab "Hôn phối" ở màn hình chi tiết giáo dân
+/// (Task 15). Khác <see cref="HonPhoiDto"/> (chỉ trả hôn phối "hiện tại" của một GIA ĐÌNH): một
+/// người có thể có NHIỀU bản ghi hôn phối theo thời gian (goá rồi tái hôn — xem chú thích
+/// ChonHonPhoiHienTai trong GiaDinhService), nên GET /api/giao-dan/{id}/hon-phoi trả về DANH
+/// SÁCH, không đoán "bản ghi hiện tại" như hai control desktop (frmHonPhoi, GxHonPhoiGiaDinh) —
+/// xem docs/superpowers/specs/man-hinh/hon-phoi.md mục 8.
+/// </summary>
+public record HonPhoiCuaGiaoDanDto(
+    Guid Id, string? TenHonPhoi, string? SoHonPhoi, DateOnly? NgayHonPhoi, string? NoiHonPhoi,
+    string? LinhMucChung, string? NguoiChung1, string? NguoiChung2,
+    string? CachThucHonPhoi, string? GhiChu,
+    /// <summary>Mã giáo dân và tên hiển thị của NGƯỜI KIA trong hôn phối này (chồng nếu đang
+    /// xem từ vợ, ngược lại) — null nếu vì lý do nào đó bản ghi GiaoDanHonPhoi chỉ có một người
+    /// (không nên xảy ra với dữ liệu hợp lệ, nhưng không giả định).</summary>
+    Guid? VoChongId, string? TenVoChong,
+    uint RowVersion);
+
 public record CapNhatGiaDinhRequest(
     string? TenGiaDinh, Guid? GiaoHoId, string? DienThoai, string? DiaChi, string? SoHoKhau,
     string? DienGiaDinh, string? GhiChu, bool DaChuyenXu, DateOnly? NgayChuyen,

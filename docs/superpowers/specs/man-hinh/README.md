@@ -83,7 +83,7 @@ Cập nhật bảng này mỗi khi thêm spec.
 | Danh sách gia đình | `ChuongTrinh/frmGiaDinhList.cs` | 386 | xong (`gia-dinh-danh-sach.md`) | xong |
 | Danh sách giáo dân | `ChuongTrinh/frmGiaoDanList.cs` | 357 | xong (`giao-dan-danh-sach.md`) | xong |
 | Màn hình chính | `ChuongTrinh/frmMain.cs` | 993 | chưa | một phần |
-| Hôn phối | `GXControl/frmHonPhoi.cs` | 422 | chưa | chưa |
+| Hôn phối | `GXControl/frmHonPhoi.cs` + `GXControl/GxHonPhoiGiaDinh.cs` | 422 + 300 | xong (`hon-phoi.md`) | một phần (xem mục 10) |
 | Rao hôn phối | `GXControl/frmRaoHonPhoi.cs` | 637 | chưa | chưa |
 | Hội đoàn | `GXControl/frmHoiDoan.cs` | 663 | chưa | chưa |
 | Giáo họ | `ChuongTrinh/frmGiaoHo.cs` | 598 | chưa | chưa |

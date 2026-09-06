@@ -152,3 +152,22 @@ export type GiaoDanDetail = {
   vaiTro: number | null
   rowVersion: number
 }
+
+/** Ánh xạ 1-1 với HonPhoiCuaGiaoDanDto phía backend — MỘT hôn phối của giáo dân đang xem
+ * (người này có thể có nhiều bản ghi theo thời gian, xem tab "Hôn phối" trong
+ * GiaoDanDetail.tsx và docs/superpowers/specs/man-hinh/hon-phoi.md mục 8). */
+export type HonPhoiCuaGiaoDan = {
+  id: string
+  tenHonPhoi: string | null
+  soHonPhoi: string | null
+  ngayHonPhoi: string | null
+  noiHonPhoi: string | null
+  linhMucChung: string | null
+  nguoiChung1: string | null
+  nguoiChung2: string | null
+  cachThucHonPhoi: string | null
+  ghiChu: string | null
+  voChongId: string | null
+  tenVoChong: string | null
+  rowVersion: number
+}

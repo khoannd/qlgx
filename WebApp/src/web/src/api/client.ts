@@ -1,5 +1,5 @@
 import type {
-  GiaDinhDetail, GiaDinhListItem, GiaoDanDetail, GiaoDanListItem,
+  GiaDinhDetail, GiaDinhListItem, GiaoDanDetail, GiaoDanListItem, HonPhoiCuaGiaoDan,
 } from './types'
 
 class LoiXungDot extends Error {}
@@ -74,5 +74,8 @@ export const api = {
     chiTiet: (id: string) => goi<GiaoDanDetail>(`/api/giao-dan/${id}`),
     capNhat: (id: string, than: unknown) =>
       goi<void>(`/api/giao-dan/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    honPhoi: (id: string) => goi<HonPhoiCuaGiaoDan[]>(`/api/giao-dan/${id}/hon-phoi`),
+    capNhatHonPhoi: (honPhoiId: string, than: unknown) =>
+      goi<void>(`/api/giao-dan/hon-phoi/${honPhoiId}`, { method: 'PUT', body: JSON.stringify(than) }),
   },
 }

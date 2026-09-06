@@ -147,4 +147,73 @@ public class GiaoDanService(QlgxDbContext db)
         try { await db.SaveChangesAsync(ct); return true; }
         catch (DbUpdateConcurrencyException) { return false; }
     }
+
+    /// <summary>
+    /// Toàn bộ hôn phối mà giáo dân này tham gia (chồng hoặc vợ), mới nhất trước — xem
+    /// HonPhoiCuaGiaoDanDto để biết vì sao đây là danh sách, không phải một bản ghi như hai
+    /// control desktop. GiaoXuId lấy tự động qua bộ lọc chung của QlgxDbContext (HasQueryFilter
+    /// trên GiaoDanHonPhoi/HonPhoi), không đọc từ tham số nào của phương thức này.
+    /// </summary>
+    public async Task<List<HonPhoiCuaGiaoDanDto>> LayHonPhoi(Guid giaoDanId, CancellationToken ct)
+    {
+        var honPhoiId = await db.GiaoDanHonPhoi
+            .Where(x => x.GiaoDanId == giaoDanId)
+            .Select(x => x.HonPhoiId)
+            .ToListAsync(ct);
+        if (honPhoiId.Count == 0) return [];
+
+        // Lấy MỌI liên kết (kể cả người kia) của các hôn phối này trong một truy vấn duy nhất —
+        // tránh N+1, cùng cách tiếp cận "gộp cột cùng nguồn vào một subquery" mà
+        // GiaDinhService.XayDungTruyVan đã ghi chú.
+        var lienKet = await db.GiaoDanHonPhoi
+            .Where(x => honPhoiId.Contains(x.HonPhoiId))
+            .Select(x => new { x.HonPhoiId, x.GiaoDanId, x.GiaoDan!.TenThanh, x.GiaoDan.HoTen })
+            .ToListAsync(ct);
+
+        var honPhoi = await db.HonPhoi
+            .Where(h => honPhoiId.Contains(h.Id))
+            .OrderByDescending(h => h.NgayHonPhoi)
+            .ToListAsync(ct);
+
+        // Ghép tên người kia bằng LINQ-to-Objects (lienKet đã nằm trong bộ nhớ) — không phải
+        // Find()/FindAsync() nào ở đây, chỉ FirstOrDefault trên một List<> cục bộ.
+        return honPhoi.Select(h =>
+        {
+            var voChong = lienKet.FirstOrDefault(x => x.HonPhoiId == h.Id && x.GiaoDanId != giaoDanId);
+            var ten = voChong is null ? null
+                : string.IsNullOrWhiteSpace(voChong.TenThanh) ? voChong.HoTen : voChong.TenThanh + " " + voChong.HoTen;
+            return new HonPhoiCuaGiaoDanDto(
+                h.Id, h.TenHonPhoi, h.SoHonPhoi, h.NgayHonPhoi, h.NoiHonPhoi, h.LinhMucChung,
+                h.NguoiChung1, h.NguoiChung2, h.CachThucHonPhoi, h.GhiChu,
+                voChong?.GiaoDanId, ten, h.RowVersion);
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Sửa một bản ghi HonPhoi theo Id (không đụng tới GiaoDanHonPhoi — chưa hỗ trợ đổi vợ/chồng
+    /// qua tab này, xem hon-phoi.md mục 8). null = không tìm thấy, false = đụng RowVersion,
+    /// true = thành công. Tra bằng FirstOrDefaultAsync với điều kiện tường minh, KHÔNG dùng
+    /// Find()/FindAsync() — Find bỏ qua HasQueryFilter khi bản ghi đã có trong bộ nhớ đệm của
+    /// DbContext, có thể trả về hôn phối của giáo xứ khác.
+    /// </summary>
+    public async Task<bool?> CapNhatHonPhoi(Guid honPhoiId, CapNhatHonPhoiRequest yc, CancellationToken ct)
+    {
+        var hp = await db.HonPhoi.FirstOrDefaultAsync(h => h.Id == honPhoiId, ct);
+        if (hp is null) return null;
+
+        db.Entry(hp).Property(x => x.RowVersion).OriginalValue = yc.RowVersion;
+
+        hp.SoHonPhoi = yc.SoHonPhoi;
+        hp.NgayHonPhoi = yc.NgayHonPhoi;
+        hp.NoiHonPhoi = yc.NoiHonPhoi;
+        hp.LinhMucChung = yc.LinhMucChung;
+        hp.NguoiChung1 = yc.NguoiChung1;
+        hp.NguoiChung2 = yc.NguoiChung2;
+        hp.CachThucHonPhoi = yc.CachThucHonPhoi;
+        hp.GhiChu = yc.GhiChu;
+        // Cố tình KHÔNG đụng tới hp.MaNhanDang — cùng lý do đã ghi ở CapNhat/GiaDinhService.
+
+        try { await db.SaveChangesAsync(ct); return true; }
+        catch (DbUpdateConcurrencyException) { return false; }
+    }
 }

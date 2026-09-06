@@ -33,5 +33,24 @@ public static class GiaoDanEndpoints
         app.MapGet("/api/gia-dinh/{id:guid}/thanh-vien",
             async (GiaoDanService dv, Guid id, CancellationToken ct) =>
                 Results.Ok(await dv.LayThanhVien(id, ct)));
+
+        // Tab "Hôn phối" của màn hình chi tiết giáo dân (Task 15) — xem
+        // docs/superpowers/specs/man-hinh/hon-phoi.md. Một giáo dân có thể có nhiều hôn phối
+        // (goá rồi tái hôn) nên GET trả danh sách, không phải một bản ghi.
+        nhom.MapGet("/{id:guid}/hon-phoi", async (GiaoDanService dv, Guid id, CancellationToken ct) =>
+            Results.Ok(await dv.LayHonPhoi(id, ct)));
+
+        nhom.MapPut("/hon-phoi/{honPhoiId:guid}", async (GiaoDanService dv, Guid honPhoiId,
+            CapNhatHonPhoiRequest yeuCau, CancellationToken ct) =>
+            await dv.CapNhatHonPhoi(honPhoiId, yeuCau, ct) switch
+            {
+                null => Results.NotFound(),
+                false => Results.Conflict(new
+                {
+                    thongBao = "Thông tin hôn phối này vừa được người khác cập nhật. " +
+                               "Hãy tải lại màn hình để xem thay đổi mới nhất rồi sửa lại."
+                }),
+                true => Results.Ok()
+            });
     }
 }

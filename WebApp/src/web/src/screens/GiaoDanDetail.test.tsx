@@ -2,7 +2,15 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { GiaoDanDetail } from './GiaoDanDetail'
-import type { GiaoDanDetail as ChiTiet } from '../api/types'
+import type { GiaoDanDetail as ChiTiet, HonPhoiCuaGiaoDan } from '../api/types'
+
+const honPhoi = (p: Partial<HonPhoiCuaGiaoDan> = {}): HonPhoiCuaGiaoDan => ({
+  id: 'hp1', tenHonPhoi: 'Giuse Trí - Maria Thu', soHonPhoi: '12/2018',
+  ngayHonPhoi: '2018-05-01', noiHonPhoi: 'Nhà thờ Chính tòa', linhMucChung: 'Lm. Nguyễn Văn A',
+  nguoiChung1: 'Ông B', nguoiChung2: 'Bà C', cachThucHonPhoi: 'Hợp pháp',
+  ghiChu: 'Không có gì đặc biệt', voChongId: 'vc1', tenVoChong: 'Maria Thu',
+  rowVersion: 1, ...p,
+})
 
 const chiTiet = (p: Partial<ChiTiet> = {}): ChiTiet => ({
   id: 'p1', maGiaoDanCu: 4511, hoTen: 'Vũ Minh Trí', tenThanh: 'Giuse', phai: 'Nam',
@@ -83,5 +91,59 @@ describe('GiaoDanDetail', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Xem gia đình' }))
 
     expect(moGiaDinh).toHaveBeenCalledWith('gd1')
+  })
+
+  // --- Task 15: tab Hôn phối nối API thật (trước đây chỉ là khung tĩnh) ---
+
+  it('chua co hon phoi nao thi bao chua co, khong hien nut Cap nhat', async () => {
+    render(<GiaoDanDetail duLieu={chiTiet()} danhSachHonPhoi={[]} />)
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Hôn phối' }))
+
+    expect(screen.getByText(/chưa có bản ghi hôn phối/i)).toBeDefined()
+  })
+
+  it('hien du cac truong cua mot hon phoi da co', async () => {
+    render(<GiaoDanDetail duLieu={chiTiet()} danhSachHonPhoi={[honPhoi()]} />)
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Hôn phối' }))
+
+    expect(screen.getByText('Maria Thu')).toBeDefined()
+    expect(screen.getByDisplayValue('12/2018')).toBeDefined()
+    expect(screen.getByDisplayValue('2018-05-01')).toBeDefined()
+    expect(screen.getByDisplayValue('Nhà thờ Chính tòa')).toBeDefined()
+    expect(screen.getByDisplayValue('Lm. Nguyễn Văn A')).toBeDefined()
+    expect(screen.getByDisplayValue('Ông B')).toBeDefined()
+    expect(screen.getByDisplayValue('Bà C')).toBeDefined()
+    expect(screen.getByDisplayValue('Không có gì đặc biệt')).toBeDefined()
+  })
+
+  it('goa roi tai hon thi hien du danh sach nhieu hon phoi', async () => {
+    render(<GiaoDanDetail duLieu={chiTiet()} danhSachHonPhoi={[
+      honPhoi({ id: 'hp-moi', soHonPhoi: 'HP-moi', tenVoChong: 'Vợ hiện tại' }),
+      honPhoi({ id: 'hp-cu', soHonPhoi: 'HP-cu', tenVoChong: 'Vợ đầu (đã mất)' }),
+    ]} />)
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Hôn phối' }))
+
+    expect(screen.getByDisplayValue('HP-moi')).toBeDefined()
+    expect(screen.getByDisplayValue('HP-cu')).toBeDefined()
+    expect(screen.getByText('Vợ hiện tại')).toBeDefined()
+    expect(screen.getByText('Vợ đầu (đã mất)')).toBeDefined()
+  })
+
+  it('sua va bam Cap nhat hon phoi thi goi onLuuHonPhoi dung id va rowVersion', async () => {
+    const onLuuHonPhoi = vi.fn().mockResolvedValue(undefined)
+    render(<GiaoDanDetail duLieu={chiTiet()} danhSachHonPhoi={[honPhoi()]} onLuuHonPhoi={onLuuHonPhoi} />)
+    await userEvent.click(screen.getByRole('tab', { name: 'Hôn phối' }))
+
+    const oNoi = screen.getByDisplayValue('Nhà thờ Chính tòa')
+    await userEvent.clear(oNoi)
+    await userEvent.type(oNoi, 'Nhà thờ mới')
+    await userEvent.click(screen.getByRole('button', { name: 'Cập nhật hôn phối' }))
+
+    expect(onLuuHonPhoi).toHaveBeenCalledWith('hp1', expect.objectContaining({
+      noiHonPhoi: 'Nhà thờ mới', rowVersion: 1,
+    }))
   })
 })
