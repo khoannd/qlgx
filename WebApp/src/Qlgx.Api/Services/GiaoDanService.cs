@@ -45,10 +45,15 @@ public class GiaoDanService(QlgxDbContext db)
     }
 
     /// <summary>Thành viên của một gia đình — cùng bộ cột với danh sách giáo dân. GiaDinhId ở
-    /// đây biết chắc chắn (chính là tham số `giaDinhId`) nên không cần suy như LayDanhSach.</summary>
+    /// đây biết chắc chắn (chính là tham số `giaDinhId`) nên không cần suy như LayDanhSach.
+    /// Lọc `!tv.GiaoDan!.DaXoa` để nhất quán với LayDanhSach/LayChiTiet (đều lọc !DaXoa) —
+    /// thiếu điều kiện này thì một giáo dân đã bị đánh dấu xoá (ví dụ khi gộp trùng dữ liệu từ
+    /// Access) sẽ biến mất khỏi danh sách giáo dân nhưng vẫn hiện trong lưới thành viên gia
+    /// đình, đúng kiểu lệch hành vi mà nguyên tắc "cùng một lưới, hai nơi dùng chung" của task
+    /// này sinh ra để tránh (vòng sửa 1).</summary>
     public Task<List<GiaoDanListItemDto>> LayThanhVien(Guid giaDinhId, CancellationToken ct) =>
         DungDanhSach(db.ThanhVienGiaDinh
-            .Where(tv => tv.GiaDinhId == giaDinhId)
+            .Where(tv => tv.GiaDinhId == giaDinhId && !tv.GiaoDan!.DaXoa)
             .OrderBy(tv => tv.VaiTro).ThenBy(tv => tv.GiaoDan!.NgaySinh)
             .Select(tv => new NguonDong(
                 tv.GiaoDan!,
