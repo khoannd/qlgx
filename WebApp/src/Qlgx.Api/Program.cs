@@ -41,6 +41,12 @@ builder.Services.AddAuthorization(opt =>
 // hinh tinh) CHI con dung trong cong cu chuyen doi du lieu (Qlgx.Migration), KHONG dang ky o
 // day nua.
 builder.Services.AddScoped<IBoiCanhGiaoXu, BoiCanhGiaoXuTuNguoiDung>();
+// review-backend.md muc T3: appsettings.Development.json khong con ghi mat khau CSDL nao (ke
+// ca quy uoc dev cuc bo) — xem file do va TRIEN-KHAI.md muc 4 de biet cach dat
+// ConnectionStrings__Qlgx cho may dev. Co tinh KHONG bao loi ngay o day neu rong: mot so host
+// test (SucKhoeTests) dung nguyen WebApplicationFactory<Program> khong can CSDL phia sau, chi
+// kiem tra /api/suc-khoe — bat buoc CSDL o day se lam hong kich ban do. Neu thieu chuoi ket
+// noi, loi se hien ro khi THAT SU co truy van dau tien (Npgsql nem ngoai le ro rang).
 builder.Services.AddDbContext<QlgxDbContext>((sp, opt) =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("Qlgx")));
 builder.Services.AddScoped<SinhMaService>();

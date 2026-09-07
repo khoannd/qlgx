@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Qlgx.Data;
@@ -11,9 +12,11 @@ using Qlgx.Data;
 namespace Qlgx.Data.Migrations
 {
     [DbContext(typeof(QlgxDbContext))]
-    partial class QlgxDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260906235006_ThemRangBuocMotChongMotVo")]
+    partial class ThemRangBuocMotChongMotVo
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1806,10 +1809,6 @@ namespace Qlgx.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("ho_ten_nguoi_dung");
 
-                    b.Property<DateTimeOffset?>("KhoaDangNhapDenLuc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("khoa_dang_nhap_den_luc");
-
                     b.Property<int>("LoaiTaiKhoan")
                         .HasColumnType("integer")
                         .HasColumnName("loai_tai_khoan");
@@ -1827,10 +1826,6 @@ namespace Qlgx.Data.Migrations
                     b.Property<string>("SoDienThoai")
                         .HasColumnType("text")
                         .HasColumnName("so_dien_thoai");
-
-                    b.Property<int>("SoLanDangNhapSaiLienTiep")
-                        .HasColumnType("integer")
-                        .HasColumnName("so_lan_dang_nhap_sai_lien_tiep");
 
                     b.Property<string>("SourceSystem")
                         .HasColumnType("text")

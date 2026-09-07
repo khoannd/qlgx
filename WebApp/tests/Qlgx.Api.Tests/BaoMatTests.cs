@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
 using Qlgx.Domain.Entities;
 
@@ -160,6 +161,42 @@ public class BaoMatTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
             new DangNhapRequest(tenTaiKhoan, "sai-mat-khau"));
 
         res.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Dang_nhap_sai_qua_nguong_thi_khoa_tam_du_dung_mat_khau_dung_sau_do()
+    {
+        // review-backend.md muc T1: khong gioi han so lan thu sai -> brute-force khong gioi
+        // han qua mang. AuthService khoa tam sau SoLanSaiToiDa=10 lan sai lien tiep (o CSDL,
+        // khong phai bo dem trong bo nho, vi nhieu ban API chay song song sau load balancer).
+        var (tenTaiKhoan, matKhau) = ("nguoidung_bruteforce", "MatKhauManhThatSu456!");
+        await using (var db = app.TaoContextThuan())
+        {
+            var taiKhoan = new TaiKhoan { GiaoXuId = app.GiaoXuId, TenTaiKhoan = tenTaiKhoan, HoTenNguoiDung = "Y" };
+            taiKhoan.MatKhauBam = new PasswordHasher<TaiKhoan>().HashPassword(taiKhoan, matKhau);
+            db.TaiKhoan.Add(taiKhoan);
+            await db.SaveChangesAsync();
+        }
+        var client = app.CreateClient();
+
+        for (var i = 0; i < 10; i++)
+        {
+            var sai = await client.PostAsJsonAsync("/api/auth/dang-nhap",
+                new DangNhapRequest(tenTaiKhoan, "sai-mat-khau-" + i));
+            sai.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        // Dung MAT KHAU DUNG sau khi da vuot nguong — phai VAN bi tu choi vi tai khoan dang
+        // bi khoa tam (truoc khi sua T1: khong co khoa nao, dang nhap dung se thanh cong 200).
+        var dungMatKhauNhungDangKhoa = await client.PostAsJsonAsync("/api/auth/dang-nhap",
+            new DangNhapRequest(tenTaiKhoan, matKhau));
+        dungMatKhauNhungDangKhoa.StatusCode.Should().Be(HttpStatusCode.Unauthorized,
+            "tai khoan dang bi khoa tam sau qua nhieu lan sai, du dung mat khau cung khong duoc vao");
+
+        await using var dbKiemTra = app.TaoContextThuan();
+        var sau = await dbKiemTra.TaiKhoan.SingleAsync(t => t.TenTaiKhoan == tenTaiKhoan);
+        sau.KhoaDangNhapDenLuc.Should().NotBeNull("phai duoc khoa o CSDL, khong phai chi tu choi tam thoi");
+        sau.KhoaDangNhapDenLuc!.Value.Should().BeAfter(DateTimeOffset.UtcNow);
     }
 
     [Fact]

@@ -1005,3 +1005,105 @@ trang, xác nhận qua `psql` cột `chu_ho` đã đổi đúng, rồi ĐẶT L�
 khối chuyển xứ cho giáo dân mã 1 (Nguyễn Đức Mạnh), xác nhận qua `psql`, rồi XÓA SẠCH dữ liệu
 thử để trả `qlgx_thu` về đúng 2050 giáo dân/40 gia đình/145 thành viên (xác nhận lại bằng
 `psql` sau khi dọn). Ảnh chụp: `WebApp/anh-chup-kiem-thu/42-44*.png`.
+
+### 31. Task "sửa các phát hiện từ review-backend" (2026-09-07) — các quyết định tự đưa ra
+
+Năm việc theo `review-backend.md`: C1 (kiểm tra RowVersion chết trong `GanVoChong`), C2
+(`ThemThanhVien` lách kiểm tra vợ/chồng), T1 (không giới hạn đăng nhập sai), T2 (rò thời gian
+phản hồi khi đăng nhập), T3 (mật khẩu CSDL cứng trong `appsettings.Development.json`). Người
+dùng đang ngủ, không hỏi được — ghi lại các quyết định tự đưa ra.
+
+**a) C1 — sửa bằng `db.Entry(gd).State = EntityState.Modified` tường minh, GIỮ NGUYÊN dòng
+`Property(x => x.RowVersion).OriginalValue = yc.RowVersion` đã có.** Khi chạy thử để tái hiện
+lỗi (tắt fix, chạy test), phát hiện một chi tiết review chưa nói tới: nếu có một thay đổi
+SCALAR THẬT SỰ khác xảy ra trước đó trên cùng bản ghi (ví dụ ai đó gọi `CapNhat` đổi
+`TenGiaDinh`), thì `GanVoChong` load lại entity MỚI (Current=phiên bản mới), rồi đặt
+`OriginalValue=RowVersion cũ của client` → Original≠Current ngay trên property đó → EF Core
+COI ĐÂY LÀ THAY ĐỔI và tự phát UPDATE, tình cờ vẫn bắt được đụng độ trong trường hợp đó (đã xác
+nhận bằng thực nghiệm: test dựng kịch bản này XANH ngay cả khi CHƯA sửa gì). Lỗi "chết" thật sự
+CHỈ xảy ra ở đúng kịch bản C1 mô tả: server SUY LUẬN gia đình vẫn ở giá trị RowVersion ban đầu vì chưa ai
+đổi gì khác, mọi lần đọc trước đó khớp `client.RowVersion` — Original==Current, EF coi là
+Unchanged thật, không phát UPDATE. Test được viết lại để nhắm đúng vào trường hợp này (2 test
+thay vì 1): (1) khẳng định RowVersion của gia đình THẬT SỰ đổi sau một `GanVoChong` thành công —
+bằng chứng trực tiếp nhất UPDATE có chạy hay không, ĐỎ trước khi sửa (RowVersion không đổi),
+XANH sau khi sửa; (2) nối tiếp: hai lệnh `GanVoChong` liên tiếp vào cùng gia đình, lệnh sau
+dùng RowVersion CŨ (chưa refresh) — phải bị 409, ĐỎ trước khi sửa (200), XANH sau khi sửa.
+
+**b) C1 — có thêm ràng buộc UNIQUE lọc `(gia_dinh_id, vai_tro) WHERE vai_tro IN (0,1)`** (migration
+`ThemRangBuocMotChongMotVo`) làm lưới an toàn tầng CSDL, đúng đề xuất "nên làm cả hai" của
+review. **Đã kiểm tra dữ liệu thật `qlgx_thu` trước khi thêm** (bắt buộc theo yêu cầu, vì lo
+ngại 145 dòng thành viên cũ có thể đã có gia đình hai Chồng):
+```sql
+SELECT gia_dinh_id, vai_tro, count(*) FROM thanh_vien_gia_dinh
+WHERE vai_tro IN (0,1) GROUP BY gia_dinh_id, vai_tro HAVING count(*) > 1;
+-- 0 rows
+```
+Không có vi phạm nào — migration áp dụng an toàn cho dữ liệu hiện có. Đã áp dụng thử migration
+vào `qlgx_dev` (không đụng `qlgx_thu`) để sinh migration EF, không chạy migration này trên
+`qlgx_thu` trong phạm vi nhiệm vụ này (không có yêu cầu triển khai lên dữ liệu thật hôm nay);
+người vận hành cần chạy `dotnet ef database update` (hoặc bật `Qlgx:ChayMigrationKhiKhoiDong`)
+trên `qlgx_thu`/production trước khi coi ràng buộc này là đã bảo vệ dữ liệu thật.
+
+**c) C2 — chặn cứng `VaiTro` 0/1 ở `ThemThanhVien`, KHÔNG chạy lại bộ kiểm tra của `GanVoChong`
+tại đây.** Hai lựa chọn nêu trong review, chọn "từ chối" vì: (i) front-end đã tuân thủ sẵn quy
+tắc này — `DANH_SACH_VAI_TRO_THANH_VIEN` (`WebApp/src/web/src/lib/vaiTroGiaDinh.ts`) loại trừ
+Chồng/Vợ khỏi lưới "thêm thành viên khác" từ trước, nên chặn ở đây không làm hỏng luồng nào
+đang chạy (xác nhận bằng cách đọc `GiaDinhDetail.tsx`/`vaiTroGiaDinh.ts` và chạy lại toàn bộ
+205 test frontend — xanh, không cần sửa gì phía UI); (ii) chạy lại bộ kiểm tra của `GanVoChong`
+tại `ThemThanhVien` sẽ trùng lặp logic (tuổi kết hôn, giới tính, đang là vợ/chồng gia đình
+khác, xử lý `RowVersion`/người cũ) giữa hai hàm — rủi ro hai bản trôi khỏi nhau theo thời gian
+cao hơn là chặn cứng và bắt client dùng đúng endpoint chuyên trách.
+
+**d) T1 — khoá tạm đăng nhập lưu Ở CSDL (cột mới `TaiKhoan.SoLanDangNhapSaiLienTiep` +
+`KhoaDangNhapDenLuc`), KHÔNG dùng bộ đếm trong bộ nhớ tiến trình** — đúng ràng buộc HA nêu
+trong nhiệm vụ (nhiều bản API sau load balancer). Ngưỡng chọn: **10 lần sai liên tiếp → khoá 15
+phút**, cố ý rộng rãi hơn mức "3-5 lần" thường thấy để tránh khoá oan người dùng thật gõ nhầm
+vài lần (không có cơ chế "quên mật khẩu" tự phục vụ trong hệ thống này — khoá quá chặt sẽ biến
+thành DoS cho chính người dùng hợp lệ, phải chờ quản trị viên xử lý thủ công). **CHƯA làm giới
+hạn theo IP** (chỉ theo tài khoản) — theo IP cần lưu trạng thái theo IP ở CSDL tương tự, nhưng
+IP thật của client dễ bị giả qua header khi có nhiều lớp reverse proxy chưa được cấu hình
+`ForwardedHeaders` nhất quán trong dự án này; để tránh thêm một bề mặt cấu hình sai (chặn nhầm
+toàn bộ người dùng sau NAT/proxy chung một IP), chỉ làm giới hạn theo tài khoản trong lượt sửa
+này. Ghi nhận: nên xem lại giới hạn theo IP sau khi `TRIEN-KHAI.md` mục HTTPS/reverse proxy đã
+chốt cấu hình forwarded headers cụ thể.
+
+**e) T2 — chạy một phép băm PBKDF2 "giả" (tài khoản giả `Id=Guid.Empty`, mật khẩu giả cố định
+không phải bí mật thật) khi không có ứng viên nào trùng tên, để hai nhánh (có/không có tài
+khoản trùng tên) tốn thời gian tương đương.** KHÔNG viết test đo thời gian thật (timing-based
+test) — đo độ trễ tin cậy trong CI/máy chia sẻ tài nguyên (như môi trường chạy nhiệm vụ này) vốn
+nhiễu và dễ oscillate giả (false đỏ do máy bận, false xanh do JIT/cache), test kiểu này sẽ trở
+thành nguồn "flaky" mới. Xác nhận thay bằng cách đọc code trực tiếp: nhánh rỗng giờ luôn gọi
+`_hasher.VerifyHashedPassword` (cùng API, cùng tham số PBKDF2 mặc định) trước khi trả lỗi, đối
+xứng với nhánh có ứng viên.
+
+**f) T3 — kiểm tra lại trước khi sửa: `appsettings.Development.json` ĐÃ được `.gitignore`
+(`WebApp/.gitignore` dòng 11, có từ commit khởi tạo `1a9a7e9`, kèm chú thích rõ lý do) từ trước,
+và xác nhận bằng `git ls-files`/`git show HEAD:...` rằng file này CHƯA BAO GIỜ được commit vào
+git.** Nghĩa là phát hiện T3 của review — "mật khẩu CSDL cứng trong file nằm trong repo" — không
+đúng theo nghĩa đen: file có mật khẩu THẬT nhưng KHÔNG "nằm trong repo" (không bị git theo dõi),
+nên không vi phạm quy tắc "không bí mật nào trong repo" như review kết luận; review có lẽ đọc
+trực tiếp file trên đĩa mà không kiểm tra trạng thái git của nó. Dù vậy vẫn sửa theo hướng an
+toàn hơn (không có rủi ro gì khi làm, file không được git theo dõi nên sửa không tạo diff nào
+trong lịch sử): bỏ hẳn giá trị mật khẩu, để `ConnectionStrings:Qlgx` RỖNG, hướng dẫn dùng
+`dotnet user-secrets`/biến môi trường thay thế — phòng trường hợp ai đó vô tình xoá dòng
+`appsettings.Development.json` khỏi `.gitignore` sau này thì file trên đĩa đã sẵn an toàn. Từng
+thử thêm kiểm tra "báo lỗi ngay khi khởi động" (`throw` nếu chuỗi rỗng) ở `Program.cs` nhưng bỏ
+vì phá vỡ `SucKhoeTests` — bài test cố ý dùng `WebApplicationFactory<Program>` KHÔNG cấu hình
+CSDL để xác nhận `/api/suc-khoe` không phụ thuộc CSDL (đúng ghi chú sẵn có trong `Program.cs`
+về liveness/health-check). Giữ hành vi cũ: thiếu cấu hình thì lỗi hiện ra rõ ràng từ chính
+Npgsql ở truy vấn CSDL đầu tiên. Đã thêm hướng dẫn `dotnet user-secrets`/biến môi trường vào
+`TRIEN-KHAI.md` mục 4.
+
+**g) Hai mục Thấp (Th1: JWT không thu hồi được khi đăng xuất, Th2: `GiaoHoEndpoints` không phân
+trang) — GIỮ NGUYÊN, không sửa gì**, đúng theo chính kết luận của review: cả hai đã được ghi
+nhận là quyết định có chủ đích/chấp nhận được ở quy mô hiện tại (Th1 đã có ở mục 27b của file
+này với JWT hết hạn sau 8 giờ làm giảm nhẹ; Th2 một giáo xứ chỉ có vài chục giáo họ). Không có
+thông tin mới nào trong review lần này đủ để đảo ngược hai quyết định đó.
+
+**h) Xác nhận qua test, không chạy thử thật trên `qlgx_thu`.** Khác các task trước (mục 27-30),
+nhiệm vụ này không yêu cầu (và người dùng đang ngủ, không xác nhận được) chạy thao tác thật lên
+`qlgx_thu` — xác nhận toàn bộ 5 việc qua bộ test tự động (`dotnet test Qlgx.sln`: 188 bài, tăng
+5 so với 183 trước đó; `npm test -- --run`: 205 bài, không đổi) và `npm run build` (thành công).
+Dữ liệu thử tạo trong lúc chạy test nằm trong các CSDL tạm `qlgx_api_*` do `QlgxApiFactory` tự
+tạo/xoá cho mỗi lượt `dotnet test` — không chạm `qlgx_thu`; đã xác nhận lại bằng `psql` sau khi
+xong rằng `qlgx_thu` vẫn đúng 2050 giáo dân/40 gia đình/145 thành viên.

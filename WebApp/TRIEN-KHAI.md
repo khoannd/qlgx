@@ -72,6 +72,18 @@ Sao chép `WebApp/.env.example` thành `WebApp/.env` (cùng thư mục với `do
 **Không bao giờ** ghi giá trị thật của các biến này vào bất kỳ file nào trong git — kể cả
 `docker-compose.yml` (file đó chỉ tham chiếu `${TEN_BIEN}`, không có giá trị).
 
+**Chạy `dotnet run` cục bộ (không qua Docker)**: `ConnectionStrings:Qlgx` trong
+`appsettings.Development.json` cố tình để RỖNG (review-backend.md mục T3 — không ghi mật khẩu
+CSDL, kể cả quy ước `postgres`/`postgres` cho máy dev, vào file trong repo). Đặt một trong hai:
+
+```
+dotnet user-secrets set ConnectionStrings:Qlgx "Host=localhost;Database=qlgx_dev;Username=postgres;Password=<mật khẩu của bạn>" --project WebApp/src/Qlgx.Api
+```
+
+hoặc biến môi trường `ConnectionStrings__Qlgx` (hai dấu gạch dưới) trước khi chạy. Thiếu biến
+này, host vẫn khởi động được (health-check `/api/suc-khoe` không cần CSDL) nhưng bất kỳ truy
+vấn CSDL thật nào cũng sẽ báo lỗi rõ ràng từ Npgsql ngay lập tức.
+
 ## 5. Row-Level Security — tạo hai vai trò CSDL (bắt buộc trước khi chạy thật)
 
 Migration `BatRlsChoBangTheoGiaoXu` đã bật RLS trên 22 bảng nghiệp vụ. Chính sách so sánh

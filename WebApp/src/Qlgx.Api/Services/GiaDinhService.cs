@@ -258,6 +258,17 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
     public async Task<(KetQuaThemThanhVien KetQua, string? ThongBaoLoi, IReadOnlyList<string> CanhBao)>
         ThemThanhVien(Guid giaDinhId, ThemThanhVienRequest yc, CancellationToken ct)
     {
+        // review-backend.md mục C2: đường này không kiểm giới tính/tuổi kết hôn/đang là vợ-chồng
+        // gia đình khác — những chặn cứng chỉ có ở GanVoChong. Cấm gán Chồng/Vợ qua đây, bắt buộc
+        // đi qua PUT /vo-chong/{vaiTro}, nơi có đủ bộ kiểm tra tương ứng. Front-end đã tuân theo
+        // quy tắc này từ trước (DANH_SACH_VAI_TRO_THANH_VIEN loại trừ Chồng/Vợ khỏi lưới "thêm
+        // thành viên khác" — xem WebApp/src/web/src/lib/vaiTroGiaDinh.ts), nên đây chỉ chặn cứng
+        // ở máy chủ những gì UI chưa từng gửi lên.
+        if (yc.VaiTro == (int)VaiTroGiaDinh.Chong || yc.VaiTro == (int)VaiTroGiaDinh.Vo)
+            return (KetQuaThemThanhVien.Loi,
+                "Không thể gán Chồng/Vợ qua đường thêm thành viên. Hãy dùng chức năng " +
+                "\"Người nam\"/\"Người nữ\" của gia đình.", []);
+
         var gd = await db.GiaDinh.Include(x => x.ThanhVien)
             .FirstOrDefaultAsync(x => x.Id == giaDinhId && !x.DaXoa, ct);
         if (gd is null) return (KetQuaThemThanhVien.KhongTimThayGiaDinh, null, []);
@@ -440,7 +451,14 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
             return (KetQuaGanVoChong.Loi,
                 "Phải chọn vai trò mới cho người cũ khi hạ xuống thành viên (không xoá hẳn)", []);
 
-        db.Entry(gd).Property(x => x.RowVersion).OriginalValue = yc.RowVersion;
+        // Hàm này chỉ Add/Remove các entity con ThanhVienGiaDinh — không gán lại thuộc tính vô
+        // hướng nào của `gd`, nên nếu chỉ đặt OriginalValue thì ChangeTracker vẫn coi `gd` là
+        // Unchanged và SaveChangesAsync KHÔNG phát UPDATE nào cho gia_dinh (WHERE xmin=...
+        // không bao giờ được kiểm tra, review-backend.md mục C1). Đánh dấu Modified tường minh
+        // để buộc phát UPDATE thật, làm phép kiểm RowVersion có tác dụng chống ghi đè đồng thời.
+        var entry = db.Entry(gd);
+        entry.Property(x => x.RowVersion).OriginalValue = yc.RowVersion;
+        entry.State = EntityState.Modified;
 
         await using var giaoDich = await db.Database.BeginTransactionAsync(ct);
         if (doiNguoi)

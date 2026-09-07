@@ -236,6 +236,40 @@ public class GiaDinhGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
         (await db.GiaoDan.AnyAsync(x => x.Id == giaoDanId)).Should().BeTrue();
     }
 
+    [Fact]
+    public async Task Them_thanh_vien_voi_VaiTro_Chong_bi_chan_khong_lach_duoc_kiem_tra_gioi_tinh()
+    {
+        // review-backend.md muc C2: truoc khi sua, goi thang endpoint "them thanh vien" voi
+        // VaiTro=0 (Chong) va mot giao dan NU se thanh cong (200), tao ra "Chong la nu" - dung
+        // thu ma PUT /vo-chong/0 tu choi voi thong bao "Người chồng không thể là nữ!". Endpoint
+        // nay phai chan cung truoc khi cham toi bat ky kiem tra nghiep vu nao khac cua GanVoChong.
+        var id = await TaoGiaDinhTrong(9101);
+        var giaoDanNuId = await TaoGiaoDan("Chi Bi Gan Nham", "Nữ", new DateOnly(1985, 1, 1));
+        var client = app.CreateAuthClient();
+
+        var res = await client.PostAsJsonAsync($"/api/gia-dinh/{id}/thanh-vien",
+            new { GiaoDanId = giaoDanNuId, VaiTro = 0, BoQuaCanhBao = true });
+
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest,
+            "VaiTro=0/1 (Chong/Vo) phai bi tu choi o day, bat buoc dung PUT /vo-chong/{vaiTro}");
+        await using var db = app.TaoContextThuan();
+        (await db.ThanhVienGiaDinh.AnyAsync(x => x.GiaDinhId == id && x.GiaoDanId == giaoDanNuId))
+            .Should().BeFalse("khong duoc tao ra dong Chong=nu nao ca");
+    }
+
+    [Fact]
+    public async Task Them_thanh_vien_voi_VaiTro_Vo_cung_bi_chan()
+    {
+        var id = await TaoGiaDinhTrong(9307);
+        var giaoDanId = await TaoGiaoDan("Nguoi Bi Gan Nham Vo", "Nam", new DateOnly(1985, 1, 1));
+        var client = app.CreateAuthClient();
+
+        var res = await client.PostAsJsonAsync($"/api/gia-dinh/{id}/thanh-vien",
+            new { GiaoDanId = giaoDanId, VaiTro = 1, BoQuaCanhBao = true });
+
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     // --- Gán/đổi Người nam / Người nữ -------------------------------------------------------
 
     [Fact]
@@ -425,5 +459,65 @@ public class GiaDinhGhiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
         var thanhVien = await db2.ThanhVienGiaDinh.Where(x => x.GiaDinhId == id).ToListAsync();
         thanhVien.Should().ContainSingle();
         thanhVien[0].GiaoDanId.Should().Be(chongMoiId);
+    }
+
+    [Fact]
+    public async Task Gan_nguoi_nam_thanh_cong_phai_that_su_doi_RowVersion_cua_gia_dinh()
+    {
+        // review-backend.md muc C1: GanVoChong CHI Add/Remove ThanhVienGiaDinh, KHONG gan lai
+        // thuoc tinh vo huong nao cua GiaDinh -> truoc khi sua, dat OriginalValue khong lam
+        // entity thanh Modified -> SaveChangesAsync KHONG phat UPDATE nao cho gia_dinh -> xmin
+        // (RowVersion) cua gia dinh khong doi du thao tac da "thanh cong". Day la bang chung
+        // truc tiep nhat cho thay phep kiem tra dong bo la ma chet: neu UPDATE that su chay,
+        // PostgreSQL LUON tang xmin sau moi UPDATE (ke ca khong doi gia tri cot nao).
+        var id = await TaoGiaDinhTrong(9513);
+        var giaoDanId = await TaoGiaoDan("Ong Chong Rieng Cho Test RowVersion", "Nam", new DateOnly(1985, 1, 1));
+        var client = app.CreateAuthClient();
+        var chiTietBanDau = await client.GetFromJsonAsync<GiaDinhChiTietToiThieu>($"/api/gia-dinh/{id}");
+
+        var res = await client.PutAsJsonAsync($"/api/gia-dinh/{id}/vo-chong/0",
+            new { GiaoDanId = giaoDanId, RowVersion = chiTietBanDau!.RowVersion, BoQuaCanhBao = false, XuLyNguoiCu = (object?)null });
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var chiTietSau = await client.GetFromJsonAsync<GiaDinhChiTietToiThieu>($"/api/gia-dinh/{id}");
+        chiTietSau!.RowVersion.Should().NotBe(chiTietBanDau.RowVersion,
+            "GanVoChong thanh cong phai phat sinh UPDATE that su cho gia_dinh (xmin phai doi), " +
+            "neu khong thi WHERE xmin=@RowVersion khong bao gio duoc kiem tra o lan goi sau");
+    }
+
+    [Fact]
+    public async Task Gan_nguoi_nam_voi_RowVersion_da_cu_bi_tu_choi_dung_phien_ban()
+    {
+        // Tiep noi test tren: mot khi GanVoChong that su cap nhat RowVersion, hai lenh GHI NOI
+        // TIEP nhau vao CUNG mot gia dinh — lenh dau thanh cong va lam xmin doi that — se khien
+        // lenh SAU dung RowVersion CU (chua refresh) bi tu choi 409, dung nhu CapNhat/GiaoDan da
+        // lam. Day la kich ban cu the cua rev-backend.md C1: "hai nguoi dung cung mo mot gia
+        // dinh chua co Chong, ca hai deu doc RowVersion ban dau" — mo phong tuan tu bang cach
+        // gan Chong LAN 1 (thanh cong, xmin doi that), roi thu doi Chong sang nguoi khac bang
+        // đung RowVersion BAN DAU (chua refresh, gio da lac hau) — phai bi chan, khong duoc am
+        // tham thanh cong.
+        var id = await TaoGiaDinhTrong(9629);
+        var chongDau = await TaoGiaoDan("Chong Duoc Gan Truoc", "Nam", new DateOnly(1985, 1, 1));
+        var chongSau = await TaoGiaoDan("Chong Muon Doi Sang", "Nam", new DateOnly(1985, 1, 1));
+        var client = app.CreateAuthClient();
+        var chiTietBanDau = await client.GetFromJsonAsync<GiaDinhChiTietToiThieu>($"/api/gia-dinh/{id}");
+
+        var lanDau = await client.PutAsJsonAsync($"/api/gia-dinh/{id}/vo-chong/0",
+            new { GiaoDanId = chongDau, RowVersion = chiTietBanDau!.RowVersion, BoQuaCanhBao = false, XuLyNguoiCu = (object?)null });
+        lanDau.StatusCode.Should().Be(HttpStatusCode.OK, "buoc chuan bi phai thanh cong de xmin thuc su doi");
+
+        // Dung RowVersion BAN DAU (truoc lan gan thu nhat, gio da lac hau) de doi sang chongSau.
+        var res = await client.PutAsJsonAsync($"/api/gia-dinh/{id}/vo-chong/0", new
+        {
+            GiaoDanId = chongSau, RowVersion = chiTietBanDau.RowVersion, BoQuaCanhBao = false,
+            XuLyNguoiCu = new { Xoa = true, VaiTroMoi = (int?)null },
+        });
+
+        res.StatusCode.Should().Be(HttpStatusCode.Conflict,
+            "RowVersion da lac hau (gia dinh vua doi Chong lan truoc) phai bi tu choi, khong duoc " +
+            "am tham thanh cong nhu khi kiem tra dong bo la ma chet");
+        await using var db = app.TaoContextThuan();
+        (await db.ThanhVienGiaDinh.SingleAsync(x => x.GiaDinhId == id)).GiaoDanId.Should().Be(chongDau,
+            "van phai la nguoi duoc gan lan dau, khong duoc doi sang chongSau bang RowVersion cu");
     }
 }
