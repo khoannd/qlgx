@@ -303,16 +303,15 @@ export function GiaDinhDetail({
       </div>
 
       <div className="cols">
-        {/* Cột trái gộp HAI tấm xếp chồng (Thông tin gia đình + Hôn phối) — bọc bằng flex-column
-            thường thay vì `.col-stack` (dành cho tấm co giãn `1fr` như "Hình gia đình" bên
-            phải): cả hai tấm ở đây đều cao tự nhiên, không tấm nào cần nở lấp chỗ trống. Đây
-            CHÍNH LÀ chỗ sửa lỗi "vỡ bố cục" người dùng báo — bản trước `.detail-page` khai đúng
-            4 hàng lưới nhưng lại có 6 phần tử con trực tiếp (tiêu đề "Thành viên khác", thanh
-            công cụ thêm, `GxGiaoDanList`, `.cmdbar`), khiến trình duyệt đẩy hai phần tử thừa
-            vào các hàng ẩn tự sinh không có chiều cao tối thiểu — hàng `.cols` (khai `minmax(0,
-            auto)`) bị bóp gần về 0 nên cuộn cụt ngay sau "Địa chỉ", còn `GxGiaoDanList` rơi vào
-            hàng ẩn cao ~0px dù đếm đúng 4 người. Sửa bằng cách gộp lại đúng 4 phần tử con thật
-            (đầu trang, `.cols`, khối thành viên, `.cmdbar`) — KHÔNG đổi `grid-template-rows`.
+        {/* Cột trái chỉ còn MỘT tấm ("Thông tin gia đình") — vẫn bọc bằng flex-column thường
+            thay vì `.col-stack` (dành cho cột có tấm co giãn `1fr` như bên phải) vì tấm này cao
+            tự nhiên, không cần nở lấp chỗ trống. Trước đây cột trái gộp CẢ "Hôn phối" ở đây, còn
+            cột phải (`.col-stack`, khai `grid-template-rows: auto 1fr`) chỉ có MỘT tấm "Hình
+            gia đình" trong khi CSS chờ tới hai hàng — hàng `1fr` thứ hai bỏ trống kéo dài hết
+            chiều cao cột trái, đúng khoảng trống người dùng báo ("hôn phối phải nằm bên dưới
+            hình gia đình, không được có khoảng trống trên form"). Sửa bằng cách CHUYỂN khối
+            "Hôn phối" sang cột phải, xuống ngay dưới "Hình gia đình" (xem bên dưới) — vừa lấp
+            đúng hàng `1fr` đó, vừa cân lại chiều cao hai cột.
             Xem docs/superpowers/specs/man-hinh/can-review-sau.md mục layout gia đình. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
           <div className="card glass">
@@ -389,6 +388,23 @@ export function GiaDinhDetail({
               </>
             )}
           </div>
+        </div>
+
+        {/* Cột phải: `.col-stack` khai `grid-template-rows: auto 1fr` — ĐÚNG hai hàng, ĐÚNG hai
+            phần tử con trực tiếp (Hình gia đình, Hôn phối). Hôn phối nằm ở hàng `1fr` nên nở lấp
+            hết phần chiều cao còn lại sau khi khớp chiều cao cột trái (do `.cols` khai
+            `align-items: stretch`) — không còn mảng trắng nào ở cuối cột phải. */}
+        <div className="col-stack">
+          <div className="card glass">
+            <div className="card-head"><h2>Hình gia đình</h2></div>
+            <AnhDaiDien
+              id={moi ? null : f.id}
+              onLayAnh={api.giaDinh.layAnh}
+              onTaiLen={api.giaDinh.taiAnhLen}
+              onXoa={api.giaDinh.xoaAnh}
+              nhan="ảnh"
+            />
+          </div>
 
           {/* Khối hôn phối (`GxHonPhoiGiaDinh` bản desktop) — trước đây bản web ĐỌC được dữ liệu
               này (`GET /api/gia-dinh/{id}` đã trả `HonPhoi`) nhưng KHÔNG hề hiện lên đâu cả, và
@@ -396,7 +412,9 @@ export function GiaDinhDetail({
               chủ đã sẵn sàng (gia-dinh-chi-tiet.md mục 10, "Trung bình #5"). Chỉ hiện được khi
               có Người nam hoặc Người nữ — hôn phối không thể "mồ côi" (KhongTheGanHonPhoiMoCoi),
               vô hiệu hoá cả khối kèm gợi ý rõ ràng khi chưa đủ điều kiện thay vì ẩn hẳn (ẩn hẳn
-              sẽ khiến người dùng lại tưởng "màn hình thiếu mục hôn phối" như lần góp ý này). */}
+              sẽ khiến người dùng lại tưởng "màn hình thiếu mục hôn phối" như lần góp ý này).
+              Người dùng góp ý (2026-09-07): khối này phải nằm DƯỚI "Hình gia đình" — chuyển
+              từ cột trái sang đây, thay vì đứng riêng cạnh "Thông tin gia đình". */}
           <div className="card glass">
             <div className="card-head"><h2>Hôn phối</h2></div>
             {!nguoiNam && !nguoiNu && (
@@ -444,19 +462,6 @@ export function GiaDinhDetail({
                 </GxField>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div className="col-stack">
-          <div className="card glass">
-            <div className="card-head"><h2>Hình gia đình</h2></div>
-            <AnhDaiDien
-              id={moi ? null : f.id}
-              onLayAnh={api.giaDinh.layAnh}
-              onTaiLen={api.giaDinh.taiAnhLen}
-              onXoa={api.giaDinh.xoaAnh}
-              nhan="ảnh"
-            />
           </div>
         </div>
       </div>
