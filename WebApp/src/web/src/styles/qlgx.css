@@ -652,10 +652,27 @@ input:disabled, textarea:disabled {
      chữ xám đậm (không đen), bỏ hẳn vạch dọc, chỉ còn một đường kẻ dưới mảnh — áp dụng cho
      MỌI lưới AG Grid trong ứng dụng vì tất cả đều dùng chung `.ag-theme-quartz` qua `GxGrid`
      (danh sách giáo dân, danh sách gia đình, lưới thành viên). Bám hệ màu sẵn có: nền từ
-     `--hair-soft` (xám rất nhạt cùng tông với đường kẻ), chữ `--ink-soft`. */
-  --ag-header-background-color: var(--hair-soft);
+     `--hair-soft` (xám rất nhạt cùng tông với đường kẻ), chữ `--ink-soft`.
+
+     Kính mờ (góp ý người dùng, 2026-09-07): nền xám phẳng ở trên nhìn tách rời khỏi phần còn
+     lại của ứng dụng (mọi khối khác đều là tấm kính bán trong + backdrop-filter, xem `.glass`
+     đầu file). Đổi `--ag-header-background-color` sang trắng bán trong suốt cùng công thức với
+     `.searchbox`/`.parish-chip` (rgba(255,255,255,.6) + viền rgba(255,255,255,.85)), rồi bật
+     backdrop-filter TRÊN CHÍNH `.ag-header` (không phải từng `.ag-header-row`) — biến CSS
+     `--ag-header-background-color` được AG Grid tô lặp lại ở nhiều lớp con
+     (`.ag-header-row::after`, `.ag-grid-scrolling-cells`, `.ag-grid-container-wrapper`), tô mờ
+     ở lớp cha `.ag-header` một lần tránh cộng dồn blur nhiều lớp. Áp cùng lúc cho hàng lọc từng
+     cột (`.ag-header-row-floating-filter` dùng chung biến này) nên tự động đồng bộ, không cần
+     luật riêng. Test bằng mắt: cuộn danh sách giáo dân 2050 dòng, chữ tiêu đề vẫn đọc rõ khi
+     dòng dữ liệu trôi phía sau — xem task-header-luoi-kinh-mo.md. */
+  --ag-header-background-color: rgba(255, 255, 255, .6);
   --ag-header-foreground-color: var(--ink-soft);
   --ag-header-column-separator-display: none;
+}
+.ag-theme-quartz .ag-header {
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-bottom: 1px solid var(--glass-line);
 }
 .ag-theme-quartz .ag-header-cell-text {
   font-size: 12px;

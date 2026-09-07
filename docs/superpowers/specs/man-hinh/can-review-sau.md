@@ -2072,3 +2072,49 @@ CSS/JSX/thứ tự import thuần phía frontend, không chạm C#; đã dừng 
 test jsdom quan sát được). `npm run build` chạy được cả hai phía. Dữ liệu giáo xứ Vô Nhiễm không
 đổi: 2050 giáo dân / 40 gia đình / 145 thành viên. Ảnh chụp/kiểm thử:
 `85`–`88` trong `WebApp/anh-chup-kiem-thu/`.
+
+### 43. Task "header lưới kính mờ (glassmorphism)" (2026-09-07) — các quyết định tự đưa ra
+
+Người dùng thật ngồi kiểm tra báo hàng tiêu đề lưới (mục 42 vừa thấp lại 28px, bỏ vạch dọc —
+hài lòng phần đó) vẫn còn nền **xám phẳng, đục**, tách rời khỏi phần còn lại của ứng dụng — cả
+hàng tiêu đề cột LẪN hàng ô lọc bên dưới. Yêu cầu: áp kính mờ trong suốt, ăn với theme sẵn có.
+
+**Quyết định:** đổi `--ag-header-background-color` (biến CSS duy nhất AG Grid dùng để tô nền
+cho CẢ hàng tiêu đề cột lẫn hàng ô lọc — cả hai đều là `.ag-header-row`, cùng đọc một biến, nên
+sửa một chỗ tự động đồng bộ cả hai) từ `var(--hair-soft)` (xám phẳng) sang
+`rgba(255, 255, 255, .6)` — đúng công thức trắng bán trong đã dùng cho `.searchbox`/
+`.parish-chip` trong `qlgx.css`, không bịa giá trị mới. Thêm `backdrop-filter: blur(16px)
+saturate(180%)` trên chính `.ag-theme-quartz .ag-header` (lớp cha bọc cả hai hàng), KHÔNG đặt
+trên từng `.ag-header-row` — AG Grid tô nền lặp lại `--ag-header-background-color` ở nhiều lớp
+con khác nhau (`.ag-header-row::after`, `.ag-grid-scrolling-cells`, `.ag-grid-container-wrapper`),
+đặt blur một lần ở `.ag-header` tránh cộng dồn nhiều lớp blur chồng nhau. Giữ nguyên viền dưới
+1px nhưng đổi màu sang `var(--glass-line)` (viền trắng bán trong của hệ `.glass`) thay vì
+`var(--hair)` xám, cho khớp tông kính. Không đổi `--ag-header-height` (vẫn 28px),
+`--ag-header-column-separator-display: none` (vẫn không vạch dọc) — đúng yêu cầu giữ nguyên.
+
+**Vì sao không cần luật riêng cho hàng ô lọc:** kiểm tra CSS gốc AG Grid xác nhận
+`.ag-header-row-filter .ag-grid-scrolling-cells` dùng CHUNG biến `--ag-header-background-color`
+với `.ag-header-row-column` — đo `getComputedStyle` thật trên trình duyệt xác nhận cả hai đều ra
+`rgba(255, 255, 255, 0.6)` sau khi sửa, không cần selector `.ag-floating-filter-*` nào thêm.
+
+**Kiểm chứng trên trình duyệt thật (Playwright MCP), đăng nhập `giaoxu`:**
+- Danh sách giáo dân (2039 dòng đang hiển thị, không lọc "đã qua đời/chuyển xứ" — tổng kho 2050):
+  cuộn tới hàng Mã GD 168+ và tới đúng khoảng **1068–1071** (ảnh `90-danhsach-giaodan-madg-1068-1071.png`)
+  — chữ tiêu đề cột và ô lọc vẫn đọc rõ, không bị mờ chữ dù nền kính bán trong.
+- `getBoundingClientRect()` đo thật sau khi cuộn `scrollTop = 5000/32000`: `.ag-header` giữ
+  nguyên vị trí cố định trên cùng khi dữ liệu cuộn (position: absolute — xác nhận hiệu ứng kính
+  mờ "dính" hoạt động đúng lúc, không phải bịa); `.ag-header-row` (tiêu đề cột) cao đúng
+  **28px**; `.ag-row` (dòng dữ liệu) cao đúng **30px** — không đổi so với mục 42. Lưới không co
+  về 0: `gridRect.height` = 582.65px (danh sách giáo dân) và 280.85px (lưới thành viên gia đình
+  mã 9, 4 dòng) — cả hai đo được kích thước thật, không bị lỗi co 0px từng gặp trước đây.
+- Gia đình "Paul Trần Văn Thái" (mã 9): mở lưới "Thành viên khác trong gia đình" — header kính
+  mờ đồng bộ với lưới chính, hai cột trái/phải vẫn cao bằng nhau, khối ảnh gia đình vẫn không
+  tiêu đề, radio "Chủ hộ" vẫn sáng khi chọn — không có gì trong mục 42 bị hỏng lại (ảnh
+  `91-giadinh-9-luoi-thanh-vien-kinh-mo.png`).
+- Danh sách gia đình (40 dòng): header cùng công thức, không kiểm ảnh riêng vì cùng
+  `.ag-theme-quartz` dùng chung `GxGrid` — đã xác nhận đủ qua đo `getComputedStyle` trên cả hai
+  hàng tiêu đề/lọc.
+
+**Số test cuối:** frontend **254/254** (không thêm test mới — thuần CSS, không đổi hành vi
+component nào bài test jsdom quan sát được). `npm run build` chạy được. Không chạm backend.
+Ảnh chụp/kiểm thử: `89`–`91` trong `WebApp/anh-chup-kiem-thu/`.
