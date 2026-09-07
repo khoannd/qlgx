@@ -6,6 +6,8 @@ import { GiaDinhListPage } from './screens/GiaDinhListPage'
 import { GiaDinhDetailPage } from './screens/GiaDinhDetailPage'
 import { GiaoDanListPage } from './screens/GiaoDanListPage'
 import { GiaoDanDetailPage } from './screens/GiaoDanDetailPage'
+import { GiaoDanLuuTruListPage } from './screens/GiaoDanLuuTruListPage'
+import { GiaDinhLuuTruListPage } from './screens/GiaDinhLuuTruListPage'
 import { TaiKhoanListPage } from './screens/TaiKhoanListPage'
 import { GiaoHoListPage } from './screens/GiaoHoListPage'
 import { HoiDoanListPage } from './screens/HoiDoanListPage'
@@ -130,6 +132,31 @@ function App() {
     })
   }
 
+  // Hồ sơ lưu trữ giáo dân/gia đình (frmGiaoDanLuuTruList.cs/frmGiaDinhLuuTruList.cs) — nút
+  // Sửa/double-click mở lại ĐÚNG cùng thẻ chi tiết giáo dân/gia đình mà danh sách đang hoạt
+  // động dùng (`moChiTietGiaoDan`/`moChiTietGiaDinh`), không có màn hình chi tiết riêng nào
+  // khác — bản desktop cũng dùng chung `frmGiaoDan`/`frmGiaDinh` cho cả hai màn hình.
+  function moDanhSachHoSoLuuTruGiaoDan() {
+    mo({
+      id: 'giaoDanLuuTruList',
+      tieuDe: 'Hồ sơ lưu trữ giáo dân',
+      noiDung: (
+        <GiaoDanLuuTruListPage
+          moGiaoDan={(id) => moChiTietGiaoDan(id)}
+          moGiaDinh={moChiTietGiaDinh}
+        />
+      ),
+    })
+  }
+
+  function moDanhSachHoSoLuuTruGiaDinh() {
+    mo({
+      id: 'giaDinhLuuTruList',
+      tieuDe: 'Hồ sơ lưu trữ gia đình',
+      noiDung: <GiaDinhLuuTruListPage moGiaDinh={(id) => moChiTietGiaDinh(id)} />,
+    })
+  }
+
   function moDanhSachSoBiTich() {
     mo({ id: 'dotBiTichList', tieuDe: 'Danh sách sổ bí tích', noiDung: <DotBiTichListPage moDot={moChiTietDotBiTich} /> })
   }
@@ -214,6 +241,8 @@ function App() {
     else if (id === 'taiKhoanList') moQuanLyTaiKhoan()
     else if (id === 'giaoHoList') moGiaoHoList()
     else if (id === 'hoiDoanList') moDanhSachHoiDoan()
+    else if (id === 'giaoDanLuuTruList') moDanhSachHoSoLuuTruGiaoDan()
+    else if (id === 'giaDinhLuuTruList') moDanhSachHoSoLuuTruGiaDinh()
     else if (id === 'dotBiTichList') moDanhSachSoBiTich()
     else if (id === 'raoHonPhoiList') moDanhSachRaoHonPhoi()
     else if (id === 'quanLyGiaoXu') moQuanLyGiaoXu()

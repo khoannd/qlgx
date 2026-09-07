@@ -17,6 +17,11 @@ public static class GiaDinhEndpoints
             bool? chiKhongThongKe, CancellationToken ct) =>
             Results.Ok(await dichVu.LayDanhSach(giaoHoId, chiKhongThongKe ?? false, ct)));
 
+        // "Hồ sơ lưu trữ gia đình" (frmGiaDinhLuuTruList.cs) — xem GiaDinhService.LayDanhSachLuuTru.
+        nhom.MapGet("/luu-tru", async (GiaDinhService dichVu, Guid? giaoHoId,
+            bool? chiKhongThongKe, CancellationToken ct) =>
+            Results.Ok(await dichVu.LayDanhSachLuuTru(giaoHoId, chiKhongThongKe ?? false, ct)));
+
         // "Xuất Excel" — cùng lý do/thiết kế với "/api/giao-dan/xuat-excel", xem chú thích ở
         // GiaoDanEndpoints.cs. Cùng hai tham số lọc với GET "" phía trên (gia đình không có
         // "hienCaDaMat" — LayDanhSach của GiaDinhService chưa hỗ trợ tham số đó).
@@ -25,6 +30,16 @@ public static class GiaDinhEndpoints
         {
             var noiDung = await dv.XuatGiaDinh(giaoHoId, chiKhongThongKe ?? false, ct);
             var tenTep = $"danh-sach-gia-dinh-{DateTime.Now:yyyy-MM-dd}.xlsx";
+            return Results.File(noiDung,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", tenTep);
+        });
+
+        // "Hồ sơ lưu trữ gia đình" xuất Excel — cùng lý do/thiết kế với "/xuat-excel" phía trên.
+        nhom.MapGet("/luu-tru/xuat-excel", async (XuatExcelService dv, Guid? giaoHoId,
+            bool? chiKhongThongKe, CancellationToken ct) =>
+        {
+            var noiDung = await dv.XuatGiaDinhLuuTru(giaoHoId, chiKhongThongKe ?? false, ct);
+            var tenTep = $"ho-so-luu-tru-gia-dinh-{DateTime.Now:yyyy-MM-dd}.xlsx";
             return Results.File(noiDung,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", tenTep);
         });

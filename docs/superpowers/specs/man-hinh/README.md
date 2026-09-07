@@ -96,5 +96,6 @@ Cập nhật bảng này mỗi khi thêm spec.
 | Đăng nhập | `ChuongTrinh/frmLogin.cs` | 89 | (gộp trong `quan-ly-tai-khoan.md` mục 8) | xong |
 | In ấn và chứng nhận | `DBAccess/WordEngine.cs` + `ExcelReport/Report*.cs` (14 mô-đun) | ~140 + nhiều | xong (`in-an.md`) | một phần (hạ tầng + Lý lịch cá nhân xong, 4 mẫu ưu tiên còn lại + phần còn lại chưa) |
 | Hỗ trợ nhập liệu (control ngày tháng, tự nhảy ô, gợi ý theo tần suất — xuyên màn hình) | `GXControl/GxDateInput.cs` + `GxTextField.cs` + `DBAccess/CMemory.cs` | 633 + nhiều | xong (`ho-tro-nhap-lieu.md`) | chưa |
+| Hồ sơ lưu trữ giáo dân / gia đình | `ChuongTrinh/frmGiaoDanLuuTruList.cs` + `ChuongTrinh/frmGiaDinhLuuTruList.cs` | 263 + 261 | xong (`ho-so-luu-tru.md`) | xong (danh sách + lọc + sửa + xóa vĩnh viễn + xuất Excel; không có "khôi phục" — bản gốc cũng không có, xem mục 4) |
 
 Còn khoảng 60 màn hình nhỏ hơn — bổ sung dần theo thứ tự migrate.

@@ -272,6 +272,12 @@ export const api = {
      * dùng lại `thamSo()` giống `danhSach()` ở trên — cùng tham số, không viết lại logic lọc. */
     xuatExcel: (giaoHoId?: string, chiKhongThongKe?: boolean) =>
       taiTepIn(`/api/gia-dinh/xuat-excel${thamSo(giaoHoId, chiKhongThongKe)}`, 'DanhSachGiaDinh.xlsx'),
+    /** "Hồ sơ lưu trữ gia đình" (frmGiaDinhLuuTruList.cs) — gia đình đã xoá mềm HOẶC đã chuyển
+     * xứ (OR, xem GiaDinhService.LayDanhSachLuuTru). */
+    danhSachLuuTru: (giaoHoId?: string, chiKhongThongKe?: boolean) =>
+      goi<GiaDinhListItem[]>(`/api/gia-dinh/luu-tru${thamSo(giaoHoId, chiKhongThongKe)}`),
+    xuatExcelLuuTru: (giaoHoId?: string, chiKhongThongKe?: boolean) =>
+      taiTepIn(`/api/gia-dinh/luu-tru/xuat-excel${thamSo(giaoHoId, chiKhongThongKe)}`, 'HoSoLuuTruGiaDinh.xlsx'),
     /** Ảnh đại diện gia đình (Task 1.2) — cùng ba thao tác với giaoDan bên dưới. */
     layAnh: (id: string) => layAnhBlobUrl(`/api/gia-dinh/${id}/anh-dai-dien`),
     taiAnhLen: (id: string, tep: File) => taiAnhLen(`/api/gia-dinh/${id}/anh-dai-dien`, tep),
@@ -284,6 +290,12 @@ export const api = {
      * bộ lọc đang áp dụng trên màn hình "Danh sách giáo dân". */
     xuatExcel: (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: boolean) =>
       taiTepIn(`/api/giao-dan/xuat-excel${thamSo(giaoHoId, chiKhongThongKe, hienCaDaMat)}`, 'DanhSachGiaoDan.xlsx'),
+    /** "Hồ sơ lưu trữ giáo dân" (frmGiaoDanLuuTruList.cs) — giáo dân đã xoá mềm, HOẶC đã qua
+     * đời, HOẶC đã chuyển xứ (OR, xem GiaoDanService.LayDanhSachLuuTru). */
+    danhSachLuuTru: (giaoHoId?: string, chiKhongThongKe?: boolean) =>
+      goi<GiaoDanListItem[]>(`/api/giao-dan/luu-tru${thamSo(giaoHoId, chiKhongThongKe)}`),
+    xuatExcelLuuTru: (giaoHoId?: string, chiKhongThongKe?: boolean) =>
+      taiTepIn(`/api/giao-dan/luu-tru/xuat-excel${thamSo(giaoHoId, chiKhongThongKe)}`, 'HoSoLuuTruGiaoDan.xlsx'),
     chiTiet: (id: string) => goi<GiaoDanDetail>(`/api/giao-dan/${id}`),
     // 201 (đã lưu) hoặc 200 (còn cảnh báo chưa xác nhận) — cả hai đọc cùng KetQuaLuuGiaoDan.
     taoMoi: (than: unknown) =>

@@ -56,8 +56,8 @@ const DANH_SACH_DIEU_HUONG: NhomDieuHuong[] = [
   {
     nhan: 'Hồ sơ lưu trữ',
     muc: [
-      { nhan: 'Hồ sơ lưu trữ giáo dân' },
-      { nhan: 'Hồ sơ lưu trữ gia đình' },
+      { id: 'giaoDanLuuTruList', nhan: 'Hồ sơ lưu trữ giáo dân' },
+      { id: 'giaDinhLuuTruList', nhan: 'Hồ sơ lưu trữ gia đình' },
     ],
   },
 ]

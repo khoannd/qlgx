@@ -75,10 +75,25 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         ngaySau.Year - ngayTruoc.Year < khoangCach;
 
 
-    public async Task<List<GiaDinhListItemDto>> LayDanhSach(
-        Guid? giaoHoId, bool chiKhongThongKe, CancellationToken ct)
+    public Task<List<GiaDinhListItemDto>> LayDanhSach(
+        Guid? giaoHoId, bool chiKhongThongKe, CancellationToken ct) =>
+        DungDanhSachGiaDinh(XayDungTruyVan(db, giaoHoId, chiKhongThongKe), ct);
+
+    /// <summary>
+    /// Danh sách "Hồ sơ lưu trữ gia đình" (`frmGiaDinhLuuTruList.cs` + `cbGiaoHo.IsLuuTru =
+    /// true`) — đúng where thật dùng khi `IsLuuTru=true` (GxGiaoHo.LoadGridData dòng 293):
+    /// "AND (DaXoa=-1 OR DaChuyenXu=-1)" — OR, không AND; KHÔNG có điều kiện QuaDoi (gia đình
+    /// không có cột này, khác giáo dân). `giaoHoId` lọc chính xác theo giáo họ đã chọn, CHƯA
+    /// gồm giáo xóm con — cùng giới hạn đã ghi ở gia-dinh-danh-sach.md mục 10 cho danh sách
+    /// đang hoạt động.
+    /// </summary>
+    public Task<List<GiaDinhListItemDto>> LayDanhSachLuuTru(
+        Guid? giaoHoId, bool chiKhongThongKe, CancellationToken ct) =>
+        DungDanhSachGiaDinh(XayDungTruyVan(db, giaoHoId, chiKhongThongKe, luuTru: true), ct);
+
+    private async Task<List<GiaDinhListItemDto>> DungDanhSachGiaDinh(IQueryable<HangTho> nguon, CancellationToken ct)
     {
-        var tho = await XayDungTruyVan(db, giaoHoId, chiKhongThongKe).ToListAsync(ct);
+        var tho = await nguon.ToListAsync(ct);
 
         // Hôn phối được tra riêng bằng MỘT truy vấn theo lô (không phải một subquery tương
         // quan lặp lại cho từng gia đình) rồi ghép vào bằng LINQ-to-Objects — xem
@@ -113,9 +128,13 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
 
     public async Task<GiaDinhDetailDto?> LayChiTiet(Guid id, CancellationToken ct)
     {
+        // KHÔNG lọc !DaXoa: màn hình "Hồ sơ lưu trữ gia đình" (frmGiaDinhLuuTruList.cs) phải mở
+        // được chi tiết của một gia đình đã xoá mềm (nút Sửa → gxGiaDinhList1.EditRow() mở
+        // thẳng frmGiaDinh, desktop không chặn theo DaXoa) — chỉ LayDanhSach (không có
+        // "LuuTru") mới ẩn các bản ghi DaXoa=true khỏi danh sách.
         var g = await db.GiaDinh
             .Include(x => x.ThanhVien).ThenInclude(tv => tv.GiaoDan)
-            .SingleOrDefaultAsync(x => x.Id == id && !x.DaXoa, ct);
+            .SingleOrDefaultAsync(x => x.Id == id, ct);
         if (g is null) return null;
 
         var (chongId, voId) = LayChongVoId(g.ThanhVien);
@@ -139,8 +158,10 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
     /// endpoint ánh xạ sang mã HTTP/thông báo nào.</summary>
     public async Task<KetQuaCapNhatGiaDinh> CapNhat(Guid id, CapNhatGiaDinhRequest yeuCau, CancellationToken ct)
     {
+        // KHÔNG lọc !DaXoa — cùng lý do đã ghi ở LayChiTiet (Hồ sơ lưu trữ gia đình phải sửa
+        // được bản ghi đã xoá mềm).
         var g = await db.GiaDinh.Include(x => x.ThanhVien)
-            .SingleOrDefaultAsync(x => x.Id == id && !x.DaXoa, ct);
+            .SingleOrDefaultAsync(x => x.Id == id, ct);
         if (g is null) return KetQuaCapNhatGiaDinh.KhongTimThay;
 
         var (chongId, voId) = LayChongVoId(g.ThanhVien);
@@ -230,7 +251,10 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
     /// vĩnh viễn một gia đình bất kể còn bao nhiêu thành viên, xoá luôn cả bảng nối.</summary>
     public async Task<KetQuaXoaGiaDinh> Xoa(Guid id, bool vinhVien, CancellationToken ct)
     {
-        var g = await db.GiaDinh.FirstOrDefaultAsync(x => x.Id == id && !x.DaXoa, ct);
+        // KHÔNG lọc !DaXoa ở đây: màn hình "Hồ sơ lưu trữ gia đình" xoá VĨNH VIỄN đúng những
+        // bản ghi ĐÃ CÓ DaXoa=true — lọc !DaXoa ở bước tra cứu sẽ khiến thao tác này luôn trả
+        // "không tìm thấy" cho mọi bản ghi trong chính hồ sơ lưu trữ.
+        var g = await db.GiaDinh.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (g is null) return KetQuaXoaGiaDinh.KhongTimThay;
 
         if (!vinhVien)
@@ -650,9 +674,11 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
     /// (vòng sửa 1 của Task 7 đã bỏ) vì FirstOrDefault() trên đó sẽ âm thầm chọn bừa một bản
     /// ghi khi một trong hai người từng có hôn phối trước đó — xem ChonHonPhoiHienTai.
     /// </summary>
-    private static IQueryable<HangTho> XayDungTruyVan(QlgxDbContext db, Guid? giaoHoId, bool chiKhongThongKe)
+    private static IQueryable<HangTho> XayDungTruyVan(
+        QlgxDbContext db, Guid? giaoHoId, bool chiKhongThongKe, bool luuTru = false)
     {
-        var truyVan = db.GiaDinh.Where(g => !g.DaXoa);
+        // luuTru=true (Hồ sơ lưu trữ gia đình): OR, không AND — xem LayDanhSachLuuTru.
+        var truyVan = luuTru ? db.GiaDinh.Where(g => g.DaXoa || g.DaChuyenXu) : db.GiaDinh.Where(g => !g.DaXoa);
 
         if (giaoHoId is { } id) truyVan = truyVan.Where(g => g.GiaoHoId == id);
         if (chiKhongThongKe) truyVan = truyVan.Where(g => g.KhongThongKe);

@@ -3325,3 +3325,78 @@ không chọn được", đây là manh mối đầu tiên cần xem lại.
 **346/346** (336 cũ + 3 test mới `GiaoHoListPage.test.tsx` + 3 `HoiDoanListPage.test.tsx` + 5
 `HoiDoanDetail.test.tsx`, xem chi tiết ở trên — 336+10=346). `dotnet build`/`npm run build` đều
 chạy được.
+
+### 57. Task "migrate Hồ sơ lưu trữ giáo dân + Hồ sơ lưu trữ gia đình" (2026-09-08)
+
+Spec mới: `ho-so-luu-tru.md` (gộp cả hai màn hình — chúng là một cặp song song, cùng cơ chế
+`cbGiaoHo.IsLuuTru=true` đổi WHERE khi tải, xem mục 0 của spec đó cho bằng chứng đầy đủ từ mã).
+
+**Phát hiện chính, đã ghi rõ trong spec**: "hồ sơ lưu trữ" không phải một khái niệm/bảng riêng —
+là phần bù chính xác (OR, không AND) của danh sách đang hoạt động: giáo dân đã xóa mềm HOẶC qua
+đời HOẶC chuyển xứ (không có gì khác `GxGiaoHo.LoadGridData` khi `IsLuuTru=true`); gia đình đã
+xóa mềm HOẶC chuyển xứ (không có điều kiện qua đời — bảng không có cột này). Số liệu thật (giáo
+xứ Vô Nhiễm, `qlgx_thu`, đếm bằng `psql` VÀ xác nhận lại qua gọi API thật): **11 giáo dân** (cả
+11 đều do `qua_doi=true`, không ai do `da_xoa`/chuyển xứ — bảng `chuyen_xu` rỗng ở giáo xứ này)
+và **0 gia đình**. Xác nhận đúng giả thuyết nêu trong nhiệm vụ: 2050 − 11 = 2039, đúng khớp con
+số "Danh sách giáo dân" đang hiện.
+
+**Không có nút "khôi phục" nào ở cả hai màn hình desktop** — đã đọc toàn bộ
+`frmGiaoDanLuuTruList.cs`/`frmGiaDinhLuuTruList.cs`/`GxGiaoDanList.cs`/`GxGiaDinhList.cs`,
+không tìm thấy. Cách duy nhất một giáo dân `DaXoa=true` được "khôi phục" trong toàn bộ mã nguồn
+là gián tiếp qua `frmGiaDinh.cs:1112-1120` (thêm vào một gia đình → hỏi có khôi phục không) —
+không áp dụng cho `QuaDoi`/`DaChuyenXu`, không áp dụng cho gia đình, và không thuộc phạm vi hai
+màn hình được giao. **Quyết định: KHÔNG dựng nút "Khôi phục" nào** cho hai màn hình lưu trữ —
+làm vậy sẽ là tính năng MỚI không có ở bản gốc, vi phạm nguyên tắc "migrate y hệt". Nút Xóa của
+cả hai màn hình lưu trữ chỉ có MỘT hành động (xóa vĩnh viễn, hộp thoại YesNo — khác hẳn hộp
+thoại 3 lựa chọn YesNoCancel của danh sách chính, vì không còn lựa chọn "đưa vào lưu trữ" nào
+nữa).
+
+**Một lệch pha thật giữa hai file desktop, đã CHỌN KHÔNG tái hiện (ghi rõ lý do, không migrate
+y hệt)**: xóa vĩnh viễn giáo dân từ `frmGiaoDanLuuTruList.cs` (`gxAddEdit1_DeleteClick`,
+dòng 157-202) dọn **7 bảng** (`BiTichChiTiet`, `ThanhVienGiaDinh`, `ChuyenXu`, `GiaoDanHonPhoi`,
+`TanHien`, `RaoHonPhoi`, `GiaoDan`) — NHIỀU HƠN và KHÁC tập bảng mà xóa vĩnh viễn từ
+`frmGiaoDanList.cs` (danh sách chính) dọn (`GiaoDan`+`ThanhVienGiaDinh`+`BiTichChiTiet`+
+`ChiTietLopGiaoLy`, đã ghi ở mục... của `giao-dan-danh-sach.md`). Bản web dùng LẠI một endpoint
+xóa duy nhất (`DELETE /api/giao-dan/{id}?vinhVien=true`, đã có sẵn từ task "ghi giáo dân", dọn
+`GiaoDan`+`BiTichChiTiet`+`ChiTietLopGiaoLy` trong transaction) cho CẢ HAI màn hình, không viết
+thêm một luồng xóa thứ hai chỉ khác ở tập bảng. Lý do: (1) CSDL Postgres có khóa ngoại thật —
+nếu xóa `GiaoDan` trước khi dọn `ChuyenXu`/`GiaoDanHonPhoi`/`TanHien`/`RaoHonPhoi` sẽ vi phạm
+FK (Access không ràng buộc FK nên desktop "xóa thiếu" không lộ ra); (2) hai luồng xóa cùng một
+loại thực thể, chỉ khác tập bảng, là nhân đôi logic dễ lệch dần. **Vì dữ liệu khảo sát không có
+giáo dân nào trong hồ sơ lưu trữ có bản ghi ở 4 bảng kia, quyết định này CHƯA quan sát được
+khác biệt thật** — cần người dùng xác nhận: nếu một giáo xứ có dữ liệu `ChuyenXu`/
+`GiaoDanHonPhoi`/`TanHien`/`RaoHonPhoi` thật gắn với một giáo dân trong hồ sơ lưu trữ, xóa vĩnh
+viễn qua web sẽ để sót các dòng đó (khác desktop, vốn xóa sạch cả 7 bảng). Phía gia đình KHÔNG
+có lệch pha này — tập bảng xóa vĩnh viễn của `frmGiaDinhLuuTruList.cs` (`ThanhVienGiaDinh`+
+`GiaDinh`) khớp đúng 100% với danh sách chính, dùng lại `DELETE /api/gia-dinh/{id}?vinhVien=true`
+không cần cân nhắc gì thêm.
+
+**Thay đổi hạ tầng phải làm để hai màn hình lưu trữ hoạt động được (không phải quyết định
+nghiệp vụ, chỉ là sửa một giới hạn kỹ thuật của các endpoint sẵn có)**: `GiaoDanService`/
+`GiaDinhService.LayChiTiet`/`CapNhat`/`Xoa` TRƯỚC ĐÂY đều lọc `!DaXoa` khi tra cứu theo Id — có
+nghĩa mở/sửa/xóa vĩnh viễn một bản ghi ĐÃ xóa mềm (chính là nội dung của hồ sơ lưu trữ) luôn trả
+"không tìm thấy". Đã gỡ điều kiện `!DaXoa` ở cả 6 chỗ (3 hàm × 2 service) — đã kiểm tra không có
+test nào trong bộ 287 test cũ khoá hành vi "phải 404 khi DaXoa=true" (chỉ có test khoá "biến mất
+khỏi DANH SÁCH", vẫn giữ nguyên vì `LayDanhSach`/`LayDanhSachLuuTru` là hai truy vấn riêng).
+
+**Đã thêm để dùng lại hạ tầng có sẵn** (không phát minh mới): `GiaoDanService.LayDanhSachLuuTru`
++ `GiaDinhService.LayDanhSachLuuTru` (tái dùng `DungDanhSach`/`XayDungTruyVan` sẵn có, chỉ đổi
+điều kiện WHERE gốc), `GET /api/giao-dan/luu-tru` + `GET /api/gia-dinh/luu-tru`,
+`XuatExcelService.XuatGiaoDanLuuTru`/`XuatGiaDinhLuuTru` (tái dùng hàm dựng bảng tính đã có,
+chỉ đổi nguồn dữ liệu) + `GET .../luu-tru/xuat-excel` — cùng 29/12 cột với xuất Excel của danh
+sách chính. Màn hình web (`GiaoDanLuuTruList.tsx`/`GiaDinhLuuTruList.tsx`) tái dùng nguyên vẹn
+`GxGiaoDanList`/`GxGiaDinhList`/`menuGiaoDanMacDinh`/`menuGiaDinhMacDinh` — không chép/viết lại
+lưới hay menu chuột phải nào, đúng yêu cầu "đừng phát minh lại".
+
+**Chứng minh bằng chạy thật (2026-09-08, giáo xứ Vô Nhiễm, tài khoản `giaoxu`):** xem ảnh
+`146`-`14x` ở `WebApp/anh-chup-kiem-thu/` — mở "Hồ sơ lưu trữ giáo dân" xác nhận đúng 11 dòng
+khớp `psql`; mở "Hồ sơ lưu trữ gia đình" xác nhận đúng 0 dòng (bảng trống, khớp `psql`). Không
+thử "khôi phục" bằng chạy thật vì màn hình không có chức năng này (xem trên) — bước 4 của quy
+trình kiểm thử ("nếu bản desktop có khôi phục... thử khôi phục") không áp dụng được, đã xác
+nhận rõ lý do thay vì bỏ qua âm thầm.
+
+**Số test cuối:** backend **293/293** (287 cũ + 6 test mới `HoSoLuuTruTests.cs` — 2 test giáo
+dân xác nhận OR đúng ba điều kiện và không lẫn với danh sách đang hoạt động, 1 test gia đình
+tương tự, 3 test khoá lại đúng thay đổi hạ tầng "gỡ `!DaXoa`" ở LayChiTiet/Xoa cho cả hai loại
+thực thể), frontend **359/359** (346 cũ + 13 test mới: 7 `GiaoDanLuuTruList.test.tsx` + 6
+`GiaDinhLuuTruList.test.tsx`). `dotnet build`/`npm run build` đều chạy được.

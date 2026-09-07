@@ -75,6 +75,39 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
                 g.GiaDinhThamGia.Any(tv => tv.GiaDinh!.DaChuyenXu)))).ToListAsync(ct);
     }
 
+    /// <summary>
+    /// Danh sách "Hồ sơ lưu trữ giáo dân" (`frmGiaoDanLuuTruList.cs` + `cbGiaoHo.IsLuuTru =
+    /// true`) — đúng where thật dùng khi `IsLuuTru=true` (GxGiaoHo.LoadGridData dòng 268):
+    /// "AND (DaXoa=-1 OR DaChuyenXu=-1 OR QuaDoi=-1)" — OR chứ không phải AND như danh sách
+    /// đang hoạt động: một giáo dân xuất hiện ở đây nếu đã xoá mềm, HOẶC đã chuyển xứ, HOẶC đã
+    /// qua đời (chỉ cần một điều kiện, không cần cả ba). "DaChuyenXu" của MỘT GIÁO DÂN (khác
+    /// "DaChuyenXu" của một GIA ĐÌNH mà LayDanhSach dùng cho hienCaDaMat) suy từ bản ghi
+    /// ChuyenXu MỚI NHẤT của người đó có LoaiChuyen=ChuyenDi — cùng công thức `daChuyenDi` mà
+    /// GiaDinhService.ThemThanhVien đã dùng. Bảng ChuyenXu rỗng ở giáo xứ khảo sát (Vô Nhiễm,
+    /// xem ghi chú trên chính entity ChuyenXu) nên điều kiện này không đóng góp dòng nào ở dữ
+    /// liệu thật hiện có, nhưng vẫn cài đúng cho giáo xứ khác có dữ liệu chuyển xứ.
+    ///
+    /// `giaoHoId` lọc CHÍNH XÁC theo giáo họ đã chọn — CHƯA gồm giáo xóm con (MaGiaoHoCha) như
+    /// desktop (`(MaGiaoHo={0} OR MaGiaoHoCha={0})`), cùng giới hạn đã ghi ở
+    /// giao-dan-danh-sach.md mục 10 cho màn hình danh sách đang hoạt động — không tự ý vá thêm
+    /// ở màn hình lưu trữ trong khi màn hình chính vẫn còn thiếu, xem can-review-sau.md.
+    /// </summary>
+    public Task<List<GiaoDanListItemDto>> LayDanhSachLuuTru(
+        Guid? giaoHoId, bool chiKhongThongKe, CancellationToken ct)
+    {
+        var truyVan = db.GiaoDan.Where(g => g.DaXoa || g.QuaDoi
+            || db.ChuyenXu.Any(c => c.GiaoDanId == g.Id && c.LoaiChuyen == LoaiChuyenXu.ChuyenDi));
+        if (giaoHoId is { } id) truyVan = truyVan.Where(g => g.GiaoHoId == id);
+        if (chiKhongThongKe) truyVan = truyVan.Where(g => g.KhongThongKe);
+
+        return DungDanhSach(truyVan
+            .OrderBy(g => g.MaGiaoDanCu)
+            .Select(g => new NguonDong(g, null,
+                g.GiaDinhThamGia.OrderBy(tv => tv.VaiTro)
+                    .Select(tv => (Guid?)tv.GiaDinhId).FirstOrDefault(),
+                g.GiaDinhThamGia.Any(tv => tv.GiaDinh!.DaChuyenXu)))).ToListAsync(ct);
+    }
+
     /// <summary>Thành viên của một gia đình — cùng bộ cột với danh sách giáo dân. GiaDinhId ở
     /// đây biết chắc chắn (chính là tham số `giaDinhId`) nên không cần suy như LayDanhSach.
     /// Lọc `!tv.GiaoDan!.DaXoa` để nhất quán với LayDanhSach/LayChiTiet (đều lọc !DaXoa) —
@@ -114,9 +147,13 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
 
     public async Task<GiaoDanDetailDto?> LayChiTiet(Guid id, CancellationToken ct)
     {
+        // KHÔNG lọc !DaXoa: màn hình "Hồ sơ lưu trữ giáo dân" (frmGiaoDanLuuTruList.cs) phải
+        // mở được chi tiết của một giáo dân đã xoá mềm (nút Sửa → gxGiaoDanList1.EditRow() mở
+        // thẳng frmGiaoDan, không có điều kiện chặn nào ở bản desktop theo DaXoa) — chỉ có
+        // LayDanhSach (không có "LuuTru") mới ẩn các bản ghi DaXoa=true khỏi danh sách.
         var g = await db.GiaoDan
             .Include(x => x.GiaDinhThamGia).ThenInclude(tv => tv.GiaDinh)
-            .SingleOrDefaultAsync(x => x.Id == id && !x.DaXoa, ct);
+            .SingleOrDefaultAsync(x => x.Id == id, ct);
         if (g is null) return null;
 
         // Một giáo dân có thể thuộc nhiều gia đình; màn hình chi tiết hiển thị gia đình mà
@@ -379,7 +416,9 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
     public async Task<(KetQuaLuuGiaoDan KetQua, string? ThongBaoLoi, IReadOnlyList<string> CanhBao)>
         CapNhat(Guid id, CapNhatGiaoDanRequest r, CancellationToken ct)
     {
-        var g = await db.GiaoDan.SingleOrDefaultAsync(x => x.Id == id && !x.DaXoa, ct);
+        // KHÔNG lọc !DaXoa — cùng lý do đã ghi ở LayChiTiet (màn hình Hồ sơ lưu trữ phải sửa
+        // được bản ghi đã xoá mềm).
+        var g = await db.GiaoDan.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (g is null) return (KetQuaLuuGiaoDan.KhongTimThay, null, []);
 
         // Rule 17 (frmGiaoDan.cs:1482-1495) — CHẶN CỨNG, kiểm tra TRƯỚC các quy tắc chung vì
@@ -499,7 +538,10 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
     /// </summary>
     public async Task<(KetQuaXoaGiaoDan KetQua, string? ThongBaoLoi)> Xoa(Guid id, bool vinhVien, CancellationToken ct)
     {
-        var g = await db.GiaoDan.FirstOrDefaultAsync(x => x.Id == id && !x.DaXoa, ct);
+        // KHÔNG lọc !DaXoa ở đây: màn hình "Hồ sơ lưu trữ giáo dân" xoá VĨNH VIỄN đúng những
+        // bản ghi ĐÃ CÓ DaXoa=true — lọc !DaXoa ở bước tra cứu sẽ khiến thao tác này luôn trả
+        // "không tìm thấy" cho mọi bản ghi trong chính hồ sơ lưu trữ.
+        var g = await db.GiaoDan.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (g is null) return (KetQuaXoaGiaoDan.KhongTimThay, null);
 
         if (!vinhVien)

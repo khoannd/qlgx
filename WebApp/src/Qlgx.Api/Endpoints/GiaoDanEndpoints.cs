@@ -13,6 +13,13 @@ public static class GiaoDanEndpoints
             bool? hienCaDaMat, CancellationToken ct) =>
             Results.Ok(await dv.LayDanhSach(giaoHoId, chiKhongThongKe ?? false, hienCaDaMat ?? false, ct)));
 
+        // "Hồ sơ lưu trữ giáo dân" (frmGiaoDanLuuTruList.cs) — xem GiaoDanService.LayDanhSachLuuTru.
+        // "/luu-tru" không khớp mẫu "/{id:guid}" ở dưới (không phải GUID) nên không giẫm route,
+        // giống "/tim"/"/xuat-excel" đã có sẵn.
+        nhom.MapGet("/luu-tru", async (GiaoDanService dv, Guid? giaoHoId, bool? chiKhongThongKe,
+            CancellationToken ct) =>
+            Results.Ok(await dv.LayDanhSachLuuTru(giaoHoId, chiKhongThongKe ?? false, ct)));
+
         // "Xuất Excel" (thay nút "Xuất dữ liệu (CSV)" cũ theo góp ý người dùng) — CÙNG BA tham số
         // lọc với GET "" phía trên (giaoHoId/chiKhongThongKe/hienCaDaMat), tôn trọng đúng bộ lọc
         // đang áp dụng trên màn hình "Danh sách giáo dân". "/xuat-excel" không khớp mẫu
@@ -25,6 +32,17 @@ public static class GiaoDanEndpoints
         {
             var noiDung = await dv.XuatGiaoDan(giaoHoId, chiKhongThongKe ?? false, hienCaDaMat ?? false, ct);
             var tenTep = $"danh-sach-giao-dan-{DateTime.Now:yyyy-MM-dd}.xlsx";
+            return Results.File(noiDung,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", tenTep);
+        });
+
+        // "Hồ sơ lưu trữ giáo dân" xuất Excel — cùng lý do/thiết kế với "/xuat-excel" phía trên,
+        // chỉ khác nguồn dữ liệu (LayDanhSachLuuTru thay LayDanhSach).
+        nhom.MapGet("/luu-tru/xuat-excel", async (XuatExcelService dv, Guid? giaoHoId,
+            bool? chiKhongThongKe, CancellationToken ct) =>
+        {
+            var noiDung = await dv.XuatGiaoDanLuuTru(giaoHoId, chiKhongThongKe ?? false, ct);
+            var tenTep = $"ho-so-luu-tru-giao-dan-{DateTime.Now:yyyy-MM-dd}.xlsx";
             return Results.File(noiDung,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", tenTep);
         });

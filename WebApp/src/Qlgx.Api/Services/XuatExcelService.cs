@@ -36,10 +36,18 @@ public class XuatExcelService(GiaoDanService giaoDan, GiaDinhService giaDinh)
     /// đình (lưới "Thành viên khác"), một ngữ cảnh không xuất Excel từ toolbar riêng.
     /// </summary>
     public async Task<byte[]> XuatGiaoDan(
-        Guid? giaoHoId, bool chiKhongThongKe, bool hienCaDaMat, CancellationToken ct)
-    {
-        var rows = await giaoDan.LayDanhSach(giaoHoId, chiKhongThongKe, hienCaDaMat, ct);
+        Guid? giaoHoId, bool chiKhongThongKe, bool hienCaDaMat, CancellationToken ct) =>
+        DungExcelGiaoDan(await giaoDan.LayDanhSach(giaoHoId, chiKhongThongKe, hienCaDaMat, ct));
 
+    /// <summary>"Hồ sơ lưu trữ giáo dân" (`btnInDanhSach_Click`/PrintButton của
+    /// `frmGiaoDanLuuTruList.cs`, cùng cơ chế GridEXExporter xuất .xls tạm trên desktop) — cùng
+    /// 29 cột, chỉ khác nguồn dữ liệu là <see cref="GiaoDanService.LayDanhSachLuuTru"/>.</summary>
+    public async Task<byte[]> XuatGiaoDanLuuTru(
+        Guid? giaoHoId, bool chiKhongThongKe, CancellationToken ct) =>
+        DungExcelGiaoDan(await giaoDan.LayDanhSachLuuTru(giaoHoId, chiKhongThongKe, ct));
+
+    private static byte[] DungExcelGiaoDan(List<GiaoDanListItemDto> rows)
+    {
         using var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add("Giáo dân");
 
@@ -98,10 +106,17 @@ public class XuatExcelService(GiaoDanService giaoDan, GiaDinhService giaDinh)
     /// `cellClass` của cột — "Người nam" khi `Gach` là 0 hoặc 2, "Người nữ" khi `Gach` là 1 hoặc
     /// 2 — chép nguyên văn điều kiện đó, xem ghi chú "Gạch ngang đỏ" dưới lưới gia đình.
     /// </summary>
-    public async Task<byte[]> XuatGiaDinh(Guid? giaoHoId, bool chiKhongThongKe, CancellationToken ct)
-    {
-        var rows = await giaDinh.LayDanhSach(giaoHoId, chiKhongThongKe, ct);
+    public async Task<byte[]> XuatGiaDinh(Guid? giaoHoId, bool chiKhongThongKe, CancellationToken ct) =>
+        DungExcelGiaDinh(await giaDinh.LayDanhSach(giaoHoId, chiKhongThongKe, ct));
 
+    /// <summary>"Hồ sơ lưu trữ gia đình" (`btnInDanhSach_Click`/PrintButton của
+    /// `frmGiaDinhLuuTruList.cs`) — cùng 12 cột, chỉ khác nguồn dữ liệu là
+    /// <see cref="GiaDinhService.LayDanhSachLuuTru"/>.</summary>
+    public async Task<byte[]> XuatGiaDinhLuuTru(Guid? giaoHoId, bool chiKhongThongKe, CancellationToken ct) =>
+        DungExcelGiaDinh(await giaDinh.LayDanhSachLuuTru(giaoHoId, chiKhongThongKe, ct));
+
+    private static byte[] DungExcelGiaDinh(List<GiaDinhListItemDto> rows)
+    {
         using var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add("Gia đình");
 
