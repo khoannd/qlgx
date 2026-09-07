@@ -1,7 +1,7 @@
 import type {
   GiaDinhDetail, GiaDinhListItem, GiaoDanDetail, GiaoDanListItem, GiaoDanTimKiem, GiaoHo,
   HoiDoanCuaGiaoDan, HoiDoanDanhMuc, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
-  TaiKhoanItem, DangNhapKetQua, SucKhoe,
+  TaiKhoanItem, DangNhapKetQua, GiaoXuLuaChon, SucKhoe,
 } from './types'
 import { authStore } from './authStore'
 
@@ -10,6 +10,18 @@ export { LoiXungDot }
 
 class ChuaDangNhap extends Error {}
 export { ChuaDangNhap }
+
+/** Ném khi tên đăng nhập trùng ở nhiều giáo xứ (xem AuthService.DangNhap mục M1) — client
+ * PHẢI cho người dùng chọn đúng giáo xứ trong `danhSachGiaoXu` rồi gọi lại `api.auth.dangNhap`
+ * kèm `giaoXuId`, không được tự đoán. */
+class CanChonGiaoXu extends Error {
+  danhSachGiaoXu: GiaoXuLuaChon[]
+  constructor(thongBao: string, danhSachGiaoXu: GiaoXuLuaChon[]) {
+    super(thongBao)
+    this.danhSachGiaoXu = danhSachGiaoXu
+  }
+}
+export { CanChonGiaoXu }
 
 /** Đọc `{ thongBao }` từ thân lỗi JSON nếu có — endpoint trả 400/409 kèm thông báo tiếng
  * Việt sẵn (xem GiaDinhEndpoints/GiaoDanEndpoints); phần lớn lỗi khác (404, 500, lỗi mạng)
@@ -227,12 +239,22 @@ export const api = {
     /** KHÔNG dùng `goi()` — endpoint này chủ ý ẩn danh và một mật khẩu sai cũng trả về 401
      * (đúng ngữ nghĩa HTTP), nhưng đó KHÔNG phải "token hết hạn" nên không được kích hoạt
      * luồng tự đăng xuất của `goi()`. Xử lý status ngay tại đây. */
-    dangNhap: async (tenTaiKhoan: string, matKhau: string): Promise<DangNhapKetQua> => {
+    dangNhap: async (tenTaiKhoan: string, matKhau: string, giaoXuId?: string): Promise<DangNhapKetQua> => {
       const res = await fetch('/api/auth/dang-nhap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenTaiKhoan, matKhau }),
+        body: JSON.stringify({ tenTaiKhoan, matKhau, giaoXuId: giaoXuId ?? null }),
       })
+      if (res.status === 400) {
+        // Có thể là "cần chọn giáo xứ" (canChonGiaoXu:true, kèm danh sách) hoặc lỗi đầu vào
+        // khác — phân biệt bằng cờ canChonGiaoXu, không suy đoán từ status code một mình.
+        const than = await res.json().catch(() => null) as
+          { thongBao?: string; canChonGiaoXu?: boolean; giaoXu?: GiaoXuLuaChon[] } | null
+        if (than?.canChonGiaoXu) {
+          throw new CanChonGiaoXu(than.thongBao ?? 'Vui lòng chọn giáo xứ', than.giaoXu ?? [])
+        }
+        throw new Error(than?.thongBao ?? 'Không đăng nhập được')
+      }
       if (res.status === 401) {
         throw new Error('Tên đăng nhập hoặc mật khẩu không chính xác')
       }
@@ -245,6 +267,11 @@ export const api = {
       tenTaiKhoan: string; hoTen: string | null; loaiTaiKhoan: number | null
       giaoXuId: string | null; tenGiaoXu: string | null
     }>('/api/auth/toi'),
+    /** Tự đổi mật khẩu của chính mình (VIEC-TIEP-THEO.md mục 1.3) — máy chủ trả 400 kèm
+     * `thongBao` rõ ràng khi mật khẩu hiện tại sai hoặc mật khẩu mới quá ngắn, `goi()` đã tự
+     * ném Error với đúng thông báo đó. */
+    doiMatKhau: (matKhauHienTai: string, matKhauMoi: string) =>
+      goi<void>('/api/auth/mat-khau', { method: 'PUT', body: JSON.stringify({ matKhauHienTai, matKhauMoi }) }),
   },
   /** Anonymous — chỉ dùng để hiện phiên bản bản web thật ở chân SideNav (xem
    * can-review-sau.md mục 32), không mang dữ liệu giáo xứ nào nên không cần token. */

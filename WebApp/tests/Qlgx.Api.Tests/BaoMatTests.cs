@@ -237,6 +237,65 @@ public class BaoMatTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     }
 
     [Fact]
+    public async Task Khoa_dang_nhap_sai_khong_duoc_lan_sang_giao_xu_khac()
+    {
+        // review-cuoi.md muc M1: TenTaiKhoan chi duy nhat TRONG mot giao xu, khong duy nhat
+        // toan may chu. Dung hai giao xu, MOI ben mot tai khoan TRUNG TEN "vanphong" — ke tan
+        // cong nham vao giao xu A (chon dung giaoXuId cua A, dung thiet ke moi) gui sai mat
+        // khau 10 lan; tai khoan "vanphong" cua giao xu B phai VAN dang nhap binh thuong duoc
+        // ngay sau do, khong bi khoa lay.
+        var giaoXuB = await TaoGiaoXuKhac("Giao xu B (khoa cheo giao xu test)");
+        const string tenTaiKhoan = "vanphong";
+        var (matKhauA, matKhauB) = ("MatKhauVanPhongA_123!", "MatKhauVanPhongB_456!");
+        await using (var db = app.TaoContextThuan())
+        {
+            var tkA = new TaiKhoan { GiaoXuId = app.GiaoXuId, TenTaiKhoan = tenTaiKhoan, HoTenNguoiDung = "Van phong xu A" };
+            tkA.MatKhauBam = new PasswordHasher<TaiKhoan>().HashPassword(tkA, matKhauA);
+            var tkB = new TaiKhoan { GiaoXuId = giaoXuB, TenTaiKhoan = tenTaiKhoan, HoTenNguoiDung = "Van phong xu B" };
+            tkB.MatKhauBam = new PasswordHasher<TaiKhoan>().HashPassword(tkB, matKhauB);
+            db.TaiKhoan.AddRange(tkA, tkB);
+            await db.SaveChangesAsync();
+        }
+        var client = app.CreateClient();
+
+        for (var i = 0; i < 10; i++)
+        {
+            var sai = await client.PostAsJsonAsync("/api/auth/dang-nhap",
+                new DangNhapRequest(tenTaiKhoan, "sai-mat-khau-" + i, app.GiaoXuId));
+            sai.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        var dangNhapB = await client.PostAsJsonAsync("/api/auth/dang-nhap",
+            new DangNhapRequest(tenTaiKhoan, matKhauB, giaoXuB));
+
+        dangNhapB.StatusCode.Should().Be(HttpStatusCode.OK,
+            "tai khoan 'vanphong' cua giao xu B khong lien quan gi toi 10 lan sai o giao xu A, " +
+            "khong duoc bi khoa lay theo (loi khoa cheo giao xu — review-cuoi.md muc M1)");
+    }
+
+    [Fact]
+    public async Task Ten_dang_nhap_trung_o_hai_giao_xu_ma_khong_chon_thi_bi_yeu_cau_chon()
+    {
+        var giaoXuB = await TaoGiaoXuKhac("Giao xu E (can chon giao xu test)");
+        const string tenTaiKhoan = "quantri_trung_ten";
+        await using (var db = app.TaoContextThuan())
+        {
+            var tkA = new TaiKhoan { GiaoXuId = app.GiaoXuId, TenTaiKhoan = tenTaiKhoan, HoTenNguoiDung = "A" };
+            tkA.MatKhauBam = new PasswordHasher<TaiKhoan>().HashPassword(tkA, "MatKhauA_Manh123!");
+            var tkB = new TaiKhoan { GiaoXuId = giaoXuB, TenTaiKhoan = tenTaiKhoan, HoTenNguoiDung = "B" };
+            tkB.MatKhauBam = new PasswordHasher<TaiKhoan>().HashPassword(tkB, "MatKhauB_Manh123!");
+            db.TaiKhoan.AddRange(tkA, tkB);
+            await db.SaveChangesAsync();
+        }
+
+        var res = await app.CreateClient().PostAsJsonAsync("/api/auth/dang-nhap",
+            new DangNhapRequest(tenTaiKhoan, "MatKhauA_Manh123!"));
+
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest,
+            "ten dang nhap trung o hai giao xu, chua chon giao xu nao thi khong duoc doan bat ky ai");
+    }
+
+    [Fact]
     public async Task Dang_nhap_voi_mat_khau_rong_tra_401_khong_phai_500()
     {
         // Phat hien khi kiem thu kham pha man hinh chi tiet giao dan/gia dinh 2026-09-07: goi
@@ -276,5 +335,90 @@ public class BaoMatTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
         var res = await client.GetAsync("/api/tai-khoan");
 
         res.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    // --- VIEC-TIEP-THEO.md muc 1.3: tu doi mat khau cua chinh minh ---
+
+    private async Task<(HttpClient client, string token)> DangNhapThatVaGanToken(string tenTaiKhoan, string matKhau)
+    {
+        var client = app.CreateClient();
+        var dangNhap = await client.PostAsJsonAsync("/api/auth/dang-nhap", new DangNhapRequest(tenTaiKhoan, matKhau));
+        dangNhap.StatusCode.Should().Be(HttpStatusCode.OK, "setup dang nhap that phai thanh cong");
+        var than = await dangNhap.Content.ReadFromJsonAsync<DangNhapOkDto>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", than!.Token);
+        return (client, than.Token);
+    }
+
+    [Fact]
+    public async Task Tu_doi_mat_khau_dung_thi_thanh_cong_va_dang_nhap_lai_duoc_bang_mat_khau_moi()
+    {
+        var (tenTaiKhoan, matKhauCu, matKhauMoi) = ("doimk_thanhcong", "MatKhauCu_Manh123!", "MatKhauMoi_Manh456!");
+        await using (var db = app.TaoContextThuan())
+        {
+            var tk = new TaiKhoan { GiaoXuId = app.GiaoXuId, TenTaiKhoan = tenTaiKhoan, HoTenNguoiDung = "Doi MK" };
+            tk.MatKhauBam = new PasswordHasher<TaiKhoan>().HashPassword(tk, matKhauCu);
+            db.TaiKhoan.Add(tk);
+            await db.SaveChangesAsync();
+        }
+        var (client, _) = await DangNhapThatVaGanToken(tenTaiKhoan, matKhauCu);
+
+        var doiMk = await client.PutAsJsonAsync("/api/auth/mat-khau", new DoiMatKhauRequest(matKhauCu, matKhauMoi));
+
+        doiMk.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dangNhapMoi = await app.CreateClient().PostAsJsonAsync("/api/auth/dang-nhap",
+            new DangNhapRequest(tenTaiKhoan, matKhauMoi));
+        dangNhapMoi.StatusCode.Should().Be(HttpStatusCode.OK, "mat khau moi phai dang nhap duoc");
+        var dangNhapCu = await app.CreateClient().PostAsJsonAsync("/api/auth/dang-nhap",
+            new DangNhapRequest(tenTaiKhoan, matKhauCu));
+        dangNhapCu.StatusCode.Should().Be(HttpStatusCode.Unauthorized, "mat khau cu phai bi tu choi sau khi doi");
+    }
+
+    [Fact]
+    public async Task Tu_doi_mat_khau_sai_mat_khau_hien_tai_thi_bi_tu_choi_va_khong_doi_gi()
+    {
+        var (tenTaiKhoan, matKhauCu) = ("doimk_saihientai", "MatKhauCu_Manh123!");
+        await using (var db = app.TaoContextThuan())
+        {
+            var tk = new TaiKhoan { GiaoXuId = app.GiaoXuId, TenTaiKhoan = tenTaiKhoan, HoTenNguoiDung = "Y" };
+            tk.MatKhauBam = new PasswordHasher<TaiKhoan>().HashPassword(tk, matKhauCu);
+            db.TaiKhoan.Add(tk);
+            await db.SaveChangesAsync();
+        }
+        var (client, _) = await DangNhapThatVaGanToken(tenTaiKhoan, matKhauCu);
+
+        var doiMk = await client.PutAsJsonAsync("/api/auth/mat-khau",
+            new DoiMatKhauRequest("mat-khau-hien-tai-sai", "MatKhauMoiHopLe123!"));
+
+        doiMk.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var dangNhapVanBangMatKhauCu = await app.CreateClient().PostAsJsonAsync("/api/auth/dang-nhap",
+            new DangNhapRequest(tenTaiKhoan, matKhauCu));
+        dangNhapVanBangMatKhauCu.StatusCode.Should().Be(HttpStatusCode.OK, "doi mat khau that bai thi khong duoc doi gi ca");
+    }
+
+    [Fact]
+    public async Task Tu_doi_mat_khau_qua_ngan_thi_bi_tu_choi()
+    {
+        var (tenTaiKhoan, matKhauCu) = ("doimk_quangan", "MatKhauCu_Manh123!");
+        await using (var db = app.TaoContextThuan())
+        {
+            var tk = new TaiKhoan { GiaoXuId = app.GiaoXuId, TenTaiKhoan = tenTaiKhoan, HoTenNguoiDung = "Z" };
+            tk.MatKhauBam = new PasswordHasher<TaiKhoan>().HashPassword(tk, matKhauCu);
+            db.TaiKhoan.Add(tk);
+            await db.SaveChangesAsync();
+        }
+        var (client, _) = await DangNhapThatVaGanToken(tenTaiKhoan, matKhauCu);
+
+        var doiMk = await client.PutAsJsonAsync("/api/auth/mat-khau", new DoiMatKhauRequest(matKhauCu, "1234567"));
+
+        doiMk.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Doi_mat_khau_khong_dang_nhap_thi_bi_401()
+    {
+        var res = await app.CreateClient().PutAsJsonAsync("/api/auth/mat-khau",
+            new DoiMatKhauRequest("bat-ky", "bat-ky-1234"));
+
+        res.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 }

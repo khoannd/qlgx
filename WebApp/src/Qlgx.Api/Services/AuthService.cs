@@ -9,9 +9,19 @@ public enum KetQuaDangNhap
 {
     ThanhCong,
     SaiTenHoacMatKhau,
+    /// <summary>Tên đăng nhập trùng ở NHIỀU giáo xứ khác nhau, client chưa gửi kèm GiaoXuId để
+    /// biết chọn tài khoản nào — xem ghi chú M1 (review-cuoi.md) ở đầu file. Trả về TRƯỚC khi
+    /// kiểm mật khẩu/tăng bộ đếm sai, và kèm sẵn danh sách giáo xứ trùng tên để client cho
+    /// người dùng chọn rồi gửi lại đúng một GiaoXuId.</summary>
+    CanChonGiaoXu,
 }
 
-public record DangNhapKetQua(KetQuaDangNhap Ket, string? Token, ThongTinNguoiDungDto? NguoiDung);
+/// <summary>Một giáo xứ có tài khoản trùng tên đăng nhập đang thử — chỉ Id + tên hiển thị, đủ
+/// để người dùng nhận ra giáo xứ của mình trong hộp chọn.</summary>
+public record GiaoXuLuaChonDto(Guid Id, string TenGiaoXu);
+
+public record DangNhapKetQua(KetQuaDangNhap Ket, string? Token, ThongTinNguoiDungDto? NguoiDung,
+    IReadOnlyList<GiaoXuLuaChonDto>? DanhSachGiaoXu = null);
 
 /// <summary>TenGiaoXu đi kèm ngay từ lúc đăng nhập để thanh trên (AppShell.tsx) hiện đúng tên
 /// giáo xứ ngay khi vào ứng dụng, không phải chờ thêm một round-trip tới /api/auth/toi.</summary>
@@ -22,14 +32,36 @@ public record ThongTinNguoiDungDto(Guid Id, string TenTaiKhoan, string? HoTen, i
 /// TaiKhoanConfig — chỉ mục là (GiaoXuId, TenTaiKhoan)), không duy nhất toàn máy chủ, vì mỗi
 /// giáo xứ trước đây là một bản cài độc lập nên có thể trùng tên đăng nhập ("vanphong" chẳng
 /// hạn) khi gộp lên một máy chủ chung. Do đó bước đăng nhập PHẢI tra trên toàn bộ máy chủ
-/// (không có giáo xứ nào biết trước — chưa xác thực thì chưa thể biết claim giao_xu_id), thử
-/// khớp mật khẩu với TỪNG tài khoản trùng tên cho tới khi khớp. Đây là truy vấn CHÉO GIÁO XỨ
-/// DUY NHẤT được phép trong toàn hệ thống, và chỉ để xác định tài khoản nào đăng nhập — sau
-/// bước này, mọi thứ đi qua BoiCanhGiaoXuTuNguoiDung như bình thường.
+/// (không có giáo xứ nào biết trước — chưa xác thực thì chưa thể biết claim giao_xu_id) để
+/// TÌM xem tên đăng nhập này thuộc (những) giáo xứ nào. Đây là truy vấn CHÉO GIÁO XỨ DUY NHẤT
+/// được phép trong toàn hệ thống, và chỉ để xác định tài khoản nào đăng nhập — sau bước này,
+/// mọi thứ đi qua BoiCanhGiaoXuTuNguoiDung như bình thường.
+///
+/// review-cuoi.md mục M1 (Trung bình): bản đầu của T1 (khoá đăng nhập sau nhiều lần sai) LẶP
+/// qua TẤT CẢ tài khoản trùng tên ở MỌI giáo xứ khi kiểm/tăng bộ đếm sai — một kẻ tấn công gõ
+/// sai mật khẩu 10 lần cho "vanphong" sẽ khoá luôn tài khoản "vanphong" ở MỌI giáo xứ khác,
+/// dù chỉ đang nhắm một nơi. Sửa bằng cách THU HẸP danh sách ứng viên về ĐÚNG MỘT giáo xứ
+/// trước khi kiểm mật khẩu/tăng bộ đếm: nếu tên đăng nhập chỉ tồn tại ở một giáo xứ (đúng
+/// trường hợp máy chủ pilot hiện chỉ có một giáo xứ, và cả trường hợp phổ biến một tên đăng
+/// nhập không trùng ai khác dù máy chủ có nhiều giáo xứ) thì xử lý y hệt trước đây — không bắt
+/// người dùng chọn gì thêm. CHỈ khi tên đăng nhập THẬT SỰ trùng ở từ hai giáo xứ trở lên mới
+/// dừng lại trả CanChonGiaoXu kèm danh sách, và client phải gửi lại đúng GiaoXuId đã chọn —
+/// từ đó danh sách ứng viên chắc chắn còn tối đa MỘT tài khoản (chỉ mục (GiaoXuId,
+/// TenTaiKhoan) là duy nhất), nên không còn đường nào tăng bộ đếm sai cho tài khoản của giáo
+/// xứ khác được nữa. Cân nhắc đã bỏ: khoá cứng theo "server có bao nhiêu giáo xứ" (luôn bắt
+/// chọn khi có ≥2 giáo xứ) — bị loại vì phần lớn tên đăng nhập không trùng ai, bắt chọn giáo
+/// xứ mỗi lần đăng nhập chỉ vì server có nhiều giáo xứ là phiền không cần thiết (yêu cầu của
+/// người giao việc), trong khi cách "theo đúng tên đang gõ" vẫn đóng chặt lỗ hổng M1 mà không
+/// đổi trải nghiệm của đa số tài khoản.
 /// </summary>
-public class AuthService(IConfiguration cauHinh, TokenService tokenService)
+public class AuthService(IConfiguration cauHinh, TokenService tokenService, QlgxDbContext dbNguoiDung)
 {
     private readonly PasswordHasher<TaiKhoan> _hasher = new();
+
+    /// <summary>Đồng bộ với TaoTaiKhoanQuanTri.cs (`QLGX_ADMIN_MAT_KHAU phai co it nhat 8 ky
+    /// tu`) — một ngưỡng tối thiểu duy nhất cho toàn hệ thống, không lệch giữa CLI và tự đổi
+    /// mật khẩu.</summary>
+    private const int DoDaiMatKhauToiThieu = 8;
 
     /// <summary>Số lần sai liên tiếp tối đa trước khi khoá tạm một tài khoản — review-backend.md
     /// mục T1. Ngưỡng và thời gian khoá cố tình rộng rãi (không phải 3-5 lần) để không khoá oan
@@ -47,7 +79,7 @@ public class AuthService(IConfiguration cauHinh, TokenService tokenService)
     private static readonly string BamGia =
         new PasswordHasher<TaiKhoan>().HashPassword(TaiKhoanGia, "mat-khau-gia-de-can-bang-thoi-gian-phan-hoi");
 
-    public async Task<DangNhapKetQua> DangNhap(string tenTaiKhoan, string matKhau, CancellationToken ct)
+    public async Task<DangNhapKetQua> DangNhap(string tenTaiKhoan, string matKhau, Guid? giaoXuId, CancellationToken ct)
     {
         // Than JSON thieu truong (hoac gui rong) khien ASP.NET model binding tao chuoi rong/null
         // thay vi bi tu choi o tang validate — PasswordHasher.VerifyHashedPassword nem
@@ -65,9 +97,38 @@ public class AuthService(IConfiguration cauHinh, TokenService tokenService)
             .Options;
         await using var db = new QlgxDbContext(options);
 
+        // Buoc TRA CUU (van chay tren toan may chu, xem doc XML o dau class) — nhung TU DAY
+        // TRO DI moi buoc kiem mat khau/tang bo dem CHI con duoc phep dung tren mot giao xu
+        // DUY NHAT, xem thu hep ben duoi (sua loi M1 — review-cuoi.md).
         var ungVien = await db.TaiKhoan
             .Where(t => t.TenTaiKhoan == tenTaiKhoan && !t.DaXoa && t.MatKhauBam != null)
             .ToListAsync(ct);
+
+        if (giaoXuId is { } gxDaChon)
+        {
+            // Client da chon giao xu (tu luot dang nhap truoc bi CanChonGiaoXu, hoac he thong
+            // chi co 1 giao xu nen frontend gan san) — thu hep ngay, chi muc
+            // (GiaoXuId, TenTaiKhoan) la duy nhat nen ket qua chac chan con toi da 1 phan tu.
+            ungVien = ungVien.Where(t => t.GiaoXuId == gxDaChon).ToList();
+        }
+        else
+        {
+            var giaoXuTrungTen = ungVien.Select(t => t.GiaoXuId).Distinct().ToList();
+            if (giaoXuTrungTen.Count > 1)
+            {
+                // THAT SU trung ten o tu hai giao xu tro len — day la truong hop DUY NHAT bat
+                // dung lai hoi, tranh doan bua roi khoa nham/khoa cheo tai khoan cua giao xu
+                // khac (loi M1). Chua kiem mat khau, chua tang bo dem cho ai ca.
+                var danhSach = await db.GiaoXu
+                    .Where(g => giaoXuTrungTen.Contains(g.Id))
+                    .Select(g => new GiaoXuLuaChonDto(g.Id, g.TenGiaoXu))
+                    .ToListAsync(ct);
+                return new DangNhapKetQua(KetQuaDangNhap.CanChonGiaoXu, null, null, danhSach);
+            }
+            // 0 hoac 1 giao xu trung ten — khong can hoi, xu ly y het truoc day (giu nguyen
+            // trai nghiem cho giao xu pilot hien chi co mot giao xu, va cho da so ten dang
+            // nhap khong trung ai du may chu co nhieu giao xu).
+        }
 
         if (ungVien.Count == 0)
         {
@@ -129,4 +190,44 @@ public class AuthService(IConfiguration cauHinh, TokenService tokenService)
     /// Identity) — dùng khi tạo/đổi mật khẩu một tài khoản. KHÔNG bao giờ dùng MD5/SHA1 trần
     /// hay lưu mật khẩu thô (quyết định bảo mật đã chốt, xem TaiKhoan.cs).</summary>
     public string Bam(TaiKhoan taiKhoan, string matKhauMoi) => _hasher.HashPassword(taiKhoan, matKhauMoi);
+
+    /// <summary>
+    /// Người đang đăng nhập tự đổi mật khẩu CỦA CHÍNH MÌNH (VIEC-TIEP-THEO.md mục 1.3) — bắt
+    /// buộc kiểm đúng mật khẩu HIỆN TẠI trước khi ghi mật khẩu mới, nếu không ai mượn được máy
+    /// đang mở phiên đăng nhập là chiếm được tài khoản vĩnh viễn (đổi mật khẩu xong chủ tài
+    /// khoản thật cũng bị khoá luôn). `dbNguoiDung` là QlgxDbContext tiêm qua DI, đã tự lọc
+    /// theo GiaoXuId của claim (BoiCanhGiaoXuTuNguoiDung) — kết hợp với `taiKhoanId` cũng lấy
+    /// từ claim (không phải tham số trình duyệt) nên không thể đổi mật khẩu tài khoản khác,
+    /// kể cả tài khoản khác trong CÙNG giáo xứ.
+    /// </summary>
+    public async Task<KetQuaDoiMatKhau> DoiMatKhauCuaToi(
+        Guid taiKhoanId, string matKhauHienTai, string matKhauMoi, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(matKhauMoi) || matKhauMoi.Length < DoDaiMatKhauToiThieu)
+            return KetQuaDoiMatKhau.MatKhauMoiQuaNgan;
+
+        var taiKhoan = await dbNguoiDung.TaiKhoan
+            .FirstOrDefaultAsync(t => t.Id == taiKhoanId && !t.DaXoa, ct);
+        // taiKhoan null hoac chua co mat khau (khong nen xay ra voi mot phien da dang nhap
+        // thanh cong, nhung khong loai tru hoan toan — vd tai khoan bi xoa giua chung phien)
+        // deu tra ve CUNG mot loi "sai mat khau hien tai", khong phan biet ly do — khong co gi
+        // de lo them vi nguoi goi da xac thuc, khong phai do tham do tai khoan ai do ton tai.
+        if (taiKhoan?.MatKhauBam is null)
+            return KetQuaDoiMatKhau.SaiMatKhauHienTai;
+
+        var ketQuaKiemTra = _hasher.VerifyHashedPassword(taiKhoan, taiKhoan.MatKhauBam, matKhauHienTai);
+        if (ketQuaKiemTra is not (PasswordVerificationResult.Success or PasswordVerificationResult.SuccessRehashNeeded))
+            return KetQuaDoiMatKhau.SaiMatKhauHienTai;
+
+        taiKhoan.MatKhauBam = _hasher.HashPassword(taiKhoan, matKhauMoi);
+        await dbNguoiDung.SaveChangesAsync(ct);
+        return KetQuaDoiMatKhau.ThanhCong;
+    }
+}
+
+public enum KetQuaDoiMatKhau
+{
+    ThanhCong,
+    SaiMatKhauHienTai,
+    MatKhauMoiQuaNgan,
 }

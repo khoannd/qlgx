@@ -1363,3 +1363,101 @@ vòng đời).
 gia `HonPhoi`, KHÔNG giả định "Chồng luôn là Nam".** Vai trò Chồng/Vợ (`ThanhVienGiaDinh.VaiTro`)
 và Nam/Nữ trên giấy chứng nhận là hai khái niệm khác nhau về mặt dữ liệu — tránh in sai giới
 tính nếu có bản ghi nhập lệch.
+
+### 35. Task "hai việc xác thực — khoá đăng nhập chéo giáo xứ và tự đổi mật khẩu" (2026-09-07) — các quyết định tự đưa ra
+
+Hai việc theo `WebApp/VIEC-TIEP-THEO.md` mục 2.1 (khoá đăng nhập khoá CHÉO giữa các giáo xứ —
+phát hiện M1 của `review-cuoi.md`) và 1.3 (màn hình tự đổi mật khẩu). Người dùng đang bận,
+không hỏi được — ghi lại các quyết định tự đưa ra.
+
+**a) M1 — sửa bằng cách thu hẹp danh sách ứng viên đăng nhập về ĐÚNG MỘT giáo xứ dựa trên
+TÊN ĐĂNG NHẬP ĐANG GÕ (không dựa trên "server có bao nhiêu giáo xứ").** Cân nhắc hai hướng:
+
+- Hướng bị loại: "cứ có ≥2 giáo xứ trên server thì luôn bắt chọn giáo xứ trước khi đăng nhập".
+  Đơn giản hơn để cài, nhưng vi phạm thẳng yêu cầu "đừng bắt người dùng chọn giáo xứ mỗi lần
+  đăng nhập nếu hệ thống chỉ có một" theo nghĩa rộng hơn: một khi có giáo xứ thứ hai (dù chỉ
+  một tài khoản không trùng tên ai), MỌI người dùng của MỌI giáo xứ đều bị bắt chọn thêm một
+  bước — phiền cho > 99% trường hợp chỉ để phòng cho một tên đăng nhập hiếm khi trùng.
+- Hướng đã chọn: `AuthService.DangNhap` tra cứu tên đăng nhập trên toàn máy chủ như cũ (đây là
+  truy vấn CHÉO GIÁO XỨ DUY NHẤT được phép, đã có từ trước), nhưng nếu tên đăng nhập đó chỉ tồn
+  tại ở MỘT giáo xứ (áp dụng cho 100% trường hợp của giáo xứ pilot hiện tại, và cho đa số tên
+  đăng nhập cá nhân dù server có nhiều giáo xứ) thì xử lý y hệt trước đây — không hỏi gì thêm,
+  không đổi trải nghiệm. CHỈ khi tên đăng nhập THẬT SỰ trùng ở ≥2 giáo xứ (ví dụ "vanphong" ở cả
+  giáo xứ A và B) mới dừng lại, trả về mã lỗi mới `CanChonGiaoXu` (HTTP 400) kèm danh sách các
+  giáo xứ trùng tên (chỉ Id + tên hiển thị), và bắt buộc client gửi lại đúng một `GiaoXuId` đã
+  chọn. Vì chỉ mục là `(GiaoXuId, TenTaiKhoan)` duy nhất, sau khi lọc theo `GiaoXuId` đã chọn,
+  danh sách ứng viên còn lại LUÔN LÀ 0 hoặc 1 tài khoản — không còn đường nào để một request
+  chạm tới/kiểm tra/tăng bộ đếm sai của tài khoản ở giáo xứ khác được nữa, đóng chặt lỗ hổng M1
+  bằng cấu trúc dữ liệu chứ không chỉ bằng kiểm tra điều kiện.
+
+**b) Đánh đổi bảo mật của việc "hỏi chọn giáo xứ khi trùng tên": rò rỉ có kiểm soát rằng một
+tên đăng nhập tồn tại ở nhiều giáo xứ (kèm TÊN các giáo xứ đó), CHƯA kiểm mật khẩu.** Đây là
+đánh đổi không tránh được của MỌI thiết kế "chọn tenant trước khi xác thực" (giống mô hình
+"chọn workspace" của các ứng dụng SaaS đa tổ chức dùng chung một trang đăng nhập) — không có
+cách nào để người dùng tự chọn đúng giáo xứ mà không tiết lộ giáo xứ nào có tên đăng nhập đó.
+Giảm nhẹ mức độ rò: (i) chỉ những tên đăng nhập THẬT SỰ trùng mới lộ gì (đa số không trùng, im
+lặng như cũ); (ii) tên giáo xứ vốn không phải bí mật trong hệ thống này — đã hiển thị công khai
+sau khi đăng nhập ở thanh trên (`AppShell.tsx`, mục 32 file này) và là thông tin một giáo xứ
+Công giáo thường công khai; (iii) KHÔNG kiểm mật khẩu/tăng bộ đếm sai ở bước hỏi này — một kẻ
+dò tên đăng nhập không thu được gì thêm ngoài "tên này trùng ở đâu", không đoán được mật khẩu
+nhanh hơn.
+
+**c) Endpoint mới không phải `GET /api/auth/giao-xu` (liệt kê TOÀN BỘ giáo xứ công khai) mà
+nhúng thẳng danh sách giáo xứ trùng tên vào phần thân lỗi 400 của chính `POST
+/api/auth/dang-nhap`.** Cân nhắc endpoint riêng trước, bỏ vì: (i) không cần thêm một endpoint
+ẩn danh mới lộ toàn bộ danh mục giáo xứ của máy chủ cho ai gọi cũng được — kể cả tên đăng nhập
+không tồn tại; (ii) một round-trip duy nhất (gửi lại đúng request cũ + `giaoXuId`) đơn giản hơn
+cho cả frontend lẫn test so với luồng tra-cứu-trước-rồi-mới-gửi.
+
+**d) Đổi mật khẩu — bắt buộc `matKhauHienTai` xác thực bằng CHÍNH `PasswordHasher<TaiKhoan>`
+đã dùng cho đăng nhập, KHÔNG tự chế cơ chế băm/so khớp nào khác.** `TaiKhoanId` của người đổi
+lấy từ claim `sub` của token (`ClaimTypes.NameIdentifier` sau ánh xạ mặc định của
+`JwtSecurityTokenHandler`, xác nhận bằng test `Doi_mat_khau_khong_dang_nhap_thi_bi_401` và ba
+test đổi mật khẩu thành công/sai/quá ngắn), kết hợp với `QlgxDbContext` tiêm qua DI (đã tự lọc
+theo `GiaoXuId` của claim) — không có tham số trình duyệt nào mang `TaiKhoanId`/`GiaoXuId` của
+người khác lọt vào được. Độ dài tối thiểu **8 ký tự**, đồng bộ với ngưỡng đã có sẵn ở
+`TaoTaiKhoanQuanTri.cs` (`QLGX_ADMIN_MAT_KHAU phai co it nhat 8 ky tu`) — không đặt ngưỡng riêng
+cho luồng tự đổi để tránh hai chuẩn lệch nhau.
+
+**e) Hai cột `CauHoiGoiY`/`CauTraLoiGoiY` KHÔNG được động tới** — đúng chốt trước đó (đã ghi ở
+`TaiKhoan.cs`), tự đổi mật khẩu ở đây chỉ cần mật khẩu HIỆN TẠI, không dùng câu hỏi gợi nhớ làm
+đường vòng nào.
+
+**f) Không ghi mật khẩu vào log — xác nhận bằng cách đọc lại toàn bộ đường đi:** không
+middleware log request body nào trong `Program.cs`, endpoint `/api/auth/mat-khau` chỉ trả
+`thongBao` cố định ("Mật khẩu hiện tại không đúng"/"Mật khẩu mới phải có ít nhất 8 ký tự"),
+không log ngoại lệ kèm giá trị mật khẩu ở bất kỳ nhánh nào của `AuthService.DoiMatKhauCuaToi`.
+
+**g) Giao diện: dùng lại nguyên khung `.hoidap-nen`/`.hoidap-hop` đã có (component `GxHoiDap`)
+thay vì tạo khung modal mới** — nhất quán với hộp thoại xác nhận sẵn có trong ứng dụng, không
+nhân đôi CSS. Thêm `input[type="password"]` vào cùng nhóm selector 12px với
+`input[type="text"]` trong `qlgx.css` (trước đây bị bỏ sót — ô mật khẩu màn hình đăng nhập cũ
+dùng cỡ chữ mặc định của trình duyệt, không phải lỗi MỚI do task này tạo ra nhưng tiện sửa
+luôn vì cùng nhóm input). Nút "Đổi mật khẩu" trong menu "Hệ thống" (cạnh "Đăng xuất") vốn đã có
+sẵn dạng `disabled` từ Task 14 — chỉ cần nối `onClick` thật, không đổi vị trí/nhãn.
+
+**h) Bắt buộc kiểm chứng bằng chạy thật:** dựng tài khoản tạm `tam_kt_doimk` trên `qlgx_thu`
+bằng CLI chính thức (`dotnet run -- tao-tai-khoan-quan-tri`), mở `Qlgx.Api` + `npm run dev`,
+dùng Playwright MCP: đăng nhập → mở modal đổi mật khẩu → thử sai mật khẩu hiện tại (bị từ chối,
+thông báo rõ, không đổi gì) → đổi đúng → đăng xuất → mật khẩu CŨ bị từ chối → mật khẩu MỚI đăng
+nhập được. Ảnh chụp `WebApp/anh-chup-kiem-thu/52`–`56`. Sau đó xoá tài khoản tạm bằng `psql`,
+xác nhận lại `qlgx_thu` chỉ còn `quantri` và dữ liệu vẫn đúng 2050/40/145.
+
+**i) Bằng chứng đỏ→xanh cho M1 (bắt buộc theo yêu cầu):** viết test
+`Khoa_dang_nhap_sai_khong_duoc_lan_sang_giao_xu_khac` TRƯỚC, tạm thời giữ nguyên logic cũ
+(`_ = giaoXuId;`, chưa lọc) — chạy `dotnet test --filter BaoMatTests` → **ĐỎ thật**
+(`Expected dangNhapB.StatusCode to be HttpStatusCode.OK ... but found HttpStatusCode.Unauthorized`,
+tài khoản "vanphong" của giáo xứ B bị khoá lây sau 10 lần sai ở giáo xứ A, đúng kịch bản M1 mô
+tả). Áp fix thật (thu hẹp theo `GiaoXuId`/ambiguity) → chạy lại → **XANH** (19/19
+`BaoMatTests`, cả test mới `Ten_dang_nhap_trung_o_hai_giao_xu_ma_khong_chon_thi_bi_yeu_cau_chon`
+cũng xanh). Tổng test cuối: backend 213/213 (207 + 6 mới: 2 test M1 + 4 test đổi mật khẩu),
+frontend 229/229 (228 + 1 test mới cho luồng chọn giáo xứ ở `LoginPage`).
+
+**j) Việc CHƯA làm trong phạm vi nhiệm vụ này** (không thuộc mục 2.1/1.3, cố tình không đụng
+vào): giới hạn đăng nhập theo IP (đã ghi nhận ở mục 31.d, vẫn treo); màn hình quản lý giáo xứ
+theo giáo phận (mục 2.3 của `VIEC-TIEP-THEO.md`); vai trò CSDL riêng cho RLS (mục 2.2). Trong
+lúc sửa cũng phát hiện `AuthService` giờ có HAI `QlgxDbContext` khác nhau trong cùng một class
+(`db` cục bộ dùng chuỗi kết nối QUẢN TRỊ cho `DangNhap`, và `dbNguoiDung` tiêm qua DI đã lọc
+tenant cho `DoiMatKhauCuaToi`) — đặt tên rõ ràng để không nhầm lẫn, nhưng đáng cân nhắc tách
+`AuthService` thành hai lớp riêng (xác thực đăng nhập vs. quản lý tài khoản của chính mình) nếu
+sau này còn thêm nghiệp vụ tự-phục-vụ khác — chưa làm vì phạm vi nhỏ, chỉ một phương thức.

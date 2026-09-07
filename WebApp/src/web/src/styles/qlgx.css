@@ -549,7 +549,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
    font khoảng 8-9pt ~ 12px) theo góp ý người dùng "form nhìn compact hơn". KHÔNG áp cho nhãn,
    tiêu đề, nút (những nơi đó có font-size riêng, xem .frow > label, .card-head h2, .btn) — chỉ
    chữ hiển thị bên trong các ô nhập. Sàn 12px để còn đọc được (đừng nhỏ hơn). */
-select, input[type="text"], input[type="date"], textarea {
+select, input[type="text"], input[type="password"], input[type="date"], textarea {
   border-radius: var(--r-field);
   border: 1px solid rgba(14,32,76,.13);
   background: rgba(255,255,255,.9);
@@ -560,8 +560,8 @@ select, input[type="text"], input[type="date"], textarea {
   outline: none;
   transition: border-color .15s ease, box-shadow .15s ease;
 }
-select:hover, input[type="text"]:hover, input[type="date"]:hover, textarea:hover { border-color: rgba(29,93,219,.35); }
-select:focus, input[type="text"]:focus, input[type="date"]:focus, textarea:focus {
+select:hover, input[type="text"]:hover, input[type="password"]:hover, input[type="date"]:hover, textarea:hover { border-color: rgba(29,93,219,.35); }
+select:focus, input[type="text"]:focus, input[type="password"]:focus, input[type="date"]:focus, textarea:focus {
   border-color: var(--brand);
   box-shadow: 0 0 0 3px rgba(29,93,219,.16);
 }

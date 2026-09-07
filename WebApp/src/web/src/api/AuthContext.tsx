@@ -18,7 +18,9 @@ type AuthContextValue = {
    * được hiện màn hình đăng nhập nhầm rồi lại nhảy sang đã đăng nhập (giật màn hình). */
   dangKiemTraPhien: boolean
   nguoiDung: NguoiDungHienTai | null
-  dangNhap: (tenTaiKhoan: string, matKhau: string) => Promise<void>
+  /** `giaoXuId` chỉ cần truyền khi lượt gọi trước đó ném `CanChonGiaoXu` (tên đăng nhập
+   * trùng ở nhiều giáo xứ) — xem `api/client.ts`. */
+  dangNhap: (tenTaiKhoan: string, matKhau: string, giaoXuId?: string) => Promise<void>
   /** `xoaCaBanNhap` (mặc định `true`) quyết định có xoá bản nháp ngoại tuyến (`lib/banNhap.ts`)
    * của tài khoản này hay không — `true` cho hành động đăng xuất CHỦ ĐỘNG (nút "Đăng xuất"),
    * `false` khi bị đăng xuất BUỘC vì token hết hạn (401, xem `authStore.dangKy401` bên dưới):
@@ -65,8 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setDangKiemTraPhien(false))
   }, [])
 
-  const dangNhap = useCallback(async (tenTaiKhoan: string, matKhau: string) => {
-    const ketQua = await api.auth.dangNhap(tenTaiKhoan, matKhau)
+  const dangNhap = useCallback(async (tenTaiKhoan: string, matKhau: string, giaoXuId?: string) => {
+    const ketQua = await api.auth.dangNhap(tenTaiKhoan, matKhau, giaoXuId)
     authStore.datToken(ketQua.token)
     setNguoiDung({
       tenTaiKhoan: ketQua.nguoiDung.tenTaiKhoan,

@@ -290,6 +290,10 @@ export type DangNhapKetQua = {
   nguoiDung: ThongTinNguoiDung
 }
 
+/** Ánh xạ 1-1 với GiaoXuLuaChonDto — dùng khi tên đăng nhập trùng ở nhiều giáo xứ và máy chủ
+ * yêu cầu người dùng chọn đúng giáo xứ trước khi đăng nhập (xem AuthService.DangNhap). */
+export type GiaoXuLuaChon = { id: string; tenGiaoXu: string }
+
 /** Ánh xạ 1-1 với TaiKhoanItemDto — một dòng lưới màn hình Quản lý tài khoản. */
 export type TaiKhoanItem = {
   id: string

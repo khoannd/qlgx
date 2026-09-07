@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { SideNav } from './SideNav'
+import { DoiMatKhauModal } from './DoiMatKhauModal'
 import { useAuth } from '../../api/AuthContext'
 
 type NguoiDungHienTai = {
@@ -47,6 +48,7 @@ export function AppShell({ dangChonNav, onNavigate, children, nguoiDung }: Props
   // thống" phải bấm được thật ngay từ Task 14. Bật/tắt bằng state đơn giản, đóng khi bấm ra
   // ngoài — không cần thư viện menu nào cho ba nút này.
   const [menuMo, setMenuMo] = useState<string | null>(null)
+  const [doiMatKhauMo, setDoiMatKhauMo] = useState(false)
   const khungRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     function onClickNgoai(e: MouseEvent) {
@@ -114,7 +116,7 @@ export function AppShell({ dangChonNav, onNavigate, children, nguoiDung }: Props
             <button type="button" disabled>Xuất dữ liệu ra Excel</button>
             <button type="button" disabled>Khôi phục dữ liệu</button>
             <hr />
-            <button type="button" disabled>Đổi mật khẩu</button>
+            <button type="button" onClick={() => { setMenuMo(null); setDoiMatKhauMo(true) }}>Đổi mật khẩu</button>
             <button type="button" onClick={() => { setMenuMo(null); dangXuat() }}>Đăng xuất</button>
           </div>
           <div className="menu-pop" id="m2" hidden={menuMo !== 'm2'}>
@@ -140,6 +142,8 @@ export function AppShell({ dangChonNav, onNavigate, children, nguoiDung }: Props
           {children}
         </main>
       </div>
+
+      {doiMatKhauMo && <DoiMatKhauModal onDong={() => setDoiMatKhauMo(false)} />}
     </div>
   )
 }
