@@ -63,8 +63,9 @@ Yêu cầu bắt buộc:
 
 ### 2.2. `VersionConfig.xml`
 
-Chính là file trong kho `qlgx` (`BIN/VersionConfig.xml`) của bản phát hành mới nhất, chép
-nguyên xi. Cấu trúc rút gọn:
+Chính là file `Release/VersionConfig.xml` trong kho **`qlgx_bin`** (không phải `BIN/` của
+kho `qlgx` — xem hộp cảnh báo dưới đây) của bản phát hành mới nhất, chép nguyên xi. Cấu
+trúc rút gọn:
 
 ```xml
 <?xml version="1.0" encoding="utf-8" ?>
@@ -88,6 +89,25 @@ Bắt buộc:
   `<downloadpath>` của máy chủ trở thành địa chỉ gốc của máy người dùng từ đó về sau.
   Đây cũng là cách các máy dùng địa chỉ cũ tự chuyển sang địa chỉ mới (xem mục 3).
 - `Content-Type: application/xml` hoặc `text/xml`.
+- **Xuống dòng trong `<info>` phải là CRLF (`\r\n`), không phải LF (`\n`) đơn thuần.**
+  Hộp thoại "Đã có phiên bản mới" của phần mềm hiển thị đoạn `<info>` bằng một control
+  WinForms chỉ nhận `\r\n` làm dấu xuống dòng — `\n` đơn thuần bị bỏ qua, làm cả đoạn ghi
+  chú dồn thành một khối chữ không xuống dòng. **Đã xảy ra thật**: file trên GitHub (kho
+  `qlgx_bin`) lưu xuống dòng Unix vì git tự chuẩn hoá lúc commit trên Windows
+  (`core.autocrlf`), nên máy chủ đọc thẳng về mà không xử lý gì thì sẽ dính đúng lỗi này.
+
+> **Vì sao đọc từ `qlgx_bin` chứ không phải `BIN/` của `qlgx`:** `BIN/` là thư mục build,
+> đổi liên tục khi phát triển bình thường (mỗi lần build local đều ghi đè). Nếu máy chủ
+> đọc thẳng từ đó, một commit `BIN/VersionConfig.xml` bất kỳ trên `master` — kể cả khi
+> chưa hề có ý định phát hành — sẽ lập tức khiến **mọi máy đã cài QLGX** nhận thông báo
+> "có bản mới", trong khi file `.zip` tương ứng còn chưa tồn tại. `qlgx_bin` chỉ nhận
+> commit đúng lúc phát hành thật (xem lịch sử commit của repo đó), nên ổn định hơn hẳn làm
+> nguồn cho một API công khai, gọi liên tục bởi mọi máy người dùng.
+>
+> **Hệ quả cho quy trình phát hành:** phải chép `Release/VersionConfig.xml` VÀ
+> `Release/thong_tin_cap_nhat.htm` từ kho `qlgx` sang `qlgx_bin` rồi commit — xem
+> `QUY_TRINH_PHAT_HANH.md` mục 5.1. Quên bước này thì máy chủ vẫn báo bản cũ dù kho `qlgx`
+> đã có bản mới.
 
 ### 2.3. `download-update`
 
@@ -110,7 +130,7 @@ chuyển hướng dạng "bấm vào đây để tải".
 ### 2.4. `help/thong_tin_cap_nhat.htm`
 
 Trang HTML ghi chú phát hành, mở bằng trình duyệt mặc định. Chính là file
-`BIN/help/thong_tin_cap_nhat.htm` trong kho `qlgx`.
+`Release/thong_tin_cap_nhat.htm` trong kho **`qlgx_bin`** — cùng lý do với mục 2.2.
 
 ---
 

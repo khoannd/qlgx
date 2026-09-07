@@ -202,27 +202,49 @@ các route liệt kê dưới đây. Tóm tắt nhanh:
 | Đường dẫn (chính thức, từ 4.0.2) | Trả về |
 | --- | --- |
 | `GET /capnhat/version.txt` | số phiên bản 4 phần, ví dụ `4.0.2.0`, KHÔNG BOM |
-| `GET /capnhat/VersionConfig.xml` | chép nguyên xi `BIN/VersionConfig.xml` mới nhất |
+| `GET /capnhat/VersionConfig.xml` | chép nguyên xi `Release/VersionConfig.xml` mới nhất trong kho `qlgx_bin` |
 | `GET /capnhat/download-update` | 302 sang gói `.zip` đúng phiên bản trong `qlgx_bin` |
-| `GET /capnhat/help/thong_tin_cap_nhat.htm` | chép nguyên xi `BIN/help/thong_tin_cap_nhat.htm` |
+| `GET /capnhat/help/thong_tin_cap_nhat.htm` | chép nguyên xi `Release/thong_tin_cap_nhat.htm` trong `qlgx_bin` |
 
 Cộng thêm **8 đường dẫn cũ**, nội dung y hệt bốn cái trên, bắt buộc giữ sống mãi cho các
 đời phần mềm phát hành trước khi có `/capnhat/` (xem bảng đầy đủ trong hợp đồng):
 `/version.txt`, `/VersionConfig.xml`, `/download.asp`, `/help/thong_tin_cap_nhat.htm` ở
 gốc domain (đời 3.3.7 trở về trước), và bản sao dưới `/4.0/` (đời 4.0.0–4.0.1).
 
-**Nguồn dữ liệu — Cách B, tự đọc GitHub, không có bước tải file lên tay:**
-`src/lib/update-server.ts` đọc `BIN/VersionConfig.xml` và `BIN/help/thong_tin_cap_nhat.htm`
-từ kho `qlgx` (qua `GITHUB_RAW_BASE`), và suy ra tên gói `.zip` (từ thuộc tính `display`,
-theo đúng quy ước `qlgx_<phiên_bản>_update.zip`) để 302 sang kho **`qlgx_bin`** (qua
-`QLGX_BIN_RAW_BASE` — một repo GitHub **khác**, chỉ chứa file nhị phân, tách khỏi `qlgx`
-để không làm phình kho mã nguồn). Kết quả: phát hành một bản mới chỉ cần `git push` cả
-hai kho, không cần đụng gì tới `landing/` — xem `QUY_TRINH_PHAT_HANH.md` mục 5.1 ở gốc
-kho `qlgx`.
+**Nguồn dữ liệu — Cách B, tự đọc GitHub, không có bước tải file lên tay cho `landing/`:**
+`src/lib/update-server.ts` đọc `Release/VersionConfig.xml` và
+`Release/thong_tin_cap_nhat.htm` từ kho **`qlgx_bin`** (qua `QLGX_BIN_RAW_BASE`), và suy ra
+tên gói `.zip` (từ thuộc tính `display`, theo đúng quy ước `qlgx_<phiên_bản>_update.zip`)
+để 302 cũng sang chính kho đó.
+
+> **Bẫy đã gặp thật, sửa ngay trong buổi triển khai:** bản đầu đọc `BIN/VersionConfig.xml`
+> từ kho **`qlgx`** (`GITHUB_RAW_BASE`), không phải `qlgx_bin`. Vấn đề: `BIN/` là thư mục
+> build, đổi liên tục khi phát triển bình thường — một commit build bất kỳ trên `master`
+> (chưa hề định phát hành) sẽ khiến API báo "có bản mới" cho mọi máy ngay lập tức, trong
+> khi gói `.zip` tương ứng còn chưa tồn tại trong `qlgx_bin`. Đổi sang đọc `qlgx_bin` (repo
+> chỉ nhận commit đúng lúc phát hành thật) mới đúng — kèm theo đó, quy trình phát hành có
+> thêm một bước: chép `Release/VersionConfig.xml` và `Release/thong_tin_cap_nhat.htm` từ
+> `qlgx` sang `qlgx_bin` rồi mới commit (xem `QUY_TRINH_PHAT_HANH.md` mục 5.1).
+>
+> `qlgx_bin` vốn đã tách khỏi `qlgx` để không làm phình kho mã nguồn bằng file nhị phân —
+> giờ nó còn đóng thêm vai trò "nguồn ổn định" cho API công khai này.
 
 Có nhớ tạm 5 phút bằng Cache API của Worker (cùng kỹ thuật với endpoint tải ở trên) —
 bắt buộc, vì `version.txt` bị gọi ở **mỗi lần mở chương trình** bởi mọi máy đã cài QLGX,
-không cache là dội GitHub liên tục.
+không cache là dội GitHub liên tục. Bộ nhớ đệm chỉ lưu nội dung THÔ lấy từ GitHub — các
+bước xử lý thêm (bỏ BOM, chuẩn hoá CRLF, xem ngay dưới) chạy lại ở MỌI lượt trả lời, kể cả
+khi trúng cache, nên sửa các bước đó có hiệu lực ngay, không phải đợi hết 5 phút.
+
+> **Bẫy thứ hai cũng gặp thật, cùng buổi:** đã kiểm chứng bằng cách cài bản 4.0.2 thật lên
+> máy Windows và bấm "Kiểm tra phiên bản mới" — hộp thoại hiện đúng nội dung nhưng **mất
+> hết xuống dòng**, dồn thành một khối chữ. Nguyên nhân: GitHub raw phục vụ file theo xuống
+> dòng Unix (`\n`) vì `core.autocrlf` của git chuẩn hoá CRLF→LF lúc commit trên Windows, còn
+> control hiển thị của WinForms (`RichTextBox`) chỉ nhận `\r\n` làm dấu xuống dòng — `\n`
+> đơn thuần bị bỏ qua. `getVersionConfigXml()` giờ tự chuẩn hoá lại thành CRLF trước khi trả
+> về. Cùng lúc đó phát hiện thêm: response thật trên Cloudflare Workers có BOM (`EF BB BF`)
+> ở đầu dù bản thử bằng `next start` trên Node thì không (`Response.text()` xử lý BOM khác
+> nhau giữa hai runtime) — đã tự bỏ BOM luôn cho chắc, đúng tinh thần cảnh báo BOM đã có sẵn
+> trong `HOP_DONG_MAY_CHU_CAP_NHAT.md`.
 
 **Vì sao các route nằm ở những đường dẫn "lạ"** (`src/app/4.0/`, `src/app/download.asp/`,
 `src/app/capnhat/help/thong_tin_cap_nhat.htm/`): Next.js App Router chấp nhận tên thư mục

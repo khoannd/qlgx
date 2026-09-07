@@ -243,20 +243,37 @@ Làm y hệt cho kho `qlgx_bin` (chỉ có `master` và thẻ).
 > xem mục 5.1. Việc còn phải làm tay là nội dung marketing trên trang chủ — mục 5.2,
 > **hoàn toàn khác** và **dễ quên** vì trước đây không tồn tại bước này.
 
-### 5.1. Máy chủ cập nhật (API mà chính phần mềm tự gọi) — tự động, không cần làm gì
+### 5.1. Máy chủ cập nhật (API mà chính phần mềm tự gọi) — một bước chép file, sau đó tự động
 
 `quanlygiaoxu.net/capnhat/*` (và các đường dẫn cũ `/version.txt`, `/VersionConfig.xml`,
-`/download.asp`, `/help/thong_tin_cap_nhat.htm`, cùng bản sao dưới `/4.0/`) đọc thẳng nội
-dung mới nhất từ GitHub mỗi khi có người gọi, có nhớ tạm 5 phút. Nghĩa là:
+`/download.asp`, `/help/thong_tin_cap_nhat.htm`, cùng bản sao dưới `/4.0/`) đọc
+`Release/VersionConfig.xml` và `Release/thong_tin_cap_nhat.htm` từ kho **`qlgx_bin`**
+(`D:\Working\QLGX\qlgx_bin`) — **không phải** `BIN/` của kho `qlgx`. Lý do: `BIN/` là thư
+mục build, đổi liên tục khi phát triển bình thường; đọc thẳng từ đó thì một commit build
+bất kỳ (chưa hề định phát hành) cũng khiến mọi máy nhận báo "có bản mới". `qlgx_bin` chỉ
+nhận commit đúng lúc phát hành thật nên ổn định hơn hẳn.
 
-**Ngay khi bước 4 (commit và đẩy lên GitHub) xong, mọi thứ đã tự lên** — chậm nhất 5 phút
-sau `git push` là API trả đúng bản mới, không cần đụng gì tới `landing/`.
+**Vì vậy có thêm một bước không tự động**, làm ngay sau bước 4 (đẩy lên GitHub), **trước
+khi coi như xong**:
+
+```bash
+cp "D:\Working\QLGX\Github\Release\VersionConfig.xml"        "D:\Working\QLGX\qlgx_bin\Release\VersionConfig.xml"
+cp "D:\Working\QLGX\Github\Release\thong_tin_cap_nhat.htm"    "D:\Working\QLGX\qlgx_bin\Release\thong_tin_cap_nhat.htm"
+cd "D:\Working\QLGX\qlgx_bin"
+git add Release/VersionConfig.xml Release/thong_tin_cap_nhat.htm
+git commit -m "Cap nhat VersionConfig.xml va ghi chu cho ban <x.y.z>"
+git push origin master
+```
+
+Sau bước này, `/capnhat/*` tự đọc bản mới trong tối đa 5 phút (bộ nhớ đệm) — không cần
+đụng gì tới `landing/`.
 
 Cách hoạt động và toàn bộ hợp đồng với phần mềm desktop (kể cả cái bẫy so sánh số phiên
-bản bằng chuỗi) nằm ở `HOP_DONG_MAY_CHU_CAP_NHAT.md`. Mã nguồn API nằm ở
-`landing/src/lib/update-server.ts` và các route dưới `landing/src/app/`.
+bản bằng chuỗi, và vì sao `<info>` phải xuống dòng CRLF) nằm ở
+`HOP_DONG_MAY_CHU_CAP_NHAT.md`. Mã nguồn API nằm ở `landing/src/lib/update-server.ts` và
+các route dưới `landing/src/app/`.
 
-Kiểm chứng nhanh sau khi push:
+Kiểm chứng nhanh sau khi push cả hai kho:
 
 ```bash
 curl -s https://quanlygiaoxu.net/capnhat/version.txt          # phải ra đúng value mới, không BOM
@@ -266,8 +283,9 @@ curl -sI http://quanlygiaoxu.net/version.txt                   # đường dẫn
 ```
 
 Nếu `version.txt` chưa đổi sau vài phút: có thể còn dính bộ nhớ đệm 5 phút, đợi thêm; nếu
-vẫn sai sau đó, kiểm tra `BIN/VersionConfig.xml` đã thật sự lên `master` trên GitHub chưa
-(`curl https://raw.githubusercontent.com/khoannd/qlgx/master/BIN/VersionConfig.xml`).
+vẫn sai sau đó, kiểm tra `Release/VersionConfig.xml` đã thật sự lên `master` của **`qlgx_bin`**
+chưa (`curl https://raw.githubusercontent.com/khoannd/qlgx_bin/master/Release/VersionConfig.xml`)
+— quên bước chép file ở trên là nguyên nhân hay gặp nhất.
 
 ### 5.2. Nội dung marketing trên trang chủ — VẪN PHẢI LÀM TAY
 
