@@ -8,6 +8,8 @@ import { GiaoDanListPage } from './screens/GiaoDanListPage'
 import { GiaoDanDetailPage } from './screens/GiaoDanDetailPage'
 import { TaiKhoanListPage } from './screens/TaiKhoanListPage'
 import { GiaoHoListPage } from './screens/GiaoHoListPage'
+import { HoiDoanListPage } from './screens/HoiDoanListPage'
+import { HoiDoanDetail } from './screens/HoiDoanDetail'
 import { DotBiTichListPage } from './screens/DotBiTichListPage'
 import { DotBiTichDetail } from './screens/DotBiTichDetail'
 import { RaoHonPhoiListPage } from './screens/RaoHonPhoiListPage'
@@ -171,6 +173,21 @@ function App() {
     mo({ id: 'giaoHoList', tieuDe: 'Giáo họ', noiDung: <GiaoHoListPage /> })
   }
 
+  function moDanhSachHoiDoan() {
+    mo({ id: 'hoiDoanList', tieuDe: 'Danh sách hội đoàn', noiDung: <HoiDoanListPage moHoiDoan={moChiTietHoiDoan} /> })
+  }
+
+  function moChiTietHoiDoan(id: string | null) {
+    const idThe = id ? `hoiDoan:${id}` : `hoiDoanMoi:${++moiDem.current}`
+    mo({
+      id: idThe,
+      tieuDe: id ? 'Hội đoàn' : 'Hội đoàn mới',
+      noiDung: (
+        <HoiDoanDetail id={id} onTieuDe={(ten) => suaTieuDe(idThe, ten)} onDaLuu={moDanhSachHoiDoan} />
+      ),
+    })
+  }
+
   function moQuanLyGiaoXu() {
     mo({ id: 'quanLyGiaoXu', tieuDe: 'Quản lý giáo xứ', noiDung: <QuanLyGiaoXuPage /> })
   }
@@ -196,6 +213,7 @@ function App() {
     else if (id === 'giaoDanList') moDanhSachGiaoDan()
     else if (id === 'taiKhoanList') moQuanLyTaiKhoan()
     else if (id === 'giaoHoList') moGiaoHoList()
+    else if (id === 'hoiDoanList') moDanhSachHoiDoan()
     else if (id === 'dotBiTichList') moDanhSachSoBiTich()
     else if (id === 'raoHonPhoiList') moDanhSachRaoHonPhoi()
     else if (id === 'quanLyGiaoXu') moQuanLyGiaoXu()

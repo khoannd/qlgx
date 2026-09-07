@@ -361,6 +361,35 @@ export type GiaoHo = {
   giaoHoChaId: string | null
 }
 
+/** Ánh xạ 1-1 với HoiDoanQuanLyDto — một dòng trên màn hình "Danh sách hội đoàn" (cấp quản lý
+ * danh mục, khác HoiDoanDanhMuc/HoiDoanCuaGiaoDan ở trên — xem
+ * docs/superpowers/specs/man-hinh/hoi-doan-danh-sach.md). */
+export type HoiDoanQuanLy = {
+  id: string
+  maHoiDoanCu: number
+  tenHoiDoan: string
+  thanhBonMang: string | null
+  ngayBonMang: string | null
+  ngayThanhLap: string | null
+  ghiChu: string | null
+  soHoiVienDangHoatDong: number
+  rowVersion: number
+}
+
+/** Ánh xạ 1-1 với ThanhVienHoiDoanDto — một hội viên trên lưới của màn hình chi tiết hội
+ * đoàn. */
+export type ThanhVienHoiDoan = {
+  chiTietId: string
+  giaoDanId: string
+  hoTen: string
+  tenThanh: string | null
+  ngayVaoHoiDoan: string | null
+  ngayRaHoiDoan: string | null
+  vaiTro: string | null
+  daRaKhoiHoiDoan: boolean
+  rowVersion: number
+}
+
 /** Ánh xạ 1-1 với GiaoDanTimKiemDto — một kết quả tìm kiếm cho GxPicker thật (gõ để tìm Tên
  * Cha/Mẹ, Người nam/nữ…), KHÔNG phải bộ cột đầy đủ của lưới danh sách giáo dân. */
 export type GiaoDanTimKiem = {

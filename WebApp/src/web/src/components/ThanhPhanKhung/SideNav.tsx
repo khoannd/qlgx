@@ -20,7 +20,7 @@ const DANH_SACH_DIEU_HUONG: NhomDieuHuong[] = [
     muc: [
       { id: 'giaoDanList', nhan: 'Danh sách giáo dân' },
       { id: 'giaDinhList', nhan: 'Danh sách gia đình' },
-      { nhan: 'Danh sách hội đoàn' },
+      { id: 'hoiDoanList', nhan: 'Danh sách hội đoàn' },
     ],
   },
   {

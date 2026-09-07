@@ -3221,3 +3221,107 @@ rác trong hai spec đó, gom lại đây theo đúng quy ước của file này
 `RaoHonPhoiTests` + 38 `Qlgx.Data.Tests` + 24 `Qlgx.Migration.Tests`), frontend **336/336** (330
 cũ + 6 test mới `DotBiTichList.test.tsx`/`RaoHonPhoiList.test.tsx`). `dotnet build`/`npm run
 build` đều chạy được.
+
+### 56. Task "migrate Giáo họ (hoàn thiện) + Danh sách hội đoàn" (2026-09-08)
+
+Hai spec mới/cập nhật: `giao-ho.md` (mới, thay phần cũ ở `quan-ly-giao-xu.md` mục 9), và
+`hoi-doan-danh-sach.md` (mới — màn hình quản trị danh mục hội đoàn, khác hẳn `hoi-doan.md` vốn
+chỉ nói về tab "Hội đoàn" trong chi tiết giáo dân).
+
+**Giáo họ — phát hiện lúc nghiên cứu, đã sửa ngay (không migrate y hệt, có lý do):**
+
+- **Sửa lỗi logic kiểm tra trùng tên** của `checkInput()` gốc
+  (`Source/ChuongTrinh/frmGiaoHo.cs:128-135`): điều kiện OR thứ hai tự mâu thuẫn
+  (`MaGiaoHoCha != -1 && MaGiaoHoCha == -1`, luôn `false`) nên bản gốc **chỉ** kiểm tra trùng
+  tên được cho giáo họ CẤP 1, không bao giờ chạy cho giáo khu con. Bản web áp dụng kiểm tra
+  trùng tên (cùng `GiaoHoChaId`) cho MỌI cấp — đây là MỘT LỆCH có chủ đích khỏi nguyên tắc
+  "migrate y hệt kể cả chỗ sai", vì giữ nguyên nghĩa là cho phép tạo hai giáo khu trùng tên
+  trong cùng một giáo họ cha mà không có lý do nghiệp vụ nào biện minh (khác lỗi chính tả vô
+  hại). Cần người dùng xác nhận đây đúng là điều họ muốn.
+- **Không dựng lại UI đệ quy "mở form con quản lý Giáo khu"** (double-click một giáo họ mở một
+  `frmGiaoHo` MỚI quản lý con của nó, `EditGiaoHoRow`, `frmGiaoHo.cs:518-533`) — bản web dùng
+  một màn hình phẳng (`GiaoHoListPage.tsx`) với select "Giáo họ cha" ngay trong form thêm/sửa
+  và một cột "Giáo họ cha" trên lưới. Lý do: dữ liệu thật hiện chỉ có 1 giáo họ, không giáo khu
+  nào — dựng lại đúng cơ chế đệ quy tốn công cho tính năng chưa ai dùng; cấu trúc dữ liệu
+  (`GiaoHoChaId`) đã sẵn sàng nếu cần nâng cấp UI sau. Cần người dùng xác nhận cách đơn giản hoá
+  này đủ dùng.
+- Vẫn **không có nút xoá** (giữ nguyên quyết định mục 37) — cascade xoá của bản gốc xoá luôn cả
+  Giáo dân/Gia đình/Bí tích/Hôn phối/Chuyển xứ/Rao hôn phối gắn với giáo họ đó
+  (`frmGiaoHo.cs:325-467`), rủi ro quá lớn cho một nút bấm nhầm.
+- Đã đọc kỹ mốc "Ngoài xứ" (`MaGiaoHo=0`) theo yêu cầu — xác nhận mốc này thuộc cột
+  `GiaoDan.MaGiaoHo`/`GiaDinh.MaGiaoHo` (khoá ngoại trỏ tới `giao_ho`), KHÔNG phải một dòng
+  trong chính bảng `GiaoHo` — màn hình danh mục Giáo họ không cần xử lý gì đặc biệt cho mốc
+  này, bản web đã xử lý đúng ở nơi cần (`GiaoDanDetail.tsx`/`GiaDinhList.tsx`, hằng số
+  `NGOAI_XU`). Không có gì cần sửa ở đây.
+
+**Danh sách hội đoàn — phạm vi cố ý thu hẹp (không migrate y hệt các hộp thoại Yes/No/Cancel
+mập mờ của `frmHoiDoan.cs`, xem `hoi-doan-danh-sach.md` mục 4/8 để đọc đầy đủ từng bước gốc):**
+
+- Không migrate kiểm tra "đúng 1 hội trưởng" (`ktHoiTruong`, `frmHoiDoan.cs:511-557`) — chuỗi
+  Yes/No/Cancel gốc tự mâu thuẫn (có nhánh chặn cứng, có nhánh chỉ cảnh báo, có nhánh đóng cả
+  form) và giá trị "Trưởng hội đoàn" chỉ là một chuỗi tự do trong `VaiTro`, không có ràng buộc
+  CSDL. Ưu tiên: Trung bình nếu giáo xứ cần đảm bảo mỗi hội đoàn có đúng 1 hội trưởng.
+- Không migrate cảnh báo "ngày vào/ra không được ở tương lai", "trùng tên hội đoàn", "cần ít
+  nhất 1 hội viên khi lưu hội đoàn" — xem lý do chi tiết ở `hoi-doan-danh-sach.md` mục 8. Ưu
+  tiên: Thấp (không mất dữ liệu, chỉ mất một lớp nhắc nhở).
+- Không migrate nút "In" (xuất `.xls` danh sách hội viên) — chưa nối hạ tầng ClosedXML cho màn
+  hình này. Ưu tiên: Thấp-Trung bình.
+- **Cố ý MỞ RỘNG**: hội đoàn và hội viên lưu RIÊNG (mỗi thao tác gọi API ngay) thay vì gộp một
+  giao dịch "OK" duy nhất như bản gốc; cho sửa trực tiếp Ngày vào/ra/Vai trò của một hội viên
+  đã có qua form riêng (không sửa trên ô lưới); RowVersion chống ghi đè cho cả `HoiDoan` lẫn
+  `ChiTietHoiDoan`; **có nút xoá hội đoàn** (khác Giáo họ — "bán kính nổ" chỉ giới hạn trong
+  `ChiTietHoiDoan` của chính nó, không đụng Giáo dân/Gia đình gốc, nên chấp nhận migrate y hệt
+  tinh thần "xoá cả hội viên" của bản gốc, chỉ đổi cơ chế cascade từ DELETE tay sang khoá ngoại
+  `ON DELETE CASCADE`).
+
+**Lỗi tự phát hiện lúc kiểm thử bằng trình duyệt thật (đã sửa trong task này, không phải hành
+vi desktop cố ý giữ lại):** `HoiDoanDetail.tsx` truyền thẳng `onIsoChange` của `GxDate` vào
+setter state cho 4 ô ngày (Ngày bổn mạng/Ngày thành lập của hội đoàn, Ngày vào/ra của hội viên)
+mà không đổi chuỗi rỗng `''` (trạng thái "chưa nhập") thành `null` trước khi gửi API — khác các
+màn hình khác đã có sẵn quy ước `onIsoChange={(iso) => setX(iso || null)}` (ví dụ
+`GiaoDanDetail.tsx`). Hậu quả: để trống "Ngày ra hội đoàn" rồi bấm Lưu → gửi `ngayRaHoiDoan: ""`
+→ .NET không bind được `""` vào `DateOnly?` → 400 Bad Request, lộ ra khi kiểm thử bằng trình
+duyệt thật (bắt được ở `PUT /api/hoi-doan/thanh-vien/{id}`, xác nhận qua
+`browser_network_request`). Đã sửa cả 4 chỗ trong `HoiDoanDetail.tsx`. Bài học: mọi `<GxDate
+onIsoChange={setX}>` không qua khâu chuẩn hoá `|| null` là một lỗi tiềm ẩn — nên kiểm lại các
+màn hình khác nếu thấy pattern này.
+
+**Phát hiện môi trường**: `hoi_doan`/`chi_tiet_hoi_doan` KHÔNG rỗng như mô tả ban đầu của
+nhiệm vụ — đã có sẵn 2 hội đoàn ("Legio Mariae", "Gia trưởng") do một **phiên Claude khác chạy
+song song** tạo ra (đúng cảnh báo ở đầu CLAUDE.md). Không đụng tới dữ liệu đó — mọi thao tác
+kiểm thử của task này dùng một hội đoàn có tên đánh dấu riêng ("...thử nghiệm agent-A") để
+không lẫn với dữ liệu của phiên kia, và chỉ xoá đúng bản ghi đó khi dọn dẹp.
+
+**Trục trặc thao tác kiểm thử (ghi lại để người sau khỏi mất công điều tra lại)**: click chuột
+thật (Playwright `browser_click`) vào một ô của lưới hội viên (`GxGrid`/AG Grid) trong
+`HoiDoanDetail` bị chặn bởi kiểm tra "actionability" của Playwright (báo `ag-root-wrapper`
+chặn sự kiện) dù phần tử hiển thị bình thường — vòng qua bằng cách bắn thẳng sự kiện
+`mousedown`/`mouseup`/`click` qua `dispatchEvent`. Cùng loại `GxGrid` ở lưới danh mục hội đoàn
+(bảng lớn hơn, không lồng trong card cuộn) lại click bình thường được — nghi ngờ liên quan tới
+việc lưới hội viên nằm trong khối `overflow`/chiều cao cố định (380px) lồng trong `card`, nhưng
+CHƯA xác nhận đây có phải vấn đề thật cho người dùng dùng chuột thật hay chỉ là giới hạn của
+kiểm thử tự động. Ghi vào đây để theo dõi — nếu người dùng thật báo "bấm vào dòng hội viên
+không chọn được", đây là manh mối đầu tiên cần xem lại.
+
+**Chứng minh bằng chạy thật (2026-09-07/08, giáo xứ Vô Nhiễm, tài khoản `giaoxu`):**
+
+- Giáo họ: thấy đúng "Simon Phan Đắc Hòa" (mã cũ 1) → thêm "Giáo họ Thánh Giuse (thử nghiệm)"
+  (`140`, `141`) → sửa tên + gán làm giáo khu con của "Simon Phan Đắc Hòa" (xác nhận
+  `giao_ho_cha_id` đúng qua `psql`) → xoá bằng `psql` (không có nút xoá trên UI theo đúng thiết
+  kế) → tải lại xác nhận về đúng 1 giáo họ như ban đầu (`142`).
+- Hội đoàn: tạo "Hiền Mẫu (thử nghiệm agent-A)" đủ 6 trường qua chính giao diện (`143`) → mở lại
+  từ danh mục → thêm hội viên thật (giáo dân #507 "Anna Bùi Lê Minh Luận") qua `GxPicker`, mặc
+  định đúng Vai trò "Hội viên" → sửa Ngày vào hội đoàn + Vai trò thành "Trưởng hội đoàn" (bắt
+  được và sửa lỗi 400 nói trên trong lúc này) → xác nhận qua `psql` → dùng checkbox "Hiện cả
+  người đã ra khỏi hội đoàn" → xoá hội đoàn qua nút "Xóa hội đoàn" của chính màn hình, xác nhận
+  cascade xoá luôn hội viên (`144`, `145`) → `psql` xác nhận `hoi_doan`/`chi_tiet_hoi_doan` trở
+  về đúng 2/2 dòng (dữ liệu của phiên song song, không phải 0 — xem "Phát hiện môi trường" ở
+  trên).
+- Toàn bộ 6 số liệu nền tảng không đổi trước/sau: **2050 giáo dân / 40 gia đình / 145 thành
+  viên / 1 giáo họ / 1108 đợt bí tích / 6150 bí tích chi tiết**.
+
+**Số test cuối:** backend **287/287** (225 `Qlgx.Api.Tests` gồm 5 test mới `HoiDoanQuanLyTests`
++ 4 test mới `GiaoHoTests` + 38 `Qlgx.Data.Tests` + 24 `Qlgx.Migration.Tests`), frontend
+**346/346** (336 cũ + 3 test mới `GiaoHoListPage.test.tsx` + 3 `HoiDoanListPage.test.tsx` + 5
+`HoiDoanDetail.test.tsx`, xem chi tiết ở trên — 336+10=346). `dotnet build`/`npm run build` đều
+chạy được.

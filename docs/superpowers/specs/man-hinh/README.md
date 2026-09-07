@@ -88,7 +88,8 @@ Cập nhật bảng này mỗi khi thêm spec.
 | Ơn gọi tận hiến | `GXControl/GxTanHien.cs` | 291 | xong (`tan-hien.md`) | một phần (xem mục 10) |
 | Hội đoàn | `GXControl/frmHoiDoan.cs` + `GXControl/GxHistoryHoiDoan.cs` | 663 + 311 | xong (`hoi-doan.md`) | một phần (xem mục 10) |
 | Quản lý giáo phận/giáo hạt/giáo xứ | `ChuongTrinh/frmGiaoXu.cs` | 280 | xong (`quan-ly-giao-xu.md`) | xong |
-| Giáo họ | `ChuongTrinh/frmGiaoHo.cs` | 598 | một phần (`quan-ly-giao-xu.md` mục 9, chỉ phần thêm/sửa) | xong (danh sách + thêm/sửa; không có nút xoá, xem `can-review-sau.md` mục 37) |
+| Giáo họ | `ChuongTrinh/frmGiaoHo.cs` | 598 | xong (`giao-ho.md`, thay cho phần cũ ở `quan-ly-giao-xu.md` mục 9) | xong (danh sách + thêm/sửa + chọn giáo họ cha; không có nút xoá, xem `can-review-sau.md` mục 37) |
+| Danh sách hội đoàn | `ChuongTrinh/frmHoiDoanList.cs` + `GXControl/frmHoiDoan.cs` | 89 + 663 | xong (`hoi-doan-danh-sach.md`) | xong (danh mục + thêm/sửa/xoá hội đoàn + quản lý hội viên) |
 | Danh sách sổ bí tích | `ChuongTrinh/frmDotBiTichList.cs` + `ChuongTrinh/frmBiTichChiTiet.cs` | 176 + 574 | xong (`so-bi-tich.md`) | một phần (xem mục 10) |
 | Lớp giáo lý | `Giaoly/frmLopGiaoLy.cs` | 724 | chưa | chưa |
 | Quản lý tài khoản | `ChuongTrinh/frmAccoutList.cs` | 440 | xong (`quan-ly-tai-khoan.md`) | xong |

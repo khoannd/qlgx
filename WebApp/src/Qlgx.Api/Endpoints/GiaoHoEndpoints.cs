@@ -22,11 +22,26 @@ public static class GiaoHoEndpoints
                 .ToListAsync(ct))).RequireAuthorization();
 
         app.MapPost("/api/giao-ho", async (GiaoHoService dv, TaoGiaoHoRequest yc, CancellationToken ct) =>
-            Results.Created($"/api/giao-ho/{await dv.Them(yc, ct)}", (object?)null)).RequireAuthorization();
+        {
+            if (string.IsNullOrWhiteSpace(yc.TenGiaoHo))
+                return Results.BadRequest(new { thongBao = "Hãy nhập tên giáo họ!" });
+            var (ketQua, id) = await dv.Them(yc, ct);
+            return ketQua == KetQuaGiaoHo.TrungTen
+                ? Results.BadRequest(new { thongBao = "Tên giáo họ này đã có. Hãy nhập tên khác" })
+                : Results.Created($"/api/giao-ho/{id}", (object?)null);
+        }).RequireAuthorization();
 
         app.MapPut("/api/giao-ho/{id:guid}", async (GiaoHoService dv, Guid id,
             CapNhatGiaoHoRequest yc, CancellationToken ct) =>
-            await dv.Sua(id, yc, ct) == KetQuaGiaoHo.KhongTimThay
-                ? Results.NotFound() : Results.Ok()).RequireAuthorization();
+        {
+            if (string.IsNullOrWhiteSpace(yc.TenGiaoHo))
+                return Results.BadRequest(new { thongBao = "Hãy nhập tên giáo họ!" });
+            return await dv.Sua(id, yc, ct) switch
+            {
+                KetQuaGiaoHo.KhongTimThay => Results.NotFound(),
+                KetQuaGiaoHo.TrungTen => Results.BadRequest(new { thongBao = "Tên giáo họ này đã có. Hãy nhập tên khác" }),
+                _ => Results.Ok(),
+            };
+        }).RequireAuthorization();
     }
 }

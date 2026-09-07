@@ -31,7 +31,22 @@ describe('GiaoHoListPage', () => {
     fireEvent.change(screen.getByLabelText('Tên giáo họ'), { target: { value: 'Giáo họ Mới' } })
     fireEvent.click(screen.getByText('Lưu'))
 
-    await vi.waitFor(() => expect(api.giaoHo.them).toHaveBeenCalledWith({ tenGiaoHo: 'Giáo họ Mới' }))
+    await vi.waitFor(() => expect(api.giaoHo.them).toHaveBeenCalledWith({ tenGiaoHo: 'Giáo họ Mới', giaoHoChaId: null }))
+  })
+
+  it('them giao ho con chon dung giao ho cha tu select', async () => {
+    vi.mocked(api.giaoHo.danhMuc).mockResolvedValue([giaoHo({ id: 'cha1', tenGiaoHo: 'Giáo họ Cha' })])
+    vi.mocked(api.giaoHo.them).mockResolvedValue(undefined)
+
+    render(<GiaoHoListPage />)
+    await screen.findByText('Giáo họ Cha')
+    fireEvent.click(screen.getByText('+ Thêm giáo họ'))
+    fireEvent.change(screen.getByLabelText(/Tên giáo họ/), { target: { value: 'Giáo khu Con' } })
+    fireEvent.change(screen.getByLabelText(/Giáo họ cha/), { target: { value: 'cha1' } })
+    fireEvent.click(screen.getByText('Lưu'))
+
+    await vi.waitFor(() => expect(api.giaoHo.them).toHaveBeenCalledWith(
+      { tenGiaoHo: 'Giáo khu Con', giaoHoChaId: 'cha1' }))
   })
 
   it('loi khi tai danh sach hien thong bao, khong am tham thanh rong', async () => {

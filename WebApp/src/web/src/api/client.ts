@@ -1,6 +1,6 @@
 import type {
   GiaDinhDetail, GiaDinhListItem, GiaoDanDetail, GiaoDanListItem, GiaoDanTimKiem, GiaoHo,
-  HoiDoanCuaGiaoDan, HoiDoanDanhMuc, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
+  HoiDoanCuaGiaoDan, HoiDoanDanhMuc, HoiDoanQuanLy, ThanhVienHoiDoan, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
   TaiKhoanItem, DangNhapKetQua, GiaoXuLuaChon, SucKhoe,
   GiaoPhan, GiaoHatQuanLy, GiaoXuQuanLy, BaoCaoXemTruoc, TrangThaiNhapDuLieu,
   DotBiTichListItem, DotBiTichDetail, LoaiBiTich, RaoHonPhoiListItem, RaoHonPhoiDetail,
@@ -324,6 +324,24 @@ export const api = {
   },
   hoiDoan: {
     danhMuc: () => goi<HoiDoanDanhMuc[]>('/api/hoi-doan'),
+  },
+  /** Màn hình "Danh sách hội đoàn" (frmHoiDoanList.cs + frmHoiDoan.cs, cấp quản lý danh mục) —
+   * xem docs/superpowers/specs/man-hinh/hoi-doan-danh-sach.md. Khác `api.hoiDoan` ở trên (danh
+   * mục rút gọn cho combo) và `api.giaoDan.hoiDoan*` (lịch sử của MỘT giáo dân). */
+  hoiDoanQuanLy: {
+    danhSach: () => goi<HoiDoanQuanLy[]>('/api/hoi-doan/danh-sach'),
+    them: (than: unknown) => goi<{ id: string }>('/api/hoi-doan', { method: 'POST', body: JSON.stringify(than) }),
+    sua: (id: string, than: unknown) =>
+      goi<void>(`/api/hoi-doan/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoa: (id: string) => goi<void>(`/api/hoi-doan/${id}`, { method: 'DELETE' }),
+    thanhVien: (id: string, chiXemHienTai: boolean) =>
+      goi<ThanhVienHoiDoan[]>(`/api/hoi-doan/${id}/thanh-vien?chiXemHienTai=${chiXemHienTai}`),
+    themThanhVien: (id: string, than: unknown) =>
+      goi<void>(`/api/hoi-doan/${id}/thanh-vien`, { method: 'POST', body: JSON.stringify(than) }),
+    suaThanhVien: (chiTietId: string, than: unknown) =>
+      goi<void>(`/api/hoi-doan/thanh-vien/${chiTietId}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoaThanhVien: (chiTietId: string) =>
+      goi<void>(`/api/hoi-doan/thanh-vien/${chiTietId}`, { method: 'DELETE' }),
   },
   /** "Danh sách sổ bí tích" (frmDotBiTichList.cs + frmBiTichChiTiet.cs) — xem
    * docs/superpowers/specs/man-hinh/so-bi-tich.md. */

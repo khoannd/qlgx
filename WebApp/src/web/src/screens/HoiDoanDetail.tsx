@@ -1,0 +1,318 @@
+import { useEffect, useState } from 'react'
+import { api, LoiXungDot } from '../api/client'
+import type { GiaoDanTimKiem, HoiDoanQuanLy, ThanhVienHoiDoan } from '../api/types'
+import { GxGrid } from '../components/GxGrid'
+import { GxDate } from '../components/GxDate'
+import { GxPicker } from '../components/GxPicker'
+import { TrangThaiTai } from '../components/TrangThaiTai'
+import { cotThanhVienHoiDoan } from '../cot/cotHoiDoan'
+
+type Props = {
+  id: string | null
+  onTieuDe?: (ten: string) => void
+  onDaLuu?: () => void
+}
+
+/**
+ * Chi tiết một hội đoàn (frmHoiDoan.cs) — khối "Tên hội đoàn/Thánh bổn mạng/Ngày bổn mạng/Ngày
+ * thành lập/Ghi chú" ở trên, danh sách hội viên (lưới `gxGiaoDanList1`) bên dưới. Xem
+ * docs/superpowers/specs/man-hinh/hoi-doan-danh-sach.md.
+ *
+ * Khác biệt cố ý so với bản gốc (ghi trong can-review-sau.md): hội đoàn và hội viên được lưu
+ * RIÊNG (mỗi thao tác gọi API ngay), không gộp thành một giao dịch "OK" duy nhất như
+ * `gxCommand1_OnOK` — vì bảng trống ở dữ liệu khảo sát nên không có ràng buộc "sửa xong mới
+ * lưu" nào cần bảo toàn, và tách riêng giúp không mất dữ liệu nếu người dùng đóng tab giữa
+ * chừng. Không migrate y hệt các hộp thoại Yes/No/Cancel phức tạp (kiểm tra hội trưởng duy
+ * nhất, ngày không được ở tương lai, trùng tên hội đoàn...) — xem can-review-sau.md.
+ */
+export function HoiDoanDetail({ id, onTieuDe, onDaLuu }: Props) {
+  const [hd, setHd] = useState<HoiDoanQuanLy | null>(null)
+  const [dangTai, setDangTai] = useState(!!id)
+  const [loi, setLoi] = useState<string | null>(null)
+
+  const [tenHoiDoan, setTenHoiDoan] = useState('')
+  const [thanhBonMang, setThanhBonMang] = useState('')
+  const [ngayBonMang, setNgayBonMang] = useState<string | null>(null)
+  const [ngayThanhLap, setNgayThanhLap] = useState<string | null>(null)
+  const [ghiChu, setGhiChu] = useState('')
+  const [dangLuu, setDangLuu] = useState(false)
+  const [loiLuu, setLoiLuu] = useState<string | null>(null)
+
+  const [xacNhanXoa, setXacNhanXoa] = useState(false)
+  const [dangXoa, setDangXoa] = useState(false)
+
+  const [thanhVien, setThanhVien] = useState<ThanhVienHoiDoan[] | null>(null)
+  const [hienCaDaRa, setHienCaDaRa] = useState(false)
+  const [dongChonTV, setDongChonTV] = useState<ThanhVienHoiDoan | null>(null)
+  const [ngayVaoSua, setNgayVaoSua] = useState<string | null>(null)
+  const [ngayRaSua, setNgayRaSua] = useState<string | null>(null)
+  const [vaiTroSua, setVaiTroSua] = useState('')
+  const [dangLuuTV, setDangLuuTV] = useState(false)
+  const [loiTV, setLoiTV] = useState<string | null>(null)
+
+  function taiThanhVien(hoiDoanId: string, chiXemHienTai: boolean) {
+    api.hoiDoanQuanLy.thanhVien(hoiDoanId, chiXemHienTai)
+      .then(setThanhVien)
+      .catch((e: unknown) => setLoiTV(e instanceof Error ? e.message : String(e)))
+  }
+
+  useEffect(() => {
+    if (!id) {
+      onTieuDe?.('Hội đoàn mới')
+      return
+    }
+    setDangTai(true)
+    api.hoiDoanQuanLy.danhSach()
+      .then((ds) => {
+        const dong = ds.find((h) => h.id === id)
+        if (!dong) { setLoi('Không tìm thấy hội đoàn này — có thể đã bị xoá.'); return }
+        setHd(dong)
+        setTenHoiDoan(dong.tenHoiDoan)
+        setThanhBonMang(dong.thanhBonMang ?? '')
+        setNgayBonMang(dong.ngayBonMang)
+        setNgayThanhLap(dong.ngayThanhLap)
+        setGhiChu(dong.ghiChu ?? '')
+        onTieuDe?.(dong.tenHoiDoan)
+        taiThanhVien(id, !hienCaDaRa)
+      })
+      .catch((e: unknown) => setLoi(e instanceof Error ? e.message : String(e)))
+      .finally(() => setDangTai(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
+  function chonThanhVien(tv: ThanhVienHoiDoan | null) {
+    setDongChonTV(tv)
+    setNgayVaoSua(tv?.ngayVaoHoiDoan ?? null)
+    setNgayRaSua(tv?.ngayRaHoiDoan ?? null)
+    setVaiTroSua(tv?.vaiTro ?? '')
+    setLoiTV(null)
+  }
+
+  function doiHienCaDaRa(v: boolean) {
+    setHienCaDaRa(v)
+    if (hd) taiThanhVien(hd.id, !v)
+  }
+
+  async function luuHoiDoan() {
+    if (tenHoiDoan.trim() === '') {
+      setLoiLuu('Vui lòng nhập tên hội đoàn')
+      return
+    }
+    setDangLuu(true)
+    setLoiLuu(null)
+    const than = {
+      tenHoiDoan: tenHoiDoan.trim(), thanhBonMang: thanhBonMang || null,
+      ngayBonMang, ngayThanhLap, ghiChu: ghiChu || null,
+      rowVersion: hd?.rowVersion ?? null,
+    }
+    try {
+      if (!hd) {
+        const moi = await api.hoiDoanQuanLy.them(than)
+        const ds = await api.hoiDoanQuanLy.danhSach()
+        const dong = ds.find((h) => h.id === moi.id)!
+        setHd(dong)
+        onTieuDe?.(dong.tenHoiDoan)
+        taiThanhVien(dong.id, !hienCaDaRa)
+      } else {
+        await api.hoiDoanQuanLy.sua(hd.id, than)
+        const ds = await api.hoiDoanQuanLy.danhSach()
+        const dong = ds.find((h) => h.id === hd.id)!
+        setHd(dong)
+        onTieuDe?.(dong.tenHoiDoan)
+      }
+      onDaLuu?.()
+    } catch (e) {
+      setLoiLuu(e instanceof LoiXungDot ? e.message : e instanceof Error ? e.message : 'Lưu thất bại, thử lại sau.')
+    } finally {
+      setDangLuu(false)
+    }
+  }
+
+  async function xoaHoiDoan() {
+    if (!hd) return
+    setDangXoa(true)
+    try {
+      await api.hoiDoanQuanLy.xoa(hd.id)
+      onDaLuu?.()
+    } catch (e) {
+      setLoiLuu(e instanceof Error ? e.message : 'Xoá thất bại, thử lại sau.')
+      setDangXoa(false)
+      setXacNhanXoa(false)
+    }
+  }
+
+  async function themThanhVien(gd: GiaoDanTimKiem) {
+    if (!hd) return
+    setDangLuuTV(true)
+    setLoiTV(null)
+    try {
+      await api.hoiDoanQuanLy.themThanhVien(hd.id, {
+        giaoDanId: gd.id, ngayVaoHoiDoan: null, ngayRaHoiDoan: null, vaiTro: null,
+      })
+      taiThanhVien(hd.id, !hienCaDaRa)
+      const ds = await api.hoiDoanQuanLy.danhSach()
+      setHd(ds.find((h) => h.id === hd.id) ?? hd)
+    } catch (e) {
+      setLoiTV(e instanceof Error ? e.message : 'Không thêm được, thử lại sau.')
+    } finally {
+      setDangLuuTV(false)
+    }
+  }
+
+  async function luuThanhVien() {
+    if (!hd || !dongChonTV) return
+    setDangLuuTV(true)
+    setLoiTV(null)
+    try {
+      await api.hoiDoanQuanLy.suaThanhVien(dongChonTV.chiTietId, {
+        ngayVaoHoiDoan: ngayVaoSua, ngayRaHoiDoan: ngayRaSua,
+        vaiTro: vaiTroSua.trim() || null, rowVersion: dongChonTV.rowVersion,
+      })
+      taiThanhVien(hd.id, !hienCaDaRa)
+      chonThanhVien(null)
+      const ds = await api.hoiDoanQuanLy.danhSach()
+      setHd(ds.find((h) => h.id === hd.id) ?? hd)
+    } catch (e) {
+      setLoiTV(e instanceof LoiXungDot ? e.message : e instanceof Error ? e.message : 'Không lưu được, thử lại sau.')
+    } finally {
+      setDangLuuTV(false)
+    }
+  }
+
+  async function xoaThanhVien() {
+    if (!hd || !dongChonTV) return
+    if (!window.confirm(
+      `Bạn có thực sự muốn giáo dân [${dongChonTV.hoTen}] ra khỏi hội đoàn vĩnh viễn.\n` +
+      'Nếu có chọn OK để xóa vĩnh viễn. Nếu không, chọn Hủy rồi tự sửa "Ngày ra hội đoàn" ' +
+      'thành hôm nay để chỉ đánh dấu đã ra (vẫn giữ trong lịch sử).')) return
+    setDangLuuTV(true)
+    try {
+      await api.hoiDoanQuanLy.xoaThanhVien(dongChonTV.chiTietId)
+      taiThanhVien(hd.id, !hienCaDaRa)
+      chonThanhVien(null)
+      const ds = await api.hoiDoanQuanLy.danhSach()
+      setHd(ds.find((h) => h.id === hd.id) ?? hd)
+    } catch (e) {
+      setLoiTV(e instanceof Error ? e.message : 'Không xoá được, thử lại sau.')
+    } finally {
+      setDangLuuTV(false)
+    }
+  }
+
+  return (
+    <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={() => id && api.hoiDoanQuanLy.danhSach().then((ds) => setHd(ds.find((h) => h.id === id) ?? null))}>
+      <section className="page" style={{ overflowY: 'auto', display: 'block' }}>
+        <div className="page-head">
+          <h1>{hd ? hd.tenHoiDoan : 'Hội đoàn mới'}</h1>
+        </div>
+
+        <div className="card glass" style={{ marginBottom: 12 }}>
+          <div className="form-grid">
+            <div className="field span-2">
+              <label htmlFor="hd-ten">Tên hội đoàn</label>
+              <input id="hd-ten" value={tenHoiDoan} onChange={(e) => setTenHoiDoan(e.target.value)} />
+            </div>
+            <div className="field">
+              <label htmlFor="hd-bonmang">Thánh bổn mạng</label>
+              <input id="hd-bonmang" value={thanhBonMang} onChange={(e) => setThanhBonMang(e.target.value)} />
+            </div>
+            <div className="field">
+              <label htmlFor="hd-ngaybonmang">Ngày bổn mạng</label>
+              <GxDate id="hd-ngaybonmang" defaultValue={ngayBonMang} onIsoChange={(iso) => setNgayBonMang(iso || null)} />
+            </div>
+            <div className="field">
+              <label htmlFor="hd-ngaythanhlap">Ngày thành lập</label>
+              <GxDate id="hd-ngaythanhlap" defaultValue={ngayThanhLap} onIsoChange={(iso) => setNgayThanhLap(iso || null)} />
+            </div>
+            <div className="field span-2">
+              <label htmlFor="hd-ghichu">Ghi chú</label>
+              <input id="hd-ghichu" value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} />
+            </div>
+          </div>
+          {loiLuu && <p className="hint" role="alert">{loiLuu}</p>}
+          <div className="cmdbar">
+            {hd && (
+              <button type="button" className="btn btn-danger" disabled={dangXoa}
+                onClick={() => setXacNhanXoa(true)}>
+                Xóa hội đoàn
+              </button>
+            )}
+            <div className="spacer" />
+            <button type="button" className="btn btn-primary" disabled={dangLuu} onClick={() => { void luuHoiDoan() }}>
+              {dangLuu ? 'Đang lưu…' : 'Cập nhật'}
+            </button>
+          </div>
+          {xacNhanXoa && (
+            <div className="card glass" role="alertdialog" style={{ marginTop: 8 }}>
+              {/* Nguyên văn frmHoiDoanList.cs:26: "Bạn có thật sự muốn xóa hội đoàn này!" */}
+              <p>Bạn có thật sự muốn xóa hội đoàn này! Toàn bộ danh sách hội viên của hội đoàn cũng sẽ bị xóa theo.</p>
+              <div className="cmdbar">
+                <button type="button" className="btn" disabled={dangXoa} onClick={() => setXacNhanXoa(false)}>Hủy bỏ</button>
+                <div className="spacer" />
+                <button type="button" className="btn btn-danger" disabled={dangXoa} onClick={() => { void xoaHoiDoan() }}>
+                  {dangXoa ? 'Đang xoá…' : 'Xóa'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {hd && (
+          <>
+            <div className="card glass" style={{ marginBottom: 12 }}>
+              <div className="cmdbar" style={{ marginBottom: 8 }}>
+                <b>Danh sách hội viên ({thanhVien?.length ?? 0})</b>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12.5 }}>
+                  <input type="checkbox" checked={hienCaDaRa} onChange={(e) => doiHienCaDaRa(e.target.checked)} />
+                  Hiện cả người đã ra khỏi hội đoàn
+                </label>
+                <div className="spacer" />
+                <GxPicker onChon={(gd) => { void themThanhVien(gd) }} onBoChon={() => {}} />
+              </div>
+              {loiTV && <p className="hint" role="alert">{loiTV}</p>}
+              <div style={{ height: 380 }}>
+                <GxGrid<ThanhVienHoiDoan>
+                  columnDefs={cotThanhVienHoiDoan}
+                  rowData={thanhVien ?? []}
+                  layId={(d) => d.chiTietId}
+                  onChon={chonThanhVien}
+                  toDo={(d) => d.daRaKhoiHoiDoan}
+                />
+              </div>
+            </div>
+
+            {dongChonTV && (
+              <div className="card glass">
+                <b>{(dongChonTV.tenThanh ? dongChonTV.tenThanh + ' ' : '') + dongChonTV.hoTen}</b>
+                <div className="form-grid" style={{ marginTop: 8 }}>
+                  <div className="field">
+                    <label htmlFor="tv-ngayvao">Ngày vào hội đoàn</label>
+                    <GxDate id="tv-ngayvao" defaultValue={ngayVaoSua} onIsoChange={(iso) => setNgayVaoSua(iso || null)} />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="tv-ngayra">Ngày ra hội đoàn</label>
+                    <GxDate id="tv-ngayra" defaultValue={ngayRaSua} onIsoChange={(iso) => setNgayRaSua(iso || null)} />
+                  </div>
+                  <div className="field span-2">
+                    <label htmlFor="tv-vaitro">Vai trò</label>
+                    <input id="tv-vaitro" value={vaiTroSua} onChange={(e) => setVaiTroSua(e.target.value)}
+                      placeholder="Hội viên" />
+                  </div>
+                </div>
+                <div className="cmdbar">
+                  <button type="button" className="btn btn-danger" disabled={dangLuuTV} onClick={() => { void xoaThanhVien() }}>
+                    Xóa khỏi hội đoàn
+                  </button>
+                  <div className="spacer" />
+                  <button type="button" className="btn btn-primary" disabled={dangLuuTV} onClick={() => { void luuThanhVien() }}>
+                    {dangLuuTV ? 'Đang lưu…' : 'Lưu'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+    </TrangThaiTai>
+  )
+}
