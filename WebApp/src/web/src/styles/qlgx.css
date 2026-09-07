@@ -708,15 +708,30 @@ input:disabled, textarea:disabled {
   min-height: 22px;
   border-color: transparent;
   background-color: transparent;
-  transition: background-color .15s ease, border-color .15s ease;
+  transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
+/* Bỏ "viền trái/phải" khi rê chuột/gõ (góp ý người dùng qua DevTools, 2026-09-07): đã
+   `getComputedStyle` trên trình duyệt thật để tìm đúng thủ phạm — KHÔNG phải border-color
+   như luật này từng đặt. `:focus` của AG Grid mặc định còn kèm
+   `box-shadow: 0 0 0 3px color-mix(..., #2196f3 47%)` (biến `--ag-input-focus-box-shadow`
+   của theme quartz, luật này không hề đụng tới). Ô `.ag-header-cell` chứa ô lọc có
+   `overflow: hidden` và `height` cố định đúng bằng chiều cao input — quầng box-shadow đó bị
+   CẮT CỤT ở trên/dưới theo chiều dọc (vừa khít) nhưng vẫn LỌT nguyên vẹn ở hai bên trái/phải
+   (input hẹp hơn bề ngang ô, còn dư chỗ) → hai quầng xanh đứng hình dấu ngoặc "[" "]" đúng như
+   ảnh chụp người dùng chỉ ra, dù `border-color` đã đúng ý muốn. Sửa: tắt hẳn box-shadow đó, và
+   đổi cả viền hover/focus sang CHỈ viền dưới (border-bottom) — bám đúng gợi ý "vẫn phải biết
+   chỗ nào bấm vào gõ" mà không tái diễn kiểu quầng/viền hai bên. Xem
+   task-bo-vien-o-loc.md. */
 .ag-theme-quartz .ag-floating-filter-input input:hover {
-  border-color: var(--hair);
+  border-color: transparent;
+  border-bottom-color: var(--hair);
   background-color: rgba(255, 255, 255, .7);
 }
 .ag-theme-quartz .ag-floating-filter-input input:focus {
-  border-color: var(--brand);
+  border-color: transparent;
+  border-bottom-color: var(--brand);
   background-color: #fff;
+  box-shadow: none;
 }
 .ag-theme-quartz .ag-floating-filter-button-button {
   opacity: .45;

@@ -2188,3 +2188,62 @@ tự động ăn cho danh sách giáo dân, danh sách gia đình, lưới thàn
 **Số test cuối:** frontend **254/254** (không thêm test mới — thuần CSS, jsdom không quan sát
 được thay đổi thị giác này). `npm run build` chạy được. Không chạm backend. Ảnh chụp/kiểm thử:
 `92`–`95` trong `WebApp/anh-chup-kiem-thu/`.
+
+### 45. Task "bỏ viền trái/phải của ô lọc" (2026-09-07) — nguồn thật không phải `border-color`
+
+Người dùng thật ngồi kiểm tra, mở DevTools chỉ thẳng luật
+`.ag-theme-quartz .ag-floating-filter-input input:focus` và viết: "hiện tại cái filter text box
+có border left right nhìn ko đẹp, hãy bỏ border này đi". Luật đó (từ mục 44) đã đặt
+`border-color: var(--brand)` — đúng ý muốn "hiện viền khi đang gõ" — nên ngờ rằng viền trái/phải
+người dùng thấy đến từ chỗ khác, không đoán mà đo `getComputedStyle` thật trên trình duyệt.
+
+**Điều tra tìm đúng nguồn:**
+- Ô nhập ở trạng thái thường (không hover/focus): `border-color` cả 4 cạnh đều
+  `rgba(0,0,0,0)` (đúng ý mục 44), không có `box-shadow` — chụp cận cảnh xác nhận KHÔNG có viền
+  gì ở trạng thái nghỉ. Vậy phàn nàn của người dùng nhắm vào trạng thái `:focus` (đúng luật họ
+  chỉ trong DevTools).
+- Ở trạng thái `:focus`: ngoài `border-color: var(--brand)` (mục 44 đặt, đúng ý), AG Grid theme
+  quartz TỰ THÊM `box-shadow: 0 0 0 3px color-mix(in srgb, transparent, #2196f3 47%)` qua biến
+  `--ag-input-focus-box-shadow` — luật của dự án không hề đụng tới biến này, kế thừa mặc định
+  của theme.
+- `.ag-header-cell` chứa ô lọc có `overflow: hidden` và `height` cố định KHÍT đúng bằng chiều
+  cao input (30px hàng lọc). Quầng `box-shadow` 3px đó bị CẮT CỤT ở trên/dưới theo chiều dọc
+  (vừa khít, không dư chỗ) nhưng LỌT NGUYÊN VẸN ở hai bên trái/phải (input 110px hẹp hơn bề
+  ngang ô header-cell 170px, còn dư ~60px ngang) → chỉ còn lại hai quầng xanh dựng đứng hình
+  dấu ngoặc "[" "]" ở hai bên — đúng in như "border trái phải" người dùng chỉ ra, dù
+  `border-color` bản thân nó đã đúng ý muốn từ trước. Ảnh zoom 5x lúc điều tra xác nhận rõ hình
+  dấu ngoặc (không giữ lại trong repo, chỉ ảnh sau khi sửa mới lưu).
+
+**Quyết định sửa (`WebApp/src/web/src/styles/qlgx.css`, khối `.ag-floating-filter-input
+input:hover/:focus`):**
+1. Tắt hẳn `box-shadow: none` ở `:focus` — đây là root cause, xoá quầng bị cắt vụn tạo hình dấu
+   ngoặc.
+2. Đổi cả `:hover` lẫn `:focus` sang CHỈ tô màu viền dưới (`border-bottom-color`), giữ
+   `border-color: transparent` cho 3 cạnh còn lại — dù viền trên/trái/phải không bị cắt vụn như
+   box-shadow, đổi sang viền dưới cho chắc ăn, tránh mọi khả năng tái diễn kiểu viền hai bên, và
+   khớp gợi ý của nhiệm vụ "nếu còn viền thì chỉ nên là viền dưới hoặc nền". Vẫn giữ tô nền sáng
+   dần (`rgba(255,255,255,.7)` hover, `#fff` focus) để biết chỗ bấm vào gõ — không tàng hình.
+   Dùng lại đúng biến `--hair`/`--brand` sẵn có, không bịa giá trị mới.
+
+**Áp dụng cho mọi lưới:** sửa duy nhất ở `qlgx.css`, không đụng `GxGrid.tsx` hay màn hình nào —
+tự động ăn cho danh sách giáo dân, danh sách gia đình, lưới thành viên gia đình.
+
+**Kiểm chứng trên trình duyệt thật (Playwright MCP), đăng nhập `giaoxu`:**
+- Danh sách giáo dân: chụp cận cảnh hàng lọc (crop + phóng 3x từ ảnh gốc) xác nhận không còn
+  viền trái/phải ở ô đang lọc lẫn các ô khác — ảnh `96-can-canh-hang-loc.png`.
+- Gõ lọc thật "Nguyễn" vào cột "Họ tên": lọc đúng (chỉ còn các dòng có "Nguyễn" trong họ tên),
+  chấm xanh trên icon phễu báo đang lọc, ô lọc vẫn thấy rõ chỗ đang gõ (nền trắng, chữ đang gõ)
+  — ảnh `96-loc-ho-ten-nguyen.png`.
+- Gia đình "Paul Trần Văn Thái" (mã 9): mở chi tiết, lưới "Thành viên khác trong gia đình" hiện
+  đúng 4 người (Mã GD 1068–1071) — ảnh `96-chi-tiet-gia-dinh-thanh-vien.png`. (Lưới này là bảng
+  HTML thường `table.grid`, không có hàng lọc AG Grid, nên không bị ảnh hưởng bởi sửa lần này —
+  chụp để xác nhận không hỏng gì khác trong màn hình chi tiết gia đình.)
+- `getBoundingClientRect()` đo thật trên danh sách giáo dân sau khi sửa: lưới `1184.8×582.65`
+  (không co 0px), hàng tiêu đề (`.ag-header-row-column`) `3800×28`, hàng lọc
+  (`.ag-header-row-filter`) `3800×30` — không đổi so với mục 44, xác nhận không làm hỏng chiều
+  cao vừa sửa xong.
+
+**Số test cuối:** frontend **254/254** (không thêm test mới — thuần CSS, jsdom không dựng
+`getComputedStyle`/`box-shadow` thật để bắt lỗi kiểu này). `npm run build` chạy được. Không
+chạm backend. Ảnh chụp/kiểm thử: `96-can-canh-hang-loc.png`, `96-loc-ho-ten-nguyen.png`,
+`96-chi-tiet-gia-dinh-thanh-vien.png` trong `WebApp/anh-chup-kiem-thu/`.
