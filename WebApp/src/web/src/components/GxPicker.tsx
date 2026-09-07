@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
 import type { GiaoDanTimKiem } from '../api/types'
+import { GxDropdownPortal } from './GxDropdownPortal'
 
 type Props = {
   /** Tên hiển thị hiện tại (đã chọn hoặc gõ tay từ dữ liệu cũ) — chỉ đọc, ô picker luôn
@@ -44,6 +45,9 @@ export function GxPicker({ value, id, onChon, onThemMoi, onBoChon, onXem }: Prop
   // Tăng mỗi lần bấm "Thử lại" để buộc effect bên dưới chạy lại dù `tuKhoa` không đổi.
   const [lanThu, setLanThu] = useState(0)
   const hopRef = useRef<HTMLDivElement>(null)
+  // Neo vị trí cho GxDropdownPortal — chính span.picker (không phải hopRef, vì hopRef trỏ tới
+  // hộp thoại kết quả nằm TRONG portal, không còn ở tại chỗ trong DOM để đo toạ độ).
+  const ankerRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
     if (!dangMo) return
@@ -78,7 +82,7 @@ export function GxPicker({ value, id, onChon, onThemMoi, onBoChon, onXem }: Prop
   }
 
   return (
-    <span className="picker" id={id} style={{ position: 'relative' }}>
+    <span className="picker" id={id} ref={ankerRef} style={{ position: 'relative' }}>
       <span className={'who' + (value ? '' : ' empty')}>{value || '—'}</span>
       {onXem && (
         <button type="button" className="mini" title="Mở hồ sơ trong thẻ mới"
@@ -98,10 +102,10 @@ export function GxPicker({ value, id, onChon, onThemMoi, onBoChon, onXem }: Prop
         &times;
       </button>
 
-      {dangMo && (
+      <GxDropdownPortal anchorRef={ankerRef} open={dangMo}>
         <div ref={hopRef} className="picker-dropdown" role="listbox"
           style={{
-            position: 'absolute', top: '100%', left: 0, zIndex: 20, minWidth: 260,
+            minWidth: 260,
             background: 'var(--bg, #fff)', border: '1px solid #ccc', borderRadius: 6,
             boxShadow: '0 4px 12px rgba(0,0,0,.15)', padding: 6,
           }}>
@@ -145,7 +149,7 @@ export function GxPicker({ value, id, onChon, onThemMoi, onBoChon, onXem }: Prop
             </ul>
           )}
         </div>
-      )}
+      </GxDropdownPortal>
     </span>
   )
 }

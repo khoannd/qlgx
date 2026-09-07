@@ -89,6 +89,25 @@ describe('GxDate', () => {
     expect(document.activeElement).toBe(screen.getByLabelText('Ô kế tiếp trên form'))
   })
 
+  it('go xong 8 so lien tuc (tu nhay control ke tiep) thi KHONG con bao loi gia — bug rieng dinh dang cu', async () => {
+    // Tái hiện đúng lỗi người dùng thật báo cáo: gõ liên tục "01/02/2003" (hợp lệ) vào ô ngày
+    // rồi tự nhảy sang control kế tiếp — trước khi sửa, việc tự nhảy focus (đồng bộ) làm bắn ra
+    // sự kiện blur dùng closure CŨ (state `text` chưa kịp commit), khiến ô bị đè lại thông báo
+    // "Ngày không hợp lệ" SAI dù giá trị đã đúng. Xem GxDate.tsx: thuChuanHoaVaCoTheNhay.
+    render(
+      <>
+        <GxDate name="ngayXucDau" ariaLabel="Ngày xức dầu" />
+        <input aria-label="Ô kế tiếp trên form" />
+      </>,
+    )
+    const o = screen.getByLabelText('Ngày xức dầu') as HTMLInputElement
+    await userEvent.type(o, '01022003')
+    expect(document.activeElement).toBe(screen.getByLabelText('Ô kế tiếp trên form'))
+    expect(o.value).toBe('01/02/2003')
+    expect(o.getAttribute('aria-invalid')).toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
   it('bam chuot/focus thang vao o nam roi go luon, roi o thi tu dien 01/01', async () => {
     const { container } = render(<GxDate name="ngaySinh" ariaLabel="Ngày sinh" />)
     const o = screen.getByLabelText('Ngày sinh') as HTMLInputElement

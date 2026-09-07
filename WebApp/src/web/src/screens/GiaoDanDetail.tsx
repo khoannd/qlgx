@@ -803,7 +803,11 @@ export function GiaoDanDetail({
                 <option value="Nữ">Nữ</option>
               </select>
               <GxInline>Ngày sinh</GxInline>
-              <GxDate ariaLabel="Ngày sinh" name="ngaySinh" defaultValue={p.ngaySinh} />
+              {/* `marginLeft: 'auto'` neo ô này SÁT LỀ PHẢI của hàng — ô không tự giãn hết bề
+               * rộng còn lại (không có flex-grow, đúng cỡ nội dung của khuôn `dd/mm/yyyy`) nên
+               * trước đây để trống một khoảng trắng lớn phía sau, trông lệch trái so với các
+               * hàng khác (góp ý người dùng: "ngày sinh cho dock bên phải"). */}
+              <GxDate ariaLabel="Ngày sinh" name="ngaySinh" defaultValue={p.ngaySinh} style={{ marginLeft: 'auto' }} />
             </GxField>
             <GxField label="Nơi sinh" id="gd-noisinh">
               <GxGoiY id="gd-noisinh" name="noiSinh" truong="noiSinh" giaoXuId={giaoXuId} defaultValue={p.noiSinh} />
@@ -937,12 +941,12 @@ export function GiaoDanDetail({
           <input id="gd-diachi" name="diaChi" type="text" defaultValue={p.diaChi ?? ''} />
         </GxField>
         <GxField label="Nghề nghiệp" id="gd-nghenghiep">
-          <input id="gd-nghenghiep" name="ngheNghiep" type="text" defaultValue={p.ngheNghiep ?? ''} style={{ maxWidth: 200 }} />
+          <input id="gd-nghenghiep" name="ngheNghiep" type="text" defaultValue={p.ngheNghiep ?? ''} style={{ maxWidth: 180 }} />
           <GxInline>Dân tộc</GxInline>
           <input aria-label="Dân tộc" name="danToc" type="text" defaultValue={p.danToc ?? ''} />
         </GxField>
         <GxField label="Điện thoại" id="gd-dienthoai">
-          <input id="gd-dienthoai" name="dienThoai" type="text" defaultValue={p.dienThoai ?? ''} style={{ maxWidth: 170 }} />
+          <input id="gd-dienthoai" name="dienThoai" type="text" defaultValue={p.dienThoai ?? ''} style={{ maxWidth: 180 }} />
           <GxInline>Email</GxInline>
           <input aria-label="Email" name="email" type="text" defaultValue={p.email ?? ''} />
         </GxField>

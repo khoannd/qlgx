@@ -1,6 +1,7 @@
 import { useId, useRef, useState, type CSSProperties, type FocusEvent, type KeyboardEvent } from 'react'
 import { focusKeTiep } from '../lib/focusDieuHuong'
 import { ghiNhanDaDung, gopGoiY } from '../lib/goiYNhapLieu'
+import { GxDropdownPortal } from './GxDropdownPortal'
 
 type Props = {
   id?: string
@@ -141,7 +142,7 @@ export function GxGoiY({
         onKeyDown={xuLyPhim}
         style={{ width: '100%' }}
       />
-      {mo && goiY.length > 0 && (
+      <GxDropdownPortal anchorRef={inputRef} open={mo && goiY.length > 0}>
         <ul id={listId} role="listbox" className="gx-goiy-list">
           {goiY.map((g, i) => (
             <li
@@ -159,7 +160,7 @@ export function GxGoiY({
             </li>
           ))}
         </ul>
-      )}
+      </GxDropdownPortal>
     </span>
   )
 }

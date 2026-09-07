@@ -7,6 +7,7 @@ import {
   type KeyboardEvent,
   type MouseEvent,
 } from 'react'
+import { flushSync } from 'react-dom'
 import {
   chuanHoaNgayThieu,
   chuanViTri,
@@ -103,11 +104,22 @@ export function GxDate({ id, name, ariaLabel, defaultValue, style, disabled }: P
       setLoi('Ngày không hợp lệ — nhập theo dd/mm/yyyy (chỉ năm, hoặc tháng và năm, cũng được)')
       return
     }
-    setLoi(null)
-    setIso(ket ?? '')
+    // QUAN TRỌNG: dùng flushSync để BUỘC React vẽ lại (render + commit DOM) NGAY LẬP TỨC, ĐỒNG
+    // BỘ, trước khi gọi focusKeTiep bên dưới — nếu không, focusKeTiep gọi el.focus() sang control
+    // kế tiếp sẽ bắn sự kiện `blur` ĐỒNG BỘ ngay trong cùng tick, trong khi state vừa setLoi/
+    // setIso/setText ở trên CHƯA kịp commit (React gộp các setState trong một handler rồi mới
+    // flush). Handler `onBlur` (xuLyRoiO) khi đó vẫn là closure CŨ, đóng gói `text` từ TRƯỚC khi
+    // gõ xong chữ số cuối (ví dụ "01/02/200_" thay vì "01/02/2003") — gọi lại
+    // chuanHoaNgayThieu() với năm thiếu 1 chữ số, trả `undefined`, và tự đè `loi` bằng thông báo
+    // "Ngày không hợp lệ" SAI dù giá trị đã nhập hoàn toàn đúng và đã lưu đúng xuống ô ISO ẩn.
+    // Đây là nguyên nhân thật của lỗi người dùng báo cáo (không phải do ràng buộc nghiệp vụ nào
+    // — xem docs/superpowers/specs/man-hinh/can-review-sau.md).
+    flushSync(() => {
+      setLoi(null)
+      setIso(ket ?? '')
+      if (ket !== null) setText(dinhDangNgay(ket))
+    })
     if (ket !== null) {
-      const hienThiChuan = dinhDangNgay(ket)
-      setText(hienThiChuan)
       // Chỉ tự nhảy control kế tiếp khi hành động vừa rồi là "vừa gõ xong chữ số cuối của năm"
       // — không nhảy khi chuẩn hoá xảy ra lúc blur (người dùng đã tự chủ động rời ô bằng cách
       // khác, không nên bị đẩy thêm một lần nữa). Xem lib/focusDieuHuong.ts.

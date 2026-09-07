@@ -1219,7 +1219,12 @@ tbody tr[aria-selected="true"] .rowhead {
 .frow .val > input[type="text"],
 .frow .val > input[type="date"],
 .frow .val > select,
-.frow .val > textarea { flex: 1; min-width: 0; }
+.frow .val > textarea,
+/* `.gx-goiy` (GxGoiY, ví dụ "Nơi sinh"/"Nơi rước lễ"/"Nơi thêm sức") cũng phải giãn hết bề rộng
+ * còn lại giống ô văn bản thường — trước đây KHÔNG có trong danh sách này nên co lại bằng đúng
+ * bề rộng mặc định của `<input>` bên trong (ngắn hơn hẳn `.picker` — ô "Tên Cha"/"Tên Mẹ" — ở
+ * ngay bên dưới, góp ý người dùng: "Nơi sinh cho dài ra bằng box bên dưới"). */
+.frow .val > .gx-goiy { flex: 1; min-width: 0; }
 .frow textarea { resize: vertical; min-height: 50px; line-height: 1.5; }
 .frow .inline-label { color: var(--ink-soft); font-size: 13px; padding-left: 4px; white-space: nowrap; }
 
@@ -1231,12 +1236,16 @@ tbody tr[aria-selected="true"] .rowhead {
   flex: 1;
   min-width: 0;
   padding: 5px 6px 5px 10px;
-  border-radius: 999px;
+  /* Bo góc/nền GIỐNG HỆT ô văn bản thường (`--r-field`, xem `select, input[type="text"]…` phía
+   * trên) — trước đây bo tròn gần hết (999px) và chữ đậm hơn (500) khiến control chọn giáo dân
+   * (Tên Cha/Tên Mẹ…) trông lạc lõng cạnh các ô văn bản như "Nơi sinh" (góp ý người dùng: "cần
+   * làm cho border radius và font weight giống text box... để cho consistent"). */
+  border-radius: var(--r-field);
   border: 1px solid rgba(14,32,76,.13);
   background: rgba(255,255,255,.92);
 }
 .picker:hover { border-color: rgba(29,93,219,.35); }
-.picker .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; }
+.picker .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 400; }
 .picker .who.empty { color: var(--ink-faint); font-weight: 400; }
 .picker .mini {
   appearance: none;
@@ -1256,7 +1265,11 @@ tbody tr[aria-selected="true"] .rowhead {
 
 /* Ô nhập ngày dùng chung (GxDate) — thay input[type=date] gốc để không phụ thuộc locale máy
  * người dùng, xem docs/superpowers/specs/man-hinh/can-review-sau.md mục W1. */
-.gx-date { display: inline-flex; flex-direction: column; gap: 3px; min-width: 0; }
+/* `display: flex` (không phải `inline-flex`) để khối chiếm TRỌN bề rộng ô của nó trong `.frow
+ * .val` — cần thiết để `.gx-date-loi` bên dưới có đúng bề rộng mà XUỐNG DÒNG thay vì tràn ra
+ * ngoài viền ô (góp ý người dùng: "thông báo lỗi là control bị tràn"). `max-width: 100%` để
+ * không phá bố cục khi phần tử cha co hẹp hơn `maxWidth` truyền qua prop `style`. */
+.gx-date { display: flex; flex-direction: column; gap: 3px; min-width: 0; max-width: 100%; }
 .gx-date-row { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 .gx-date-row input[type="text"] { min-width: 0; flex: 1; }
 .gx-date-row input[type="text"].invalid {
@@ -1295,16 +1308,22 @@ tbody tr[aria-selected="true"] .rowhead {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
 }
-.gx-date-loi { font-size: 11.5px; color: var(--rose-ink); }
+.gx-date-loi {
+  display: block;
+  font-size: 11.5px;
+  color: var(--rose-ink);
+  width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
+}
 
 /* Gợi ý nhập liệu theo tần suất (GxGoiY.tsx) — dropdown nổi trên, cùng khuôn với
-   .picker-dropdown (GxPicker) để giao diện nhất quán giữa hai kiểu "gợi ý" trong ứng dụng. */
+   .picker-dropdown (GxPicker) để giao diện nhất quán giữa hai kiểu "gợi ý" trong ứng dụng.
+   KHÔNG còn `position`/`top`/`left`/`right`/`z-index` ở đây — phần tử bọc ngoài do
+   `GxDropdownPortal` dựng (render qua portal thẳng vào `document.body`) đã lo toàn bộ việc định
+   vị bằng `position: fixed` tính theo toạ độ thật của ô neo, xem GxDropdownPortal.tsx. */
 .gx-goiy-list {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 20;
   margin: 2px 0 0;
   padding: 4px;
   list-style: none;

@@ -2927,3 +2927,121 @@ dưới; không đổi hành vi lưu (`giaoDanAo`/`doiGiaoDanAo` giữ nguyên, 
 và `getByLabelText('Là giáo dân không được thống kê')` tìm đúng phần tử bất kể vị trí DOM, các bài
 test hiện có không phụ thuộc thứ tự trong `.canhan-top-fields`). `npm run build` chạy được. Không
 chạm backend, không chạy `dotnet test`. Ảnh chụp: `118`–`119` trong `WebApp/anh-chup-kiem-thu/`.
+
+### 53. Task "thông báo lỗi ngày tháng + cân đối bố cục thông tin cá nhân" (2026-09-07/08) —
+thông báo sai KHÔNG phải do thiếu ràng buộc nghiệp vụ, mà là bug race-condition thật
+
+Người dùng thật gửi ảnh và viết: nhập `01/02/2003` vào "Ngày xức dầu" của giáo dân sinh năm 2015
+bị báo "Ngày không hợp lệ — nhập theo dd/mm/yyyy..." dù ngày ĐÚNG định dạng — người dùng ĐOÁN
+nguyên nhân là ràng buộc nghiệp vụ ("ngày xức dầu không thể trước ngày sinh") thiếu thông báo rõ
+ràng. **Điều tra bằng trình duyệt thật cho thấy phỏng đoán đó SAI** — quan trọng vì nhiệm vụ yêu
+cầu "đừng đoán — điều tra rồi mới sửa".
+
+**Nguyên nhân thật (xác nhận bằng Playwright, gõ liên tục `01022003` vào `#gd-ngayxucdau`):**
+không có ràng buộc "ngày xức dầu không trước ngày sinh" nào tồn tại — KHÔNG ở client, KHÔNG ở
+`GiaoDanService.KiemTraNghiepVu` phía máy chủ, và KHÔNG cả ở bản desktop (`isValidDateInputRelations`,
+frmGiaoDan.cs:467-479, đã ghi ở mục 1 — hàm gốc thậm chí không nhận tham số `ngayXucDau`). Lỗi là
+một **race condition** thuần UI trong `GxDate.tsx`:
+
+Khi gõ xong chữ số cuối của năm, `thuChuanHoaVaCoTheNhay()` gọi `setLoi(null)` rồi NGAY SAU ĐÓ gọi
+`focusKeTiep()` — hàm này gọi `el.focus()` ĐỒNG BỘ sang control kế tiếp (combobox "Tình trạng xức
+dầu") NGAY TRONG CÙNG TICK, trước khi React kịp flush `setLoi(null)`/`setText(...)` vừa gọi. Việc
+`.focus()` bắn `blur` đồng bộ ngay lập tức trên ô ngày — nhưng handler `onBlur` (`xuLyRoiO`) lúc đó
+vẫn là **closure CŨ**, đóng gói `text` từ TRƯỚC khi gõ xong ký tự cuối (ví dụ `"01/02/200_"` — năm
+mới có 3 chữ số). `xuLyRoiO` gọi lại `chuanHoaNgayThieu("01","02","200")` → năm thiếu 1 chữ số →
+trả `undefined` → `setLoi(thông báo lỗi)` — chạy SAU `setLoi(null)` (đúng thứ tự) nên THẮNG, ghi đè
+`loi` bằng thông báo SAI dù `text`/ISO cuối cùng đều đúng `01/02/2003`/`2003-02-01`. Bất kỳ ngày
+hợp lệ nào gõ đủ 8 số liên tục (không riêng gì "Ngày xức dầu") đều tái hiện được lỗi này — đúng
+với việc người dùng gặp lỗi này ở CẢ "Ngày xức dầu" LẪN "Ngày rước lễ" (hai ảnh khác nhau, cùng
+một bug).
+
+**Sửa:** bọc ba `setState` (`setLoi(null)`, `setIso(...)`, `setText(...)`) trong `flushSync` (từ
+`react-dom`) trước khi gọi `focusKeTiep()` — buộc React render+commit ĐỒNG BỘ trước khi `.focus()`
+kích blur, để `onBlur` khi đó là closure MỚI (đã có `text` đúng `"01/02/2003"`), không còn re-validate
+sai. `GxDate.tsx`, hàm `thuChuanHoaVaCoTheNhay`. Test mới:
+`GxDate.test.tsx` — "go xong 8 so lien tuc (tu nhay control ke tiep) thi KHONG con bao loi gia" —
+gõ `01022003` liên tục, xác nhận `aria-invalid` rỗng và không có `role=alert` sau khi tự nhảy
+focus (trước khi sửa, test này thất bại — tái hiện đúng bug).
+
+**Rà "tất cả các validation tương tự" theo đúng yêu cầu người dùng:** kiểm tra toàn bộ
+`GiaoDanService.KiemTraNghiepVu`/`GiaDinhService` (mọi thông báo chặn cứng/cảnh báo) — tất cả ĐÃ
+nêu rõ quy tắc VÀ con số cụ thể sẵn (ví dụ "Giáo dân này rước lễ lần đầu khi chưa được 7 tuổi",
+"Cha chưa đủ 15 tuổi để có con. Tuổi phụ huynh phải lớn hơn tuổi của giáo dân ít nhất là 15") —
+không có thông báo chung chung nào khác ở phía máy chủ. Phía client, tìm khắp
+`WebApp/src/web/src` chuỗi "không hợp lệ" — CHỈ có đúng một chỗ (`GxDate.tsx` dòng 103, thông báo
+định dạng, dùng chung cho MỌI ô `GxDate` trong toàn bộ hai màn hình chi tiết) — sửa MỘT chỗ này đã
+tự động sửa cho mọi ô ngày khác trong ứng dụng, không cần sửa từng ô. Giữ nguyên nội dung thông
+báo cho trường hợp thật sự sai định dạng (đúng yêu cầu "Sai định dạng → giữ thông báo hiện tại").
+
+**Không thêm quy tắc nghiệp vụ nào** ("ngày xức dầu không trước ngày sinh" hay tương tự) — đúng
+yêu cầu "đừng thay đổi quy tắc nào đang có", vì quy tắc đó KHÔNG tồn tại ở bản desktop để tái hiện,
+và việc thêm mới nằm ngoài phạm vi nhiệm vụ này (ghi lại đây để người dùng quyết định sau, không tự
+thêm).
+
+**Lỗi tràn ô (nhóm 1, việc 4):** thông báo dài của `GxDate` tràn ra ngoài khung, đè lên nhãn cạnh
+bên (ví dụ đè "Tình trạng" ở khối Xức dầu) — nguyên nhân: `.gx-date` là `inline-flex` (không phải
+`flex`), khiến khối không chắc chắn chiếm đúng bề rộng `max-width` được truyền qua prop `style`
+trong mọi tình huống trình duyệt, và `.gx-date-loi` không có `white-space: normal`/`overflow-wrap`
+tường minh. Sửa: `.gx-date` đổi sang `display: flex` + `max-width: 100%`; `.gx-date-loi` thêm
+`display: block; width: 100%; white-space: normal; overflow-wrap: anywhere`. Đo thật (Chromium,
+nhập `99/99/2015` — sai cả ngày lẫn tháng để chắc chắn kích hoạt lỗi): khung `.gx-date` = 170 ×
+102px, `.gx-date-loi` = **170 × 69px** (đúng khớp bề rộng khung, xuống 3 dòng, không tràn) — ảnh
+`127-loi-khong-tran.png`.
+
+**Nhóm 2 — danh sách gợi ý bị khối bên dưới che (`GxGoiY`/`GxPicker`):** nguyên nhân là
+`.card.glass` dùng `backdrop-filter`, thuộc tính TỰ TẠO một stacking context mới theo đặc tả CSS.
+Danh sách `position: absolute` lồng bên trong một `.card.glass` — dù `z-index` cao bao nhiêu —
+KHÔNG BAO GIỜ thoát ra khỏi ranh giới stacking context của khối cha đó để nổi lên trên một
+`.card.glass` KHÁC đứng sau nó trong DOM (ví dụ khối "Rửa tội" bị khối "Thêm sức" che, vì "Thêm
+sức" vẽ sau trong cùng stacking context của `.card-row`). Sửa: dựng component dùng chung mới
+`GxDropdownPortal.tsx` — render danh sách qua React portal thẳng vào `document.body` với
+`position: fixed` tính theo `getBoundingClientRect()` của ô neo, tự tính lại khi cuộn/đổi cỡ cửa
+sổ, và tự LẬT LÊN TRÊN khi không đủ chỗ phía dưới (< 240px, khớp `max-height` CSS). Áp dụng cho cả
+`GxGoiY` (dropdown gợi ý) và `GxPicker` (dropdown tìm giáo dân) — cùng cơ chế, cùng file dùng
+chung.
+
+Xác nhận thật (Playwright, seed vài mục lịch sử `localStorage` để có gợi ý hiện): gõ vào "Người đỡ
+đầu" khối Rửa tội → danh sách 4 dòng hiện TRỌN VẸN, nổi trên khối "Thêm sức" bên dưới (ảnh
+`123-goiy-hien-tron.png`). Thu nhỏ cửa sổ xuống 650px cao, gõ vào "Nơi thêm sức" (gần đáy) → danh
+sách tự LẬT LÊN TRÊN ô (`style="... bottom: 76.25px"`, không có `top`) — ảnh
+`124-goiy-lat-len-tren.png`. `GxPicker` (nút chọn "Tên Cha") cũng portal đúng ra `document.body`,
+dropdown 267,6px cao nổi trọn trên hai khối "Rửa tội"/"Rước lễ lần đầu" bên dưới — ảnh
+`125-picker-portal.png`.
+
+**Nhóm 3 — cân đối bề rộng khối "Thông tin cá nhân":** đo thật (Chromium, giáo dân "Anton Nguyễn
+Hoàng Thiên", mã 3) TRƯỚC/SAU:
+
+| Ô | Trước | Sau |
+|---|---|---|
+| "Nơi sinh" (`#gd-noisinh`) | rộng 176px, mép phải tại x=1171,2 | rộng **457,6px**, mép phải x=1452,8 — **khớp đúng** mép phải "Tên Cha"/"Tên Mẹ" |
+| "Tên Cha"/"Tên Mẹ" (`.picker`) | rộng 457,6px, mép phải x=1452,8 (không đổi) | rộng 457,6px, mép phải x=1452,8 |
+| "Ngày sinh" (ô hiển thị) | mép phải x=1352,4 (hụt ~100px so với lề phải hàng) | mép phải x=1420,8 (sát nút lịch, docked đúng lề phải hàng — nút lịch tới x=1452,8) |
+| "Nơi rước lễ" (`#gd-noiruocle`) | rộng 176px, mép phải x=1220 | rộng **408,8px**, mép phải x=1452,8 — hết lề phải |
+| `.picker` border-radius | `999px` (bo tròn hết cỡ) | **`9px`** (`var(--r-field)`, khớp ô văn bản thường) |
+| `.picker .who` font-weight | `500` | **`400`** (khớp ô văn bản thường) |
+| "Nghề nghiệp" `max-width` | 200px | **180px** |
+| "Điện thoại" `max-width` | 170px | **180px** — bằng "Nghề nghiệp" |
+| Khung ảnh `.photo-slot` (nhóm 4, không đụng) | 131 × 174px (tỉ lệ 0,753) | 131 × 174px (không đổi) |
+
+Cách sửa: thêm CSS `.frow .val > .gx-goiy { flex: 1; min-width: 0 }` (trước đây CHỈ
+`input[type=text]/date/select/textarea` trực tiếp mới được `flex: 1`, span bọc `GxGoiY` bị bỏ sót
+nên co lại bằng đúng bề rộng mặc định của `<input>` bên trong, ngắn hơn hẳn `.picker` đứng cạnh nó
+— `.picker` tự có `flex: 1` trong CSS riêng từ trước); `GxDate` "Ngày sinh" thêm
+`style={{ marginLeft: 'auto' }}` (ô này không có `flex-grow`, cỡ đúng bằng nội dung khuôn
+`dd/mm/yyyy`, `margin-left: auto` đẩy nó sát lề phải của hàng); `.picker` đổi `border-radius: 999px`
+→ `var(--r-field)` và `.picker .who` đổi `font-weight: 500` → `400`; `Nghề nghiệp`/`Điện thoại`
+đồng bộ `maxWidth` về 180px (khớp "Trình độ văn hóa"/"Biết ngoại ngữ" cùng cột, vốn đã dùng 180px).
+Ảnh chụp trước/sau: `121-truoc-canhan.png`/`121-truoc-canhan-cuoi.png` và
+`122-sau-canhan.png`/`122-sau-canhan-cuoi.png`.
+
+**Nhóm 4 (giữ nguyên, không đụng):** khung ảnh 3:4 và ô CMND/CCCD (mục 51-52) không sửa gì thêm —
+đo lại xác nhận tỉ lệ 131/174 = 0,753 ≈ 0,75, không đổi so với trước task này. `GxDate` khuôn
+`__/__/____`/tự nhảy ô/chuẩn hoá ngày thiếu (mục trước) giữ nguyên hành vi, chỉ sửa đúng chỗ
+race-condition ở trên. Gợi ý theo tần suất, biểu tượng lịch, header/hàng lọc lưới, bố cục màn hình
+gia đình, xuất Excel: không đụng.
+
+**Số test cuối:** frontend **317/317** (thêm đúng 1 test mới cho bug race-condition ở trên).
+`npm run build` chạy được. Không đụng backend (`GiaoDanService.KiemTraNghiepVu` chỉ ĐỌC để rà soát,
+không sửa dòng nào) nên không chạy `dotnet test`. Dữ liệu xác nhận không đổi bằng `psql`: giáo dân
+mã 3 vẫn `ngay_xuc_dau` rỗng (không lưu nhầm dữ liệu test), tổng **2050 giáo dân / 40 gia đình**
+không đổi. Ảnh chụp: `121`–`127` trong `WebApp/anh-chup-kiem-thu/`.
