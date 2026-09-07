@@ -1280,6 +1280,38 @@ tbody tr[aria-selected="true"] .rowhead {
 }
 .gx-date-loi { font-size: 11.5px; color: var(--rose-ink); }
 
+/* Gợi ý nhập liệu theo tần suất (GxGoiY.tsx) — dropdown nổi trên, cùng khuôn với
+   .picker-dropdown (GxPicker) để giao diện nhất quán giữa hai kiểu "gợi ý" trong ứng dụng. */
+.gx-goiy-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 2px 0 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--bg, #fff);
+  border: 1px solid rgba(29,93,219,.25);
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(15,47,110,.15);
+  max-height: 220px;
+  overflow-y: auto;
+}
+.gx-goiy-list li {
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gx-goiy-list li:hover, .gx-goiy-list li.active {
+  background: var(--brand-mist);
+  color: var(--brand-ink);
+}
+
 /* `.seg` được đặt THẲNG lên chính thẻ <label> bọc input (radio "Chủ hộ" cạnh Người
    nam/nữ ở GiaDinhDetail.tsx) — KHÔNG phải một khối cha bọc nhiều <label> con như tên gợi ý
    ban đầu. Trước đây CSS viết theo kiểu "cha .seg { pill } .seg label { padding, màu } .seg

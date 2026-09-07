@@ -11,6 +11,12 @@ type NguoiDungHienTai = {
    * chữ viết cứng "Giáo xứ Thánh Tâm" trước đây (can-review-sau.md mục 32). `null` chỉ trong
    * lúc dữ liệu chưa kịp tải (không nên xảy ra vì backend luôn trả kèm ngay từ lúc đăng nhập). */
   tenGiaoXu: string | null
+  /** Khoá (không phải tên) của giáo xứ đang đăng nhập — dùng để TÁCH gợi ý nhập liệu lưu ở
+   * `localStorage` theo từng giáo xứ (xem `lib/goiYNhapLieu.ts` và can-review-sau.md mục 50):
+   * máy chủ phục vụ nhiều giáo xứ, một trình duyệt dùng chung bởi hai người ở hai giáo xứ khác
+   * nhau KHÔNG được thấy gợi ý lẫn nhau. `null` chỉ trong lúc dữ liệu chưa kịp tải, cùng lý do
+   * `tenGiaoXu`. */
+  giaoXuId: string | null
 }
 
 type AuthContextValue = {
@@ -62,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     api.auth.toi()
       .then((tt) => setNguoiDung({
         tenTaiKhoan: tt.tenTaiKhoan, hoTen: tt.hoTen, loaiTaiKhoan: tt.loaiTaiKhoan, tenGiaoXu: tt.tenGiaoXu,
+        giaoXuId: tt.giaoXuId,
       }))
       .catch(() => { authStore.xoaToken() })
       .finally(() => setDangKiemTraPhien(false))
@@ -75,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       hoTen: ketQua.nguoiDung.hoTen,
       loaiTaiKhoan: ketQua.nguoiDung.loaiTaiKhoan,
       tenGiaoXu: ketQua.nguoiDung.tenGiaoXu,
+      giaoXuId: ketQua.nguoiDung.giaoXuId,
     })
   }, [])
 

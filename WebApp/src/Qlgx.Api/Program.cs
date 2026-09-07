@@ -160,6 +160,7 @@ app.MapGiaoHo();
 app.MapTaiKhoan();
 app.MapQuanLyGiaoXu();
 app.MapNhapDuLieu();
+app.MapDanhMuc();
 
 // Fallback SPA: moi GET khong khop route API/tep tinh nao o tren tra ve index.html de React
 // Router tu xu ly duong dan phia trinh duyet. Loai tru "/api" bang rang buoc regex phu dinh de

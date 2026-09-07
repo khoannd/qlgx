@@ -324,6 +324,12 @@ export const api = {
   hoiDoan: {
     danhMuc: () => goi<HoiDoanDanhMuc[]>('/api/hoi-doan'),
   },
+  danhMuc: {
+    // Danh sách "Tên thánh" tĩnh (bảng `du_lieu_chung`, 343 dòng đã chuyển từ Access) — một
+    // trong hai nguồn gợi ý nhập liệu, nguồn còn lại là lịch sử `localStorage` (xem
+    // `lib/goiYNhapLieu.ts` và docs/superpowers/specs/man-hinh/ho-tro-nhap-lieu.md mục C.1).
+    tenThanh: () => goi<string[]>('/api/danh-muc/ten-thanh'),
+  },
   giaoHo: {
     // Danh mục thật (Id + tên) — thay data/giaoHoTam.ts hard-code theo tên, xem
     // docs/superpowers/specs/man-hinh/can-review-sau.md mục 19.

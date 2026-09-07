@@ -44,6 +44,9 @@ function App() {
   // theo tài khoản (Task 16, xem lib/banNhap.ts). Component chi tiết không tự gọi useAuth() để
   // giữ khả năng test độc lập (không bắt buộc bọc <AuthProvider> trong test).
   const tenTaiKhoan = nguoiDung?.tenTaiKhoan ?? null
+  // Khoá giáo xứ đang đăng nhập — dùng để tách gợi ý nhập liệu theo tần suất lưu ở
+  // `localStorage` (xem lib/goiYNhapLieu.ts), cùng cách truyền tenTaiKhoan ở trên.
+  const giaoXuId = nguoiDung?.giaoXuId ?? null
 
   function moChiTietGiaDinh(id: string | null) {
     const idThe = id ? `giaDinh:${id}` : `giaDinhMoi:${++moiDem.current}`
@@ -61,6 +64,7 @@ function App() {
           moGiaoDan={(giaoDanId) => moChiTietGiaoDan(giaoDanId, idThe)}
           moDanhSachGiaDinh={moDanhSachGiaDinh}
           tenTaiKhoan={tenTaiKhoan}
+          giaoXuId={giaoXuId}
           onTieuDe={(ten) => suaTieuDe(idThe, ten)}
         />
       ),
@@ -91,6 +95,7 @@ function App() {
           moGiaoDan={moChiTietGiaoDan}
           onQuayVe={quayVe}
           tenTaiKhoan={tenTaiKhoan}
+          giaoXuId={giaoXuId}
           onTieuDe={(ten) => suaTieuDe(idThe, ten)}
         />
       ),

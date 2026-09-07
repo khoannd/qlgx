@@ -8,6 +8,7 @@ import { AnhDaiDien } from '../components/AnhDaiDien'
 import { GxDate } from '../components/GxDate'
 import { GxField, GxInline } from '../components/GxField'
 import { GxGiaoDanList, menuGiaoDanMacDinh } from '../components/GxGiaoDanList'
+import { GxGoiY } from '../components/GxGoiY'
 import { GxPicker } from '../components/GxPicker'
 import { useTuDongLuuBanNhap, xoaBanNhap } from '../lib/banNhap'
 import { chuaHoTro } from '../lib/thongBao'
@@ -99,6 +100,9 @@ type Props = {
    * chuỗi `thongBaoLuu` để dò vì nội dung câu chữ có thể đổi; đổi giá trị này là tín hiệu đủ để
    * xoá bản nháp tương ứng (xem effect bên dưới). */
   luuThanhCongDem?: number
+  /** Khoá giáo xứ đang đăng nhập — dùng để tách gợi ý nhập liệu theo tần suất lưu ở
+   * `localStorage` (xem `lib/goiYNhapLieu.ts` và cùng prop ở `GiaoDanDetail.Props`). */
+  giaoXuId?: string | null
 }
 
 const rong = (): GiaDinhDetailDuLieu => ({
@@ -145,7 +149,7 @@ function tuThanhVien(tv: ThanhVien, giaDinhId: string): GiaoDanListItem {
 export function GiaDinhDetail({
   duLieu, moGiaoDan, moDanhSachGiaDinh, onLuu, dangLuu, thongBaoLuu, danhMucGiaoHo = [],
   onGanVoChong, onBoChonVoChong, onThemThanhVien, onXoaThanhVien, onTaoMoi,
-  khoaBanNhap = null, tenTaiKhoan = null, banNhap = null, luuThanhCongDem,
+  khoaBanNhap = null, tenTaiKhoan = null, banNhap = null, luuThanhCongDem, giaoXuId = null,
 }: Props) {
   // banNhap đè lên dữ liệu gốc khi người dùng bấm "Khôi phục" ở BanNhapBanner — xem chú thích ở
   // GiaoDanDetail.tsx (cùng cơ chế, container luôn đổi `key` kèm theo).
@@ -431,12 +435,12 @@ export function GiaDinhDetail({
                 defaultValue={f.honPhoi?.soHonPhoi ?? ''} disabled={!nguoiNam && !nguoiNu} style={{ maxWidth: 100 }} />
             </GxField>
             <GxField label="Nơi hôn phối" id="gdinh-hp-noi">
-              <input id="gdinh-hp-noi" name="honPhoiNoi" type="text"
-                defaultValue={f.honPhoi?.noiHonPhoi ?? ''} disabled={!nguoiNam && !nguoiNu} />
+              <GxGoiY id="gdinh-hp-noi" name="honPhoiNoi" truong="noiHonPhoi" giaoXuId={giaoXuId}
+                defaultValue={f.honPhoi?.noiHonPhoi} disabled={!nguoiNam && !nguoiNu} />
             </GxField>
             <GxField label="Linh mục chứng" id="gdinh-hp-lm">
-              <input id="gdinh-hp-lm" name="honPhoiLinhMuc" type="text"
-                defaultValue={f.honPhoi?.linhMucChung ?? ''} disabled={!nguoiNam && !nguoiNu} />
+              <GxGoiY id="gdinh-hp-lm" name="honPhoiLinhMuc" truong="linhMucChung" giaoXuId={giaoXuId}
+                defaultValue={f.honPhoi?.linhMucChung} disabled={!nguoiNam && !nguoiNu} />
             </GxField>
             <GxField label="Người chứng 1" id="gdinh-hp-c1">
               <input id="gdinh-hp-c1" name="honPhoiChung1" type="text"

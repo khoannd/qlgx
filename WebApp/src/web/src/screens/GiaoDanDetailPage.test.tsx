@@ -23,6 +23,9 @@ vi.mock('../api/client', async () => {
       giaoHo: {
         danhMuc: vi.fn().mockResolvedValue([]),
       },
+      danhMuc: {
+        tenThanh: vi.fn().mockResolvedValue([]),
+      },
     },
   }
 })

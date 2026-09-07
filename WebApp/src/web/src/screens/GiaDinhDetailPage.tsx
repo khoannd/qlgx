@@ -21,6 +21,8 @@ type Props = {
    * thẻ tài liệu đang mở — trước đây thẻ luôn ghi tĩnh "Gia đình", mở nhiều gia đình không
    * phân biệt nổi. Xem `useTabDocs.suaTieuDe`. */
   onTieuDe?: (tieuDe: string) => void
+  /** Khoá giáo xứ đang đăng nhập — xem chú thích cùng tên ở `GiaoDanDetailPage.Props`. */
+  giaoXuId?: string | null
 }
 
 const tenHienThi = (nguoi: { tenThanh: string | null; hoTen: string }) =>
@@ -33,7 +35,9 @@ const tenHienThi = (nguoi: { tenThanh: string | null; hoTen: string }) =>
  * `window.confirm`/`alert` — bắt buộc cho chuỗi hỏi nhiều bước của `NguoiCu`, xem
  * docs/superpowers/specs/man-hinh/can-review-sau.md mục 3.
  */
-export function GiaDinhDetailPage({ id, moGiaoDan, moDanhSachGiaDinh, tenTaiKhoan = null, onTieuDe }: Props) {
+export function GiaDinhDetailPage({
+  id, moGiaoDan, moDanhSachGiaDinh, tenTaiKhoan = null, onTieuDe, giaoXuId = null,
+}: Props) {
   const [idThat, setIdThat] = useState(id)
   const [duLieu, setDuLieu] = useState<GiaDinhDetailDuLieu | null>(null)
   const [dangTai, setDangTai] = useState(idThat !== null)
@@ -125,6 +129,7 @@ export function GiaDinhDetailPage({ id, moGiaoDan, moDanhSachGiaDinh, tenTaiKhoa
           onTaoMoi={taoMoi}
           dangLuu={dangLuu}
           tenTaiKhoan={tenTaiKhoan}
+          giaoXuId={giaoXuId}
         />
         {Dialog}
       </>
@@ -331,6 +336,7 @@ export function GiaDinhDetailPage({ id, moGiaoDan, moDanhSachGiaDinh, tenTaiKhoa
           tenTaiKhoan={tenTaiKhoan}
           banNhap={banNhapApDung}
           luuThanhCongDem={luuThanhCongDem}
+          giaoXuId={giaoXuId}
         />
       )}
       {Dialog}

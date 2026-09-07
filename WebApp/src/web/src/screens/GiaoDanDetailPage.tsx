@@ -36,12 +36,17 @@ type Props = {
    * liệu đang mở — trước đây thẻ luôn ghi tĩnh "Giáo dân", mở nhiều giáo dân không phân biệt
    * nổi. Xem `useTabDocs.suaTieuDe`. */
   onTieuDe?: (tieuDe: string) => void
+  /** Khoá giáo xứ đang đăng nhập — App.tsx truyền xuống từ `useAuth()` (cùng lý do không tự
+   * gọi `useAuth()` ở đây như `tenTaiKhoan`). Dùng để tách gợi ý nhập liệu theo tần suất lưu ở
+   * `localStorage` (Task "gợi ý nhập liệu", xem `lib/goiYNhapLieu.ts`). */
+  giaoXuId?: string | null
 }
 
 /** Container nối `GiaoDanDetail` với `GET`/`PUT /api/giao-dan/{id}` — cùng khuôn tải lại sau
  * khi lưu và xử lý xung đột RowVersion như `GiaDinhDetailPage`. */
 export function GiaoDanDetailPage({
   id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan, onQuayVe, tenTaiKhoan = null, onTieuDe,
+  giaoXuId = null,
 }: Props) {
   // "Quay về"/"← Danh sách" của GiaoDanDetail gọi đúng MỘT prop `moDanhSachGiaoDan` — ghi đè
   // tại đây bằng `onQuayVe` khi có (mở từ ngữ cảnh gia đình) để không phải sửa GiaoDanDetail.
@@ -91,6 +96,7 @@ export function GiaoDanDetailPage({
   const [dangTaiHoiDoan, setDangTaiHoiDoan] = useState(id !== null)
   const [danhMucHoiDoan, setDanhMucHoiDoan] = useState<HoiDoanDanhMuc[]>([])
   const [danhMucGiaoHo, setDanhMucGiaoHo] = useState<GiaoHo[]>([])
+  const [danhMucTenThanh, setDanhMucTenThanh] = useState<string[]>([])
 
   const tai = useCallback(() => {
     if (id === null) return
@@ -172,6 +178,14 @@ export function GiaoDanDetailPage({
       .catch((e: unknown) => { console.error('Không tải được danh mục giáo họ', e) })
   }, [])
 
+  // Danh mục "Tên thánh" (một trong hai nguồn gợi ý của ô "Tên thánh", xem GxGoiY) — không phụ
+  // thuộc `id`, tải một lần.
+  useEffect(() => {
+    api.danhMuc.tenThanh()
+      .then(setDanhMucTenThanh)
+      .catch((e: unknown) => { console.error('Không tải được danh mục tên thánh', e) })
+  }, [])
+
   // Gộp MỌI cảnh báo nghiệp vụ áp dụng được (xem TaoGiaoDanRequest.BoQuaCanhBao phía backend)
   // thành MỘT hộp thoại xác nhận, thay vì chuỗi hộp thoại Yes/No tuần tự của desktop — cùng
   // tinh thần "chặn tới khi được xác nhận rõ ràng", chỉ khác cách trình bày. Trả về `true` nếu
@@ -229,6 +243,8 @@ export function GiaoDanDetailPage({
           khoaBanNhap={khoaBanNhap}
           tenTaiKhoan={tenTaiKhoan}
           banNhap={banNhapApDung}
+          giaoXuId={giaoXuId}
+          danhMucTenThanh={danhMucTenThanh}
         />
       </>
     )
@@ -344,6 +360,8 @@ export function GiaoDanDetailPage({
           onLayAnh={api.giaoDan.layAnh}
           onTaiAnhLen={api.giaoDan.taiAnhLen}
           onXoaAnh={api.giaoDan.xoaAnh}
+          giaoXuId={giaoXuId}
+          danhMucTenThanh={danhMucTenThanh}
         />
       )}
     </TrangThaiTai>

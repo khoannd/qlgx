@@ -7,6 +7,7 @@ import { AnhDaiDien } from '../components/AnhDaiDien'
 import { GxDate } from '../components/GxDate'
 import { GxField, GxInline } from '../components/GxField'
 import { GxFormTabs } from '../components/GxFormTabs'
+import { GxGoiY } from '../components/GxGoiY'
 import { GxPicker } from '../components/GxPicker'
 import { dinhDangNgay } from '../lib/ngay'
 import { useTuDongLuuBanNhap, xoaBanNhap } from '../lib/banNhap'
@@ -46,11 +47,12 @@ const CACH_THUC_HON_PHOI = [
  * hon-phoi.md mục 8) — chỉ xem tên người phối ngẫu và sửa các trường còn lại.
  */
 function KhoiHonPhoi({
-  hp, thuTu, onLuu,
+  hp, thuTu, onLuu, giaoXuId,
 }: {
   hp: HonPhoiCuaGiaoDan
   thuTu: number
   onLuu?: (honPhoiId: string, payload: YeuCauCapNhatHonPhoi) => Promise<void>
+  giaoXuId: string | null
 }) {
   // KHÔNG dùng thẻ <form> ở đây: toàn bộ tab này được `GxFormTabs` render bên trong thẻ
   // <form> duy nhất bọc cả trang của `GiaoDanDetail` (dùng cho nút "Cập nhật" chính) — lồng
@@ -107,10 +109,12 @@ function KhoiHonPhoi({
             <GxDate id={`${idBase}-ngay`} name="ngayHonPhoi" defaultValue={hp.ngayHonPhoi} style={{ maxWidth: 180 }} />
           </GxField>
           <GxField label="Nơi hôn phối" id={`${idBase}-noi`}>
-            <input id={`${idBase}-noi`} name="noiHonPhoi" type="text" defaultValue={hp.noiHonPhoi ?? ''} />
+            <GxGoiY id={`${idBase}-noi`} name="noiHonPhoi" truong="noiHonPhoi" giaoXuId={giaoXuId}
+              defaultValue={hp.noiHonPhoi} />
           </GxField>
           <GxField label="Linh mục chứng" id={`${idBase}-lm`}>
-            <input id={`${idBase}-lm`} name="linhMucChung" type="text" defaultValue={hp.linhMucChung ?? ''} />
+            <GxGoiY id={`${idBase}-lm`} name="linhMucChung" truong="linhMucChung" giaoXuId={giaoXuId}
+              defaultValue={hp.linhMucChung} />
           </GxField>
         </div>
         <div>
@@ -606,6 +610,14 @@ type Props = {
   onLayAnh?: (id: string) => Promise<string | null>
   onTaiAnhLen?: (id: string, tep: File) => Promise<void>
   onXoaAnh?: (id: string) => Promise<void>
+  /** Khoá giáo xứ đang đăng nhập (claim, không phải tham số trình duyệt) — dùng để tách gợi ý
+   * nhập liệu theo tần suất lưu ở `localStorage` (xem `lib/goiYNhapLieu.ts`). `null`/không
+   * truyền = tắt phần lịch sử ở mọi ô `GxGoiY` trong form này (các bài test dựng component độc
+   * lập không cần biết tới cơ chế này). */
+  giaoXuId?: string | null
+  /** Danh mục "Tên thánh" tĩnh (GET /api/danh-muc/ten-thanh, bảng `du_lieu_chung`) — một trong
+   * hai nguồn gợi ý của ô "Tên thánh", xem `GxGoiY`. */
+  danhMucTenThanh?: string[]
 }
 
 const rong = (): GiaoDanDetailDuLieu => ({
@@ -651,6 +663,7 @@ export function GiaoDanDetail({
   danhMucHoiDoan = [], danhMucGiaoHo = [], khoaBanNhap = null, tenTaiKhoan = null, banNhap = null,
   onIn, dangIn = false,
   onLayAnh, onTaiAnhLen, onXoaAnh,
+  giaoXuId = null, danhMucTenThanh = [],
 }: Props) {
   // banNhap (nếu người dùng vừa bấm "Khôi phục" ở BanNhapBanner) đè lên dữ liệu gốc — xem chú
   // thích ở Props.banNhap. Container LUÔN đổi `key` khi truyền banNhap mới nên các state dưới
@@ -732,7 +745,8 @@ export function GiaoDanDetail({
                   <input id="gd-ma" type="text" value={moi ? '(tự sinh khi lưu)' : String(p.maGiaoDanCu)} disabled />
                 </GxField>
                 <GxField label="Tên thánh" id="gd-tenthanh">
-                  <input id="gd-tenthanh" name="tenThanh" type="text" defaultValue={p.tenThanh ?? ''} />
+                  <GxGoiY id="gd-tenthanh" name="tenThanh" truong="tenThanh" giaoXuId={giaoXuId}
+                    danhMuc={danhMucTenThanh} defaultValue={p.tenThanh} />
                 </GxField>
                 <GxField label="Họ tên" id="gd-hoten">
                   <input id="gd-hoten" name="hoTen" type="text" defaultValue={p.hoTen} />
@@ -780,7 +794,7 @@ export function GiaoDanDetail({
               <GxDate ariaLabel="Ngày sinh" name="ngaySinh" defaultValue={p.ngaySinh} />
             </GxField>
             <GxField label="Nơi sinh" id="gd-noisinh">
-              <input id="gd-noisinh" name="noiSinh" type="text" defaultValue={p.noiSinh ?? ''} />
+              <GxGoiY id="gd-noisinh" name="noiSinh" truong="noiSinh" giaoXuId={giaoXuId} defaultValue={p.noiSinh} />
             </GxField>
             <GxField label="Tên Cha" id="gd-tencha">
               <GxPicker id="gd-tencha" value={tenCha} onChon={chonCha}
@@ -804,9 +818,11 @@ export function GiaoDanDetail({
           </GxField>
           <GxField label="Người ban bí tích" id="gd-charuatoi"><GxPicker id="gd-charuatoi" value={p.chaRuaToi} /></GxField>
           <GxField label="Người đỡ đầu" id="gd-dodauruatoi">
-            <input id="gd-dodauruatoi" name="nguoiDoDauRuaToi" type="text" defaultValue={p.nguoiDoDauRuaToi ?? ''} />
+            <GxGoiY id="gd-dodauruatoi" name="nguoiDoDauRuaToi" truong="nguoiDoDau" giaoXuId={giaoXuId}
+              defaultValue={p.nguoiDoDauRuaToi} />
             <GxInline>Nơi rửa tội</GxInline>
-            <input aria-label="Nơi rửa tội" name="noiRuaToi" type="text" defaultValue={p.noiRuaToi ?? ''} />
+            <GxGoiY ariaLabel="Nơi rửa tội" name="noiRuaToi" truong="noiRuaToi" giaoXuId={giaoXuId}
+              defaultValue={p.noiRuaToi} />
           </GxField>
         </div>
         <div className="card glass">
@@ -818,7 +834,7 @@ export function GiaoDanDetail({
           </GxField>
           <GxField label="Người ban bí tích" id="gd-charuocle"><GxPicker id="gd-charuocle" value={p.chaRuocLe} /></GxField>
           <GxField label="Nơi rước lễ" id="gd-noiruocle">
-            <input id="gd-noiruocle" name="noiRuocLe" type="text" defaultValue={p.noiRuocLe ?? ''} />
+            <GxGoiY id="gd-noiruocle" name="noiRuocLe" truong="noiRuocLe" giaoXuId={giaoXuId} defaultValue={p.noiRuocLe} />
           </GxField>
         </div>
       </div>
@@ -833,9 +849,11 @@ export function GiaoDanDetail({
           </GxField>
           <GxField label="Người ban bí tích" id="gd-chathemsuc"><GxPicker id="gd-chathemsuc" value={p.chaThemSuc} /></GxField>
           <GxField label="Người đỡ đầu" id="gd-dodauthemsuc">
-            <input id="gd-dodauthemsuc" name="nguoiDoDauThemSuc" type="text" defaultValue={p.nguoiDoDauThemSuc ?? ''} />
+            <GxGoiY id="gd-dodauthemsuc" name="nguoiDoDauThemSuc" truong="nguoiDoDau" giaoXuId={giaoXuId}
+              defaultValue={p.nguoiDoDauThemSuc} />
             <GxInline>Nơi thêm sức</GxInline>
-            <input aria-label="Nơi thêm sức" name="noiThemSuc" type="text" defaultValue={p.noiThemSuc ?? ''} />
+            <GxGoiY ariaLabel="Nơi thêm sức" name="noiThemSuc" truong="noiThemSuc" giaoXuId={giaoXuId}
+              defaultValue={p.noiThemSuc} />
           </GxField>
         </div>
         <div className="card glass">
@@ -1018,7 +1036,7 @@ export function GiaoDanDetail({
         </div>
       )}
       {danhSachHonPhoi.map((hp, i) => (
-        <KhoiHonPhoi key={hp.id} hp={hp} thuTu={i} onLuu={onLuuHonPhoi} />
+        <KhoiHonPhoi key={hp.id} hp={hp} thuTu={i} onLuu={onLuuHonPhoi} giaoXuId={giaoXuId} />
       ))}
     </>
   )

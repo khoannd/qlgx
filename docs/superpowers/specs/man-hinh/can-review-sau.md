@@ -2701,3 +2701,106 @@ mới + sửa 2 test cũ theo đúng hành vi mới `__/__/____`, 5 cho `lib/foc
 `npm run build` chạy được. Backend: `Qlgx.Data.Tests` 38/38 (thêm 15, gồm bằng chứng đỏ→xanh cho
 `NgayThangText`), `Qlgx.Api.Tests` 201/201, `Qlgx.Migration.Tests` 24/24 — không xoá test nào.
 Ảnh chụp: `108`–`110` trong `WebApp/anh-chup-kiem-thu/`.
+
+---
+
+### 50. Task "gợi ý nhập liệu theo tần suất dùng" (2026-09-07) — các quyết định tự đưa ra
+
+Người dùng đang chờ, yêu cầu không dừng lại hỏi. Yêu cầu gốc: tái hiện "điểm đặc biệt" của bản
+desktop — gợi ý các mục hay nhập (tên thánh, tên linh mục…) theo tần suất dùng nhiều nhất, để
+đỡ gõ lại. Đã đọc trước `docs/superpowers/specs/man-hinh/ho-tro-nhap-lieu.md` (spec nghiên cứu
+từ mã nguồn desktop) — kết luận quan trọng nhất của spec đó: cơ chế THẬT của desktop (`DuLieuChung`
+danh mục tĩnh không đếm tần suất, `autocomplete.xml` chỉ nhớ theo thứ tự lần đầu gõ) **không**
+khớp với "sắp theo tần suất" mà người dùng mô tả — nghĩa là bản web ở đây làm một tính năng MỚI,
+tốt hơn desktop, chứ không phải migrate y hệt. Người dùng cũng đã tự chốt nơi lưu: `localStorage`
+thay vì bảng CSDL mới.
+
+**Nguồn gợi ý — gộp hai nguồn, đúng đề xuất spec mục 4:**
+- **Danh mục có sẵn**: `GET /api/danh-muc/ten-thanh` (`WebApp/src/Qlgx.Api/Endpoints/DanhMucEndpoints.cs`)
+  — đọc bảng `du_lieu_chung` (343 dòng, `LoaiDuLieu=1`, đúng `LoaiDuLieuChung.TenThanh` desktop),
+  `DISTINCT`, sắp bảng chữ cái (danh mục tĩnh nên không cần đếm tần suất, đúng kết luận spec).
+  KHÔNG lọc `giao_xu_id` thủ công — RLS (`BoiCanhGiaoXuTuNguoiDung`) đã tự giới hạn ở tầng kết
+  nối CSDL, giống `GET /api/giao-ho` đã có sẵn. Chỉ dùng cho ô "Tên thánh" — không có danh mục
+  tĩnh tương tự cho các trường tự do khác (nơi chốn, người đỡ đầu…).
+- **Lịch sử người dùng đã gõ**: `WebApp/src/web/src/lib/goiYNhapLieu.ts` (`ghiNhanDaDung`,
+  `layGoiY`, `gopGoiY`) — lưu `localStorage`, mỗi mục mang `{giaTri, soLan, lanCuoi}`, xếp
+  `soLan` giảm dần rồi `lanCuoi` giảm dần (đúng yêu cầu "ưu tiên theo số lần dùng... vừa dùng gần
+  đây nên dễ thấy"). Ghi nhận tại HAI thời điểm: chọn một gợi ý (ngay lập tức), hoặc rời ô sau
+  khi tự gõ (`onBlur`) — tương đương thời điểm desktop ghi `autocomplete.xml` lúc đóng form
+  (`GxTextField.cs`), chỉ khác là ghi ngay lúc rời TỪNG Ô thay vì đợi đóng cả FORM (đơn giản hơn,
+  không mất gợi ý nếu người dùng đóng tab mà quên bấm Lưu — đổi lại là ghi cả giá trị gõ dở chưa
+  từng lưu xuống CSDL, chấp nhận được vì đây chỉ là gợi ý cục bộ, không phải dữ liệu nghiệp vụ).
+
+**Điều 1 — tách theo giáo xứ, KHÔNG tách theo tài khoản (quyết định có cân nhắc, khác `lib/banNhap.ts`):**
+- Khoá `localStorage`: `qlgx.goiy.v1.<giaoXuId>.<truong>` — `giaoXuId` lấy từ
+  `AuthContext.nguoiDung.giaoXuId` (trường MỚI thêm vào `NguoiDungHienTai`, dữ liệu này backend
+  vốn đã trả sẵn ở cả `/api/auth/dang-nhap` lẫn `/api/auth/toi`, chỉ là frontend chưa đọc ra —
+  không cần sửa gì phía backend). Truyền xuống `GiaoDanDetail`/`GiaDinhDetail` qua prop
+  `giaoXuId` giống hệt cách `tenTaiKhoan` đang được truyền (App.tsx → *Page → *Detail), để giữ
+  nguyên khả năng test độc lập của các component (không tự gọi `useAuth()`).
+- CỐ Ý **không** kèm thêm id tài khoản vào khoá (khác `lib/banNhap.ts`, nơi bản nháp CÁ NHÂN bắt
+  buộc tách theo tài khoản) — lý do: gợi ý nhập liệu (tên thánh, tên linh mục, địa danh quen
+  thuộc của MỘT giáo xứ) là hiểu biết CHUNG có ích cho mọi nhân viên văn phòng của cùng giáo xứ
+  đó, tách theo tài khoản chỉ làm gợi ý học chậm hơn (mỗi người phải tự gõ lại từ đầu) mà không
+  thêm an toàn nào — họ vốn đã cùng xem/sửa toàn bộ dữ liệu giáo dân của giáo xứ. Ranh giới cần
+  bảo vệ là GIỮA CÁC GIÁO XỨ (một máy dùng chung ở văn phòng có thể phục vụ hai giáo xứ khác
+  nhau vào hai thời điểm), không phải giữa các nhân viên cùng giáo xứ.
+- Test `lib/goiYNhapLieu.test.ts`: xác nhận giá trị của `gx-A` không lộ sang `gx-B`.
+
+**Điều 2 — giới hạn dung lượng:** tối đa 300 giá trị/trường (`SO_MUC_TOI_DA`), vượt thì loại giá
+trị ÍT DÙNG NHẤT trước (rồi CŨ NHẤT trong số cùng ít dùng). Để tách đúng thứ tự cũ/mới khi nhiều
+lượt ghi rơi CÙNG một mili-giây (`Date.now()` chỉ chính xác tới ms — gặp thật khi viết test ghi
+300+ lượt liên tiếp trong một vòng lặp), `lanCuoi` KHÔNG dùng thẳng `Date.now()` mỗi lần mà tăng
+dần từ một mốc khởi tạo bằng `Date.now()` lúc tải trang (đơn điệu tăng trong một phiên, và mốc
+khởi tạo của phiên sau luôn lớn hơn giá trị lớn nhất phiên trước để lại — xem chú thích
+`lanCuoiKeTiep()` trong `goiYNhapLieu.ts`).
+
+**Điều 3 — không lưu dữ liệu nhạy cảm:** chỉ gắn `GxGoiY` vào các ô liệt kê trong yêu cầu (xem
+danh sách bên dưới) — không có ô họ tên/CMND/điện thoại/email/địa chỉ nào dùng component này.
+
+**Các ô đã có gợi ý — và MỘT ngoại lệ có chủ đích so với yêu cầu gốc:**
+- `GiaoDanDetail.tsx`: Tên thánh (`truong="tenThanh"`, kèm danh mục), Nơi sinh, Người đỡ đầu rửa
+  tội + Người đỡ đầu thêm sức (dùng CHUNG `truong="nguoiDoDau"` — cùng ý nghĩa nghiệp vụ, đúng đề
+  xuất spec mục 4 "gộp theo Ý NGHĨA trường, không theo từng ô"), Nơi rửa tội, Nơi rước lễ, Nơi
+  thêm sức, và (tab Hôn phối) Nơi hôn phối + Linh mục chứng (`KhoiHonPhoi`).
+- `GiaDinhDetail.tsx`: Nơi hôn phối + Linh mục chứng (khối hôn phối gắn ở gia đình) — dùng CHUNG
+  khoá `truong` với hai ô cùng tên ở `GiaoDanDetail.tsx` (`noiHonPhoi`/`linhMucChung`) vì đúng
+  cùng ý nghĩa dù xuất hiện ở hai màn hình khác nhau.
+- **Ngoại lệ**: yêu cầu liệt kê "Linh mục (các ô linh mục rửa tội/rước lễ/thêm sức/chứng hôn)" —
+  nhưng ba ô "Người ban bí tích" (rửa tội/rước lễ/thêm sức) trong `GiaoDanDetail.tsx` KHÔNG phải
+  ô văn bản tự do: chúng là `GxPicker` (liên kết tới một bản ghi `GiaoDan` thật qua tìm kiếm, và
+  ở Phase 1 hiện tại còn CHƯA cho sửa — chỉ hiển thị giá trị đã tải, xem chú thích tại chỗ dựng
+  `dungPayloadTuForm`). Không có ô nhập văn bản nào cho ba trường đó để gắn gợi ý vào — chỉ "Linh
+  mục chứng" (hôn phối, vốn đã là `input` văn bản tự do) có gợi ý. Không tự ý đổi ba ô đó thành
+  ô nhập tự do (sẽ phá vỡ ràng buộc liên kết-tới-giáo-dân-thật đang có, ngoài phạm vi nhiệm vụ
+  này) — ghi lại để người dùng biết và quyết định sau nếu muốn.
+
+**Hành vi khi chọn một gợi ý:** dùng lại `focusKeTiep` (`lib/focusDieuHuong.ts`, không viết mới)
+— chọn xong tự nhảy sang control kế tiếp trong `<form>`, đúng cơ chế vừa làm ở commit `c8fd8a5`.
+Bàn phím: mũi tên lên/xuống duyệt, Enter xác nhận (kèm tự nhảy), Esc đóng danh sách mà KHÔNG xoá
+nội dung đang gõ dở. Không bẫy Tab.
+
+**Kiểm chứng bằng trình duyệt thật** (Playwright, tài khoản `giaoxu`, giáo xứ Vô Nhiễm — 2039
+giáo dân, 40 gia đình xác nhận đúng số): mở giáo dân mã 1 (Giuse Nguyễn Đức Mạnh), gõ vào ô "Tên
+thánh" → hiện gợi ý lọc từ danh mục 343 tên thánh (ảnh `111`) → chọn "Giuse" → điền đúng, tiêu
+điểm tự chuyển sang ô "Họ tên" (ảnh `112`). Gõ "Nhà thờ Giáo họ Simon" vào "Nơi thêm sức", rồi
+gõ một giá trị khác một lần, rồi chọn lại "Nhà thờ Giáo họ Simon" lần hai (tăng `soLan` lên 2,
+xác nhận bằng `localStorage` thật qua `evaluate`) — tải lại trang, mở lại giáo dân, gõ lại: giá
+trị dùng 2 lần đứng TRÊN giá trị dùng 1 lần (ảnh `113`). Gõ một chuỗi hoàn toàn mới vào "Nơi rước
+lễ" — lưu bình thường, không bị chặn (ảnh `114`). Nội dung `localStorage` thật lúc kiểm tra:
+
+```json
+"qlgx.goiy.v1.00000000-0000-0000-0000-0000000000aa.noiThemSuc":
+  "[{\"giaTri\":\"Nhà thờ Giáo họ Simon\",\"soLan\":2,...},
+    {\"giaTri\":\"Nhà thờ Giáo họ Khác Một Lần\",\"soLan\":1,...}]"
+```
+
+**Không đụng gì khác:** không thêm bảng CSDL mới (đúng quyết định localStorage của người dùng);
+không sửa `GxDate`/`focusDieuHuong.ts`/`GxPicker.tsx` (dùng lại nguyên trạng); không đổi hợp đồng
+API nào đã có, chỉ THÊM một endpoint đọc mới (`GET /api/danh-muc/ten-thanh`) và thêm một trường
+đọc-thôi (`giaoXuId`) vào response đăng nhập/`/toi` vốn backend đã trả sẵn.
+
+**Số test cuối:** frontend 316/316 (thêm 29: 16 cho `lib/goiYNhapLieu.test.ts`, 13 cho
+`components/GxGoiY.test.tsx`), `npm run build` chạy được. Backend: `Qlgx.Data.Tests` 38/38,
+`Qlgx.Api.Tests` 204/204 (thêm 3 cho `DanhMucTests.cs`), `Qlgx.Migration.Tests` 24/24 — không xoá
+test nào. Ảnh chụp: `111`–`114` trong `WebApp/anh-chup-kiem-thu/`.
