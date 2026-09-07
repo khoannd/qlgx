@@ -418,4 +418,27 @@ describe('GiaoDanDetail', () => {
 
     expect(screen.getByRole('button', { name: 'Thêm giáo dân' })).toHaveProperty('disabled', true)
   })
+
+  // --- In ly lich ca nhan (VIEC-TIEP-THEO.md muc 1.1) ------------------------------------
+
+  it('nut In ly lich ca nhan bi vo hieu hoa khi chua co onIn (ban ghi moi)', () => {
+    render(<GiaoDanDetail duLieu={chiTiet()} />)
+
+    expect(screen.getByRole('button', { name: 'In lý lịch cá nhân' })).toHaveProperty('disabled', true)
+  })
+
+  it('bam In ly lich ca nhan thi goi onIn', async () => {
+    const onIn = vi.fn()
+    render(<GiaoDanDetail duLieu={chiTiet()} onIn={onIn} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'In lý lịch cá nhân' }))
+
+    expect(onIn).toHaveBeenCalledTimes(1)
+  })
+
+  it('dangIn=true thi nut In ly lich ca nhan hien "Đang tạo PDF…" va bi vo hieu hoa', () => {
+    render(<GiaoDanDetail duLieu={chiTiet()} onIn={vi.fn()} dangIn />)
+
+    expect(screen.getByRole('button', { name: 'Đang tạo PDF…' })).toHaveProperty('disabled', true)
+  })
 })

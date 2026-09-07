@@ -16,6 +16,16 @@ public static class GiaoDanEndpoints
         nhom.MapGet("/{id:guid}", async (GiaoDanService dv, Guid id, CancellationToken ct) =>
             await dv.LayChiTiet(id, ct) is { } chiTiet ? Results.Ok(chiTiet) : Results.NotFound());
 
+        // In "Lý lịch cá nhân" (VIEC-TIEP-THEO.md mục 1.1, xem
+        // docs/superpowers/specs/man-hinh/in-an.md) — mẫu in đầu tiên của hạ tầng in ấn dùng
+        // chung (HTML + Playwright, KHÔNG Office Interop). Route nằm trong `nhom` nên đã kế
+        // thừa RequireAuthorization() và bộ lọc GiaoXuId từ claim đăng nhập (InAnService không
+        // nhận GiaoXuId nào từ tham số).
+        nhom.MapGet("/{id:guid}/in/ly-lich-ca-nhan", async (InAnService dv, Guid id, CancellationToken ct) =>
+            await dv.XuatLyLichCaNhan(id, ct) is { } ketQua
+                ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
+                : Results.NotFound());
+
         // Tìm giáo dân theo tên/mã cũ — hạ tầng cho GxPicker thật (gõ để tìm, chọn từ danh
         // sách), dùng ở Tên Cha/Mẹ (màn hình giáo dân) và Người nam/nữ (màn hình gia đình, lượt
         // sau). Route CỐ Ý đặt trước "/{id:guid}" phía trên không đụng nhau nhờ tiền tố "/tim"

@@ -8,6 +8,7 @@
     <!-- Xac thuc JWT (Task 14). PasswordHasher<T> (Microsoft.Extensions.Identity.Core) da co
          san qua Microsoft.NET.Sdk.Web nen khong can khai bao rieng. -->
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Playwright" Version="1.55.0" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -15,5 +16,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+
+  <!-- Mẫu in HTML (xem Printing/BoDoMauIn.cs) nhúng thẳng vào assembly thay vì để dạng tệp rời
+       trên đĩa cạnh tệp thực thi — máy chủ chạy container (Dockerfile) không đảm bảo giữ đúng
+       cấu trúc thư mục nguồn, còn nhúng vào assembly thì chắc chắn đi cùng bản build. -->
+  <ItemGroup>
+    <EmbeddedResource Include="PrintTemplates\**\*.html" />
+  </ItemGroup>
 
 </Project>

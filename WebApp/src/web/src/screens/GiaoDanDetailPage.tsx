@@ -64,6 +64,7 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan,
   const [dangTai, setDangTai] = useState(id !== null)
   const [loi, setLoi] = useState<string | null>(null)
   const [dangLuu, setDangLuu] = useState(false)
+  const [dangIn, setDangIn] = useState(false)
   const [thongBaoLuu, setThongBaoLuu] = useState<string | null>(null)
   // Màu của `thongBaoLuu` ở thanh lệnh cuối form — xem GiaoDanDetail.Props.loaiThongBao.
   const [loaiThongBao, setLoaiThongBao] = useState<'thanhcong' | 'canhbao' | 'loi' | null>(null)
@@ -272,6 +273,22 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan,
     taiHoiDoan()
   }
 
+  // In "Lý lịch cá nhân" (VIEC-TIEP-THEO.md mục 1.1) — tải PDF thẳng về máy, KHÔNG đi qua
+  // luồng `thongBaoLuu`/`loaiThongBao` của form (đó là cho lưu dữ liệu, không phải in). Lỗi
+  // hiện bằng alert() cho đơn giản — cùng mức thô sơ với `chuaHoTro()` mà các mục menu chưa
+  // làm khác đang dùng, tránh thêm một kênh thông báo mới chỉ cho một nút.
+  async function inLyLichCaNhan() {
+    setDangIn(true)
+    try {
+      await api.giaoDan.inLyLichCaNhan(id as string)
+    } catch (e) {
+      console.error(`Không in được lý lịch cá nhân của giáo dân ${id}`, e)
+      window.alert(e instanceof Error ? e.message : 'In thất bại, thử lại sau.')
+    } finally {
+      setDangIn(false)
+    }
+  }
+
   return (
     <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={tai}>
       {banNhapCho && <BanNhapBanner thoiDiem={banNhapCho.thoiDiem} onKhoiPhuc={khoiPhucBanNhap} onBoQua={boQuaBanNhap} />}
@@ -301,6 +318,8 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan,
           khoaBanNhap={khoaBanNhap}
           tenTaiKhoan={tenTaiKhoan}
           banNhap={banNhapApDung}
+          onIn={inLyLichCaNhan}
+          dangIn={dangIn}
         />
       )}
     </TrangThaiTai>

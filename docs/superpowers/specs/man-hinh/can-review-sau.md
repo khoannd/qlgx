@@ -1197,3 +1197,77 @@ nữ, thành viên mới) đều ở trạng thái `disabled` trên màn hình c
 xác nhận lại bằng `psql`: `tai_khoan` chỉ còn `quantri`, `giao_dan`/`gia_dinh` vẫn đúng
 2050/40 bản ghi (không đổi gì trên `qlgx_thu`). Tắt cả `Qlgx.Api` và `npm run dev` đã mở cho
 lượt kiểm thử này.
+
+### 33. Task "in ấn và chứng nhận" (2026-09-07) — các quyết định tự đưa ra
+
+Nhiệm vụ: dựng hạ tầng in ấn dùng chung (HTML + Playwright → PDF, KHÔNG Office Interop) và mẫu
+"Lý lịch cá nhân" — xem `docs/superpowers/specs/man-hinh/in-an.md` (spec đầy đủ). Ghi ở đây các
+quyết định KHÔNG có trong yêu cầu gốc, tự đưa ra theo đúng chỉ dẫn "đừng dừng lại để hỏi".
+
+**a) Chỉ làm hạ tầng + "Lý lịch cá nhân" ở lượt này, KHÔNG chạm tới 4 mẫu ưu tiên còn lại
+(Chứng nhận bí tích, Phiếu gia đình, Chứng nhận hôn phối).** Yêu cầu gốc đã lường trước khả
+năng này ("nếu hết sức trước khi xong cả 5, dừng lại cho tử tế"). Chọn dừng ở đây vì hạ tầng
+(vòng đời trình duyệt dùng chung, cơ chế chọn mẫu theo giáo phận, thay thế có thoát HTML) cần
+làm cho đúng ngay từ đầu — mọi mẫu sau chỉ còn việc thêm một tệp HTML + một phương thức
+`Xuat*`, không phải sửa lại nền tảng. Xem mục 8 của `in-an.md` để biết đúng những gì còn thiếu.
+
+**b) Mẫu HTML nhúng vào assembly (`EmbeddedResource`), KHÔNG để rời cạnh tệp thực thi.** Bản
+Docker (`Dockerfile`) build web rồi COPY vào `wwwroot` của image API — một thư mục
+`PrintTemplates/` rời có nguy cơ bị bỏ sót khi đóng gói hoặc lệch cấu trúc thư mục giữa môi
+trường dev/container. Nhúng vào assembly đảm bảo mẫu LUÔN đi cùng bản build.
+
+**c) Chọn mẫu theo giáo phận bằng cách chuẩn hoá TRỰC TIẾP `GiaoXu.GiaoHat.GiaoPhan.TenGiaoPhan`
+(bỏ dấu, bỏ khoảng trắng) làm tên thư mục, KHÔNG dựng bảng ánh xạ tên thư mục tuỳ ý.** Không
+đọc được nguyên văn từ mã nguồn desktop cách nó chọn thư mục `BMT` (file chứa hàm liên quan chỉ
+tồn tại dạng đã biên dịch, không phải `.cs` — xem mục 9 của `in-an.md`), nên chọn cách suy luận
+đơn giản nhất, dựa thẳng vào cột đã có sẵn trong CSDL thay vì bịa thêm một bảng cấu hình mới chỉ
+để ánh xạ. Dữ liệu thật hiện tại chỉ có một giáo phận (Phan Thiết, không có mẫu riêng) nên luôn
+rơi về `Chung` — chưa kiểm chứng được với dữ liệu giáo phận có mẫu riêng thật.
+
+**d) Endpoint in trả PDF qua `Results.File(bytes, "application/pdf", tenTep)`, tải về bằng
+`taiTepIn()` mới trong `client.ts` (tương tự `lib/csv.ts` đã có sẵn cho "Xuất dữ liệu (CSV)"),
+KHÔNG mở PDF trong tab mới.** Nhất quán với cách CSV đã tải về hiện tại — người dùng quen một
+kiểu duy nhất "bấm nút → tệp rơi vào thư mục Tải xuống", không cần thêm hành vi mở tab mới rồi
+lại phải tự lưu.
+
+**e) 9 mục còn lại của menu chuột phải "In lý lịch cá nhân" (bí tích, giới thiệu hôn phối, rửa
+tội…) đổi từ hoàn toàn im lặng (không có `chay`) sang gọi `chuaHoTro()` — alert "chức năng này
+chưa được hỗ trợ trên web ở giai đoạn này".** Đúng yêu cầu "đừng để im lặng không phản hồi",
+dùng lại nguyên hàm `chuaHoTro()` đã có sẵn (đang dùng cho "In danh sách" và toàn bộ menu chuột
+phải của `GxGiaDinhList`) thay vì tạo thêm một cơ chế thông báo mới.
+
+**f) Hai nút "In lý lịch cá nhân"/"In phiếu gia đình" ở màn hình CHI TIẾT GIA ĐÌNH (không phải
+danh sách) cũng đổi sang `chuaHoTro()`, KHÔNG nối "In lý lịch cá nhân" ở đây vào
+`InAnService.XuatLyLichCaNhan`.** Nút này không có ngữ cảnh "cho thành viên nào" — gia đình có
+nhiều thành viên. Menu chuột phải trên từng dòng thành viên của lưới nhúng trong form gia đình
+(`GxGiaoDanList.menuThanhVien`, dùng chung `menuGiaoDanMacDinh`) đã in được thật cho đúng một
+người — đó là chỗ đúng để in lý lịch cá nhân từ màn hình gia đình, không phải nút chung mơ hồ
+này. "In phiếu gia đình" (mẫu `PhieuGiaDinh.doc`) chưa làm ở lượt này (xem mục a).
+
+**g) Kiểm thử chạy tay qua trình duyệt thật gặp giới hạn công cụ: Playwright MCP mất kết nối
+(`Connection closed`) NGAY KHI bấm bất kỳ nút nào kích hoạt tải tệp xuống (`URL.createObjectURL`
++ `<a download>` + `.click()`), kể cả nút "Xuất dữ liệu (CSV)" đã hoạt động từ trước (đã thử lại
+để xác nhận đây là giới hạn chung của công cụ MCP trong môi trường này, KHÔNG phải lỗi của tính
+năng in ấn mới). Xử lý: xác nhận luồng thật bằng `fetch()` thực thi NGAY TRONG trang đã đăng
+nhập (`browser_evaluate`, dùng đúng token từ `localStorage['qlgx.token']` mà `authStore` dùng,
+gọi qua cùng proxy Vite `/api/...` như nút bấm thật sẽ gọi) — nhận đúng
+`200 application/pdf`, đúng `Content-Disposition: attachment; filename=LyLichCaNhan_1.pdf`,
+đúng 139122 byte, khớp hệt kết quả gọi trực tiếp bằng `curl`. Bước cuối cùng (`a.click()` gọi
+API trình duyệt chuẩn) không kiểm được qua công cụ tự động ở đây nhưng dùng lại NGUYÊN VĂN cùng
+một đoạn mã (`URL.createObjectURL`/`a.download`/`a.click()`) với `lib/csv.ts` đã chạy tốt trong
+sản phẩm thật từ trước — rủi ro còn lại ở bước đó coi là không đáng kể.
+
+**h) PDF mẫu thật in cho giáo dân "Giuse Nguyễn Đức Mạnh" (mã 1, `qlgx_thu`) — đã mở lại bằng
+PyMuPDF (render trang 1 ra PNG + trích xuất văn bản) để xác nhận: tiếng Việt có dấu hiển thị
+đúng (không vỡ phông, thử cả nguyên âm có dấu tổ hợp như "ộ"/"ệ"), khổ A4, bố cục đúng tinh thần
+văn bản hành chính (quốc hiệu → giáo phận/giáo hạt/giáo xứ → tiêu đề → bảng thông tin → chỗ ký
+tên), dữ liệu đúng người (mã giáo dân, họ tên, ngày sinh, tên cha/mẹ, số/ngày/nơi rửa tội đều
+khớp `GET /api/giao-dan` cùng id). Lưu tại
+`WebApp/anh-chup-kiem-thu/47-LyLichCaNhan-mau-Nguyen-Duc-Manh.pdf` (PDF thật),
+`47-truoc-khi-bam-in-ly-lich-ca-nhan.png` (màn hình chi tiết trước khi bấm nút) và
+`48-pdf-ly-lich-ca-nhan-trang-1.png` (ảnh chụp trang 1 của PDF đã render).
+
+**i) Tài khoản tạm `kiemthu_inan` tạo bằng đúng CLI chính thức, xoá ngay sau khi kiểm thử, xác
+nhận lại `psql`: `tai_khoan` chỉ còn `quantri`, `giao_dan`/`gia_dinh`/`thanh_vien_gia_dinh` vẫn
+đúng 2050/40/145 (không đổi gì trên `qlgx_thu` — lượt này chỉ ĐỌC dữ liệu để in, không ghi gì).
+Tắt cả `Qlgx.Api` và `npm run dev` đã mở cho lượt kiểm thử này.**

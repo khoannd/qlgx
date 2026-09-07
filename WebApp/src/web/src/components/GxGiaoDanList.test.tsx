@@ -2,9 +2,14 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createRef } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { GxGiaoDanList } from './GxGiaoDanList'
+import { GxGiaoDanList, menuGiaoDanMacDinh } from './GxGiaoDanList'
 import type { GxGridHandle } from './GxGrid'
+import { api } from '../api/client'
 import type { GiaoDanListItem } from '../api/types'
+
+vi.mock('../api/client', () => ({
+  api: { giaoDan: { inLyLichCaNhan: vi.fn(() => Promise.resolve()) } },
+}))
 
 const nguoi = (p: Partial<GiaoDanListItem> = {}): GiaoDanListItem => ({
   id: 'a1', maGiaoDanCu: 4412, tenThanh: 'Maria', hoTen: 'Trần Thị Khánh Ngọc',
@@ -139,6 +144,34 @@ describe('GxGiaoDanList', () => {
       // cờ đứng giữa, nhưng phép thử thật sự nằm ở việc dữ liệu bên dưới KHÔNG BAO GIỜ được
       // đổi field/valueGetter sang chuỗi hiển thị — xem chú thích `ngay()` ở cotGiaoDan.ts.
       expect(ngaySinhTheoThuTu).toEqual(['26/03/1990', '01/01/2005', '25/04/2015'])
+    })
+  })
+
+  // --- Menu chuot phai: In ly lich ca nhan (VIEC-TIEP-THEO.md muc 1.1) -------------------
+
+  describe('menuGiaoDanMacDinh', () => {
+    it('co dung 12 muc, dung thu tu, va muc "In ly lich ca nhan" da co chay that', () => {
+      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn())
+
+      expect(menu.map((m) => m.nhan)).toEqual([
+        'Xem chi tiết', 'In lý lịch cá nhân', 'In chứng nhận bí tích', 'In giới thiệu hôn phối',
+        'In chứng nhận rửa tội', 'In chứng nhận xưng tội - rước lễ', 'In chứng nhận thêm sức',
+        'Xem gia đình', 'In giấy giới thiệu chứng nhận rửa tội', 'In giấy giới thiệu giáo lý hôn phối',
+        'In giấy giới thiệu chứng nhận thêm sức', 'Xem vị trí',
+      ])
+      // Trước lượt "in ấn" (VIEC-TIEP-THEO.md mục 1.1), 10/12 mục chỉ có `nhan`, bấm không làm
+      // gì — nay MỌI mục đều có `chay` (đã làm thật, hoặc báo "chưa hỗ trợ" bằng chuaHoTro),
+      // không còn mục nào im lặng không phản hồi.
+      expect(menu.every((m) => typeof m.chay === 'function')).toBe(true)
+    })
+
+    it('bam "In ly lich ca nhan" thi goi api.giaoDan.inLyLichCaNhan voi dung id', () => {
+      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn())
+      const muc = menu.find((m) => m.nhan === 'In lý lịch cá nhân')!
+
+      muc.chay!(nguoi({ id: 'gd-xyz' }))
+
+      expect(api.giaoDan.inLyLichCaNhan).toHaveBeenCalledWith('gd-xyz')
     })
   })
 })

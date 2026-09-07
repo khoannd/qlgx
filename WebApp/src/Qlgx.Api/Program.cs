@@ -53,6 +53,15 @@ builder.Services.AddScoped<SinhMaService>();
 builder.Services.AddScoped<GiaDinhService>();
 builder.Services.AddScoped<GiaoDanService>();
 
+// Ha tang in an (VIEC-TIEP-THEO.md muc 1.1) — xem docs/superpowers/specs/man-hinh/in-an.md.
+// BoTrinhDuyet la Singleton CO CHU DICH: giu dung MOT trinh duyet Chromium headless (Playwright)
+// dung chung cho ca tien trinh API, khong mo tien trinh Chromium moi cho tung yeu cau in (xem
+// ghi chu trong BoTrinhDuyet.cs). BoDoMauIn khong giu trang thai gi rieng tung yeu cau nen cung
+// de Singleton cho gon; InAnService la Scoped vi phu thuoc QlgxDbContext (Scoped).
+builder.Services.AddSingleton<Qlgx.Api.Printing.BoTrinhDuyet>();
+builder.Services.AddSingleton<Qlgx.Api.Printing.BoDoMauIn>();
+builder.Services.AddScoped<InAnService>();
+
 var app = builder.Build();
 
 // Chay migration CSDL luc khoi dong — CHI KHI bat rieng qua cau hinh "Qlgx:ChayMigrationKhiKhoiDong"

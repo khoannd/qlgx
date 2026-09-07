@@ -594,6 +594,11 @@ type Props = {
    * này kèm theo để các input không kiểm soát/`GxDate` dựng lại từ đầu với giá trị mới — đổi
    * `defaultValue` không tự cập nhật lại ô đã dựng (xem GxDate.tsx). */
   banNhap?: YeuCauCapNhatGiaoDan | null
+  /** In "Lý lịch cá nhân" (VIEC-TIEP-THEO.md mục 1.1) — container gọi
+   * `api.giaoDan.inLyLichCaNhan`. Không truyền/`undefined` khi bản ghi chưa lưu (`moi`), nút
+   * tự vô hiệu vì chưa có id để in. */
+  onIn?: () => void
+  dangIn?: boolean
 }
 
 const rong = (): GiaoDanDetailDuLieu => ({
@@ -637,6 +642,7 @@ export function GiaoDanDetail({
   danhSachTanHien = [], dangTaiTanHien = false, onLuuTanHien, onThemTanHien,
   danhSachHoiDoan = [], dangTaiHoiDoan = false, onLuuHoiDoan, onThemHoiDoan,
   danhMucHoiDoan = [], danhMucGiaoHo = [], khoaBanNhap = null, tenTaiKhoan = null, banNhap = null,
+  onIn, dangIn = false,
 }: Props) {
   // banNhap (nếu người dùng vừa bấm "Khôi phục" ở BanNhapBanner) đè lên dữ liệu gốc — xem chú
   // thích ở Props.banNhap. Container LUÔN đổi `key` khi truyền banNhap mới nên các state dưới
@@ -1140,7 +1146,9 @@ export function GiaoDanDetail({
         <button type="button" className="btn" disabled={!p.giaDinhId} onClick={() => p.giaDinhId && moGiaDinh?.(p.giaDinhId)}>
           Xem gia đình
         </button>
-        <button type="button" className="btn">In lý lịch cá nhân</button>
+        <button type="button" className="btn" disabled={!onIn || dangIn} onClick={() => onIn?.()}>
+          {dangIn ? 'Đang tạo PDF…' : 'In lý lịch cá nhân'}
+        </button>
         <button type="button" className="btn btn-quiet" onClick={() => moDanhSachGiaoDan?.()}>Quay về</button>
         <button type="submit" className="btn btn-primary" disabled={!onLuu || dangLuu}>
           {dangLuu ? 'Đang lưu…' : moi ? 'Thêm giáo dân' : 'Cập nhật'}

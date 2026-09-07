@@ -80,6 +80,46 @@ async function goi<T>(duong: string, tuyChon?: RequestInit): Promise<T> {
   return than ? (JSON.parse(than) as T) : (undefined as T)
 }
 
+/** Tải một tệp nhị phân (PDF in ấn — xem `Qlgx.Api/Endpoints/GiaoDanEndpoints.cs`
+ * `/in/ly-lich-ca-nhan`) và kích trình duyệt lưu về máy, thay vì cố `res.json()` như `goi()`.
+ * Đọc tên tệp thật từ header `Content-Disposition` mà `Results.File(...)` phía máy chủ đã đặt
+ * sẵn (ví dụ `LyLichCaNhan_1234.pdf`), rơi về một tên chung nếu vì lý do gì đó thiếu header. */
+async function taiTepIn(duong: string, tenTepMacDinh: string): Promise<void> {
+  const token = authStore.layToken()
+  let res: Response
+  try {
+    res = await fetch(duong, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+  } catch (loiMang) {
+    console.error(`Lỗi mạng khi in ${duong}`, loiMang)
+    throw new Error('Không kết nối được máy chủ để in. Kiểm tra Qlgx.Api đã chạy chưa.')
+  }
+  if (res.status === 401) {
+    authStore.baoHet401()
+    throw new ChuaDangNhap('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+  }
+  if (res.status === 404) {
+    throw new Error('Không tìm thấy dữ liệu để in — có thể bản ghi đã bị xoá.')
+  }
+  if (!res.ok) {
+    const thongBao = await docThongBaoLoi(res)
+    throw new Error(thongBao ?? `Máy chủ trả lỗi ${res.status} khi in.`)
+  }
+  const blob = await res.blob()
+  const dispo = res.headers.get('Content-Disposition') ?? ''
+  const ten = /filename="?([^";]+)"?/.exec(dispo)?.[1] ?? tenTepMacDinh
+  const url = URL.createObjectURL(blob)
+  try {
+    const a = document.createElement('a')
+    a.href = url
+    a.download = ten
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
 const thamSo = (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: boolean) => {
   const p = new URLSearchParams()
   if (giaoHoId) p.set('giaoHoId', giaoHoId)
@@ -154,6 +194,10 @@ export const api = {
       goi<{ id: string }>(`/api/giao-dan/${id}/hoi-doan`, { method: 'POST', body: JSON.stringify(than) }),
     capNhatHoiDoan: (chiTietId: string, than: unknown) =>
       goi<void>(`/api/giao-dan/hoi-doan/${chiTietId}`, { method: 'PUT', body: JSON.stringify(than) }),
+    /** In "Lý lịch cá nhân" (mẫu đầu tiên của hạ tầng in ấn — xem
+     * docs/superpowers/specs/man-hinh/in-an.md) — tải PDF về máy, không mở tab mới. */
+    inLyLichCaNhan: (id: string) =>
+      taiTepIn(`/api/giao-dan/${id}/in/ly-lich-ca-nhan`, 'LyLichCaNhan.pdf'),
   },
   hoiDoan: {
     danhMuc: () => goi<HoiDoanDanhMuc[]>('/api/hoi-doan'),

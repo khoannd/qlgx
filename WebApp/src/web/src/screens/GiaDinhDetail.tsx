@@ -8,6 +8,7 @@ import { GxField, GxInline } from '../components/GxField'
 import { GxGiaoDanList, menuGiaoDanMacDinh } from '../components/GxGiaoDanList'
 import { GxPicker } from '../components/GxPicker'
 import { useTuDongLuuBanNhap, xoaBanNhap } from '../lib/banNhap'
+import { chuaHoTro } from '../lib/thongBao'
 
 /** Sentinel hiển thị cho "Ngoài xứ" — ứng với `giaoHoId === null` (xem NGOAI_XU ở
  * GiaoDanDetail.tsx, cùng quy ước). */
@@ -364,8 +365,13 @@ export function GiaDinhDetail({
           {thongBaoLuu ?? (moi ? 'Nhập Tên gia đình rồi bấm "Tạo gia đình" — chọn Người nam/nữ và thành viên sau khi đã tạo' : 'Chưa có thay đổi')}
         </span>
         <div className="spacer" />
-        <button type="button" className="btn">In lý lịch cá nhân</button>
-        <button type="button" className="btn">In phiếu gia đình</button>
+        {/* "In lý lịch cá nhân" ở đây không rõ in cho thành viên nào — dùng menu chuột phải
+            trên từng dòng thành viên (đã in được thật, xem GxGiaoDanList.inLyLichCaNhan) thay
+            vì nút chung này. "In phiếu gia đình" chưa làm ở lượt này (xem
+            docs/superpowers/specs/man-hinh/in-an.md mục phạm vi) — cả hai báo "chưa hỗ trợ"
+            rõ ràng thay vì im lặng không phản hồi. */}
+        <button type="button" className="btn" onClick={chuaHoTro}>In lý lịch cá nhân</button>
+        <button type="button" className="btn" onClick={chuaHoTro}>In phiếu gia đình</button>
         <button type="button" className="btn btn-quiet" onClick={() => moDanhSachGiaDinh?.()}>Quay về</button>
         <button type="submit" className="btn btn-primary" disabled={moi ? (!onTaoMoi || dangLuu) : (!onLuu || dangLuu)}>
           {dangLuu ? 'Đang lưu…' : moi ? 'Tạo gia đình' : 'Cập nhật'}

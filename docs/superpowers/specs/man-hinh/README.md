@@ -92,5 +92,6 @@ Cập nhật bảng này mỗi khi thêm spec.
 | Lớp giáo lý | `Giaoly/frmLopGiaoLy.cs` | 724 | chưa | chưa |
 | Quản lý tài khoản | `ChuongTrinh/frmAccoutList.cs` | 440 | xong (`quan-ly-tai-khoan.md`) | xong |
 | Đăng nhập | `ChuongTrinh/frmLogin.cs` | 89 | (gộp trong `quan-ly-tai-khoan.md` mục 8) | xong |
+| In ấn và chứng nhận | `DBAccess/WordEngine.cs` + `ExcelReport/Report*.cs` (14 mô-đun) | ~140 + nhiều | xong (`in-an.md`) | một phần (hạ tầng + Lý lịch cá nhân xong, 4 mẫu ưu tiên còn lại + phần còn lại chưa) |
 
 Còn khoảng 60 màn hình nhỏ hơn — bổ sung dần theo thứ tự migrate.
