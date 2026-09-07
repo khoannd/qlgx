@@ -47,6 +47,14 @@ public class AuthService(IConfiguration cauHinh, TokenService tokenService)
 
     public async Task<DangNhapKetQua> DangNhap(string tenTaiKhoan, string matKhau, CancellationToken ct)
     {
+        // Than JSON thieu truong (hoac gui rong) khien ASP.NET model binding tao chuoi rong/null
+        // thay vi bi tu choi o tang validate — PasswordHasher.VerifyHashedPassword nem
+        // ArgumentNullException voi mat khau null/rong, se lam lo mot 500 khong bat thay vi 401
+        // nhu moi truong hop sai mat khau khac. Chan som, khong chay bam gia can bang thoi gian
+        // o day vi day la loi dau vao ro rang, khong phai do vet ten dang nhap ton tai hay khong.
+        if (string.IsNullOrEmpty(tenTaiKhoan) || string.IsNullOrEmpty(matKhau))
+            return new DangNhapKetQua(KetQuaDangNhap.SaiTenHoacMatKhau, null, null);
+
         // Boi canh = null (khong dung DI) — day la truy van duy nhat trong he thong duoc phep
         // bo qua bo loc tenant, vi luc nay chua biet nguoi dung thuoc giao xu nao. Dung chuoi
         // ket noi QUAN TRI (vai tro co BYPASSRLS) — xem ChuoiKetNoiQuanTri.

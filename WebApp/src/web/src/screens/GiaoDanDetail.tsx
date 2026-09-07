@@ -1134,7 +1134,7 @@ export function GiaoDanDetail({
           className={'hint' + (thongBaoLuu && loaiThongBao ? ` hint-${loaiThongBao}` : '')}
           role={thongBaoLuu ? 'status' : undefined}
         >
-          {thongBaoLuu ?? (moi ? 'Bản nháp chưa lưu' : 'Thay đổi chưa được lưu')}
+          {thongBaoLuu ?? (moi ? 'Bản nháp chưa lưu' : 'Chưa có thay đổi')}
         </span>
         <div className="spacer" />
         <button type="button" className="btn" disabled={!p.giaDinhId} onClick={() => p.giaDinhId && moGiaDinh?.(p.giaDinhId)}>

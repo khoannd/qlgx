@@ -318,6 +318,29 @@ describe('GiaoDanDetailPage', () => {
     expect(moGiaoDan).toHaveBeenCalledWith('gd-moi')
   })
 
+  it('canh bao da tu ket bang cau hoi xac nhan thi KHONG lap lai cau hoi do lan nua', async () => {
+    // Phat hien khi kiem thu kham pha 2026-09-07: rule 9/10/12 cua KiemTraNghiepVu da tu ket
+    // thuc bang dung cau "Bạn có chắc muốn lưu thông tin giáo dân này không?", nhung
+    // xacNhanCanhBao truoc day luon noi them chinh cau do lan nua o cuoi, hien ra hop thoai co
+    // cau hoi lap lai hai lan gay kho hieu.
+    vi.mocked(api.giaoDan.taoMoi).mockResolvedValueOnce({
+      id: null,
+      canhBao: ['Hãy đảm bảo Ngày sinh <= Ngày rửa tội <= Ngày rước lễ lần đầu <= Ngày thêm sức.\n' +
+        'Bạn có chắc muốn lưu thông tin giáo dân này không?'],
+    })
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    render(<GiaoDanDetailPage id={null} />)
+    await userEvent.type(screen.getByLabelText('Họ tên'), 'Nguyễn Văn Test')
+    await userEvent.selectOptions(screen.getByLabelText('Giới tính'), 'Nam')
+    await userEvent.type(screen.getByLabelText('Ngày sinh'), '01/01/2000')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Thêm giáo dân' }))
+
+    const noiDung = confirmSpy.mock.calls[0][0] as string
+    const soLanLap = noiDung.split('Bạn có chắc muốn lưu thông tin giáo dân này không?').length - 1
+    expect(soLanLap).toBe(1)
+  })
+
   it('tao moi co canh bao: huy thi KHONG goi lai POST va khong mo the moi', async () => {
     vi.mocked(api.giaoDan.taoMoi).mockResolvedValueOnce({
       id: null, canhBao: ['Giáo dân này hiện tại chưa đủ 18 tuổi để kết hôn.'],

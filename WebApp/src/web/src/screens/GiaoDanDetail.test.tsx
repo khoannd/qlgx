@@ -96,6 +96,15 @@ describe('GiaoDanDetail', () => {
     expect(screen.queryByText('Thông tin chuyển xứ')).toBeNull()
   })
 
+  it('vua mo mot ban ghi da co, chua sua gi thi KHONG bao Thay doi chua duoc luu', () => {
+    // Phat hien khi kiem thu kham pha 2026-09-07: thongBaoLuu khoi tao la null nen luc moi mo
+    // form (chua dong gi den o nao) van roi vao nhanh mac dinh "Thay doi chua duoc luu", bao
+    // sai vi nguoi dung chua sua gi ca.
+    render(<GiaoDanDetail duLieu={chiTiet()} />)
+
+    expect(screen.queryByText('Thay đổi chưa được lưu')).toBeNull()
+  })
+
   it('nut Quay ve va Danh sach goi ham mo danh sach giao dan', async () => {
     const moDanhSachGiaoDan = vi.fn()
     render(<GiaoDanDetail duLieu={chiTiet()} moDanhSachGiaoDan={moDanhSachGiaoDan} />)

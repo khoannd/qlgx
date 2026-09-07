@@ -361,7 +361,7 @@ export function GiaDinhDetail({
 
       <div className="cmdbar">
         <span className="hint" role={thongBaoLuu ? 'status' : undefined}>
-          {thongBaoLuu ?? (moi ? 'Nhập Tên gia đình rồi bấm "Tạo gia đình" — chọn Người nam/nữ và thành viên sau khi đã tạo' : 'Thay đổi chưa được lưu')}
+          {thongBaoLuu ?? (moi ? 'Nhập Tên gia đình rồi bấm "Tạo gia đình" — chọn Người nam/nữ và thành viên sau khi đã tạo' : 'Chưa có thay đổi')}
         </span>
         <div className="spacer" />
         <button type="button" className="btn">In lý lịch cá nhân</button>

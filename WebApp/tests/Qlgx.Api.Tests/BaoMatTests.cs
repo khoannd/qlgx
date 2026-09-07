@@ -200,6 +200,28 @@ public class BaoMatTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     }
 
     [Fact]
+    public async Task Dang_nhap_voi_mat_khau_rong_tra_401_khong_phai_500()
+    {
+        // Phat hien khi kiem thu kham pha man hinh chi tiet giao dan/gia dinh 2026-09-07: goi
+        // /api/auth/dang-nhap voi than JSON thieu truong MatKhau (hoac MatKhau rong) lam
+        // PasswordHasher.VerifyHashedPassword nem ArgumentNullException chua duoc bat, tra ve
+        // 500 thay vi 401 nhu moi truong hop sai mat khau khac.
+        var res = await app.CreateClient().PostAsJsonAsync("/api/auth/dang-nhap",
+            new DangNhapRequest("quantri", ""));
+
+        res.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Dang_nhap_voi_ten_tai_khoan_rong_tra_401_khong_phai_500()
+    {
+        var res = await app.CreateClient().PostAsJsonAsync("/api/auth/dang-nhap",
+            new DangNhapRequest("", "bat-ky"));
+
+        res.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
     public async Task Nguoi_dung_khong_phai_quan_tri_khong_vao_duoc_quan_ly_tai_khoan()
     {
         var client = app.CreateAuthClient(app.GiaoXuId, loaiTaiKhoan: 1); // Nguoi nhap 1

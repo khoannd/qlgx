@@ -31,6 +31,14 @@ describe('GiaDinhDetail', () => {
     expect(screen.getByLabelText('Địa chỉ')).toBeDefined()
   })
 
+  it('vua mo mot ho so gia dinh da co, chua sua gi thi KHONG bao Thay doi chua duoc luu', () => {
+    // Cung loi voi GiaoDanDetail (kiem thu kham pha 2026-09-07): thongBaoLuu mac dinh null nen
+    // luc moi mo, chua dong den o nao, van hien nham "Thay doi chua duoc luu".
+    render(<GiaDinhDetail duLieu={chiTiet()} />)
+
+    expect(screen.queryByText('Thay đổi chưa được lưu')).toBeNull()
+  })
+
   it('tick Da chuyen di xu khac thi hien Ngay chuyen va Noi chuyen', async () => {
     render(<GiaDinhDetail duLieu={chiTiet()} />)
     expect(screen.queryByLabelText('Ngày chuyển')).toBeNull()

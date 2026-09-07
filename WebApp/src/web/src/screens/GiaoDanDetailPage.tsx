@@ -155,8 +155,12 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan,
   // tinh thần "chặn tới khi được xác nhận rõ ràng", chỉ khác cách trình bày. Trả về `true` nếu
   // đã lưu thành công (hoặc không có gì cần lưu thêm), `false` nếu người dùng huỷ.
   function xacNhanCanhBao(canhBao: string[]): boolean {
-    return window.confirm(
-      canhBao.join('\n\n') + '\n\nBạn có chắc muốn lưu thông tin giáo dân này không?')
+    // Một vài cảnh báo (rule 9/10/12 của KiemTraNghiepVu) đã tự kết bằng đúng câu hỏi xác nhận
+    // này — chỉ nối thêm khi nội dung CHƯA kết bằng câu đó, tránh hỏi lặp lại hai lần trong
+    // cùng một hộp thoại (phát hiện khi kiểm thử khám phá 2026-09-07).
+    const hoiXacNhan = 'Bạn có chắc muốn lưu thông tin giáo dân này không?'
+    const noiDung = canhBao.join('\n\n')
+    return window.confirm(noiDung.endsWith(hoiXacNhan) ? noiDung : noiDung + '\n\n' + hoiXacNhan)
   }
 
   if (id === null) {
