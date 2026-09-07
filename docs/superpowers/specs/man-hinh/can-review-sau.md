@@ -2870,3 +2870,60 @@ giả trong jsdom không đo được layout thật nên một test riêng cho t
 số 0,75 trong code, không kiểm tra được layout thật — không thêm giá trị). `npm run build` chạy
 được. Không chạm backend, không chạy `dotnet test`. Ảnh chụp: `115`–`117` trong
 `WebApp/anh-chup-kiem-thu/`.
+
+### 52. Task "nới rộng ô CMND/CCCD, thu nhỏ khung ảnh" (2026-09-07) — thủ phạm thật không phải
+khung ảnh mà là ô tick dùng chung hàng
+
+Người dùng thật đang ngồi kiểm tra, viết nguyên văn: "chỗ này chưa tốt, có thể cho hình ngắn lại
+để CCCD hiện dài hơn". Sau mục 48 (chuyển CMND/CCCD sang cột trái, dưới Giáo họ) và mục 51 (khung
+ảnh đúng tỉ lệ 3:4, rộng lên 92 → 134px), ô CMND/CCCD chỉ còn hiện được vài ký tự đầu của một số
+CCCD 12 chữ số.
+
+**Đo trước khi sửa (Chromium thật, giáo dân "Giuse Nguyễn Đức Mạnh", mã 1) — đúng lỗi nhưng KHÔNG
+đúng nguyên nhân người dùng đoán:** `.photo-slot` = 134 × 178,6px (tỉ lệ 0,75, đúng mục 51, không
+đổi). Ô nhập CMND thật sự chỉ rộng **54 × 30px** — nhưng đo tiếp `.val` (hàng chứa cả ô nhập lẫn
+`extra`) thì thấy `.val` rộng 321,6px, trong đó nhãn tick "Là giáo dân không được thống kê" (đặt
+qua prop `extra` của `GxField`, CÙNG hàng flex với ô nhập từ mục 48) chiếm tới **259,6px** — nhãn
+dài, không co (`flex` mặc định của phần tử không phải input/select/textarea trong `.val` không có
+`flex:1`), ô nhập (`flex:1; min-width:0`) bị ép co xuống phần dư ít ỏi còn lại. Khung ảnh rộng
+thêm 42px (92→134, mục 51) chỉ là phần cộng dồn khiến nó từ "hơi chật" thành "vô dụng" — không
+phải nguyên nhân chính.
+
+**Vì vậy KHÔNG thu nhỏ khung ảnh** (đã đúng tỉ lệ 3:4 và cỡ mặt người chốt ở mục 51, thu nhỏ thêm
+sẽ phải đối mặt lại đúng bẫy "khoảng trống thừa dưới ảnh" mà mục 51/trước đó đã tốn công dẹp —
+`align-items: stretch` khớp cao khung ảnh với cột trái chỉ hoạt động ĐÚNG khi khung ảnh KHÔNG có
+giới hạn cao riêng; đặt `max-height` sẽ làm khung ảnh ngắn hơn hàng flex, để lại một mảng trống
+đúng bằng phần chênh lệch — vi phạm yêu cầu "không khoảng trống thừa" của nhiệm vụ này). Thay vào
+đó: **chuyển ô tick "Là giáo dân không được thống kê" ra khỏi `extra` của `GxField` CMND**, đặt
+thành một hàng `.frow` riêng (label rỗng — đúng khuôn mẫu "Đã hồi tục" đã dùng ở `KhoiTanHien`
+trong cùng file), đặt NGOÀI `<div className="canhan-top">` (giống cách field "Giáo xứ"/"Giáo
+phận" khi Ngoài xứ đã đặt ngoài `.canhan-top` từ trước) — không đụng số hàng bên TRONG
+`.canhan-top-fields` nên khung ảnh không cao/rộng thêm chút nào (vẫn giữ nguyên 134 × 178,6px);
+đồng thời ô CMND giờ là NỘI DUNG DUY NHẤT của hàng `.val`, chiếm trọn bề rộng còn lại.
+
+**Đo sau khi sửa** (cùng giáo dân, gõ thật CCCD `079203001234` vào ô CMND qua trình duyệt thật):
+
+| Đại lượng | Trước | Sau |
+|---|---|---|
+| Ô nhập CMND/CCCD | 54 × 30px (chữ bị cắt, chỉ hiện "07920") | **324,6 × 30px** (hiện trọn `079203001234`, không cắt) |
+| Khung ảnh `.photo-slot` | 134 × 178,6 (tỉ lệ 0,750) | **131 × 174** (tỉ lệ **0,753**) — lệch nhẹ do chiều cao viewport lúc đo, KHÔNG do thay đổi CSS/logic ảnh |
+| `.canhan-top-fields` | 427,6 × 178,6 | 430,6 × 174 |
+| Cột trái (`.canhan-cols` > div đầu) | 573,6 × 184,6 | 573,6 × 214,6 (cao thêm đúng một hàng tick mới — nội dung thật, không phải khoảng trống) |
+| Cột phải | 573,6 × 149,2 | 573,6 × 149,2 (không đổi) |
+
+Tỉ lệ khung ảnh vẫn ≈ 0,75 đúng yêu cầu mục 51 (chênh lệch 131×174 so với 134×178,6 chỉ do đo ở
+hai lần tải trang khác nhau — cùng công thức `width = height × 0,75`, không sửa `AnhDaiDien.tsx`/
+`tiLe34` trong task này). Cột trái cao thêm 30px là NỘI DUNG thật (hàng tick mới), không phải
+khoảng trống — ảnh chụp `118-truoc-cccd-hep.png` (CMND cắt còn "07920") và
+`119-sau-cccd-rong.png` (CMND hiện trọn `079203001234`, ô tick xuống hàng riêng ngay dưới, không
+có khoảng trắng nào giữa hai hàng).
+
+**Không đụng gì khác:** không sửa `AnhDaiDien.tsx`/CSS `.canhan-top`/`.canhan-top .photo-slot`
+(khung ảnh giữ nguyên cơ chế đo JS + tỉ lệ 3:4 của mục 51); không đổi vị trí/nội dung 4 khối bên
+dưới; không đổi hành vi lưu (`giaoDanAo`/`doiGiaoDanAo` giữ nguyên, chỉ đổi JSX chỗ render); không
+đụng backend.
+
+**Số test cuối:** frontend **316/316** (không thêm test mới — vẫn `getByLabelText('CMND / CCCD')`
+và `getByLabelText('Là giáo dân không được thống kê')` tìm đúng phần tử bất kể vị trí DOM, các bài
+test hiện có không phụ thuộc thứ tự trong `.canhan-top-fields`). `npm run build` chạy được. Không
+chạm backend, không chạy `dotnet test`. Ảnh chụp: `118`–`119` trong `WebApp/anh-chup-kiem-thu/`.

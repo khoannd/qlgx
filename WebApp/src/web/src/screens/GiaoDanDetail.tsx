@@ -757,13 +757,7 @@ export function GiaoDanDetail({
                     {dsGiaoHo.map((g) => <option key={g.id} value={g.id}>{g.tenGiaoHo}</option>)}
                   </select>
                 </GxField>
-                <GxField label="CMND / CCCD" id="gd-cmnd"
-                  extra={
-                    <label className="toggle">
-                      <input type="checkbox" checked={giaoDanAo} onChange={(e) => doiGiaoDanAo(e.target.checked)} />
-                      Là giáo dân không được thống kê
-                    </label>
-                  }>
+                <GxField label="CMND / CCCD" id="gd-cmnd">
                   <input id="gd-cmnd" name="cmnd" type="text" defaultValue={p.cmnd ?? ''} />
                 </GxField>
               </div>
@@ -776,6 +770,23 @@ export function GiaoDanDetail({
                 tiLe34
               />
             </div>
+            {/* Góp ý tiếp theo (2026-09-07, người dùng): "cho hình ngắn lại để CCCD hiện dài hơn"
+                — đo thật thì thủ phạm chính KHÔNG PHẢI khung ảnh mà là ô tick "Là giáo dân không
+                được thống kê" đứng CÙNG hàng `.val` với ô CMND (qua prop `extra` cũ): nhãn tick
+                dài (~260px, flex tự nhiên không co) chiếm gần hết hàng, chỉ còn ~54px cho ô nhập
+                12 chữ số CCCD (đo trước: input 54 × 30px, xem can-review-sau.md). Chuyển ô tick
+                ra thành một hàng `.frow` RIÊNG (label rỗng, giống cách "Đã hồi tục" ở KhoiTanHien
+                phía trên) đặt NGOÀI `.canhan-top` — không đụng vào số hàng bên trong
+                `.canhan-top-fields` nên KHÔNG làm khung ảnh cao/rộng thêm (giữ nguyên 134 ×
+                178,6px, tỉ lệ 0,75 đã chốt), mà trả lại toàn bộ bề ngang hàng CMND (~322-428px
+                tuỳ bề rộng khung ảnh) cho một mình ô nhập — đo sau: nhập thật 12 chữ số CCCD hiện
+                trọn, không cắt. */}
+            <GxField label="">
+              <label className="toggle">
+                <input type="checkbox" checked={giaoDanAo} onChange={(e) => doiGiaoDanAo(e.target.checked)} />
+                Là giáo dân không được thống kê
+              </label>
+            </GxField>
             {ngoaiXu && (
               <GxField label="Giáo xứ" id="gd-giaoxu">
                 <input id="gd-giaoxu" type="text" defaultValue="" />
