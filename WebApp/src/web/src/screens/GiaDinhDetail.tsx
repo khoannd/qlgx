@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { api } from '../api/client'
 import type {
   GiaDinhDetail as GiaDinhDetailDuLieu, GiaoDanListItem, GiaoDanTimKiem, GiaoHo, ThanhVien,
 } from '../api/types'
@@ -127,6 +128,17 @@ export function GiaDinhDetail({
   const f = { ...(duLieu ?? rong()), ...(banNhap ?? {}) }
   const moi = !duLieu?.id
   const formRef = useRef<HTMLFormElement>(null)
+
+  // "In phiếu gia đình" — không mơ hồ như "In lý lịch cá nhân" (KHÔNG rõ cho thành viên nào,
+  // vẫn dùng menu chuột phải trên lưới thành viên), vì phiếu gia đình luôn in cho CẢ gia đình
+  // đang mở, nên nối thẳng nút này vào endpoint — xem docs/superpowers/specs/man-hinh/in-an.md.
+  function inPhieuGiaDinh(): void {
+    if (!duLieu?.id) return
+    api.giaDinh.inPhieuGiaDinh(duLieu.id).catch((e: unknown) => {
+      console.error(`Không in được phiếu gia đình ${duLieu.id}`, e)
+      window.alert(e instanceof Error ? e.message : 'In thất bại, thử lại sau.')
+    })
+  }
   // Thêm thành viên: chọn người qua GxPicker rồi chọn vai trò trước khi bấm "Thêm vào gia đình"
   // — tách hai bước vì máy chủ cần biết VaiTro ngay từ đầu (không có vai trò "mặc định" hợp lý).
   const [dangThem, setDangThem] = useState<GiaoDanTimKiem | null>(null)
@@ -367,11 +379,11 @@ export function GiaDinhDetail({
         <div className="spacer" />
         {/* "In lý lịch cá nhân" ở đây không rõ in cho thành viên nào — dùng menu chuột phải
             trên từng dòng thành viên (đã in được thật, xem GxGiaoDanList.inLyLichCaNhan) thay
-            vì nút chung này. "In phiếu gia đình" chưa làm ở lượt này (xem
-            docs/superpowers/specs/man-hinh/in-an.md mục phạm vi) — cả hai báo "chưa hỗ trợ"
-            rõ ràng thay vì im lặng không phản hồi. */}
+            vì nút chung này, nên vẫn báo "chưa hỗ trợ". "In phiếu gia đình" thì KHÔNG mơ hồ
+            (luôn là cả gia đình đang mở) — đã nối thẳng vào endpoint thật, disable khi gia đình
+            còn là bản nháp chưa lưu (chưa có id để in). */}
         <button type="button" className="btn" onClick={chuaHoTro}>In lý lịch cá nhân</button>
-        <button type="button" className="btn" onClick={chuaHoTro}>In phiếu gia đình</button>
+        <button type="button" className="btn" onClick={inPhieuGiaDinh} disabled={moi}>In phiếu gia đình</button>
         <button type="button" className="btn btn-quiet" onClick={() => moDanhSachGiaDinh?.()}>Quay về</button>
         <button type="submit" className="btn btn-primary" disabled={moi ? (!onTaoMoi || dangLuu) : (!onLuu || dangLuu)}>
           {dangLuu ? 'Đang lưu…' : moi ? 'Tạo gia đình' : 'Cập nhật'}

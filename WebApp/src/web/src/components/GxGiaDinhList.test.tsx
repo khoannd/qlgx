@@ -2,7 +2,17 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { GxGiaDinhList, menuGiaDinhMacDinh } from './GxGiaDinhList'
+import { api } from '../api/client'
 import type { GiaDinhListItem } from '../api/types'
+
+vi.mock('../api/client', () => ({
+  api: {
+    giaDinh: {
+      inChungNhanHonPhoi: vi.fn(() => Promise.resolve()),
+      inPhieuGiaDinh: vi.fn(() => Promise.resolve()),
+    },
+  },
+}))
 
 const giaDinh = (p: Partial<GiaDinhListItem> = {}): GiaDinhListItem => ({
   id: 'g1', maGiaDinhCu: 12, maGiaDinhRieng: null, tenGiaDinh: 'Nguyễn Văn A',
@@ -76,18 +86,37 @@ describe('GxGiaDinhList', () => {
   })
 
   // Task "ghi gia đình" mục C: "In phiếu gia đình" TỪNG bị nối nhầm vào mở màn hình chi tiết
-  // (moChiTiet) — xem gia-dinh-danh-sach.md mục 10 "Ưu tiên cao #2". Đã gỡ nối sai; giờ mọi
-  // mục in/xem-vị-trí đều hiện đúng thông báo "chưa hỗ trợ", không mở gì cả.
-  it('menu In phieu gia dinh KHONG con mo man hinh chi tiet, chi hien thong bao chua ho tro', () => {
+  // (moChiTiet) — xem gia-dinh-danh-sach.md mục 10 "Ưu tiên cao #2". Đã gỡ nối sai; nay đã in
+  // được thật (xem docs/superpowers/specs/man-hinh/in-an.md) — không mở màn hình chi tiết.
+  it('menu In phieu gia dinh KHONG mo man hinh chi tiet, goi dung api voi id gia dinh', () => {
     const moChiTiet = vi.fn()
-    const alertGia = vi.spyOn(window, 'alert').mockImplementation(() => {})
 
     const menu = menuGiaDinhMacDinh(moChiTiet)
     const inPhieu = menu.find((m) => m.nhan === 'In phiếu gia đình')
-    inPhieu?.chay?.(giaDinh())
+    inPhieu?.chay?.(giaDinh({ id: 'gd-1' }))
 
     expect(moChiTiet).not.toHaveBeenCalled()
-    expect(alertGia).toHaveBeenCalledWith(expect.stringContaining('chưa được hỗ trợ'))
+    expect(api.giaDinh.inPhieuGiaDinh).toHaveBeenCalledWith('gd-1')
+  })
+
+  it('menu In chung nhan hon phoi goi dung api voi id gia dinh', () => {
+    const menu = menuGiaDinhMacDinh(vi.fn())
+    const inHonPhoi = menu.find((m) => m.nhan === 'In chứng nhận hôn phối')
+    inHonPhoi?.chay?.(giaDinh({ id: 'gd-2' }))
+
+    expect(api.giaDinh.inChungNhanHonPhoi).toHaveBeenCalledWith('gd-2')
+  })
+
+  it('cac muc con lai van bao "chua ho tro" (In ly lich ca nhan, gioi thieu chuyen xu, xem vi tri)', () => {
+    const alertGia = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    const menu = menuGiaDinhMacDinh(vi.fn())
+
+    for (const nhan of ['In lý lịch cá nhân', 'In giới thiệu chuyển xứ', 'Xem vị trí']) {
+      const muc = menu.find((m) => m.nhan === nhan)
+      muc?.chay?.(giaDinh())
+    }
+
+    expect(alertGia).toHaveBeenCalledTimes(3)
     alertGia.mockRestore()
   })
 })

@@ -20,6 +20,21 @@ public static class GiaDinhEndpoints
         nhom.MapGet("/{id:guid}", async (GiaDinhService dichVu, Guid id, CancellationToken ct) =>
             await dichVu.LayChiTiet(id, ct) is { } ct2 ? Results.Ok(ct2) : Results.NotFound());
 
+        // In "Phiếu gia đình" / "Chứng nhận hôn phối" (VIEC-TIEP-THEO.md mục 1.1, xem
+        // docs/superpowers/specs/man-hinh/in-an.md) — cùng hạ tầng HTML + Playwright của
+        // "Lý lịch cá nhân", RequireAuthorization() + lọc GiaoXuId qua claim đã kế thừa từ
+        // `nhom`. "Chứng nhận hôn phối" trả 404 khi gia đình chưa có hôn phối nào để chứng
+        // nhận, không chỉ khi không tìm thấy gia đình.
+        nhom.MapGet("/{id:guid}/in/phieu-gia-dinh", async (InAnService dv, Guid id, CancellationToken ct) =>
+            await dv.XuatPhieuGiaDinh(id, ct) is { } ketQua
+                ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
+                : Results.NotFound());
+
+        nhom.MapGet("/{id:guid}/in/chung-nhan-hon-phoi", async (InAnService dv, Guid id, CancellationToken ct) =>
+            await dv.XuatChungNhanHonPhoi(id, ct) is { } ketQua
+                ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
+                : Results.NotFound());
+
         // Tạo mới một gia đình (Task "ghi cho gia đình") — xem GiaDinhService.Tao. Chỉ tạo bản
         // ghi trống (Tên gia đình + Giáo họ); Người nam/nữ và thành viên gán bằng các endpoint
         // riêng dưới đây SAU KHI đã có Id.

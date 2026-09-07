@@ -6,7 +6,10 @@ import { api } from '../api/client'
 import type { GiaDinhDetail as ChiTiet, GiaoDanTimKiem } from '../api/types'
 
 vi.mock('../api/client', () => ({
-  api: { timKiem: { giaoDan: vi.fn() } },
+  api: {
+    timKiem: { giaoDan: vi.fn() },
+    giaDinh: { inPhieuGiaDinh: vi.fn(() => Promise.resolve()) },
+  },
 }))
 
 const nguoiTim = (p: Partial<GiaoDanTimKiem> = {}): GiaoDanTimKiem => ({
@@ -240,5 +243,22 @@ describe('GiaDinhDetail', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Tạo gia đình' }))
 
     expect(onTaoMoi).toHaveBeenCalledWith({ tenGiaDinh: 'Gia đình Thử Nghiệm', giaoHoId: null })
+  })
+
+  // "In phiếu gia đình" (xem docs/superpowers/specs/man-hinh/in-an.md) — không mơ hồ như "In
+  // lý lịch cá nhân" (luôn là cả gia đình đang mở), nên nối thẳng vào api.giaDinh.inPhieuGiaDinh
+  // thay vì báo "chưa hỗ trợ".
+  it('bam In phieu gia dinh thi goi dung api voi id gia dinh dang mo', async () => {
+    render(<GiaDinhDetail duLieu={chiTiet({ id: 'g9' })} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'In phiếu gia đình' }))
+
+    expect(api.giaDinh.inPhieuGiaDinh).toHaveBeenCalledWith('g9')
+  })
+
+  it('gia dinh moi (chua luu): nut In phieu gia dinh bi vo hieu hoa', () => {
+    render(<GiaDinhDetail onTaoMoi={vi.fn()} />)
+
+    expect(screen.getByRole('button', { name: 'In phiếu gia đình' })).toHaveProperty('disabled', true)
   })
 })

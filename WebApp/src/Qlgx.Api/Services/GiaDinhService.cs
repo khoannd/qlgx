@@ -488,6 +488,23 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         (thanhVien.FirstOrDefault(tv => tv.VaiTro == VaiTroGiaDinh.Chong)?.GiaoDanId,
          thanhVien.FirstOrDefault(tv => tv.VaiTro == VaiTroGiaDinh.Vo)?.GiaoDanId);
 
+    /// <summary>Dùng cho InAnService (Phiếu gia đình, Chứng nhận hôn phối) — trả về id chồng/vợ
+    /// hiện tại của một gia đình (null nếu chưa có/gia đình không có vai trò đó) cùng bản ghi
+    /// HonPhoi "hiện tại" (xem <see cref="ChonHonPhoiHienTai"/>) nếu có. CỐ Ý gọi lại đúng các
+    /// hàm private đã có ở đây thay vì InAnService tự truy vấn lại — tránh lặp lại logic chọn
+    /// hôn phối hiện tại (đã có lịch sử giảm subquery tương quan ở đây, xem lịch sử commit) ở
+    /// hai nơi khác nhau rồi lệch nhau dần.</summary>
+    public async Task<(Guid? ChongId, Guid? VoId, HonPhoi? HonPhoi)?> LayVoChongVaHonPhoi(Guid giaDinhId, CancellationToken ct)
+    {
+        var g = await db.GiaDinh.Include(x => x.ThanhVien)
+            .FirstOrDefaultAsync(x => x.Id == giaDinhId && !x.DaXoa, ct);
+        if (g is null) return null;
+
+        var (chongId, voId) = LayChongVoId(g.ThanhVien);
+        var honPhoi = await TimHonPhoiHienTaiEntity(chongId, voId, ct);
+        return (chongId, voId, honPhoi);
+    }
+
     /// <summary>
     /// Tạo mới bản ghi HonPhoi (kèm nối GiaoDanHonPhoi tới chồng/vợ hiện có, bỏ qua bên nào
     /// chưa có) nếu gia đình chưa có hôn phối HIỆN TẠI (xem ChonHonPhoiHienTai), hoặc cập

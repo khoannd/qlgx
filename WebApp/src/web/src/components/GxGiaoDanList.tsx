@@ -6,15 +6,28 @@ import { cotGiaoDan, cotQuanHeGiaDinh } from '../cot/cotGiaoDan'
 import { chuaHoTro } from '../lib/thongBao'
 import { GxGrid, type GxGridHandle, type MucMenu } from './GxGrid'
 
-/** "In lý lịch cá nhân" từ menu chuột phải — cùng lệnh gọi với nút ở màn hình chi tiết
- * (`GiaoDanDetailPage.inLyLichCaNhan`), nhưng gọi thẳng ở đây vì menu chuột phải của lưới
- * không đi qua trang chi tiết. Lỗi báo bằng alert() — nhất quán với `chuaHoTro()` cho các mục
- * menu khác, tránh thêm một kênh thông báo mới chỉ cho một mục. */
-function inLyLichCaNhan(d: GiaoDanListItem): void {
-  api.giaoDan.inLyLichCaNhan(d.id).catch((e: unknown) => {
-    console.error(`Không in được lý lịch cá nhân của giáo dân ${d.id}`, e)
+/** "In lý lịch cá nhân" / "In chứng nhận bí tích..." từ menu chuột phải — cùng lệnh gọi với
+ * nút ở màn hình chi tiết, nhưng gọi thẳng ở đây vì menu chuột phải của lưới không đi qua
+ * trang chi tiết. Lỗi báo bằng alert() — nhất quán cho mọi mục in trên lưới này, tránh thêm
+ * một kênh thông báo mới chỉ cho một mục. */
+function baoLoiIn(hanhDong: string, giaoDanId: string) {
+  return (e: unknown) => {
+    console.error(`Không ${hanhDong} của giáo dân ${giaoDanId}`, e)
     window.alert(e instanceof Error ? e.message : 'In thất bại, thử lại sau.')
-  })
+  }
+}
+
+function inLyLichCaNhan(d: GiaoDanListItem): void {
+  api.giaoDan.inLyLichCaNhan(d.id).catch(baoLoiIn('in được lý lịch cá nhân', d.id))
+}
+
+/** Bốn mục "In chứng nhận bí tích/rửa tội/xưng tội-rước lễ/thêm sức" dùng CHUNG một hàm, chỉ
+ * khác `loai` gửi lên — xem InAnService.XuatChungNhanBiTich (mẫu HTML dùng chung, chỉ đổi tiêu
+ * đề và dòng bí tích được liệt kê theo `loai`). */
+function inChungNhanBiTich(loai?: 'RuaToi' | 'RuocLe' | 'ThemSuc') {
+  return (d: GiaoDanListItem): void => {
+    api.giaoDan.inChungNhanBiTich(d.id, loai).catch(baoLoiIn('in được chứng nhận bí tích', d.id))
+  }
 }
 
 type Props = {
@@ -38,14 +51,14 @@ export const menuGiaoDanMacDinh = (
   // "In lý lịch cá nhân": mẫu đầu tiên của hạ tầng in ấn thật (VIEC-TIEP-THEO.md mục 1.1, xem
   // docs/superpowers/specs/man-hinh/in-an.md) — tải PDF thật, không còn là mục chỉ có nhãn.
   { nhan: 'In lý lịch cá nhân', chay: inLyLichCaNhan },
-  // 9 mục còn lại CHƯA làm ở lượt này (xem in-an.md mục phạm vi) — trước đây bấm không phản
-  // hồi gì (chỉ có `nhan`, không có `chay`); nay báo rõ "chưa hỗ trợ" bằng `chuaHoTro`, đúng
-  // yêu cầu "đừng để im lặng không phản hồi".
-  { nhan: 'In chứng nhận bí tích', chay: chuaHoTro },
+  // 4 mục "chứng nhận bí tích" nối vào lượt này (xem in-an.md) — dùng CHUNG một endpoint,
+  // khác nhau ở `loai`. 5 mục còn lại (giới thiệu hôn phối/rửa tội/thêm sức, xem vị trí) CHƯA
+  // làm — báo rõ "chưa hỗ trợ" bằng `chuaHoTro`, đúng yêu cầu "đừng để im lặng không phản hồi".
+  { nhan: 'In chứng nhận bí tích', chay: inChungNhanBiTich() },
   { nhan: 'In giới thiệu hôn phối', chay: chuaHoTro },
-  { nhan: 'In chứng nhận rửa tội', chay: chuaHoTro },
-  { nhan: 'In chứng nhận xưng tội - rước lễ', chay: chuaHoTro },
-  { nhan: 'In chứng nhận thêm sức', chay: chuaHoTro },
+  { nhan: 'In chứng nhận rửa tội', chay: inChungNhanBiTich('RuaToi') },
+  { nhan: 'In chứng nhận xưng tội - rước lễ', chay: inChungNhanBiTich('RuocLe') },
+  { nhan: 'In chứng nhận thêm sức', chay: inChungNhanBiTich('ThemSuc') },
   { nhan: 'Xem gia đình', chay: xemGiaDinh, an: (d) => !d.giaDinhId },
   { nhan: 'In giấy giới thiệu chứng nhận rửa tội', chay: chuaHoTro },
   { nhan: 'In giấy giới thiệu giáo lý hôn phối', chay: chuaHoTro },

@@ -26,6 +26,14 @@ public static class GiaoDanEndpoints
                 ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
                 : Results.NotFound());
 
+        // In "Chứng nhận bí tích" — 4 mục menu chuột phải dùng CHUNG một endpoint, chỉ khác
+        // query string `loai` (RuaToi/RuocLe/ThemSuc; bỏ trống = mục "In chứng nhận bí tích"
+        // chung, liệt kê cả ba) — xem InAnService.XuatChungNhanBiTich.
+        nhom.MapGet("/{id:guid}/in/chung-nhan-bi-tich", async (InAnService dv, Guid id, string? loai, CancellationToken ct) =>
+            await dv.XuatChungNhanBiTich(id, loai, ct) is { } ketQua
+                ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
+                : Results.NotFound());
+
         // Tìm giáo dân theo tên/mã cũ — hạ tầng cho GxPicker thật (gõ để tìm, chọn từ danh
         // sách), dùng ở Tên Cha/Mẹ (màn hình giáo dân) và Người nam/nữ (màn hình gia đình, lượt
         // sau). Route CỐ Ý đặt trước "/{id:guid}" phía trên không đụng nhau nhờ tiền tố "/tim"

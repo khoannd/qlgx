@@ -23,7 +23,8 @@
 
   .tieu-de { text-align: center; margin: 8mm 0; }
   .tieu-de h1 { font-size: 18pt; margin: 0; letter-spacing: 1px; }
-  .tieu-de .phu-de { font-style: italic; font-size: 11pt; }
+
+  .doan-mo-dau { margin: 6mm 0; text-align: justify; line-height: 1.7; }
 
   table.thong-tin { width: 100%; border-collapse: collapse; margin-bottom: 4mm; }
   table.thong-tin td { padding: 1.4mm 2mm; vertical-align: top; }
@@ -33,6 +34,7 @@
   .khoi { margin-top: 5mm; }
   .khoi-tieu-de { font-weight: bold; text-transform: uppercase; font-size: 11.5pt;
     border-bottom: 1px solid #000; padding-bottom: 1mm; margin-bottom: 2mm; }
+  .danh-sach-bi-tich { white-space: pre-line; line-height: 1.9; }
 
   .ky-ten { margin-top: 14mm; display: flex; justify-content: flex-end; }
   .ky-ten .khoi-ky { text-align: center; width: 65mm; }
@@ -56,62 +58,26 @@
   </div>
 
   <div class="tieu-de">
-    <h1>LÝ LỊCH CÁ NHÂN</h1>
-    <div class="phu-de">Giáo họ: {{TenGiaoHo}}</div>
+    <h1>{{TieuDeBiTich}}</h1>
+  </div>
+
+  <div class="doan-mo-dau">
+    Linh mục chính xứ Giáo xứ {{TenGiaoXu}} chứng nhận:
   </div>
 
   <table class="thong-tin">
-    <tr><td class="nhan">Mã giáo dân</td><td class="gia-tri">{{MaGiaoDan}}</td></tr>
     <tr><td class="nhan">Họ và tên</td><td class="gia-tri">{{HoTen}}</td></tr>
     <tr><td class="nhan">Ngày sinh</td><td class="gia-tri">{{NgaySinh}}</td></tr>
     <tr><td class="nhan">Nơi sinh</td><td class="gia-tri">{{NoiSinh}}</td></tr>
-    <tr><td class="nhan">Giới tính</td><td class="gia-tri">{{Phai}}</td></tr>
-    <tr><td class="nhan">Vai trò trong gia đình</td><td class="gia-tri">{{VaiTro}}</td></tr>
     <tr><td class="nhan">Họ tên cha</td><td class="gia-tri">{{TenCha}}</td></tr>
     <tr><td class="nhan">Họ tên mẹ</td><td class="gia-tri">{{TenMe}}</td></tr>
+    <tr><td class="nhan">Giáo họ</td><td class="gia-tri">{{TenGiaoHo}}</td></tr>
     <tr><td class="nhan">Địa chỉ</td><td class="gia-tri">{{DiaChiGiaoDan}}</td></tr>
-    <tr><td class="nhan">Điện thoại</td><td class="gia-tri">{{DienThoaiGiaoDan}}</td></tr>
-    <tr><td class="nhan">Email</td><td class="gia-tri">{{EmailGiaoDan}}</td></tr>
-    <tr><td class="nhan">Dân tộc</td><td class="gia-tri">{{DanToc}}</td></tr>
-    <tr><td class="nhan">Nghề nghiệp</td><td class="gia-tri">{{NgheNghiep}}</td></tr>
-    <tr><td class="nhan">Trình độ văn hoá</td><td class="gia-tri">{{TrinhDoVanHoa}}</td></tr>
-    <tr><td class="nhan">Trình độ chuyên môn</td><td class="gia-tri">{{TrinhDoChuyenMon}}</td></tr>
-    <tr><td class="nhan">Biết ngoại ngữ</td><td class="gia-tri">{{BietNgoaiNgu}}</td></tr>
   </table>
 
   <div class="khoi">
-    <div class="khoi-tieu-de">Các bí tích đã lãnh nhận</div>
-    <table class="thong-tin">
-      <tr><td class="nhan">Rửa tội</td>
-        <td class="gia-tri">{{MoTaRuaToi}}</td></tr>
-      <tr><td class="nhan">Rước lễ lần đầu</td>
-        <td class="gia-tri">{{MoTaRuocLe}}</td></tr>
-      <tr><td class="nhan">Thêm sức</td>
-        <td class="gia-tri">{{MoTaThemSuc}}</td></tr>
-    </table>
-  </div>
-
-  <div class="khoi">
-    <div class="khoi-tieu-de">Tình trạng hôn phối</div>
-    <table class="thong-tin">
-      <tr><td class="nhan">Số hôn phối</td><td class="gia-tri">{{SoHonPhoi}}</td></tr>
-      <tr><td class="nhan">Kết hôn với</td><td class="gia-tri">{{VoChong}}</td></tr>
-      <tr><td class="nhan">Ngày hôn phối</td><td class="gia-tri">{{NgayHonPhoi}}</td></tr>
-      <tr><td class="nhan">Nơi cử hành</td><td class="gia-tri">{{NoiHonPhoi}}</td></tr>
-      <tr><td class="nhan">Chủ sự</td><td class="gia-tri">{{ChaHonPhoi}}</td></tr>
-      <tr><td class="nhan">Cách thức</td><td class="gia-tri">{{CachThucHonPhoi}}</td></tr>
-      <tr><td class="nhan">Người chứng</td><td class="gia-tri">{{NguoiChung1}} — {{NguoiChung2}}</td></tr>
-    </table>
-  </div>
-
-  <div class="khoi">
-    <div class="khoi-tieu-de">Tình trạng khác</div>
-    <table class="thong-tin">
-      <tr><td class="nhan">Còn đi học</td><td class="gia-tri">{{ConHoc}}</td></tr>
-      <tr><td class="nhan">Tân tòng</td><td class="gia-tri">{{TanTong}}</td></tr>
-      <tr><td class="nhan">Đã có gia đình</td><td class="gia-tri">{{DaCoGiaDinh}}</td></tr>
-      <tr><td class="nhan">Đã qua đời</td><td class="gia-tri">{{QuaDoi}} {{NgayQuaDoi}} {{NoiAnTang}}{{SoAnTang}}</td></tr>
-    </table>
+    <div class="khoi-tieu-de">Đã lãnh nhận</div>
+    <div class="danh-sach-bi-tich">{{DanhSachBiTich}}</div>
   </div>
 
   <div class="ky-ten">

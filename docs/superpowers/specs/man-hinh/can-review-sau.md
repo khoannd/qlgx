@@ -1271,3 +1271,95 @@ khớp `GET /api/giao-dan` cùng id). Lưu tại
 nhận lại `psql`: `tai_khoan` chỉ còn `quantri`, `giao_dan`/`gia_dinh`/`thanh_vien_gia_dinh` vẫn
 đúng 2050/40/145 (không đổi gì trên `qlgx_thu` — lượt này chỉ ĐỌC dữ liệu để in, không ghi gì).
 Tắt cả `Qlgx.Api` và `npm run dev` đã mở cho lượt kiểm thử này.**
+
+### 34. Task "in ấn — 4 mẫu còn lại" (2026-09-07) — các quyết định tự đưa ra
+
+Tiếp mục 33: làm 3/4 mẫu ưu tiên còn lại (Chứng nhận bí tích, Phiếu gia đình, Chứng nhận hôn
+phối) đúng khuôn mẫu hạ tầng đã dựng, và sửa lỗi trình bày "nhãn/nối rỗng lửng" đã tự phát hiện
+ở mẫu Lý lịch cá nhân. Giấy giới thiệu (4 mẫu) KHÔNG làm ở lượt này — xem mục d. Ghi quyết định
+tự đưa ra, không có trong yêu cầu gốc.
+
+**a) Sửa lỗi "nhãn/nối rỗng lửng" ở TẦNG DÙNG CHUNG (`Printing/VanBanInAn.cs`), không vá riêng
+từng mẫu.** `VanBanInAn.MoTaBiTich(so, ngay, noi, chuSu, hanhDong, nguoiPhu, nhan)` ghép câu
+kiểu "Số X — ngày Y tại Z, cha A rửa, người đỡ đầu B" nhưng bỏ HẲN từng đoạn (kể cả liên từ đi
+kèm — "tại", dấu "—", dấu phẩy) khi thiếu dữ liệu tương ứng, thay vì để lại nhãn rỗng. Áp dụng
+lại cho `LyLichCaNhan` (đổi 6 cột rời `SoRuaToi`/`NgayRuaToi`/... trong dict thành 3 khoá
+`MoTaRuaToi`/`MoTaRuocLe`/`MoTaThemSuc` đã ghép sẵn) VÀ dùng ngay từ đầu ở 2 mẫu mới
+(`ChungNhanBiTich`, `PhieuGiaDinh`, `ChungNhanHonPhoi`) — một chỗ sửa, không có mẫu nào tái phạm
+lỗi cũ. Đã kiểm tra bằng dữ liệu thật thiếu-đủ khác nhau (xem mục e) — không còn dấu phẩy/giới
+từ bơ vơ ở bất kỳ trường hợp thiếu dữ liệu nào gặp phải.
+
+**b) Bốn mục menu "In chứng nhận bí tích/rửa tội/xưng tội-rước lễ/thêm sức" dùng CHUNG MỘT
+endpoint** (`GET /api/giao-dan/{id}/in/chung-nhan-bi-tich?loai=RuaToi|RuocLe|ThemSuc`, bỏ trống
+`loai` = mục chung liệt kê cả ba) **và CHUNG MỘT mẫu HTML** (`ChungNhanBiTich.html`), chỉ đổi
+tiêu đề + dòng bí tích được liệt kê theo `loai`. Bản desktop
+(`Source/ExcelReport/ReportChungNhanBT.cs`) cũng chỉ đổi TÊN TỆP mẫu theo `LoaiBiTich`, mọi
+phép `Replace` chạy giống nhau cho cả 4 loại — bản web tái hiện đúng tinh thần đó bằng cấu trúc
+đơn giản hơn (một mẫu, một danh sách văn bản nhiều dòng dùng CSS `white-space: pre-line`) thay
+vì 4 tệp `.doc` gần như trùng lặp.
+
+**c) CỐ Ý KHÔNG dựng phần "gửi giáo xứ nhận"** (`TenLinhMucNhan`/`TenGiaoXuNhan`/`TenGiaoPhanNhan`/
+`LyDo` của `ReportChungNhanBT.cs`/`ReportChungNhanHP.cs`) **ở cả "Chứng nhận bí tích" lẫn "Chứng
+nhận hôn phối".** Đó là dữ liệu của một giấy CHUYỂN giáo xứ (linh mục xứ nhận, lý do xin chuyển)
+cần NHẬP TAY ngay lúc in — không có cột nào trong CSDL hiện tại lưu sẵn, và cũng chưa có màn
+hình/hộp thoại nào cho nhập lúc in ở Phase 1. Hai mẫu web hiện tại là "chứng nhận nội bộ" (giáo
+xứ tự chứng nhận cho chính giáo dân của mình), không phải "giấy giới thiệu liên xứ" — tương ứng
+đúng phần thân đã tái hiện, chỉ bỏ khối định tuyến chuyển xứ. Nếu sau này cần giấy chuyển xứ đầy
+đủ, cần thêm hộp thoại nhập 4 trường đó trước khi gọi endpoint in — ghi lại để lượt sau biết.
+
+**d) "Giấy giới thiệu" (4 mẫu: chuyển xứ/rửa tội/thêm sức/giáo lý hôn phối) VẪN CHƯA LÀM —
+KHÔNG kịp trong lượt này, đúng tinh thần "2 mẫu chạy tốt hơn 4 mẫu làm dở" nhân lên cho lượt
+này (ở đây là 3/4 mẫu chạy tốt hơn 4/4 mẫu làm dở).** Đọc sơ `ReportGioiThieuHP.cs`
+(giấy giới thiệu giáo lý hôn phối) cho thấy mẫu này cần dữ liệu của "người thứ hai" — thường ở
+GIÁO XỨ KHÁC, không nhất thiết có bản ghi `GiaoDan` nào trong CSDL của giáo xứ đang đăng nhập
+(`ReportHonPhoiConst.Nguoi2`/`Tuoi2`/`TenCha2`... là các trường NHẬP TAY độc lập, không tra từ
+bảng nào) — nghĩa là cần một MÀN HÌNH NHẬP LIỆU mới (form nhập tay thông tin người thứ hai),
+không chỉ một mẫu in đọc thẳng từ CSDL như ba mẫu đã làm. Việc này lớn hơn "chỉ thêm một `.html`
++ một `Xuat*`", để lại nguyên vẹn cho lượt sau. Menu tương ứng ("In giới thiệu hôn phối", "In
+giấy giới thiệu chứng nhận rửa tội/thêm sức") VẪN báo `chuaHoTro()`, không đổi.
+
+**e) Bằng chứng chạy thật:** tạo tài khoản tạm `kiemthu_inan2` bằng CLI, đăng nhập lấy JWT thật,
+gọi `fetch`/`curl` NGAY QUA API THẬT (`Qlgx.Api` chạy tại `localhost:5299`, kết nối `qlgx_thu`
+thật) — không phải test giả lập. Bốn lần gọi:
+- Chứng nhận bí tích "TatCa" cho giáo dân "Trần Thị Mai Phượng" (mã 456, đủ 3 bí tích) —
+  `49-ChungNhanBiTich-TatCa-Tran-Thi-Mai-Phuong.pdf`.
+- Ba biến thể `loai=RuaToi/RuocLe/ThemSuc` cho cùng người — xác nhận tiêu đề đổi đúng
+  ("CHỨNG NHẬN RỬA TỘI"/"CHỨNG NHẬN XƯNG TỘI - RƯỚC LỄ LẦN ĐẦU"/"CHỨNG NHẬN THÊM SỨC") và chỉ
+  đúng MỘT dòng bí tích tương ứng được liệt kê (không lưu PDF riêng, chỉ trích văn bản kiểm tra).
+- Phiếu gia đình cho gia đình 7 thành viên (đủ các trường hợp: chồng/vợ/con, có/không đủ tam bí
+  tích, có/không hôn phối) — `50-PhieuGiaDinh-7-thanh-vien.pdf`. Trích văn bản xác nhận KHÔNG
+  còn nhãn/nối rỗng lửng ở bất kỳ dòng nào (kể cả các dòng chỉ có MỘT trong ba mốc so/ngày/nơi —
+  ví dụ "Tại Tiêu Hạ" viết hoa chữ đầu khi chỉ có nơi, không có ngày/số).
+- Chứng nhận hôn phối cho gia đình có hôn phối thật (522 bản ghi, chọn "Giuse Lương Văn Sơn" —
+  `ngay_hon_phoi` 1997-01-12) — `51-ChungNhanHonPhoi-Giuse-Luong-Van-Son.pdf`. Phát hiện phụ khi
+  đọc PDF: một số dữ liệu gốc (`qlgx_thu`) có giá trị placeholder cũ `"X"` (ví dụ `NoiRuaToi =
+  "X"`, `HoTenCha = "X"`) và cả lỗi chính tả sẵn có ("Thj" thay vì "Thị") — đây là DỮ LIỆU THẬT
+  từ Access chuyển sang, KHÔNG phải lỗi in ấn; mẫu in hiển thị trung thực đúng những gì có trong
+  CSDL, cố ý KHÔNG lọc/sửa giá trị "X" ở tầng in (không phải việc của tính năng in ấn để "làm
+  đẹp" dữ liệu gốc — nếu cần dọn, đó là việc của một nhiệm vụ làm sạch dữ liệu riêng).
+- Tất cả 4/4 lần gọi trả đúng `200 application/pdf`, chữ ký `%PDF-`; gọi không kèm token trả
+  đúng `401`. Dọn dẹp: xoá tài khoản tạm, xác nhận lại `psql` — `tai_khoan` chỉ còn `quantri`,
+  4 bảng đếm vẫn đúng 2050/40/145/522 (không ghi gì, chỉ đọc để in).
+
+**f) `BoDoMauIn.Dung()` thêm tham số tuỳ chọn `khoiHtmlAnToan` — lối thoát CÓ CHỦ ĐÍCH khỏi cơ
+chế thay-thế-tự-thoát-HTML thông thường, DÙNG RIÊNG cho phần mẫu cần LẶP LẠI theo số lượng bản
+ghi không cố định (mỗi dòng một thành viên gia đình ở Phiếu gia đình).** Giá trị trong
+`khoiHtmlAnToan` được chèn NGUYÊN VĂN (không tự thoát) — `InAnService.XuatPhieuGiaDinh` tự gọi
+`HtmlEncoder.Default.Encode(...)` cho TỪNG mẩu dữ liệu người dùng trước khi ghép vào khung
+`<tr>/<td>` tự viết, giữ đúng nguyên tắc "dữ liệu người dùng luôn qua HtmlEncoder trước khi vào
+HTML" — chỉ khác ai gọi encoder (InAnService, không phải BoDoMauIn) để có thể ghép nhiều mẩu đã
+thoát cạnh khung HTML chưa thoát. Cân nhắc thay thế: một template engine thật (Razor/Scriban) xử
+lý vòng lặp gọn hơn, nhưng thêm phụ thuộc mới chỉ để giải quyết MỘT trường hợp (bảng thành viên)
+— chưa đáng đánh đổi ở quy mô hiện tại (4 mẫu HTML, một trường hợp cần lặp).
+
+**g) `GiaDinhService` thêm phương thức public `LayVoChongVaHonPhoi` để `InAnService` TÁI SỬ
+DỤNG logic "chọn hôn phối hiện tại của một gia đình" đã có sẵn** (`TimHonPhoiHienTaiEntity`,
+`ChonHonPhoiHienTai` — đã tối ưu để tránh subquery tương quan, xem lịch sử commit
+"Giam subquery tuong quan..."), KHÔNG viết lại truy vấn đó lần thứ hai ở `InAnService`. Đánh đổi
+duy nhất: `InAnService` giờ phụ thuộc thêm `GiaDinhService` (cả hai đều Scoped, không có vấn đề
+vòng đời).
+
+**h) Nam/Nữ trong "Chứng nhận hôn phối" xác định theo `GiaoDan.Phai` THẬT của từng người tham
+gia `HonPhoi`, KHÔNG giả định "Chồng luôn là Nam".** Vai trò Chồng/Vợ (`ThanhVienGiaDinh.VaiTro`)
+và Nam/Nữ trên giấy chứng nhận là hai khái niệm khác nhau về mặt dữ liệu — tránh in sai giới
+tính nếu có bản ghi nhập lệch.

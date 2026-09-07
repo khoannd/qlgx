@@ -167,6 +167,12 @@ export const api = {
      * can-review-sau.md mục 5. */
     xoaThanhVien: (id: string, giaoDanId: string, vaiTro: number) =>
       goi<void>(`/api/gia-dinh/${id}/thanh-vien/${giaoDanId}/${vaiTro}`, { method: 'DELETE' }),
+    /** In "Phiếu gia đình" (xem docs/superpowers/specs/man-hinh/in-an.md) — tải PDF về máy. */
+    inPhieuGiaDinh: (id: string) =>
+      taiTepIn(`/api/gia-dinh/${id}/in/phieu-gia-dinh`, 'PhieuGiaDinh.pdf'),
+    /** In "Chứng nhận hôn phối" — 404 khi gia đình chưa có hôn phối nào để chứng nhận. */
+    inChungNhanHonPhoi: (id: string) =>
+      taiTepIn(`/api/gia-dinh/${id}/in/chung-nhan-hon-phoi`, 'ChungNhanHonPhoi.pdf'),
   },
   giaoDan: {
     danhSach: (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: boolean) =>
@@ -198,6 +204,10 @@ export const api = {
      * docs/superpowers/specs/man-hinh/in-an.md) — tải PDF về máy, không mở tab mới. */
     inLyLichCaNhan: (id: string) =>
       taiTepIn(`/api/giao-dan/${id}/in/ly-lich-ca-nhan`, 'LyLichCaNhan.pdf'),
+    /** In "Chứng nhận bí tích" — `loai` rỗng/undefined = mục chung "In chứng nhận bí tích"
+     * (liệt kê cả ba); "RuaToi"/"RuocLe"/"ThemSuc" = mục riêng từng bí tích. */
+    inChungNhanBiTich: (id: string, loai?: 'RuaToi' | 'RuocLe' | 'ThemSuc') =>
+      taiTepIn(`/api/giao-dan/${id}/in/chung-nhan-bi-tich${loai ? `?loai=${loai}` : ''}`, 'ChungNhanBiTich.pdf'),
   },
   hoiDoan: {
     danhMuc: () => goi<HoiDoanDanhMuc[]>('/api/hoi-doan'),

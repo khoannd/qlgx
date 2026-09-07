@@ -1,5 +1,6 @@
 import { forwardRef } from 'react'
 import type { Ref } from 'react'
+import { api } from '../api/client'
 import type { GiaDinhListItem } from '../api/types'
 import { cotGiaDinh } from '../cot/cotGiaDinh'
 import { chuaHoTro } from '../lib/thongBao'
@@ -13,15 +14,33 @@ type Props = {
   hangLoc?: boolean
 }
 
-/** Đúng 5 mục và đúng thứ tự trong constructor của GxGiaDinhList bản desktop. In ấn thuộc
- * giai đoạn 3 (chưa làm) — "In phiếu gia đình" TỪNG bị nối nhầm vào `moChiTiet` (mở màn hình
- * chi tiết thay vì in gì cả, xem gia-dinh-danh-sach.md mục 10 "Ưu tiên cao #2"); đã gỡ nối sai
- * đó, giờ hiện đúng thông báo "chưa hỗ trợ" như bốn mục in/xem-vị-trí còn lại. */
+/** "In chứng nhận hôn phối" / "In phiếu gia đình" từ menu chuột phải — xem
+ * docs/superpowers/specs/man-hinh/in-an.md. Lỗi báo bằng alert(), nhất quán với cách
+ * GxGiaoDanList báo lỗi in. */
+function baoLoiIn(hanhDong: string, giaDinhId: string) {
+  return (e: unknown) => {
+    console.error(`Không ${hanhDong} của gia đình ${giaDinhId}`, e)
+    window.alert(e instanceof Error ? e.message : 'In thất bại, thử lại sau.')
+  }
+}
+
+function inChungNhanHonPhoi(d: GiaDinhListItem): void {
+  api.giaDinh.inChungNhanHonPhoi(d.id).catch(baoLoiIn('in được chứng nhận hôn phối', d.id))
+}
+
+function inPhieuGiaDinh(d: GiaDinhListItem): void {
+  api.giaDinh.inPhieuGiaDinh(d.id).catch(baoLoiIn('in được phiếu gia đình', d.id))
+}
+
+/** Đúng 5 mục và đúng thứ tự trong constructor của GxGiaDinhList bản desktop. "In lý lịch cá
+ * nhân" ở lưới GIA ĐÌNH vẫn báo "chưa hỗ trợ" — không rõ in cho thành viên nào (dùng menu
+ * chuột phải trên lưới THÀNH VIÊN — GxGiaoDanList.inLyLichCaNhan — thay vì mục này); "In giới
+ * thiệu chuyển xứ" và "Xem vị trí" cũng chưa làm ở lượt này. */
 export const menuGiaDinhMacDinh = (
   _moChiTiet: (d: GiaDinhListItem) => void,
 ): MucMenu<GiaDinhListItem>[] => [
-  { nhan: 'In chứng nhận hôn phối', chay: chuaHoTro },
-  { nhan: 'In phiếu gia đình', chay: chuaHoTro },
+  { nhan: 'In chứng nhận hôn phối', chay: inChungNhanHonPhoi },
+  { nhan: 'In phiếu gia đình', chay: inPhieuGiaDinh },
   { nhan: 'In lý lịch cá nhân', chay: chuaHoTro },
   { nhan: 'In giới thiệu chuyển xứ', chay: chuaHoTro },
   { nhan: 'Xem vị trí', chay: chuaHoTro },

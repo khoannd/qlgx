@@ -8,7 +8,12 @@ import { api } from '../api/client'
 import type { GiaoDanListItem } from '../api/types'
 
 vi.mock('../api/client', () => ({
-  api: { giaoDan: { inLyLichCaNhan: vi.fn(() => Promise.resolve()) } },
+  api: {
+    giaoDan: {
+      inLyLichCaNhan: vi.fn(() => Promise.resolve()),
+      inChungNhanBiTich: vi.fn(() => Promise.resolve()),
+    },
+  },
 }))
 
 const nguoi = (p: Partial<GiaoDanListItem> = {}): GiaoDanListItem => ({
@@ -172,6 +177,20 @@ describe('GxGiaoDanList', () => {
       muc.chay!(nguoi({ id: 'gd-xyz' }))
 
       expect(api.giaoDan.inLyLichCaNhan).toHaveBeenCalledWith('gd-xyz')
+    })
+
+    it.each([
+      ['In chứng nhận bí tích', undefined],
+      ['In chứng nhận rửa tội', 'RuaToi'],
+      ['In chứng nhận xưng tội - rước lễ', 'RuocLe'],
+      ['In chứng nhận thêm sức', 'ThemSuc'],
+    ] as const)('bam "%s" thi goi api.giaoDan.inChungNhanBiTich dung loai', (nhan, loai) => {
+      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn())
+      const muc = menu.find((m) => m.nhan === nhan)!
+
+      muc.chay!(nguoi({ id: 'gd-bt' }))
+
+      expect(api.giaoDan.inChungNhanBiTich).toHaveBeenCalledWith('gd-bt', loai)
     })
   })
 })

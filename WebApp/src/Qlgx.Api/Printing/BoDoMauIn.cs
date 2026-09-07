@@ -63,13 +63,27 @@ public sealed class BoDoMauIn
     /// <paramref name="duLieu"/> (đã được thoát HTML). Chỗ trống không có trong
     /// <paramref name="duLieu"/> bị để trống, không ném lỗi — mẫu có thể có nhiều chỗ trống hơn
     /// dữ liệu một số trường hợp không áp dụng (ví dụ mẫu hôn phối trên giấy lý lịch một người
-    /// độc thân).</summary>
-    public string Dung(string giaoPhanDaChuanHoa, string tenMau, IReadOnlyDictionary<string, string?> duLieu)
+    /// độc thân).
+    ///
+    /// <paramref name="khoiHtmlAnToan"/> là lối thoát CÓ CHỦ ĐÍCH, dùng riêng cho phần mẫu cần
+    /// LẶP LẠI theo số lượng bản ghi (ví dụ mỗi dòng một thành viên gia đình trong
+    /// PhieuGiaDinh) — số dòng không cố định nên không thể là một mẫu HTML tĩnh với chỗ trống
+    /// {{Key}} thông thường. Giá trị trong <paramref name="khoiHtmlAnToan"/> được chèn NGUYÊN
+    /// VĂN, KHÔNG thoát HTML — nơi gọi (InAnService) BẮT BUỘC tự
+    /// <c>HtmlEncoder.Default.Encode(...)</c> từng mẩu dữ liệu người dùng nhập trước khi ghép
+    /// vào khối, chỉ để nguyên phần khung <c>&lt;tr&gt;</c>/<c>&lt;td&gt;</c> tự viết. Vẫn cùng
+    /// một nguyên tắc "dữ liệu người dùng luôn phải qua HtmlEncoder trước khi vào HTML" như
+    /// <paramref name="duLieu"/> — chỉ khác chỗ ai gọi encoder (ở đây là InAnService, không
+    /// phải BoDoMauIn) để có thể ghép nhiều mẩu đã-thoát cạnh khung HTML chưa-thoát.</summary>
+    public string Dung(string giaoPhanDaChuanHoa, string tenMau, IReadOnlyDictionary<string, string?> duLieu,
+        IReadOnlyDictionary<string, string?>? khoiHtmlAnToan = null)
     {
         var mau = DocMauGoc(giaoPhanDaChuanHoa, tenMau);
         return System.Text.RegularExpressions.Regex.Replace(mau, @"\{\{(\w+)\}\}", m =>
         {
             var key = m.Groups[1].Value;
+            if (khoiHtmlAnToan is not null && khoiHtmlAnToan.TryGetValue(key, out var khoi))
+                return khoi ?? "";
             var gia = duLieu.GetValueOrDefault(key);
             return gia is null ? "" : HtmlEncoder.Default.Encode(gia);
         });
