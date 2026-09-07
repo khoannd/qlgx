@@ -41,6 +41,11 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
     public DbSet<GiaoPhan> GiaoPhan => Set<GiaoPhan>();
     public DbSet<GiaoHat> GiaoHat => Set<GiaoHat>();
 
+    /// <summary>Theo dõi lượt nhập dữ liệu Access chạy nền (xem NhapDuLieuJob.cs) — không có
+    /// bộ lọc GiaoXuId, cùng lý do với GiaoXu/GiaoPhan/GiaoHat: chỉ đọc/ghi được qua policy
+    /// "QuanTriHeThong", luôn dùng QlgxDbContext mở bằng chuỗi kết nối quản trị (bỏ qua RLS).</summary>
+    public DbSet<NhapDuLieuJob> NhapDuLieuJob => Set<NhapDuLieuJob>();
+
     // --- Theo giáo xứ, có bộ lọc tenant bên dưới ---
     public DbSet<CauHinh> CauHinh => Set<CauHinh>();
     public DbSet<DuLieuChung> DuLieuChung => Set<DuLieuChung>();

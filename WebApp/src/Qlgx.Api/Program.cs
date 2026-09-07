@@ -26,6 +26,7 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<TaiKhoanService>();
 builder.Services.AddScoped<QuanLyGiaoXuService>();
+builder.Services.AddScoped<NhapDuLieuService>();
 builder.Services.AddScoped<GiaoHoService>();
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -146,6 +147,7 @@ app.MapGiaoDan();
 app.MapGiaoHo();
 app.MapTaiKhoan();
 app.MapQuanLyGiaoXu();
+app.MapNhapDuLieu();
 
 // Fallback SPA: moi GET khong khop route API/tep tinh nao o tren tra ve index.html de React
 // Router tu xu ly duong dan phia trinh duyet. Loai tru "/api" bang rang buoc regex phu dinh de

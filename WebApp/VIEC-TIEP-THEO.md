@@ -107,10 +107,25 @@ và xác nhận KHÔNG thấy 2050 giáo dân của Vô Nhiễm — xem
 `docs/superpowers/specs/man-hinh/can-review-sau.md` mục 37d, ảnh ở
 `WebApp/anh-chup-kiem-thu/65`-`67`.
 
-### 2.4 Chức năng nhập dữ liệu cho quản trị viên
+### 2.4 Chức năng nhập dữ liệu cho quản trị viên  ← ✅ ĐÃ XONG (2026-09-07)
 
 Công cụ chuyển dữ liệu Access hiện chạy bằng dòng lệnh, cần người kỹ thuật. Quản trị viên
 cần tự nhập được file `.mdb` của giáo xứ mới qua giao diện.
+
+**Đã xong theo kiến trúc hai bước** (máy chủ Linux không đọc được `.mdb`): quản trị viên chạy
+`Qlgx.Migration <file.mdb> --xuat-goi=goi.json.gz` tại máy Windows của mình để rút gói dữ liệu
+trung gian (JSON nén gzip, không cần mạng tới PostgreSQL), rồi tải GÓI đó lên màn hình "Nhập dữ
+liệu Access" (`/api/quan-tri/nhap-du-lieu/*`, policy "QuanTriHeThong") — có chạy thử (đối chiếu
+số dòng, không ghi gì), cảnh báo/chặn khi giáo xứ đích đã có dữ liệu, chạy nền có theo dõi tiến
+độ, và đối chiếu số dòng sau khi nhập thật. **Tự phát hiện và sửa một lỗi nghiêm trọng giữa
+chừng**: khoá chống trùng lặp gốc (`BangAnhXaId`, tái sử dụng từ công cụ dòng lệnh) không tách
+theo giáo xứ, khiến nhập giáo xứ B có thể ĐÁNH CẮP dữ liệu giáo xứ A nếu hai giáo xứ có mã cũ
+Access trùng nhau (gần như luôn đúng — mọi Access đều đánh số từ 1) — xem
+`docs/superpowers/specs/man-hinh/can-review-sau.md` mục 38g. Đã sửa và chứng minh lại bằng chạy
+thật: nhập `BIN/giaoxu.mdb` vào giáo xứ mới, khớp tuyệt đối GiaoHo 1/GiaDinh 40/GiaoDan 2050/
+ThanhVienGiaDinh 145/HonPhoi 522/GiaoDanHonPhoi 1043/DotBiTich 1108/BiTichChiTiet 6150, Vô Nhiễm
+giữ nguyên không lẫn lộn, nhập lại lần hai không tạo trùng — ảnh `68`-`72` trong
+`WebApp/anh-chup-kiem-thu/`.
 
 ---
 

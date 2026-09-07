@@ -338,3 +338,28 @@ export type GiaoXuQuanLy = {
   coTrungTen: boolean
   soTaiKhoan: number
 }
+
+// --- Màn hình "Nhập dữ liệu Access" (policy "QuanTriHeThong", VIEC-TIEP-THEO.md mục 2.4) ---
+
+/** Ánh xạ 1-1 với DongDoiChieuDto — một dòng đối chiếu số dòng nguồn/đích theo bảng. */
+export type DongDoiChieu = { bang: string; soDongNguon: number; soDongDich: number; lech: boolean }
+
+/** Ánh xạ 1-1 với BaoCaoXemTruocDto — kết quả CHẠY THỬ, KHÔNG ghi gì. */
+export type BaoCaoXemTruoc = {
+  tenGiaoXuNguon: string
+  giaoXuDichDaCoDuLieu: boolean
+  soGiaoDanDaCo: number
+  doiChieu: DongDoiChieu[]
+  canhBao: string[]
+}
+
+/** Ánh xạ 1-1 với TrangThaiNhapDuLieuDto — "DangChay" | "HoanThanh" | "Loi". */
+export type TrangThaiNhapDuLieu = {
+  jobId: string
+  trangThai: 'DangChay' | 'HoanThanh' | 'Loi'
+  doiChieu: DongDoiChieu[] | null
+  canhBao: string[] | null
+  loiThongBao: string | null
+  batDauLuc: string
+  ketThucLuc: string | null
+}

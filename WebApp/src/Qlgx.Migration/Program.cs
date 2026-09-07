@@ -1,15 +1,22 @@
+using System.IO.Compression;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Data;
 using Qlgx.Migration;
 
-if (args.Length < 3)
+if (args.Length < 1)
 {
     Console.WriteLine("""
-        Cách dùng:
+        Cách dùng (chuyển thẳng vào PostgreSQL — cần mạng tới máy chủ CSDL, xem can-review-sau.md mục 38):
           Qlgx.Migration <duong-dan-giaoxu.mdb> <chuoi-ket-noi-postgres> <ma-giao-xu-guid>
                          [--mat-khau=<mat khau file mdb>] [--nguoi-dung=<ten>] [--chay-that]
 
-        Mặc định là CHẠY THỬ: chỉ đọc và in báo cáo, không ghi gì vào PostgreSQL.
+        Cách dùng (RÚT gói dữ liệu trung gian để tải lên qua giao diện web — không cần mạng tới
+        PostgreSQL, chỉ cần chạy trên Windows nơi có Access Database Engine):
+          Qlgx.Migration <duong-dan-giaoxu.mdb> --xuat-goi=<duong-dan-goi.json.gz>
+                         [--mat-khau=<mat khau file mdb>] [--nguoi-dung=<ten>] [--ten-giao-xu=<ten>]
+
+        Mặc định (chế độ đầu) là CHẠY THỬ: chỉ đọc và in báo cáo, không ghi gì vào PostgreSQL.
         Thêm --chay-that để ghi dữ liệu.
 
         File .mdb của QLGX thường được khoá bằng mật khẩu cấp database. Truyền qua
@@ -19,15 +26,46 @@ if (args.Length < 3)
     return 1;
 }
 
-var (duongDan, chuoiKetNoi, maGiaoXu) = (args[0], args[1], Guid.Parse(args[2]));
-var chayThat = args.Contains("--chay-that");
-
 static string? LayCo(string[] args, string ten) =>
     args.FirstOrDefault(a => a.StartsWith(ten + "=", StringComparison.Ordinal))?[(ten.Length + 1)..];
 
+var duongDan = args[0];
 // Ưu tiên biến môi trường để mật khẩu không lọt vào lịch sử dòng lệnh.
 var matKhau = Environment.GetEnvironmentVariable("QLGX_MDB_PASSWORD") ?? LayCo(args, "--mat-khau");
 var nguoiDung = LayCo(args, "--nguoi-dung") ?? "Admin";
+
+var duongDanGoiXuat = LayCo(args, "--xuat-goi");
+if (duongDanGoiXuat is not null)
+{
+    using var nguonXuat = new DocAccess(duongDan, matKhau, nguoiDung);
+    try { nguonXuat.Mo(); }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Không mở được file Access '{duongDan}': {ex.Message}");
+        return 3;
+    }
+
+    var tenGiaoXuNguon = LayCo(args, "--ten-giao-xu") ?? System.IO.Path.GetFileNameWithoutExtension(duongDan);
+    var goi = GoiDuLieuNhap.TuNguon(nguonXuat, tenGiaoXuNguon);
+
+    await using (var tepRa = File.Create(duongDanGoiXuat))
+    await using (var nen = new GZipStream(tepRa, CompressionLevel.Optimal))
+        await JsonSerializer.SerializeAsync(nen, goi);
+
+    Console.WriteLine($"Đã xuất gói dữ liệu trung gian: {duongDanGoiXuat}");
+    Console.WriteLine("Tải tệp này lên qua màn hình \"Nhập dữ liệu Access\" (Quản trị hệ thống) " +
+        "trên giao diện web — máy chủ không cần Windows, không cần mở cổng CSDL ra ngoài.");
+    return 0;
+}
+
+if (args.Length < 3)
+{
+    Console.WriteLine("Thiếu tham số — cần <chuoi-ket-noi-postgres> <ma-giao-xu-guid> (hoặc dùng --xuat-goi=).");
+    return 1;
+}
+
+var (chuoiKetNoi, maGiaoXu) = (args[1], Guid.Parse(args[2]));
+var chayThat = args.Contains("--chay-that");
 
 using var nguon = new DocAccess(duongDan, matKhau, nguoiDung);
 try

@@ -79,6 +79,7 @@ export function SideNav({ dangChonId, onNavigate, laQuanTri, laQuanTriHeThong }:
   const mucHeThong = [
     ...(laQuanTri ? [{ id: 'taiKhoanList', nhan: 'Quản lý tài khoản' }] : []),
     ...(laQuanTriHeThong ? [{ id: 'quanLyGiaoXu', nhan: 'Quản lý giáo xứ' }] : []),
+    ...(laQuanTriHeThong ? [{ id: 'nhapDuLieu', nhan: 'Nhập dữ liệu Access' }] : []),
   ]
   const danhSachDieuHuong = mucHeThong.length > 0
     ? [...DANH_SACH_DIEU_HUONG, { nhan: 'Hệ thống', muc: mucHeThong }]

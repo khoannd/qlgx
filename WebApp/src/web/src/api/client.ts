@@ -2,7 +2,7 @@ import type {
   GiaDinhDetail, GiaDinhListItem, GiaoDanDetail, GiaoDanListItem, GiaoDanTimKiem, GiaoHo,
   HoiDoanCuaGiaoDan, HoiDoanDanhMuc, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
   TaiKhoanItem, DangNhapKetQua, GiaoXuLuaChon, SucKhoe,
-  GiaoPhan, GiaoHatQuanLy, GiaoXuQuanLy,
+  GiaoPhan, GiaoHatQuanLy, GiaoXuQuanLy, BaoCaoXemTruoc, TrangThaiNhapDuLieu,
 } from './types'
 import { authStore } from './authStore'
 
@@ -180,6 +180,37 @@ async function taiAnhLen(duong: string, tep: File): Promise<void> {
     const thongBao = await docThongBaoLoi(res)
     throw new Error(thongBao ?? `Máy chủ trả lỗi ${res.status} khi tải ảnh lên.`)
   }
+}
+
+/** Tải một tệp lên qua `multipart/form-data` (trường "tep") rồi ĐỌC LẠI thân JSON trả về —
+ * khác `taiAnhLen` (chỉ cần biết thành công/thất bại): màn hình "Nhập dữ liệu Access" cần đọc
+ * báo cáo đối chiếu (BaoCaoXemTruoc/TrangThaiNhapDuLieu) ngay trong thân phản hồi 200. Việc
+ * kiểm định dạng tệp THẬT (chữ ký gzip, kích thước) nằm ở máy chủ (NhapDuLieuService) — ở đây
+ * chỉ chuyển tiếp thông báo lỗi tiếng Việt máy chủ trả về (400). */
+async function taiTepLenVaDoc<T>(duong: string, tep: File): Promise<T> {
+  const token = authStore.layToken()
+  const than = new FormData()
+  than.append('tep', tep)
+  let res: Response
+  try {
+    res = await fetch(duong, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: than,
+    })
+  } catch (loiMang) {
+    console.error(`Lỗi mạng khi tải tệp lên ${duong}`, loiMang)
+    throw new Error('Không kết nối được máy chủ để tải tệp lên. Kiểm tra Qlgx.Api đã chạy chưa.')
+  }
+  if (res.status === 401) {
+    authStore.baoHet401()
+    throw new ChuaDangNhap('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+  }
+  if (!res.ok) {
+    const thongBao = await docThongBaoLoi(res)
+    throw new Error(thongBao ?? `Máy chủ trả lỗi ${res.status} khi tải tệp lên.`)
+  }
+  return (await res.json()) as T
 }
 
 const thamSo = (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: boolean) => {
@@ -386,6 +417,22 @@ export const api = {
         email: string | null; soDienThoai: string | null
       }) => goi<{ id: string }>(`/api/quan-tri/giao-xu/${giaoXuId}/tai-khoan`,
         { method: 'POST', body: JSON.stringify(than) }),
+    },
+    /** Màn hình "Nhập dữ liệu Access" (policy "QuanTriHeThong", VIEC-TIEP-THEO.md mục 2.4) —
+     * xem NhapDuLieuService.cs (Qlgx.Api) cho kiến trúc hai bước: quản trị viên chạy
+     * Qlgx.Migration tại máy Windows của mình để rút gói dữ liệu trung gian (.json.gz), rồi
+     * tải GÓI đó lên đây (KHÔNG tải file .mdb — máy chủ Linux không đọc được). */
+    nhapDuLieu: {
+      /** Chạy thử — KHÔNG ghi gì vào PostgreSQL, chỉ đối chiếu số dòng để xem trước. */
+      xemTruoc: (giaoXuDichId: string, tep: File) =>
+        taiTepLenVaDoc<BaoCaoXemTruoc>(`/api/quan-tri/nhap-du-lieu/${giaoXuDichId}/xem-truoc`, tep),
+      /** Khởi động một lượt NHẬP THẬT, chạy NỀN phía máy chủ — trả JobId ngay, không đợi nhập
+       * xong (có thể mất nhiều giây). Client tự gọi `trangThai` định kỳ để theo dõi. */
+      batDau: (giaoXuDichId: string, tep: File, xacNhanGhiDe: boolean) =>
+        taiTepLenVaDoc<{ jobId: string }>(
+          `/api/quan-tri/nhap-du-lieu/${giaoXuDichId}/bat-dau?xacNhanGhiDe=${xacNhanGhiDe}`, tep),
+      trangThai: (jobId: string) =>
+        goi<TrangThaiNhapDuLieu>(`/api/quan-tri/nhap-du-lieu/trang-thai/${jobId}`),
     },
   },
 }

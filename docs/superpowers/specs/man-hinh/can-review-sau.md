@@ -1653,3 +1653,115 @@ thật (không dùng lại mật khẩu của phiên kiểm thử này).
 `RlsTests` mới qua vai trò thật không-BYPASSRLS đã có sẵn từ trước lượt này + 4 test thêm/sửa
 giáo họ + 2 test khác chưa tính — số chính xác xem log `dotnet test`), frontend **235/235** (229
 cũ + 6 test mới cho `GiaoHoListPage`/`QuanLyGiaoXuPage`). `npm run build` chạy được.
+
+### 38. Task "nhập dữ liệu Access cho quản trị viên" (2026-09-07) — các quyết định tự đưa ra
+
+VIEC-TIEP-THEO.md mục 2.4. Người dùng dặn tự quyết, không dừng lại hỏi — ghi hết quyết định ở
+đây, kể cả một lỗi dữ liệu nghiêm trọng tự phát hiện và tự sửa giữa chừng.
+
+**a) Kiến trúc hai bước — đã kiểm chứng THẬT, không suy đoán.** Xác nhận trước khi code:
+`Qlgx.Migration.csproj` là `net10.0-windows`, dùng `System.Data.OleDb` + ACE OLEDB (chỉ chạy
+Windows, đúng bitness); `Dockerfile` build trên `mcr.microsoft.com/dotnet/aspnet:10.0` (Linux).
+Máy chủ **không thể** đọc `.mdb` trực tiếp. Đã cân nhắc cả ba hướng nêu trong nhiệm vụ:
+- **(a) máy Windows ghi thẳng vào Postgres qua mạng** — loại vì phải mở cổng CSDL ra ngoài
+  (rủi ro bảo mật thật) và vẫn cần dòng lệnh, không phải "giao diện cho quản trị viên".
+- **(b) đọc `.mdb` trực tiếp trên máy chủ bằng thư viện đa nền tảng** — loại NGAY không thử,
+  vì file `.mdb` của QLGX có mật khẩu cấp database (Jet/ACE database password) — chưa tìm thấy
+  thư viện .NET/Linux nào công khai đọc được định dạng Jet MÃ HOÁ mật khẩu ngoài chính ACE
+  OLEDB (Windows-only). Đây là kết luận từ tra cứu, KHÔNG phải tự chạy thử thất bại — ghi rõ ở
+  đây để không ai lặp lại việc dò tìm thư viện vô ích.
+- **(c) hai bước, gói dữ liệu trung gian** — **chọn hướng này**. Tái sử dụng TOÀN BỘ
+  `Qlgx.Migration.Core` (`IDuLieuNguon`, `ChuyenDoiDuLieu`, `BangAnhXaId`, `BaoCaoDoiChieu`) —
+  không viết lại bộ chuyển đổi. Định dạng gói: **JSON nén gzip** (`GoiDuLieuNhap.cs`), KHÔNG
+  chọn SQLite — SQLite cần một tệp thật để `Microsoft.Data.Sqlite` mở (không đọc thẳng từ
+  `MemoryStream`), buộc phải ghi tạm xuống đĩa máy chủ dù chỉ trong một request; JSON đọc thẳng
+  từ luồng byte tải lên, không đụng đĩa cục bộ máy chủ dù chỉ một byte — khớp đúng ràng buộc HA
+  "không ghi file xuống đĩa cục bộ". `Qlgx.Migration` (Windows) có thêm chế độ
+  `--xuat-goi=<path.json.gz>`: đọc `.mdb` bằng `DocAccess` sẵn có, đóng gói `GoiDuLieuNhap`, ghi
+  ra JSON nén — chạy y hệt cách dùng cũ, chỉ thêm một nhánh, không đụng nhánh `--chay-that` cũ.
+  `DuLieuNguonTuGoi : IDuLieuNguon` (mới, trong `Qlgx.Migration.Core`, cross-platform) đọc lại
+  gói này để `ChuyenDoiDuLieu` chạy y nguyên trên máy chủ.
+
+**b) `NhapDuLieuService.cs` (Qlgx.Api) là ĐƯỜNG DẪN THỨ NĂM được phép đọc/ghi CHÉO GIÁO XỨ**
+(cùng nhóm đăng nhập/CLI tạo tài khoản/công cụ chuyển dữ liệu dòng lệnh/`QuanLyGiaoXuService` —
+xem `ChuoiKetNoiQuanTri.cs` đã cập nhật) — tự mở `QlgxDbContext` bằng chuỗi kết nối QUẢN TRỊ
+(`BYPASSRLS`), không dùng context tiêm qua DI (bị lọc theo giáo xứ của chính quản trị viên đang
+gọi, trong khi giáo xứ ĐÍCH của một lượt nhập gần như luôn khác). Endpoint nhóm
+`/api/quan-tri/nhap-du-lieu/*` chỉ policy `"QuanTriHeThong"` gọi được — lớp phòng thủ DUY NHẤT
+(`NhapDuLieuJob` không có RLS, giống `GiaoXu`/`GiaoPhan`/`GiaoHat`).
+
+**c) Chạy nền, KHÔNG giữ một yêu cầu HTTP chờ suốt.** `POST .../bat-dau` tạo một dòng
+`NhapDuLieuJob` (bảng mới, migration `ThemNhapDuLieuJob`) rồi `Task.Run` với
+`CancellationToken.None` (cố ý — huỷ theo request gốc sẽ làm dở dang một lượt ghi CSDL, tệ hơn
+chạy xong dù không ai còn xem), trả `jobId` ngay. Client (`NhapDuLieuPage.tsx`) tự `setInterval`
+1.5 giây gọi `GET .../trang-thai/{jobId}` tới khi `TrangThai != "DangChay"`. **Giới hạn đã biết,
+chấp nhận được cho quy mô một lượt/giáo xứ mới:** đây KHÔNG phải hàng đợi bền — nếu tiến trình
+API khởi động lại giữa chừng, job mồ côi mãi `"DangChay"`, không tự phục hồi. Trạng thái lưu ở
+bảng Postgres (không phải biến nhớ tiến trình) nên polling từ BẤT KỲ bản API nào (sau bộ cân
+bằng tải HA) đều đọc đúng — chỉ riêng việc TIẾP TỤC chạy lượt nhập đang dở là không chịu được
+khởi động lại, không phải việc polling trạng thái.
+
+**d) Chặn/cảnh báo nhập vào giáo xứ đã có dữ liệu.** `XemTruoc` trả `giaoXuDichDaCoDuLieu` +
+`soGiaoDanDaCo` (đếm `GiaoDan` của giáo xứ đích) để hiện cảnh báo đỏ NGAY ở báo cáo chạy thử.
+`BatDauNhapThat` **CHẶN THẬT** (400) nếu giáo xứ đích có ≥1 giáo dân và không kèm
+`xacNhanGhiDe=true` — checkbox riêng ở giao diện, không tự động bật theo cảnh báo, quản trị viên
+phải tự tích sau khi đọc báo cáo.
+
+**e) Kiểm định dạng tệp thật ở máy chủ, không tin phần mở rộng.** `DocGoi` kiểm 2 byte đầu
+(`0x1F 0x8B`, chữ ký gzip thật) trước khi coi là hợp lệ, cộng `PhienBanGoi` (đối chiếu
+`GoiDuLieuNhap.PhienBanHienTai`) để báo lỗi rõ ràng nếu gói cũ/hỏng cấu trúc thay vì ném lỗi giải
+mã JSON khó hiểu. Giới hạn 100MB (gói thật của Vô Nhiễm, 2050 giáo dân + 6150 bí tích chi tiết,
+chỉ ~250KB nén — 100MB rất rộng rãi).
+
+**g) LỖI NGHIÊM TRỌNG tự phát hiện khi kiểm thử thật, đã sửa — đánh cắp dữ liệu giữa hai giáo
+xứ (`BangAnhXaId` không tách giáo xứ).** Khoá ổn định chống trùng lặp của `ChuyenDoiDuLieu`
+(tái sử dụng, "chạy tốt" theo mô tả nhiệm vụ) chỉ dựa trên (tên bảng, mã cũ Access) — AN TOÀN
+khi công cụ luôn chạy với một `giaoXuId` cố định (đúng cách dùng gốc: dòng lệnh, một giáo xứ),
+nhưng **THẢM HOẠ** khi máy chủ phục vụ NHIỀU giáo xứ: mọi file Access đều đánh số `MaGiaoDan`/
+`MaGiaDinh`/... bắt đầu từ 1, nên hai giáo xứ khác nhau chắc chắn có mã cũ trùng — khoá không
+tách giáo xứ khiến lần nhập giáo xứ B **tìm thấy** bản ghi giáo xứ A (cùng UUID suy từ cùng mã
+cũ) rồi **ghi đè `GiaoXuId` của nó sang B**.
+
+Tái hiện thật trên `qlgx_thu`: nhập gói xuất từ chính `BIN/giaoxu.mdb` (Vô Nhiễm) vào một giáo
+xứ đích MỚI tạo → 2050 giáo dân/40 gia đình/522 hôn phối/6150 bí tích chi tiết/1108 đợt bí
+tích/1 giáo họ/19 cấu hình/343 dữ liệu chung/3 vai trò/3 tên loại tài khoản của **Vô Nhiễm bị
+đổi `giao_xu_id` sang giáo xứ thử nghiệm** — `psql` xác nhận Vô Nhiễm còn **0** giáo dân ngay
+sau lượt nhập. Chỉ hai bảng khoá tổ hợp không có cột `Id` riêng (`ThanhVienGiaDinh`,
+`GiaoDanHonPhoi`) thoát nạn — nhánh "tìm thấy thì sửa" của chúng không đụng `GiaoXuId`, nên đây
+lại chính là hai bảng duy nhất báo "⚠ lệch" trong báo cáo đối chiếu — **lưới an toàn phát hiện
+được PHẦN NỔI của vấn đề nhưng không phát hiện được bốn bảng bị đánh cắp hoàn toàn khác** (số
+dòng đích trùng khít số dòng nguồn vì chính là dữ liệu bị cướp, không phải dữ liệu mới).
+
+**Sửa:** thêm `giaoXuId` vào khoá — `ChuyenDoiDuLieu` giờ gọi `Anh(bang, maCu)` (helper riêng)
+thay vì `anhXa.Lay(bang, maCu)` trực tiếp; `Anh` tự thêm tiền tố `"{giaoXuId}:"` cho MỌI bảng
+**trừ** `giao_phan`/`giao_hat` (cố ý dùng CHUNG giữa các giáo xứ, không có `giao_xu_id`, xem
+`GiaoPhan.cs`/`GiaoHat.cs`). **Đánh đổi đã chấp nhận, ghi rõ trong code:** đổi khoá làm giáo xứ
+Vô Nhiễm ĐÃ nhập trước bản sửa này (bằng khoá KHÔNG có `giaoXuId`) không còn khớp khoá MỚI —
+nếu ai chạy lại `Qlgx.Migration --chay-that` cho CHÍNH Vô Nhiễm trong tương lai, lần chạy đó sẽ
+tạo bản ghi TRÙNG thay vì cập nhật tại chỗ (mất tính "idempotent" CHỈ với dữ liệu đã nhập trước
+bản sửa). Chấp nhận được: Vô Nhiễm đã nhập xong, không có kế hoạch nhập lại; nguy cơ đánh cắp
+dữ liệu giữa các giáo xứ nghiêm trọng hơn nhiều so với rủi ro hiếm gặp này.
+
+**Khôi phục dữ liệu đã bị đánh cắp** (xảy ra TRƯỚC khi phát hiện và sửa lỗi, trong phiên kiểm
+thử này) bằng `psql` trực tiếp: `UPDATE <10 bảng bị ảnh hưởng> SET giao_xu_id='<Vô Nhiễm>' WHERE
+giao_xu_id='<giáo xứ thử nghiệm>'` — xác nhận lại Vô Nhiễm đúng 2050/40/145 trước khi chạy lại
+lượt kiểm thử với bản đã sửa.
+
+**h) Chứng minh bằng chạy thật, SAU KHI sửa lỗi ở mục g — số dòng khớp TUYỆT ĐỐI cho mọi bảng
+(kể cả hai bảng từng lệch):** GiaoHo 1, GiaDinh 40, GiaoDan 2050, ThanhVienGiaDinh 145, HonPhoi
+522, GiaoDanHonPhoi 1043, DotBiTich 1108, BiTichChiTiet 6150 — đối chiếu `psql` trên giáo xứ
+đích, đồng thời Vô Nhiễm giữ nguyên 2050 giáo dân, không lẫn lộn. Nhập lại lần hai
+(`xacNhanGhiDe=true`) cho đúng số dòng như cũ — không tạo bản ghi trùng (idempotent với khoá
+MỚI). Đăng nhập bằng tài khoản của giáo xứ mới qua trình duyệt thật (Playwright MCP, không phải
+test tự động) → danh sách gia đình hiện đúng 40, danh sách giáo dân hiện đúng 2050 (2039 khi ẩn
+người đã qua đời/chuyển xứ theo bộ lọc mặc định — đúng hành vi UI hiện có, không phải lỗi). Ảnh
+chụp: `68`–`72` trong `WebApp/anh-chup-kiem-thu/`.
+
+**i) Dọn dẹp sau kiểm thử.** Xoá toàn bộ dữ liệu giáo xứ thử nghiệm (10 bảng theo `giao_xu_id`,
+dòng `giao_xu`, `giao_hat`/`giao_phan` tạo riêng cho lượt thử, dòng `nhap_du_lieu_job`, hai tài
+khoản tạm `tmp_qthethong`/`tmp_gxmoi`) bằng `psql` trực tiếp — xác nhận lại `qlgx_thu` đúng
+2050/40/145/1 giáo xứ, chỉ còn tài khoản `quantri`.
+
+**j) Số test cuối:** backend **244/244** (235 cũ + 9 `NhapDuLieuTests` mới), frontend
+**239/239** (235 cũ + 4 `NhapDuLieuPage.test.tsx` mới). `npm run build` chạy được. `dotnet build
+Qlgx.sln` sạch (Windows-only `Qlgx.Migration` build được cùng lượt, không tách CI riêng).

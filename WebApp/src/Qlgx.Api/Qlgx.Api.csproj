@@ -2,6 +2,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Qlgx.Data\Qlgx.Data.csproj" />
+    <!-- IDuLieuNguon/ChuyenDoiDuLieu/GoiDuLieuNhap (Task "nhap du lieu Access") — cross-platform
+         (net10.0, KHÔNG net10.0-windows), KHÔNG tham chiếu Qlgx.Migration (chứa DocAccess/
+         OleDb, chỉ chạy Windows) — xem can-review-sau.md mục 38. -->
+    <ProjectReference Include="..\Qlgx.Migration.Core\Qlgx.Migration.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

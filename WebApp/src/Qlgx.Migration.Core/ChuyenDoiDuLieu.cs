@@ -17,11 +17,38 @@ public record KetQuaChuyenDoi(
 /// Chạy lại nhiều lần không sinh dữ liệu trùng nhờ BangAnhXaId sinh UUID ổn định theo
 /// (tên bảng, mã cũ) — cùng đầu vào luôn ra cùng khoá nên các hàm Ghi* luôn tìm-thấy-thì-sửa,
 /// không-thấy-thì-thêm.
+///
+/// QUAN TRỌNG (sự cố tự phát hiện khi kiểm thử thật màn hình "Nhập dữ liệu Access", xem
+/// can-review-sau.md mục 38): khoá ổn định CHỈ dựa trên (tên bảng, mã cũ) — KHÔNG có giáo xứ —
+/// là AN TOÀN khi công cụ luôn chạy với MỘT giaoXuId cố định (đúng cách dùng gốc, dòng lệnh cho
+/// một giáo xứ duy nhất), nhưng THẢM HOẠ khi nhập HAI giáo xứ khác nhau vào CÙNG một database:
+/// Access của giáo xứ nào cũng đánh số MaGiaoDan/MaGiaDinh/... bắt đầu từ 1, nên hai giáo xứ
+/// khác nhau chắc chắn có mã cũ trùng nhau — nếu khoá không tách theo giáo xứ, lần nhập giáo xứ
+/// B sẽ TÌM THẤY bản ghi giáo xứ A (cùng UUID suy ra từ cùng mã cũ) rồi ghi đè GiaoXuId của nó
+/// sang B, ĐÁNH CẮP dữ liệu của A. Đã tái hiện thật: nhập lần hai cùng file .mdb Vô Nhiễm vào
+/// một giáo xứ đích khác đã khiến 2050 giáo dân/40 gia đình/522 hôn phối/6150 bí tích chi tiết
+/// của Vô Nhiễm bị đổi giao_xu_id sang giáo xứ thử nghiệm. Khắc phục bằng cách đưa giaoXuId vào
+/// khoá (xem <see cref="Anh"/>) cho MỌI bảng theo giáo xứ — CHỈ trừ giao_phan/giao_hat (trên
+/// cấp giáo xứ, dùng CHUNG giữa các giáo xứ một cách có chủ đích, xem GiaoPhan.cs/GiaoHat.cs).
+///
+/// Đánh đổi đã chấp nhận: đổi khoá làm giáo xứ Vô Nhiễm ĐÃ nhập TRƯỚC bản sửa này (bằng khoá
+/// KHÔNG có giaoXuId) sẽ không còn khớp khoá MỚI (có giaoXuId) nếu công cụ dòng lệnh chạy lại
+/// cho chính Vô Nhiễm — lần chạy lại đó sẽ tạo bản ghi trùng thay vì cập nhật. Chấp nhận được vì
+/// dữ liệu Vô Nhiễm đã nhập xong, không có kế hoạch chạy lại; ưu tiên chặn đứng nguy cơ đánh cắp
+/// dữ liệu giữa các giáo xứ — nghiêm trọng hơn nhiều so với một lượt tái nhập hiếm khi xảy ra.
 /// </summary>
 public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
 {
     private const string Nguon = "access";
     private readonly List<string> _canhBao = [];
+
+    /// <summary>Khoá ổn định CÓ TÁCH GIÁO XỨ — xem ghi chú "QUAN TRỌNG" ở đầu lớp này. GiaoPhan/
+    /// GiaoHat KHÔNG tách vì cố ý dùng chung giữa các giáo xứ (không có giao_xu_id).</summary>
+    private Guid Anh(string bang, int maCu) =>
+        anhXa.Lay(bang is "giao_phan" or "giao_hat" ? bang : $"{giaoXuId}:{bang}", maCu);
+
+    private Guid Anh(string bang, string maCu) =>
+        anhXa.Lay(bang is "giao_phan" or "giao_hat" ? bang : $"{giaoXuId}:{bang}", maCu);
 
     public async Task<KetQuaChuyenDoi> Chay(IDuLieuNguon nguon, bool chayThu, CancellationToken ct)
     {
@@ -170,7 +197,7 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
     {
         foreach (var d in dong)
         {
-            var id = anhXa.Lay("giao_phan", d.MaGiaoPhan);
+            var id = Anh("giao_phan", d.MaGiaoPhan);
             var e = await db.GiaoPhan.FindAsync([id], ct) ?? Them(new GiaoPhan { Id = id });
             e.MaGiaoPhanCu = d.MaGiaoPhan;
             e.TenGiaoPhan = d.TenGiaoPhan;
@@ -184,10 +211,10 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
     {
         foreach (var d in dong)
         {
-            var id = anhXa.Lay("giao_hat", d.MaGiaoHat);
+            var id = Anh("giao_hat", d.MaGiaoHat);
             var e = await db.GiaoHat.FindAsync([id], ct) ?? Them(new GiaoHat { Id = id });
             e.MaGiaoHatCu = d.MaGiaoHat;
-            e.GiaoPhanId = anhXa.Lay("giao_phan", d.MaGiaoPhan);
+            e.GiaoPhanId = Anh("giao_phan", d.MaGiaoPhan);
             e.TenGiaoHat = d.TenGiaoHat;
             e.GhiChu = d.GhiChu;
             e.MaGiaoHatRieng = d.MaGiaoHatRieng;
@@ -211,7 +238,7 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
 
             e.MaGiaoXuCu = d.MaGiaoXu;
             e.MaGiaoHatCu = d.MaGiaoHat;
-            e.GiaoHatId = d.MaGiaoHat is > 0 ? anhXa.Lay("giao_hat", d.MaGiaoHat.Value) : null;
+            e.GiaoHatId = d.MaGiaoHat is > 0 ? Anh("giao_hat", d.MaGiaoHat.Value) : null;
             e.MaGiaoXuRieng = d.MaGiaoXuRieng;
             e.TenGiaoXu = d.TenGiaoXu;
             e.DiaChi = d.DiaChi;
@@ -231,12 +258,12 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
     {
         foreach (var d in dong)
         {
-            var id = anhXa.Lay("giao_ho", d.MaGiaoHo);
+            var id = Anh("giao_ho", d.MaGiaoHo);
             var e = await db.GiaoHo.FindAsync([id], ct) ?? Them(new GiaoHo { Id = id });
             e.GiaoXuId = giaoXuId;
             e.MaGiaoHoCu = d.MaGiaoHo;
             e.TenGiaoHo = d.TenGiaoHo;
-            e.GiaoHoChaId = d.MaGiaoHoCha is > 0 ? anhXa.Lay("giao_ho", d.MaGiaoHoCha.Value) : null;
+            e.GiaoHoChaId = d.MaGiaoHoCha is > 0 ? Anh("giao_ho", d.MaGiaoHoCha.Value) : null;
             e.DaXoa = d.DaXoa;
             e.MaNhanDang = d.MaNhanDang;
             e.SourceSystem = Nguon;
@@ -244,21 +271,21 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         await db.SaveChangesAsync(ct);
 
         foreach (var d in dong.Where(d => d.UpdateDate is not null))
-            await DatLaiUpdatedAt(db.GiaoHo, anhXa.Lay("giao_ho", d.MaGiaoHo), d.UpdateDate!.Value, ct);
+            await DatLaiUpdatedAt(db.GiaoHo, Anh("giao_ho", d.MaGiaoHo), d.UpdateDate!.Value, ct);
     }
 
     private async Task GhiGiaDinh(List<DongGiaDinh> dong, CancellationToken ct)
     {
         foreach (var d in dong)
         {
-            var id = anhXa.Lay("gia_dinh", d.MaGiaDinh);
+            var id = Anh("gia_dinh", d.MaGiaDinh);
             var e = await db.GiaDinh.FindAsync([id], ct) ?? Them(new GiaDinh { Id = id });
             var loi = new Dictionary<string, string>();
 
             e.GiaoXuId = giaoXuId;
             e.MaGiaDinhCu = d.MaGiaDinh;
             // MaGiaoHo = 0 nghĩa là "Ngoài xứ", không phải khoá ngoại hợp lệ
-            e.GiaoHoId = d.MaGiaoHo is > 0 ? anhXa.Lay("giao_ho", d.MaGiaoHo.Value) : null;
+            e.GiaoHoId = d.MaGiaoHo is > 0 ? Anh("giao_ho", d.MaGiaoHo.Value) : null;
             e.TenGiaDinh = d.TenGiaDinh;
             e.GhiChu = d.GhiChu;
             e.DiaChi = d.DiaChi;
@@ -281,14 +308,14 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         await db.SaveChangesAsync(ct);
 
         foreach (var d in dong.Where(d => d.UpdateDate is not null))
-            await DatLaiUpdatedAt(db.GiaDinh, anhXa.Lay("gia_dinh", d.MaGiaDinh), d.UpdateDate!.Value, ct);
+            await DatLaiUpdatedAt(db.GiaDinh, Anh("gia_dinh", d.MaGiaDinh), d.UpdateDate!.Value, ct);
     }
 
     private async Task GhiGiaoDan(List<DongGiaoDan> dong, CancellationToken ct)
     {
         foreach (var d in dong)
         {
-            var id = anhXa.Lay("giao_dan", d.MaGiaoDan);
+            var id = Anh("giao_dan", d.MaGiaoDan);
             var e = await db.GiaoDan.FindAsync([id], ct) ?? Them(new GiaoDan { Id = id });
             var loi = new Dictionary<string, string>();
 
@@ -303,7 +330,7 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             e.NoiSinh = d.NoiSinh;
             e.CMND = d.CMND;
             e.DanToc = d.DanToc;
-            e.GiaoHoId = d.MaGiaoHo is > 0 ? anhXa.Lay("giao_ho", d.MaGiaoHo.Value) : null;
+            e.GiaoHoId = d.MaGiaoHo is > 0 ? Anh("giao_ho", d.MaGiaoHo.Value) : null;
             e.ThuocGiaoXu = d.ThuocGiaoXu;
             e.ThuocGiaoPhan = d.ThuocGiaoPhan;
             e.DiaChi = d.DiaChi;
@@ -383,15 +410,15 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         await db.SaveChangesAsync(ct);
 
         foreach (var d in dong.Where(d => d.UpdateDate is not null))
-            await DatLaiUpdatedAt(db.GiaoDan, anhXa.Lay("giao_dan", d.MaGiaoDan), d.UpdateDate!.Value, ct);
+            await DatLaiUpdatedAt(db.GiaoDan, Anh("giao_dan", d.MaGiaoDan), d.UpdateDate!.Value, ct);
     }
 
     private async Task GhiThanhVien(List<DongThanhVien> dong, CancellationToken ct)
     {
         foreach (var d in dong)
         {
-            var maGiaDinh = anhXa.Lay("gia_dinh", d.MaGiaDinh);
-            var maGiaoDan = anhXa.Lay("giao_dan", d.MaGiaoDan);
+            var maGiaDinh = Anh("gia_dinh", d.MaGiaDinh);
+            var maGiaoDan = Anh("giao_dan", d.MaGiaoDan);
             // GIỮ NGUYÊN giá trị VaiTro, không chuẩn hoá: dữ liệu thật có bảy giá trị khác
             // nhau (0,1,2,3,8,18,100) và khoá chính là bộ ba (GiaDinhId, GiaoDanId, VaiTro) —
             // gộp các giá trị lại sẽ đụng khoá và mất dữ liệu. Enum trong C# nhận mọi giá trị
@@ -414,7 +441,7 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
     {
         foreach (var d in dong)
         {
-            var id = anhXa.Lay("hon_phoi", d.MaHonPhoi);
+            var id = Anh("hon_phoi", d.MaHonPhoi);
             var e = await db.HonPhoi.FindAsync([id], ct) ?? Them(new HonPhoi { Id = id });
             var loi = new Dictionary<string, string>();
 
@@ -436,15 +463,15 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         await db.SaveChangesAsync(ct);
 
         foreach (var d in dong.Where(d => d.UpdateDate is not null))
-            await DatLaiUpdatedAt(db.HonPhoi, anhXa.Lay("hon_phoi", d.MaHonPhoi), d.UpdateDate!.Value, ct);
+            await DatLaiUpdatedAt(db.HonPhoi, Anh("hon_phoi", d.MaHonPhoi), d.UpdateDate!.Value, ct);
     }
 
     private async Task GhiGiaoDanHonPhoi(List<DongGiaoDanHonPhoi> dong, CancellationToken ct)
     {
         foreach (var d in dong)
         {
-            var giaoDanId = anhXa.Lay("giao_dan", d.MaGiaoDan);
-            var honPhoiId = anhXa.Lay("hon_phoi", d.MaHonPhoi);
+            var giaoDanId = Anh("giao_dan", d.MaGiaoDan);
+            var honPhoiId = Anh("hon_phoi", d.MaHonPhoi);
 
             var da = await db.GiaoDanHonPhoi.FindAsync([giaoDanId, honPhoiId], ct);
             if (da is not null) { da.SoThuTu = d.SoThuTu; continue; }
@@ -465,7 +492,7 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         // để ghi file (xem ghi chú tại Qlgx.Domain.Entities.CauHinh và DongCauHinh).
         foreach (var d in dong)
         {
-            var id = anhXa.Lay("cau_hinh", d.MaCauHinh);
+            var id = Anh("cau_hinh", d.MaCauHinh);
             var e = await db.CauHinh.FindAsync([id], ct) ?? Them(new CauHinh { Id = id });
             e.GiaoXuId = giaoXuId;
             e.MaCauHinh = d.MaCauHinh;
@@ -476,14 +503,14 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         await db.SaveChangesAsync(ct);
 
         foreach (var d in dong.Where(d => d.UpdateDate is not null))
-            await DatLaiUpdatedAt(db.CauHinh, anhXa.Lay("cau_hinh", d.MaCauHinh), d.UpdateDate!.Value, ct);
+            await DatLaiUpdatedAt(db.CauHinh, Anh("cau_hinh", d.MaCauHinh), d.UpdateDate!.Value, ct);
     }
 
     private async Task GhiDuLieuChung(List<DongDuLieuChung> dong, CancellationToken ct)
     {
         foreach (var d in dong)
         {
-            var id = anhXa.Lay("du_lieu_chung", d.ID);
+            var id = Anh("du_lieu_chung", d.ID);
             var e = await db.DuLieuChung.FindAsync([id], ct) ?? Them(new DuLieuChung { Id = id });
             e.GiaoXuId = giaoXuId;
             e.MaDuLieuChungCu = d.ID;
@@ -500,7 +527,7 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
     {
         foreach (var d in dong)
         {
-            var id = anhXa.Lay("vai_tro", d.ID);
+            var id = Anh("vai_tro", d.ID);
             var e = await db.VaiTro.FindAsync([id], ct) ?? Them(new VaiTro { Id = id });
             e.GiaoXuId = giaoXuId;
             e.MaVaiTroCu = d.ID;
@@ -514,7 +541,7 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
     {
         foreach (var d in dong)
         {
-            var id = anhXa.Lay("ten_loai_tai_khoan", d.ID);
+            var id = Anh("ten_loai_tai_khoan", d.ID);
             var e = await db.TenLoaiTaiKhoan.FindAsync([id], ct) ?? Them(new TenLoaiTaiKhoan { Id = id });
             e.GiaoXuId = giaoXuId;
             e.MaLoaiTaiKhoanCu = d.ID;
@@ -530,7 +557,7 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         // sẽ là nơi đầu tiên ghi vào cột này khi người dùng đặt lại mật khẩu lần đầu.
         foreach (var d in dong)
         {
-            var id = anhXa.Lay("tai_khoan", d.TenTaiKhoan);
+            var id = Anh("tai_khoan", d.TenTaiKhoan);
             var e = await db.TaiKhoan.FindAsync([id], ct) ?? Them(new TaiKhoan { Id = id });
             e.GiaoXuId = giaoXuId;
             e.HoTenNguoiDung = d.HoTenNguoiDung;
@@ -553,12 +580,12 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
     /// </summary>
     private async Task GhiDotBiTich(List<DongDotBiTich> dong, CancellationToken ct)
     {
-        var ids = dong.Select(d => anhXa.Lay("dot_bi_tich", d.MaDotBiTich)).ToHashSet();
+        var ids = dong.Select(d => Anh("dot_bi_tich", d.MaDotBiTich)).ToHashSet();
         var hienCo = await db.DotBiTich.Where(x => ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
 
         foreach (var d in dong)
         {
-            var id = anhXa.Lay("dot_bi_tich", d.MaDotBiTich);
+            var id = Anh("dot_bi_tich", d.MaDotBiTich);
             if (!hienCo.TryGetValue(id, out var e))
             {
                 e = new DotBiTich { Id = id };
@@ -580,7 +607,7 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         await db.SaveChangesAsync(ct);
 
         foreach (var d in dong.Where(d => d.UpdateDate is not null))
-            await DatLaiUpdatedAt(db.DotBiTich, anhXa.Lay("dot_bi_tich", d.MaDotBiTich), d.UpdateDate!.Value, ct);
+            await DatLaiUpdatedAt(db.DotBiTich, Anh("dot_bi_tich", d.MaDotBiTich), d.UpdateDate!.Value, ct);
     }
 
     /// <summary>
@@ -606,12 +633,12 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             hopLe.Add(d);
         }
 
-        var ids = hopLe.Select(d => anhXa.Lay("bi_tich_chi_tiet", $"{d.MaDotBiTich}:{d.MaGiaoDan}")).ToHashSet();
+        var ids = hopLe.Select(d => Anh("bi_tich_chi_tiet", $"{d.MaDotBiTich}:{d.MaGiaoDan}")).ToHashSet();
         var hienCo = await db.BiTichChiTiet.Where(x => ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
 
         foreach (var d in hopLe)
         {
-            var id = anhXa.Lay("bi_tich_chi_tiet", $"{d.MaDotBiTich}:{d.MaGiaoDan}");
+            var id = Anh("bi_tich_chi_tiet", $"{d.MaDotBiTich}:{d.MaGiaoDan}");
             if (!hienCo.TryGetValue(id, out var e))
             {
                 e = new BiTichChiTiet { Id = id };
@@ -619,8 +646,8 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
                 hienCo[id] = e;
             }
             e.GiaoXuId = giaoXuId;
-            e.DotBiTichId = anhXa.Lay("dot_bi_tich", d.MaDotBiTich);
-            e.GiaoDanId = anhXa.Lay("giao_dan", d.MaGiaoDan);
+            e.DotBiTichId = Anh("dot_bi_tich", d.MaDotBiTich);
+            e.GiaoDanId = Anh("giao_dan", d.MaGiaoDan);
             e.GhiChu = d.GhiChu;
             e.SourceSystem = Nguon;
         }
@@ -628,7 +655,7 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
 
         foreach (var d in hopLe.Where(d => d.UpdateDate is not null))
             await DatLaiUpdatedAt(db.BiTichChiTiet,
-                anhXa.Lay("bi_tich_chi_tiet", $"{d.MaDotBiTich}:{d.MaGiaoDan}"), d.UpdateDate!.Value, ct);
+                Anh("bi_tich_chi_tiet", $"{d.MaDotBiTich}:{d.MaGiaoDan}"), d.UpdateDate!.Value, ct);
     }
 
     private async Task GhiChuyenXu(List<DongChuyenXu> dong, HashSet<int> maGiaoDanHopLe, CancellationToken ct)
@@ -641,13 +668,13 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
                     $"(MaGiaoDan={d.MaGiaoDan} không tồn tại)");
                 continue;
             }
-            var id = anhXa.Lay("chuyen_xu", d.MaChuyenXu);
+            var id = Anh("chuyen_xu", d.MaChuyenXu);
             var e = await db.ChuyenXu.FindAsync([id], ct) ?? Them(new ChuyenXu { Id = id });
             var loi = new Dictionary<string, string>();
 
             e.GiaoXuId = giaoXuId;
             e.MaChuyenXuCu = d.MaChuyenXu;
-            e.GiaoDanId = anhXa.Lay("giao_dan", d.MaGiaoDan);
+            e.GiaoDanId = Anh("giao_dan", d.MaGiaoDan);
             e.NgayChuyen = DocNgay(d.NgayChuyen, nameof(d.NgayChuyen), loi);
             e.NoiChuyen = d.NoiChuyen;
             e.LoaiChuyen = (LoaiChuyenXu)d.LoaiChuyen;
@@ -658,14 +685,14 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         await db.SaveChangesAsync(ct);
 
         foreach (var d in dong.Where(d => d.UpdateDate is not null && maGiaoDanHopLe.Contains(d.MaGiaoDan)))
-            await DatLaiUpdatedAt(db.ChuyenXu, anhXa.Lay("chuyen_xu", d.MaChuyenXu), d.UpdateDate!.Value, ct);
+            await DatLaiUpdatedAt(db.ChuyenXu, Anh("chuyen_xu", d.MaChuyenXu), d.UpdateDate!.Value, ct);
     }
 
     private async Task GhiRaoHonPhoi(List<DongRaoHonPhoi> dong, HashSet<int> maGiaoDanHopLe, CancellationToken ct)
     {
         foreach (var d in dong)
         {
-            var id = anhXa.Lay("rao_hon_phoi", d.MaRaoHonPhoi);
+            var id = Anh("rao_hon_phoi", d.MaRaoHonPhoi);
             var e = await db.RaoHonPhoi.FindAsync([id], ct) ?? Them(new RaoHonPhoi { Id = id });
             var loi = new Dictionary<string, string>();
 
@@ -675,9 +702,9 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             // MaGiaoDan1/2 = 0/null hoặc trỏ tới người không thuộc giáo xứ này nghĩa là "không
             // phải giáo dân của xứ" (một bên hôn phối có thể ở xứ khác) — không phải mồ côi.
             e.GiaoDan1Id = d.MaGiaoDan1 is > 0 && maGiaoDanHopLe.Contains(d.MaGiaoDan1.Value)
-                ? anhXa.Lay("giao_dan", d.MaGiaoDan1.Value) : null;
+                ? Anh("giao_dan", d.MaGiaoDan1.Value) : null;
             e.GiaoDan2Id = d.MaGiaoDan2 is > 0 && maGiaoDanHopLe.Contains(d.MaGiaoDan2.Value)
-                ? anhXa.Lay("giao_dan", d.MaGiaoDan2.Value) : null;
+                ? Anh("giao_dan", d.MaGiaoDan2.Value) : null;
             e.NgayRaoLan1 = DocNgay(d.NgayRaoLan1, nameof(d.NgayRaoLan1), loi);
             e.NgayRaoLan2 = DocNgay(d.NgayRaoLan2, nameof(d.NgayRaoLan2), loi);
             e.NgayRaoLan3 = DocNgay(d.NgayRaoLan3, nameof(d.NgayRaoLan3), loi);
@@ -705,7 +732,7 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         await db.SaveChangesAsync(ct);
 
         foreach (var d in dong.Where(d => d.UpdateDate is not null))
-            await DatLaiUpdatedAt(db.RaoHonPhoi, anhXa.Lay("rao_hon_phoi", d.MaRaoHonPhoi), d.UpdateDate!.Value, ct);
+            await DatLaiUpdatedAt(db.RaoHonPhoi, Anh("rao_hon_phoi", d.MaRaoHonPhoi), d.UpdateDate!.Value, ct);
     }
 
     private async Task GhiTanHien(List<DongTanHien> dong, HashSet<int> maGiaoDanHopLe, CancellationToken ct)
@@ -718,13 +745,13 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
                     $"(MaGiaoDan={d.MaGiaoDan} không tồn tại)");
                 continue;
             }
-            var id = anhXa.Lay("tan_hien", d.MaTanHien);
+            var id = Anh("tan_hien", d.MaTanHien);
             var e = await db.TanHien.FindAsync([id], ct) ?? Them(new TanHien { Id = id });
             var loi = new Dictionary<string, string>();
 
             e.GiaoXuId = giaoXuId;
             e.MaTanHienCu = d.MaTanHien;
-            e.GiaoDanId = anhXa.Lay("giao_dan", d.MaGiaoDan);
+            e.GiaoDanId = Anh("giao_dan", d.MaGiaoDan);
             e.NgayBatDau = DocNgay(d.NgayBatDau, nameof(d.NgayBatDau), loi);
             e.ChucVu = d.ChucVu;
             e.NoiTu = d.NoiTu;
@@ -755,7 +782,7 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
     {
         foreach (var d in dong)
         {
-            var id = anhXa.Lay("linh_muc", d.MaLinhMuc);
+            var id = Anh("linh_muc", d.MaLinhMuc);
             var e = await db.LinhMuc.FindAsync([id], ct) ?? Them(new LinhMuc { Id = id });
             var loi = new Dictionary<string, string>();
 
@@ -777,7 +804,7 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         await db.SaveChangesAsync(ct);
 
         foreach (var d in dong.Where(d => d.UpdateDate is not null))
-            await DatLaiUpdatedAt(db.LinhMuc, anhXa.Lay("linh_muc", d.MaLinhMuc), d.UpdateDate!.Value, ct);
+            await DatLaiUpdatedAt(db.LinhMuc, Anh("linh_muc", d.MaLinhMuc), d.UpdateDate!.Value, ct);
     }
 
     /// <summary>
@@ -791,14 +818,14 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
     {
         foreach (var d in dong)
         {
-            var id = anhXa.Lay("khoi_giao_ly", d.MaKhoi);
+            var id = Anh("khoi_giao_ly", d.MaKhoi);
             var e = await db.KhoiGiaoLy.FindAsync([id], ct) ?? Them(new KhoiGiaoLy { Id = id });
 
             e.GiaoXuId = giaoXuId;
             e.MaKhoiCu = d.MaKhoi;
             e.TenKhoi = d.TenKhoi;
             e.NguoiQuanLyId = d.NguoiQuanLy > 0 && maGiaoDanHopLe.Contains(d.NguoiQuanLy)
-                ? anhXa.Lay("giao_dan", d.NguoiQuanLy) : null;
+                ? Anh("giao_dan", d.NguoiQuanLy) : null;
             e.GhiChu = d.GhiChu;
             e.SourceSystem = Nguon;
         }
@@ -820,13 +847,13 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
                     $"(MaKhoi={d.MaKhoi} không tồn tại)");
                 continue;
             }
-            var id = anhXa.Lay("lop_giao_ly", d.MaLop);
+            var id = Anh("lop_giao_ly", d.MaLop);
             var e = await db.LopGiaoLy.FindAsync([id], ct) ?? Them(new LopGiaoLy { Id = id });
 
             e.GiaoXuId = giaoXuId;
             e.MaLopCu = d.MaLop;
             e.TenLop = d.TenLop;
-            e.KhoiGiaoLyId = anhXa.Lay("khoi_giao_ly", d.MaKhoi);
+            e.KhoiGiaoLyId = Anh("khoi_giao_ly", d.MaKhoi);
             e.Nam = d.Nam;
             e.PhongHoc = d.PhongHoc;
             e.GhiChu = d.GhiChu;
@@ -850,12 +877,12 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
                     $"MaGiaoDan={d.MaGiaoDan} (khoá ngoại không tồn tại)");
                 continue;
             }
-            var id = anhXa.Lay("chi_tiet_lop_giao_ly", $"{d.MaLop}:{d.MaGiaoDan}");
+            var id = Anh("chi_tiet_lop_giao_ly", $"{d.MaLop}:{d.MaGiaoDan}");
             var e = await db.ChiTietLopGiaoLy.FindAsync([id], ct) ?? Them(new ChiTietLopGiaoLy { Id = id });
 
             e.GiaoXuId = giaoXuId;
-            e.LopGiaoLyId = anhXa.Lay("lop_giao_ly", d.MaLop);
-            e.GiaoDanId = anhXa.Lay("giao_dan", d.MaGiaoDan);
+            e.LopGiaoLyId = Anh("lop_giao_ly", d.MaLop);
+            e.GiaoDanId = Anh("giao_dan", d.MaGiaoDan);
             e.SoThuTu = d.SoThuTu;
             e.HoanThanh = d.HoanThanh;
             e.GhiChuGLy = d.GhiChuGLy;
@@ -879,12 +906,12 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
                     $"MaGiaoDan={d.MaGiaoDan} (khoá ngoại không tồn tại)");
                 continue;
             }
-            var id = anhXa.Lay("giao_ly_vien", $"{d.MaLop}:{d.MaGiaoDan}");
+            var id = Anh("giao_ly_vien", $"{d.MaLop}:{d.MaGiaoDan}");
             var e = await db.GiaoLyVien.FindAsync([id], ct) ?? Them(new GiaoLyVien { Id = id });
 
             e.GiaoXuId = giaoXuId;
-            e.LopGiaoLyId = anhXa.Lay("lop_giao_ly", d.MaLop);
-            e.GiaoDanId = anhXa.Lay("giao_dan", d.MaGiaoDan);
+            e.LopGiaoLyId = Anh("lop_giao_ly", d.MaLop);
+            e.GiaoDanId = Anh("giao_dan", d.MaGiaoDan);
             e.SourceSystem = Nguon;
         }
         await db.SaveChangesAsync(ct);
@@ -895,7 +922,7 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
     {
         foreach (var d in dong)
         {
-            var id = anhXa.Lay("hoi_doan", d.MaHoiDoan);
+            var id = Anh("hoi_doan", d.MaHoiDoan);
             var e = await db.HoiDoan.FindAsync([id], ct) ?? Them(new HoiDoan { Id = id });
             var loi = new Dictionary<string, string>();
 
@@ -928,14 +955,14 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
                     $"MaHoiDoan={d.MaHoiDoan}, MaGiaoDan={d.MaGiaoDan} (khoá ngoại không tồn tại)");
                 continue;
             }
-            var id = anhXa.Lay("chi_tiet_hoi_doan", d.ID);
+            var id = Anh("chi_tiet_hoi_doan", d.ID);
             var e = await db.ChiTietHoiDoan.FindAsync([id], ct) ?? Them(new ChiTietHoiDoan { Id = id });
             var loi = new Dictionary<string, string>();
 
             e.GiaoXuId = giaoXuId;
             e.MaChiTietHoiDoanCu = d.ID;
-            e.HoiDoanId = anhXa.Lay("hoi_doan", d.MaHoiDoan);
-            e.GiaoDanId = anhXa.Lay("giao_dan", d.MaGiaoDan);
+            e.HoiDoanId = Anh("hoi_doan", d.MaHoiDoan);
+            e.GiaoDanId = Anh("giao_dan", d.MaGiaoDan);
             e.NgayVaoHoiDoan = DocNgay(d.NgayVaoHoiDoan, nameof(d.NgayVaoHoiDoan), loi);
             e.NgayRaHoiDoan = DocNgay(d.NgayRaHoiDoan, nameof(d.NgayRaHoiDoan), loi);
             e.VaiTro = d.VaiTro;

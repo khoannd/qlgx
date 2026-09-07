@@ -9,6 +9,7 @@ import { GiaoDanDetailPage } from './screens/GiaoDanDetailPage'
 import { TaiKhoanListPage } from './screens/TaiKhoanListPage'
 import { GiaoHoListPage } from './screens/GiaoHoListPage'
 import { QuanLyGiaoXuPage } from './screens/QuanLyGiaoXuPage'
+import { NhapDuLieuPage } from './screens/NhapDuLieuPage'
 import { LoginPage } from './screens/LoginPage'
 import { useAuth } from './api/AuthContext'
 import { TrangThaiMangBanner } from './components/TrangThaiMangBanner'
@@ -103,6 +104,10 @@ function App() {
     mo({ id: 'quanLyGiaoXu', tieuDe: 'Quản lý giáo xứ', noiDung: <QuanLyGiaoXuPage /> })
   }
 
+  function moNhapDuLieu() {
+    mo({ id: 'nhapDuLieu', tieuDe: 'Nhập dữ liệu Access', noiDung: <NhapDuLieuPage /> })
+  }
+
   // Khởi động giống frmMain: mở "Tổng quan" (không đóng được), rồi mở và chọn
   // "Danh sách gia đình" — xem cuối script của bản mẫu. CHỈ chạy sau khi đã đăng nhập —
   // gọi API trước khi có token chỉ để bị 401 rồi tự đăng xuất lại, vô ích.
@@ -121,6 +126,7 @@ function App() {
     else if (id === 'taiKhoanList') moQuanLyTaiKhoan()
     else if (id === 'giaoHoList') moGiaoHoList()
     else if (id === 'quanLyGiaoXu') moQuanLyGiaoXu()
+    else if (id === 'nhapDuLieu') moNhapDuLieu()
   }
 
   // Đang kiểm tra token cũ (tải lại trang) — không hiện gì để tránh giật từ màn hình đăng
