@@ -140,4 +140,4 @@ $v.GetType().InvokeMember('Close', 'InvokeMethod', $null, $v, $null) | Out-Null
 $db.GetType().InvokeMember('Commit', 'InvokeMethod', $null, $db, $null) | Out-Null
 DongDb $db
 
-Write-Host "Da nap ban dieu khoan su dung ($($rtf.Length) ky tu RTF); phan chu con lai giu nguyen tieng Anh"
+Write-Host "Da nap ban dieu khoan su dung ($($rtf.Length) ky tu RTF)"

@@ -24,26 +24,18 @@
     <div class="info">
 	
 	<p><b>07-09-2026</b></p>
-	<p><b>» Sửa lỗi nghiêm trọng: cài bản mới đè lên máy đang dùng thì chương trình vẫn là bản cũ</b></p>
-	<p>- Bộ cài chạy xong bình thường, không báo lỗi gì, nhưng mở chương trình lên vẫn không thấy các chức năng mới. Bản 4.0.0 và 4.0.1 đều bị lỗi này.</p>
-	<p>- Nguyên nhân: số phiên bản ghi trong file GiaoXu.exe bị để nguyên "1.0.0.3" suốt nhiều năm. Windows chỉ chép đè một file khi file trong bộ cài có số phiên bản lớn hơn file đang có trên máy; hai bên bằng nhau nên Windows giữ nguyên chương trình cũ.</p>
-	<p>- Nay mỗi lần phát hành, tất cả các file chương trình đều mang đúng số phiên bản của bản phát hành đó.</p>
-	<p>- Quý vị nào đã cài bản 4.0.0 hoặc 4.0.1 mà không thấy thay đổi gì, xin cài đè bản 4.0.2 này lên là được.</p>
-	<p><b>» Bộ cài đặt:</b></p>
-	<p>- Bộ cài nay có đầy đủ thư mục Template (biểu mẫu Word/Excel), Resources (file Excel mẫu) và help (hướng dẫn sử dụng). Bản 4.0.0 thiếu ba thư mục này nên máy cài mới không in được biểu mẫu và không mở được hướng dẫn.</p>
-	<p>- Sửa lỗi lối tắt trên Desktop và trong Start Menu chỉ mở ra một thư mục thay vì mở chương trình.</p>
-	<p>- Lối tắt nay có tên "GiaoXu" đúng như các bản trước, để quý vị không bị nhầm lẫn.</p>
-	<p>- Có lại màn hình Điều khoản sử dụng như các bản trước. Các chữ còn lại trên màn hình cài đặt vẫn bằng tiếng Anh.</p>
-	<p>- Khi cài đè lên máy đang dùng bản cũ (3.3.7 trở về trước), bộ cài tự xoá mục "GiaoXu" cũ trong "Apps &amp; features" cùng các lối tắt cũ, để trên máy chỉ còn MỘT phần mềm. Dữ liệu giáo xứ và mọi tập tin trong thư mục cài đặt được giữ nguyên.</p>
-	<p><b>» Chức năng mới trong menu Công cụ &gt; Sửa lỗi:</b></p>
-	<p>- "Sửa lỗi màn hình hôn phối không hiện tên vợ chồng": dùng khi màn hình Sổ bí tích chọn Hôn phối chỉ hiện mã số thay vì hiện họ tên. Thường gặp sau khi phục hồi một bản sao lưu cũ hoặc chép đè tập tin dữ liệu từ máy khác.</p>
-	<p>- "Sửa lỗi không xuất được Word / Excel": chuyển vào cùng nhóm cho dễ tìm.</p>
-	<hr />
-
-	<p><b>04-09-2026</b></p>
+	<p><b>» Đổi địa chỉ máy chủ cập nhật sang một địa chỉ cố định, không còn gắn với số phiên bản</b></p>
+	<p>- Quý vị không cần làm gì cả. Từ bản này trở đi, mỗi lần có bản mới chương trình đều tìm đúng chỗ, không phải chờ tác giả sửa lại đường dẫn.</p>
 	<p><b>» Nâng cấp nền tảng:</b></p>
 	<p>- Nâng cấp chương trình từ .NET Framework 2.0 lên 4.8 để chạy ổn định hơn trên Windows 10 và Windows 11.</p>
 	<p>- Cập nhật lại cách kết nối với Microsoft Word và Microsoft Excel cho phù hợp với các phiên bản Office đời mới.</p>
+	<p><b>» Bộ cài đặt mới:</b></p>
+	<p>- Bộ cài nay chỉ còn MỘT file duy nhất, quý vị tải về rồi chạy là xong.</p>
+	<p>- Giao diện cài đặt bằng tiếng Việt, có màn hình Điều khoản sử dụng.</p>
+	<p>- Bộ cài có đầy đủ biểu mẫu in (Template), file Excel mẫu (Resources) và trang hướng dẫn sử dụng (help).</p>
+	<p>- Thư mục cài đặt mặc định chuyển từ ổ D: sang ổ C:, vì nhiều máy nhất là máy xách tay không có ổ D:.</p>
+	<p>- Nếu máy đã có chương trình từ trước, bộ cài tự nhận ra thư mục cũ và cài vào đúng chỗ đó, để dữ liệu giáo xứ không bị lạc chỗ.</p>
+	<p>- Cài đè lên máy đang dùng bản 3.3.7 trở về trước thì mục "GiaoXu" cũ trong danh sách phần mềm của Windows và các lối tắt cũ được dọn đi, để trên máy chỉ còn MỘT phần mềm. Mọi tập tin trong thư mục cài đặt được giữ nguyên.</p>
 	<p><b>» Nhập dữ liệu từ phần mềm MGC:</b></p>
 	<p>- Sửa lỗi chỉ nhập được một phần giáo dân. Trước đây, nếu số người trong phần Lý lịch ít hơn số người trong Sổ Rửa tội thì chương trình bỏ qua toàn bộ những người chỉ có tên trong Sổ Rửa tội. Nay chương trình nhập đầy đủ tất cả.</p>
 	<p>- Giữ nguyên thông tin lý lịch (ngày qua đời, số điện thoại, dân tộc, địa chỉ) cho những người đã có sẵn lý lịch.</p>
@@ -59,13 +51,16 @@
 	<p>- Sao lưu registry ra file trước khi sửa để có thể khôi phục.</p>
 	<p>- Sửa được cho cả Microsoft Word lẫn Microsoft Excel.</p>
 	<p>- Báo đúng kết quả đã làm, không còn báo "Đã sửa xong" trong khi thực tế không có gì cần sửa.</p>
+	<p><b>» Thêm menu Công cụ &gt; Sửa lỗi để tự khắc phục khi cần:</b></p>
+	<p>- "Sửa lỗi màn hình hôn phối không hiện tên vợ chồng": dùng khi màn hình Sổ bí tích chọn Hôn phối chỉ hiện mã số thay vì hiện họ tên. Thường gặp sau khi phục hồi một bản sao lưu cũ hoặc chép đè tập tin dữ liệu từ máy khác.</p>
+	<p>- "Sửa lỗi không xuất được Word / Excel".</p>
 	<p><b>» Sổ bí tích:</b></p>
 	<p>- Sửa lỗi màn hình Sổ bí tích, mục Hôn phối chỉ hiện mã số thay vì tên của người chồng và người vợ.</p>
 	<p><b>» Gia đình:</b></p>
 	<p>- Khi chọn người vợ hoặc người chồng, nếu người còn lại đã qua đời thì chương trình không tự đưa người đó vào gia đình nữa.</p>
-	<p><b>» Khác:</b></p>
 	<p>- Cập nhật các mẫu in.</p>
-	<p>&nbsp;</p>
+	<hr />
+
 	<p><b>07-07-2024</b></p>
 	<p><b>» Các cải tiến và sửa lỗi:</b></p>
       <p>- Hiển thị thêm thông tin qua đời trong màn hình danh sách giáo dân.</p>

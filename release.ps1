@@ -580,8 +580,32 @@ else {
     Write-Ok 'Da ghi ARPINSTALLLOCATION de cac ban sau tu do duoc chinh minh'
 }
 
-# ------------------------------------------------- 6d. Nạp bản điều khoản sử dụng
-Write-Buoc '6d. Nap ban dieu khoan su dung vao man hinh cai dat'
+# ------------------------------------------ 6d. Dịch giao diện bộ cài sang tiếng Việt
+Write-Buoc '6d. Dich giao dien bo cai sang tieng Viet'
+if ($SkipInstaller -or $DryRun) { Write-Canh 'Bo qua' }
+else {
+    # Visual Studio khong co san giao dien cai dat tieng Viet (khong co ma 1066) nen
+    # phai ghi de chu tieng Viet vao bang Control/RadioButton/Dialog cua file MSI.
+    $scriptDich = Join-Path $Root 'dich_bo_cai_sang_tieng_viet.ps1'
+    if (-not (Test-Path $scriptDich)) { Write-Loi "Khong tim thay $scriptDich"; exit 1 }
+
+    $kqDich = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptDich -Msi $msiPath 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Loi 'Dich giao dien bo cai that bai:'
+        $kqDich | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        exit 1
+    }
+    $kqDich2 = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptDich -Msi $msiPath -ChiKiemChung 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Loi 'Kiem chung ban dich that bai:'
+        $kqDich2 | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        exit 1
+    }
+    $kqDich | ForEach-Object { Write-Ok $_ }
+}
+
+# ------------------------------------------------- 6e. Nạp bản điều khoản sử dụng
+Write-Buoc '6e. Nap ban dieu khoan su dung vao man hinh cai dat'
 if ($SkipInstaller -or $DryRun) { Write-Canh 'Bo qua' }
 else {
     # Chi ghi noi dung dieu khoan. Toan bo chu con lai cua bo cai giu nguyen tieng
@@ -605,8 +629,8 @@ else {
     $kqDk | ForEach-Object { Write-Ok $_ }
 }
 
-# ------------------------------------------- 6e. Dọn dấu vết bản Inno cũ
-Write-Buoc '6e. Don dau vet ban cai cu (Inno Setup)'
+# ------------------------------------------- 6f. Dọn dấu vết bản Inno cũ
+Write-Buoc '6f. Don dau vet ban cai cu (Inno Setup)'
 if ($SkipInstaller -or $DryRun) { Write-Canh 'Bo qua' }
 else {
     # Xoa khoa dang ky va loi tat cua ban cu de may chi con MOT phan mem. Khong goi

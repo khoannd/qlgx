@@ -238,6 +238,10 @@ Làm y hệt cho kho `qlgx_bin` (chỉ có `master` và thẻ).
 
 ## 5. Đưa lên máy chủ
 
+Máy chủ phải phục vụ đúng bốn đường dẫn mà phần mềm gọi tới, cùng các đường dẫn cũ của
+những đời phần mềm trước. Xem `HOP_DONG_MAY_CHU_CAP_NHAT.md` — tài liệu đó mô tả đầy đủ
+hợp đồng giữa phần mềm và backend, kể cả cái bẫy so sánh số phiên bản bằng chuỗi.
+
 `release.ps1` **không** tự tải lên. Bước 10 của script in ra thứ tự bắt buộc:
 
 1. `qlgx_<x_y_z>_update.zip` → thư mục ghi trong `downloadpath`
