@@ -2118,3 +2118,73 @@ với `.ag-header-row-column` — đo `getComputedStyle` thật trên trình duy
 **Số test cuối:** frontend **254/254** (không thêm test mới — thuần CSS, không đổi hành vi
 component nào bài test jsdom quan sát được). `npm run build` chạy được. Không chạm backend.
 Ảnh chụp/kiểm thử: `89`–`91` trong `WebApp/anh-chup-kiem-thu/`.
+
+### 44. Task "làm nhẹ header và filter box của lưới" (2026-09-07) — các quyết định tự đưa ra
+
+Người dùng thật ngồi kiểm tra sau mục 43 (kính mờ) viết nguyên văn: "grid header hiện tại như
+style của 199x", "hãy bỏ bớt border trên header và filter box để nhìn nó nhẹ nhàng hơn". Ảnh
+`89-danhsach-giaodan-header-kinh-mo-cuon.png` cho thấy bốn thứ cũ: vạch dọc "|" giữa MỌI cột ở
+cả hàng tiêu đề LẪN hàng lọc, ô nhập lọc viền hộp, nút phễu trong hộp, và thanh cuộn ngang dưới
+lưới dày thô (15px, mặc định trình duyệt).
+
+**Điều tra tìm đúng nguồn (đo `getComputedStyle` thật trên trình duyệt, không đoán):**
+- Vạch dọc "|" KHÔNG phải do `--ag-header-column-separator-display` (biến này đã tắt từ mục 42,
+  vẫn tắt) — nó là `.ag-header-cell-resize::after`, tay cầm đổi cỡ cột, luôn hiện qua biến
+  `--ag-header-column-resize-handle-display: block` mặc định của AG Grid. Chạy trên CẢ hàng
+  tiêu đề lẫn hàng lọc vì cả hai đều có `.ag-header-cell`. Ảnh zoom 3x xác nhận (không còn giữ
+  trong repo, chỉ dùng lúc điều tra).
+- Ô nhập lọc (`.ag-input-field-input.ag-text-field-input`) có `border: 0.8px solid
+  rgba(0,0,0,.15)` mặc định của AG Grid, không phải CSS của dự án — cần override rõ ràng.
+- Nút phễu (`.ag-floating-filter-button-button`) đã KHÔNG có viền hộp sẵn (border 0, không có
+  class cha nào tạo hộp) — nhưng icon tô đậm 100% ngay cả khi không cần chú ý tới, nên vẫn làm
+  mờ mặc định, đậm dần khi rê/focus cho "nhẹ" hơn dù không phải sửa border.
+- Đường kẻ ngang thừa GIỮA hàng tiêu đề và hàng lọc đến từ `.ag-theme-quartz .ag-header-row {
+  border-bottom: 1px solid var(--hair); }` (mục 42 để lại) — áp cho MỌI `.ag-header-row` nên vẽ
+  line sau cả hàng tiêu đề (thừa) lẫn hàng lọc (trùng với viền `.ag-header` đã có).
+- Thanh cuộn dày là thanh cuộn NGUYÊN SINH của trình duyệt trên `.ag-body-horizontal/
+  vertical-scroll-viewport` (đo `overflow: scroll`, `height/width: 15px`) — KHÔNG phải
+  `.grid-wrap` (div bọc ngoài không tự cuộn, AG Grid định vị nội dung tuyệt đối bên trong nên
+  luật `::-webkit-scrollbar` cũ đặt trên `.grid-wrap` chưa từng có tác dụng, đã xoá luôn).
+
+**Quyết định sửa (`WebApp/src/web/src/styles/qlgx.css`, khối `.ag-theme-quartz`):**
+1. `--ag-header-column-resize-handle-display: none` mặc định; thêm
+   `.ag-header-cell:hover .ag-header-cell-resize::after { display: block; }` để tay cầm đổi cỡ
+   cột vẫn dùng được khi rê chuột, chỉ ẩn lúc không cần.
+2. Xoá `.ag-header-row { border-bottom: ... }`, giữ nguyên `.ag-header { border-bottom: 1px
+   solid var(--glass-line); }` sẵn có — một đường kẻ dưới CÙNG cả khối tiêu đề, không còn line
+   giữa hai hàng con.
+3. Ô nhập lọc: `border-color: transparent; background-color: transparent` mặc định, chuyển
+   sang `border-color: var(--hair)` + nền trắng mờ `.7` khi hover, `border-color: var(--brand)`
+   + nền trắng đặc khi focus/đang gõ — vẫn thấy được chỗ bấm (không tàng hình), nhưng không còn
+   dãy hộp vuông khi không tương tác. Dùng lại đúng biến `--hair`/`--brand` sẵn có.
+4. Nút phễu: `opacity: .45` mặc định, `opacity: 1` khi hover/focus-visible/đang mở menu.
+5. Thanh cuộn lưới: bỏ luật chết trên `.grid-wrap`, thêm `::-webkit-scrollbar` (8px, thumb
+   `rgba(14,32,76,.14)`, bo tròn) lên đúng `.ag-body-horizontal-scroll-viewport` và
+   `.ag-body-vertical-scroll-viewport` — copy NGUYÊN giá trị của `.nav-scroll` (thanh cuộn
+   thanh bên đã làm mảnh trước đó), đúng yêu cầu "dùng lại chính nó, đừng viết kiểu mới".
+
+**Áp dụng cho mọi lưới:** sửa duy nhất ở `qlgx.css` (không đụng `GxGrid.tsx`/màn hình nào) nên
+tự động ăn cho danh sách giáo dân, danh sách gia đình, lưới thành viên gia đình — cùng dùng
+`.ag-theme-quartz` qua `GxGrid`.
+
+**Kiểm chứng trên trình duyệt thật (Playwright MCP), đăng nhập `giaoxu`:**
+- Danh sách giáo dân (2039 dòng hiển thị / kho 2050): header + hàng lọc hết vạch dọc, hết viền
+  hộp quanh ô nhập, hết đường kẻ thừa giữa hai hàng — ảnh
+  `92-danhsach-giaodan-header-filter-nhe.png`.
+- Gõ lọc thật "Nguyễn Văn" vào cột "Họ tên": ô nhập hiện viền xanh brand rõ ràng khi đang gõ,
+  lưới lọc đúng (chỉ còn các dòng khớp) — xác nhận ô lọc VẪN DÙNG ĐƯỢC, không tàng hình — ảnh
+  `93-danhsach-giaodan-loc-ho-ten-dang-go.png`.
+- Cuộn ngang lưới giáo dân (`scrollLeft = 400`): thanh cuộn dưới đáy hiện dạng dải thẻ mảnh, bo
+  tròn, cùng kiểu `.nav-scroll` — ảnh `94-danhsach-giaodan-cuon-ngang-manh.png`.
+- Gia đình "Paul Trần Văn Thái" (mã 9): lưới "Thành viên khác trong gia đình" (Mã GD 1068–1071)
+  cùng kiểu header nhẹ, thanh cuộn mảnh — ảnh `95-giadinh-9-luoi-thanhvien-header-nhe.png`. Ô
+  đánh dấu vẫn không xuống dòng, khối ảnh gia đình vẫn không tiêu đề, hai cột cao bằng nhau,
+  radio "Chủ hộ" vẫn sáng khi chọn — không có gì trong các mục trước bị hỏng lại.
+- `getBoundingClientRect()` đo thật trên danh sách giáo dân sau khi sửa: lưới `1184.8×582.7`
+  (không co 0px), hàng tiêu đề `3800×28` (đúng `--ag-header-height: 28px`, rộng bằng nội dung
+  cuộn được), hàng lọc `3800×30` (đúng `floatingFiltersHeight={30}`), dòng dữ liệu `3815×30`
+  (đúng `--ag-row-height: 30px`) — không đổi so với mục 42/43.
+
+**Số test cuối:** frontend **254/254** (không thêm test mới — thuần CSS, jsdom không quan sát
+được thay đổi thị giác này). `npm run build` chạy được. Không chạm backend. Ảnh chụp/kiểm thử:
+`92`–`95` trong `WebApp/anh-chup-kiem-thu/`.

@@ -668,11 +668,23 @@ input:disabled, textarea:disabled {
   --ag-header-background-color: rgba(255, 255, 255, .6);
   --ag-header-foreground-color: var(--ink-soft);
   --ag-header-column-separator-display: none;
+  /* Bỏ vạch tay cầm đổi cỡ cột luôn hiện (góp ý người dùng "style 199x", 2026-09-07): mặc
+     định AG Grid vẽ SẴN một vạch dọc mảnh giữa MỌI cột qua `.ag-header-cell-resize::after`
+     (biến `--ag-header-column-resize-handle-display: block`) — đây MỚI là nguồn thật của
+     những vạch "|" vẫn thấy dù `--ag-header-column-separator-display` đã tắt ở trên (hai cơ
+     chế khác nhau: separator vs. resize handle). Vạch này chạy trên cả hàng tiêu đề LẪN hàng
+     lọc vì cả hai đều có ô `.ag-header-cell`, xem `header-zoom.png`/`filter-zoom.png` lúc điều
+     tra — xoá xong là mất vạch ở cả hai hàng cùng lúc, không cần luật riêng cho hàng lọc. Ẩn
+     mặc định, chỉ hiện khi rê chuột vào ô để không mất hẳn khả năng đổi cỡ cột. */
+  --ag-header-column-resize-handle-display: none;
 }
 .ag-theme-quartz .ag-header {
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   border-bottom: 1px solid var(--glass-line);
+}
+.ag-theme-quartz .ag-header-cell:hover .ag-header-cell-resize::after {
+  display: block;
 }
 .ag-theme-quartz .ag-header-cell-text {
   font-size: 12px;
@@ -680,11 +692,60 @@ input:disabled, textarea:disabled {
   letter-spacing: .02em;
   color: var(--ink-soft);
 }
-.ag-theme-quartz .ag-header-row { border-bottom: 1px solid var(--hair); }
-.ag-theme-quartz .ag-floating-filter-input input { font-size: 12px; min-height: 22px; }
+/* KHÔNG đặt border-bottom trên `.ag-header-row` (từng làm, đã bỏ): nó vẽ ĐƯỜNG KẺ SAU MỖI
+   hàng con (hàng tiêu đề VÀ hàng lọc riêng), tạo ra một gạch ngang thừa NẰM GIỮA hai hàng đó
+   — đúng thứ "đường viền quanh ô tiêu đề" người dùng phàn nàn. Một đường kẻ dưới CÙNG `.ag-header`
+   ở trên đã đủ cho "một đường kẻ ngang mảnh dưới cùng cả khối tiêu đề".
+
+   Hàng lọc (góp ý người dùng, 2026-09-07): "grid header như style 199x, bỏ bớt border trên
+   header và filter box cho nhẹ nhàng". Ô nhập lọc mặc định KHÔNG viền/KHÔNG nền — chỉ hiện
+   viền/nền rất nhạt khi rê chuột hoặc đang gõ (focus), để vẫn NHÌN RA có chỗ bấm vào gõ (đừng
+   tàng hình hoàn toàn) mà không còn dãy hộp vuông liền nhau. Nút phễu bỏ luôn khung, chỉ còn
+   icon mờ, đậm dần khi rê/focus. Màu dùng lại `--hair`/`--hair-soft`/`--brand` sẵn có, không
+   bịa giá trị mới. */
+.ag-theme-quartz .ag-floating-filter-input input {
+  font-size: 12px;
+  min-height: 22px;
+  border-color: transparent;
+  background-color: transparent;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+.ag-theme-quartz .ag-floating-filter-input input:hover {
+  border-color: var(--hair);
+  background-color: rgba(255, 255, 255, .7);
+}
+.ag-theme-quartz .ag-floating-filter-input input:focus {
+  border-color: var(--brand);
+  background-color: #fff;
+}
+.ag-theme-quartz .ag-floating-filter-button-button {
+  opacity: .45;
+  transition: opacity .15s ease;
+}
+.ag-theme-quartz .ag-floating-filter-button-button:hover,
+.ag-theme-quartz .ag-floating-filter-button-button:focus-visible,
+.ag-theme-quartz .ag-floating-filter-button-button.ag-has-menu-open {
+  opacity: 1;
+}
+
+/* Thanh cuộn mảnh cho lưới (góp ý người dùng, 2026-09-07): AG Grid tự vẽ thanh cuộn ngang/dọc
+   qua `.ag-body-horizontal/vertical-scroll-viewport` — đây là phần tử `overflow: scroll` THẬT
+   nên style ::-webkit-scrollbar có tác dụng (khác `.grid-wrap` bên dưới vốn không tự cuộn, AG
+   Grid định vị nội dung tuyệt đối bên trong nên luật webkit-scrollbar trên `.grid-wrap` không
+   bao giờ có cơ hội vẽ ra — xoá luôn cho khỏi nhầm là đang style đúng chỗ). Dùng lại NGUYÊN
+   giá trị của `.nav-scroll` (thanh cuộn thanh bên đã làm mảnh trước đó) — 8px, cùng một màu —
+   để đồng bộ toàn ứng dụng, đúng yêu cầu "áp dụng đúng kiểu mảnh đó cho thanh cuộn của lưới". */
+.ag-theme-quartz .ag-body-horizontal-scroll-viewport::-webkit-scrollbar,
+.ag-theme-quartz .ag-body-vertical-scroll-viewport::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.ag-theme-quartz .ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb,
+.ag-theme-quartz .ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb {
+  background: rgba(14, 32, 76, .14);
+  border-radius: 99px;
+}
 .grid-wrap { min-height: 0; overflow: auto; }
-.grid-wrap::-webkit-scrollbar { width: 10px; height: 10px; }
-.grid-wrap::-webkit-scrollbar-thumb { background: rgba(14,32,76,.16); border-radius: 99px; }
 
 table.grid {
   border-collapse: separate;
