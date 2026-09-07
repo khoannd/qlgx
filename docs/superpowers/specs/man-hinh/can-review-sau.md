@@ -1039,8 +1039,14 @@ WHERE vai_tro IN (0,1) GROUP BY gia_dinh_id, vai_tro HAVING count(*) > 1;
 -- 0 rows
 ```
 Không có vi phạm nào — migration áp dụng an toàn cho dữ liệu hiện có. Đã áp dụng thử migration
-vào `qlgx_dev` (không đụng `qlgx_thu`) để sinh migration EF, không chạy migration này trên
-`qlgx_thu` trong phạm vi nhiệm vụ này (không có yêu cầu triển khai lên dữ liệu thật hôm nay);
+vào `qlgx_dev` (không đụng `qlgx_thu`) để sinh migration EF.
+
+> **Cập nhật 2026-09-07 (cuối phiên)**: migration này **ĐÃ được áp** lên `qlgx_thu` bằng
+> `dotnet ef database update` cùng hai migration `BatRlsChoBangTheoGiaoXu` và
+> `ThemKhoaDangNhapTaiKhoan`. Chỉ đổi schema, số liệu không đổi (đã kiểm lại bằng `psql`:
+> 2050 giáo dân / 145 thành viên / 6150 bí tích chi tiết). Câu dưới đây giữ lại làm lịch sử.
+
+Vào thời điểm sửa lỗi thì chưa chạy migration này trên `qlgx_thu`;
 người vận hành cần chạy `dotnet ef database update` (hoặc bật `Qlgx:ChayMigrationKhiKhoiDong`)
 trên `qlgx_thu`/production trước khi coi ràng buộc này là đã bảo vệ dữ liệu thật.
 
