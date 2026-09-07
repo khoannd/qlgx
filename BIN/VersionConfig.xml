@@ -1,14 +1,20 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <application value="GiaoXu" xmlns="urn:newversion-schema">
-  <version-info value="4.0.1.0" display="4.0.1" exename="GiaoXu.exe">
+  <version-info value="4.0.2.0" display="4.0.2" exename="GiaoXu.exe">
     <info>
-      Ngày 06-09-2026: cập nhật lên phiên bản 4.0.1
+      Ngày 07-09-2026: cập nhật lên phiên bản 4.0.2
+
+      - Sửa lỗi nghiêm trọng: cài bản mới đè lên máy đang dùng thì chương trình vẫn là bản cũ.
+      + Bộ cài chạy xong bình thường, không báo lỗi gì, nhưng mở chương trình lên vẫn không thấy các chức năng mới. Bản 4.0.0 và 4.0.1 đều bị lỗi này.
+      + Nguyên nhân: số phiên bản ghi trong file GiaoXu.exe bị để nguyên "1.0.0.3" suốt nhiều năm. Windows chỉ chép đè một file khi file trong bộ cài có số phiên bản lớn hơn file đang có trên máy; hai bên bằng nhau nên Windows giữ nguyên chương trình cũ.
+      + Nay mỗi lần phát hành, tất cả các file chương trình đều mang đúng số phiên bản của bản phát hành đó.
+      + Quý vị nào đã cài bản 4.0.0 hoặc 4.0.1 mà không thấy thay đổi gì, xin cài đè bản 4.0.2 này lên là được.
 
       - Bộ cài đặt:
       + Bộ cài nay có đầy đủ thư mục Template (biểu mẫu Word/Excel), Resources (file Excel mẫu) và help (hướng dẫn sử dụng). Bản 4.0.0 thiếu ba thư mục này nên máy cài mới không in được biểu mẫu và không mở được hướng dẫn.
       + Sửa lỗi lối tắt trên Desktop và trong Start Menu chỉ mở ra một thư mục thay vì mở chương trình.
       + Lối tắt nay có tên "GiaoXu" đúng như các bản trước, để quý vị không bị nhầm lẫn.
-      + Toàn bộ màn hình cài đặt nay bằng tiếng Việt, và có màn hình Điều khoản sử dụng như các bản trước.
+      + Có lại màn hình Điều khoản sử dụng như các bản trước. Các chữ còn lại trên màn hình cài đặt vẫn bằng tiếng Anh.
       + Khi cài đè lên máy đang dùng bản cũ (3.3.7 trở về trước), bộ cài tự xoá mục "GiaoXu" cũ trong danh sách phần mềm của Windows cùng các lối tắt cũ, để trên máy chỉ còn MỘT phần mềm. Dữ liệu giáo xứ và mọi tập tin trong thư mục cài đặt được giữ nguyên.
 
       - Chức năng mới trong menu Công cụ > Sửa lỗi:
@@ -194,7 +200,7 @@
       - Cho phép in phiếu lý gia đình hàng loạt
     </info>
     <downloadpath value="download-update">http://quanlygiaoxu.net/4.0/</downloadpath>
-    <dateupdate>2026-09-06</dateupdate>
+    <dateupdate>2026-09-07</dateupdate>
     <size>8.67</size>
   </version-info>
 </application>

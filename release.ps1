@@ -311,6 +311,26 @@ if ($procs) {
     } else { Write-Loi 'Khong the build khi chuong trinh dang chay'; exit 1 }
 } else { Write-Ok 'Khong co tien trinh nao dang chay' }
 
+# ------------------------------------- 3b. Đánh số phiên bản cho từng file
+Write-Buoc '3b. Dat so phien ban cho tung file chuong trinh'
+if ($SkipBuild -or $DryRun) { Write-Canh 'Bo qua' }
+else {
+    # BAT BUOC, khong duoc bo qua. Windows Installer chi chep de mot file khi file
+    # trong bo cai co so phien ban LON HON file dang co tren may. Truoc day moi file
+    # deu mang so 1.0.0.3 co dinh, nen cai ban moi de len may dang dung thi chuong
+    # trinh VAN LA BAN CU ma khong bao loi gi - ban 4.0.0 va 4.0.1 deu dinh loi nay.
+    $scriptPb = Join-Path $Root 'dat_phien_ban_file.ps1'
+    if (-not (Test-Path $scriptPb)) { Write-Loi "Khong tim thay $scriptPb"; exit 1 }
+
+    $kqPb = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptPb -PhienBan $verValue 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Loi 'Dat so phien ban cho cac file that bai:'
+        $kqPb | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        exit 1
+    }
+    $kqPb | ForEach-Object { Write-Ok $_ }
+}
+
 # ---------------------------------------------------------- 4. Build Release
 Write-Buoc '4. Bien dich toan bo solution (Release)'
 if ($SkipBuild) { Write-Canh 'Bo qua theo tham so -SkipBuild' }
@@ -320,6 +340,17 @@ else {
     & $MSBuild $Sln -p:Configuration=Release -p:Platform="Any CPU" -v:minimal -nologo
     if ($LASTEXITCODE -ne 0) { Write-Loi "MSBuild that bai (ma loi $LASTEXITCODE)"; exit 1 }
     Write-Ok 'Bien dich thanh cong'
+
+    # Doc so phien ban THAT cua cac file vua build, khong doc lai ma nguon - de
+    # chac chan trinh bien dich da nhan so moi.
+    $scriptPb = Join-Path $Root 'dat_phien_ban_file.ps1'
+    $kqPb2 = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptPb -PhienBan $verValue -ChiKiemChung 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Loi 'File vua build khong mang dung so phien ban:'
+        $kqPb2 | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        exit 1
+    }
+    $kqPb2 | ForEach-Object { Write-Ok $_ }
 }
 
 # ------------------------------------------- 4b. Đưa các thư mục con vào bộ cài
@@ -549,29 +580,29 @@ else {
     Write-Ok 'Da ghi ARPINSTALLLOCATION de cac ban sau tu do duoc chinh minh'
 }
 
-# ------------------------------------------ 6d. Dịch giao diện bộ cài sang tiếng Việt
-Write-Buoc '6d. Dich giao dien bo cai sang tieng Viet'
+# ------------------------------------------------- 6d. Nạp bản điều khoản sử dụng
+Write-Buoc '6d. Nap ban dieu khoan su dung vao man hinh cai dat'
 if ($SkipInstaller -or $DryRun) { Write-Canh 'Bo qua' }
 else {
-    # Visual Studio khong co san giao dien cai dat tieng Viet (khong co ma 1066),
-    # nen phai ghi de chu tieng Viet vao file MSI sau khi build.
-    $scriptDich = Join-Path $Root 'dich_bo_cai_sang_tieng_viet.ps1'
-    if (-not (Test-Path $scriptDich)) { Write-Loi "Khong tim thay $scriptDich"; exit 1 }
+    # Chi ghi noi dung dieu khoan. Toan bo chu con lai cua bo cai giu nguyen tieng
+    # Anh do Visual Studio sinh ra - ban 4.0.1 tung thu dich het sang tieng Viet va
+    # lam man hinh cai dat trong tron.
+    $scriptDk = Join-Path $Root 'nap_dieu_khoan_su_dung.ps1'
+    if (-not (Test-Path $scriptDk)) { Write-Loi "Khong tim thay $scriptDk"; exit 1 }
 
-    $kqDich = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptDich -Msi $msiPath 2>&1
+    $kqDk = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptDk -Msi $msiPath 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Loi 'Dich giao dien bo cai that bai:'
-        $kqDich | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        Write-Loi 'Nap ban dieu khoan that bai:'
+        $kqDk | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
         exit 1
     }
-    $kqDich2 = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptDich -Msi $msiPath -ChiKiemChung 2>&1
+    $kqDk2 = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptDk -Msi $msiPath -ChiKiemChung 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Loi 'Kiem chung ban dich that bai:'
-        $kqDich2 | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        Write-Loi 'Kiem chung ban dieu khoan that bai:'
+        $kqDk2 | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
         exit 1
     }
-    $kqDich | ForEach-Object { Write-Ok $_ }
-    Write-Ok 'Da co man hinh Dieu khoan su dung nhu bo cai Inno cu'
+    $kqDk | ForEach-Object { Write-Ok $_ }
 }
 
 # ------------------------------------------- 6e. Dọn dấu vết bản Inno cũ
