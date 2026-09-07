@@ -2247,3 +2247,115 @@ tự động ăn cho danh sách giáo dân, danh sách gia đình, lưới thàn
 `getComputedStyle`/`box-shadow` thật để bắt lỗi kiểu này). `npm run build` chạy được. Không
 chạm backend. Ảnh chụp/kiểm thử: `96-can-canh-hang-loc.png`, `96-loc-ho-ten-nguyen.png`,
 `96-chi-tiet-gia-dinh-thanh-vien.png` trong `WebApp/anh-chup-kiem-thu/`.
+
+### 46. Task "ô lọc hẹp/phễu to/dư khoảng trống, header thấp hơn dòng dữ liệu, mất hẳn hiệu ứng
+focus" (2026-09-07) — ba góp ý liên tiếp trong CÙNG một lượt kiểm tra trực tiếp
+
+Người dùng thật ngồi kiểm tra gửi liên tiếp ba góp ý (hai góp ý đầu trong một yêu cầu, góp ý
+focus tới sau khi đã thấy bản sửa đầu):
+
+1. *"bên phải filter icon còn 1 khoảng trống mà textbox filter lại nhỏ, hãy tối ưu cho filter
+   icon nhỏ lại và textbox có thể rộng hơn"*.
+2. *"chiều cao grid header cần dài thêm tí cho bằng chiều cao của record row bên dưới"* (header
+   28px, dòng dữ liệu 30px — lệch 2px).
+3. *"vẫn cần hiệu ứng focus vào filter textbox"* — sau khi mục 45 tắt hẳn `box-shadow` ở
+   `:focus` để hết quầng hình dấu ngoặc, ngờ rằng đã tắt luôn MỌI phản hồi thị giác khi gõ.
+
+**Việc 1 — đo bằng `getComputedStyle`/`getBoundingClientRect` thật trên cột "Mã GĐ" (100px,
+danh sách gia đình) để tìm đúng chỗ ăn hết chỗ, không đoán:**
+- `.ag-header-cell` hàng lọc kế thừa `padding: 0 16px` từ biến DÙNG CHUNG
+  `--ag-cell-horizontal-padding` (áp cho cả hàng tiêu đề lẫn mọi ô dữ liệu, không chỉ hàng lọc).
+- `.ag-floating-filter-button` cách ô nhập bằng `margin-left: 12px` (biến
+  `--ag-cell-widget-spacing`, theme quartz đặt = grid-size × 1.5).
+- Nút phễu bên trong rộng `var(--ag-icon-size)` = 16px.
+- Cộng lại: padding hai bên (32) + margin (12) + icon (16) = 60px trong cột 100px, chỉ còn 40px
+  cho ô nhập — đúng ô "chỉ đủ hiện vài gạch placeholder mờ" trong ảnh người dùng gửi. Khoảng
+  trống "dư bên phải nút phễu" người dùng chỉ ra CHÍNH LÀ padding-phải 16px đó (nút phễu là phần
+  tử cuối cùng trong ô).
+- **Bẫy khi sửa:** thử selector `.ag-header-row-floating-filter .ag-header-cell` trước — không
+  ăn thua gì (không báo lỗi, chỉ không có tác dụng). In `className` của tổ tiên `.ag-header-cell`
+  trên trình duyệt thật mới lộ ra tên lớp AG Grid THẬT cho hàng lọc là `.ag-header-row-filter`
+  (không phải `.ag-header-row-floating-filter` như tên biến CSS `--ag-header-height`/comment cũ
+  trong file gợi ý).
+- **Sửa** (`qlgx.css`, sau khối `.ag-floating-filter-button-button`): giảm padding hàng lọc còn
+  8px hai bên (`.ag-header-row-filter .ag-header-cell`, KHÔNG đụng padding hàng tiêu đề/ô dữ
+  liệu vì chỉ scope đúng hàng lọc), giảm khoảng cách ô nhập↔nút phễu còn 6px, thu icon phễu về
+  12px — cả hai qua biến cục bộ trên `.ag-floating-filter-button` (`--ag-icon-size: 12px;
+  margin-left: 6px`, không bịa biến mới, chỉ ghi đè biến sẵn có trong phạm vi hẹp). Ô nhập không
+  cần sửa gì — nó là `flex: 1 1 auto` duy nhất trong `.ag-floating-filter-body`, tự nở lấp phần
+  chỗ vừa giải phóng.
+- **Đo lại sau khi sửa** (cột "Mã GĐ" 100px, danh sách gia đình): ô nhập rộng từ 40px → **66px**
+  (+65%), nút phễu 16×16 → **12×12**, khoảng cách ô nhập↔phễu 12px → **6px**, khoảng trống sau
+  phễu tới mép cột 16px → **8px** (đúng bằng padding còn lại, không còn "dư" bất thường — 8px là
+  padding chủ ý, không phải khoảng trống vô nghĩa).
+
+**Việc 2 — chiều cao header bằng dòng dữ liệu:**
+- Đổi `--ag-header-height` từ `28px` → `30px` (đúng bằng `--ag-row-height` đã có, KHÔNG giảm
+  dòng dữ liệu — người dùng chỉ nhắc header).
+- Hàng lọc dùng CHUNG biến `--ag-header-height` với hàng tiêu đề (xác nhận qua AG Grid CSS gốc:
+  không có biến riêng cho floating filter) nên tự động cao theo 30px, không cần luật riêng —
+  đúng gợi ý "đừng cố tách riêng nếu không cần thiết".
+- Đo lại: hàng tiêu đề, hàng lọc, dòng dữ liệu đều **30×(rộng theo cột hiện có)** — ba hàng bằng
+  nhau tuyệt đối.
+
+**Việc 3 — hiệu ứng focus:**
+- Điều tra bằng `getComputedStyle` trên input đang thật sự `document.activeElement`: luật
+  `border-bottom-color: var(--brand)` ở `:focus` (mục 45) THỰC RA vẫn thắng đúng (đọ specificity
+  với rule mặc định AG Grid VÀ rule `input:focus` chung toàn ứng dụng — cả hai đều thua vì
+  `qlgx.css` nạp SAU trong `main.tsx`, xác nhận bằng cách liệt kê toàn bộ CSS rule khớp input qua
+  `document.styleSheets`). Vấn đề không phải "mất hẳn" mà là QUÁ MỜ: viền dưới kế thừa bề dày mặc
+  định của AG Grid — `border-bottom-width: 0.8px`, gần như vô hình trên nền kính mờ của hàng lọc.
+- **Sửa:** thêm `border-bottom-width: 2px` CHỈ ở trạng thái `:focus` (viền nghỉ/hover vẫn mảnh
+  như cũ, không đổi gì khác) — viền dưới dày hẳn lên, dễ thấy, nhưng vẫn `box-shadow: none` và
+  vẫn không có viền trái/phải — không tái diễn quầng dấu ngoặc mục 45 vừa sửa.
+- Đo lại lúc `input.focus()` thật: `border-bottom-color: rgb(29, 93, 219)` (đúng `--brand`),
+  `border-bottom-width` dày rõ rệt so với trạng thái nghỉ, `box-shadow: none`, `border-left/right-
+  width` không đổi (không có viền hai bên) — chụp cận cảnh xác nhận một vạch xanh rõ dưới đáy ô,
+  không tràn ra ngoài.
+
+**Sự cố trong lúc kiểm chứng (không phải lỗi CSS, tự gây ra rồi tự phục hồi):** dùng
+`document.body.style.zoom` để phóng to chụp cận cảnh làm lưới AG Grid co về `0×0` đúng như cảnh
+báo "lưới hay co về 0px" trong CLAUDE.md/brief — nguyên nhân là zoom kích hoạt vòng lặp
+ResizeObserver khiến AG Grid đo được kích thước 0. Khôi phục bằng cách tải lại trang (F5/
+`navigate`), không phải sửa CSS gì — sau khi tải lại, lưới về đúng `1184.8×573.85`, ba hàng
+đều 30px, không có tác động gì tồn lại từ CSS đã sửa. Ghi lại để agent sau không hoảng khi thấy
+hiện tượng này trong lúc TỰ kiểm chứng bằng cách phóng to trình duyệt.
+
+**Áp dụng cho mọi lưới:** cả ba sửa đổi đều ở tầng dùng chung `.ag-theme-quartz` trong
+`qlgx.css`, không đụng `GxGrid.tsx` hay màn hình riêng nào — tự động ăn cho danh sách giáo dân,
+danh sách gia đình, lưới thành viên gia đình dùng AG Grid. (Lưới thành viên trong trang chi tiết
+gia đình — `table.grid` — là bảng HTML thường, không dùng AG Grid, không bị ảnh hưởng.)
+
+**Kiểm chứng trên trình duyệt thật (Playwright MCP), đăng nhập `giaoxu`:**
+- Danh sách giáo dân: chụp cận cảnh (phóng `zoom:3` tạm thời trên `<body>`, chụp xong reset về
+  trang mới) ô lọc cột "Họ tên" ở trạng thái nghỉ — phễu nhỏ, ô nhập rộng, không dư khoảng trống
+  — ảnh `99-loc-hep-rong-ra.png`.
+- Cùng ô đó ở trạng thái `:focus` (gọi `input.focus()` thật) — vạch xanh rõ dưới đáy ô, không có
+  viền/quầng hai bên — ảnh `99-loc-focus-hieu-ung.png`.
+- Gõ lọc thật "Nguyễn Đức" vào cột "Họ tên" (set `value` qua native setter + dispatch sự kiện
+  `input`, đúng cách React nhận): lưới lọc đúng còn lại toàn các dòng "Nguyễn Đức…", icon phễu
+  chuyển xanh báo đang có bộ lọc hoạt động — xác nhận ô lọc vẫn dùng được, gõ vẫn lọc đúng.
+- So sánh chiều cao hàng tiêu đề/hàng lọc/dòng dữ liệu — ảnh `99-header-cao-bang-row.png`.
+- Gia đình "Paul Trần Văn Thái" (mã 9): mở chi tiết, lưới "Thành viên khác trong gia đình" hiện
+  đúng 4 người (Mã GD 1068–1071), không có gì trong các mục trước bị hỏng lại — ảnh
+  `99-giadinh-9-luoi-thanhvien.png`.
+- `getBoundingClientRect()` đo thật trên danh sách giáo dân sau khi sửa (không zoom, tải trang
+  mới):
+  - Lưới `.ag-root-wrapper`: **1184.8 × 573.85** (không co 0px).
+  - Hàng tiêu đề `.ag-header-row`: **1820 × 30** (trước: 28).
+  - Hàng lọc `.ag-header-row-filter`: **1820 × 30** (trước: 30, không đổi — cùng biến với hàng
+    tiêu đề).
+  - Dòng dữ liệu `.ag-row` đầu tiên: **1835 × 30** (không đổi).
+  - Ô lọc cột "Mã GĐ" (100px): `.ag-header-cell` padding `0 16px` → **`0 8px`**; ô nhập
+    `input`: 40px → **66px** rộng; nút phễu: 16×16 → **12×12**; khoảng cách ô nhập↔phễu: 12px →
+    **6px**.
+  - Ô lọc lúc `:focus` (input "Họ tên"): `border-bottom-color: rgb(29, 93, 219)`,
+    `border-bottom-width: 2px` (chuẩn logic, đo được `1.6px` do tỉ lệ scale của phiên trình
+    duyệt lúc đo — không phải lỗi), `box-shadow: none`, `border-left/right-width` không đổi so
+    với trạng thái nghỉ.
+
+**Số test cuối:** frontend **254/254** (không thêm test mới — thuần CSS bố cục/hiệu ứng thị
+giác, jsdom không dựng layout thật/`:focus` thật để bắt các thay đổi này). `npm run build` chạy
+được. Không chạm backend. Ảnh chụp/kiểm thử: `99-loc-hep-rong-ra.png`,
+`99-loc-focus-hieu-ung.png`, `99-header-cao-bang-row.png`, `99-giadinh-9-luoi-thanhvien.png`
+trong `WebApp/anh-chup-kiem-thu/`.

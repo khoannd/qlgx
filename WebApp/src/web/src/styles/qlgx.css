@@ -645,7 +645,13 @@ input:disabled, textarea:disabled {
 .ag-theme-quartz {
   --ag-font-size: 12px;
   --ag-row-height: 30px;
-  --ag-header-height: 28px;
+  /* Hàng tiêu đề cao bằng hàng dữ liệu (góp ý người dùng, 2026-09-07): "chiều cao grid header
+     cần dài thêm tí cho bằng chiều cao của record row bên dưới" — trước 28px, dòng dữ liệu
+     30px, lệch 2px nhìn ra được khi so hai hàng cạnh nhau. Tăng lên bằng `--ag-row-height`
+     (không giảm hàng dữ liệu, người dùng chỉ nhắc header). Hàng lọc từng cột dùng CHUNG biến
+     này (`--ag-header-height`, xem AG Grid quartz theme — không có biến riêng cho floating
+     filter) nên tự động cao theo, không cần luật riêng. */
+  --ag-header-height: 30px;
   --ag-list-item-height: 26px;
   /* Header hiện đại hơn (góp ý người dùng, ảnh chụp lưới thành viên): nền phẳng trắng + chữ
      đen thường + vạch ngăn dọc mảnh giữa MỌI cột nhìn cũ/rời rạc. Đổi sang nền xám rất nhạt,
@@ -730,6 +736,16 @@ input:disabled, textarea:disabled {
 .ag-theme-quartz .ag-floating-filter-input input:focus {
   border-color: transparent;
   border-bottom-color: var(--brand);
+  /* Hiệu ứng focus vẫn quá mờ (góp ý người dùng, 2026-09-07, sau khi luật ở trên đã tắt
+     box-shadow): đo bằng `getComputedStyle` trên trình duyệt thật — luật `border-bottom-color`
+     ĐÃ chạy đúng (thắng cả rule mặc định của AG lẫn rule `input:focus` chung toàn ứng dụng nhờ
+     nạp SAU trong `main.tsx`), chỉ có điều `border-bottom-width` kế thừa nguyên bản mặc định
+     của AG là 0.8px — một sợi chỉ mảnh gần như vô hình dưới đáy một ô cao ~30px, đặc biệt khi
+     nền hàng lọc là kính mờ. Tăng riêng bề dày viền dưới lên 2px CHỈ ở trạng thái focus (viền
+     nghỉ/hover vẫn mảnh 0.8px như cũ, không đổi) để hiệu ứng rõ mắt mà KHÔNG quay lại kiểu quầng
+     box-shadow tràn ra ngoài ô đã bị chê trước đó — vẫn `box-shadow: none`, vẫn không viền
+     trái/phải. */
+  border-bottom-width: 2px;
   background-color: #fff;
   box-shadow: none;
 }
@@ -741,6 +757,41 @@ input:disabled, textarea:disabled {
 .ag-theme-quartz .ag-floating-filter-button-button:focus-visible,
 .ag-theme-quartz .ag-floating-filter-button-button.ag-has-menu-open {
   opacity: 1;
+}
+/* Ô lọc hẹp / nút phễu to / dư khoảng trống bên phải (góp ý người dùng qua ảnh chụp cận cảnh,
+   2026-09-07): "bên phải filter icon còn 1 khoảng trống mà textbox filter lại nhỏ, hãy tối ưu
+   cho filter icon nhỏ lại và textbox có thể rộng hơn". Đo bằng `getBoundingClientRect()` +
+   `getComputedStyle()` trên trình duyệt thật để tìm đúng chỗ ăn hết chỗ (đo trên cột "Mã GĐ"
+   rộng 100px của danh sách gia đình — cột hẹp nên lộ rõ vấn đề nhất):
+
+     `.ag-header-cell` hàng lọc kế thừa `padding: 0 16px` từ `--ag-cell-horizontal-padding`
+     (biến DÙNG CHUNG với hàng tiêu đề và mọi ô dữ liệu — không đụng biến gốc, chỉ ghi đè
+     padding cục bộ cho riêng hàng lọc qua selector `.ag-header-row-floating-filter`).
+     `.ag-floating-filter-button` cách ô nhập bằng `margin-left: 12px` (biến
+     `--ag-cell-widget-spacing`, theme quartz đặt = grid-size*1.5). Nút phễu bên trong
+     `width/height: var(--ag-icon-size)` = 16px. Lưu ý tên lớp thật của AG Grid cho hàng lọc là
+     `.ag-header-row-filter` (không phải `.ag-header-row-floating-filter` như tên biến CSS gợi
+     ý) — kiểm bằng cách in chuỗi `className` của tổ tiên `.ag-header-cell` trên trình duyệt
+     thật, đoán nhầm tên lớp làm luật không khớp gì cả mà không báo lỗi.
+
+   Ba khoản đó cộng lại (16+16 padding hai bên + 12 margin + 16 icon = 60px) chiếm gần hết cột
+   100px, chỉ còn 40px cho ô nhập — đúng ô "chỉ đủ hiện vài gạch placeholder mờ" trong ảnh chụp.
+   Phần "khoảng trống dư bên phải nút phễu" người dùng chỉ ra CHÍNH LÀ padding-phải 16px đó,
+   nằm sau nút phễu vì nút là phần tử cuối cùng trong ô.
+
+   Sửa: giảm padding ô hàng lọc còn 8px hai bên (còn đủ để nút phễu không dính sát viền cột kế
+   — không rút về 0), giảm khoảng cách ô nhập↔nút phễu còn 6px, và thu icon phễu về 12px (icon
+   size nhỏ nhất AG Grid vẫn rõ nét, không dùng giá trị bịa). Ô nhập không cần sửa gì thêm — nó
+   là `flex: 1 1 auto` duy nhất trong `.ag-floating-filter-body`, tự nở lấp hết phần chỗ vừa
+   giải phóng. Không đụng padding hàng tiêu đề hay ô dữ liệu — chỉ scoping đúng hàng lọc để
+   không phá bố cục hai chỗ kia. */
+.ag-theme-quartz .ag-header-row-filter .ag-header-cell {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.ag-theme-quartz .ag-floating-filter-button {
+  --ag-icon-size: 12px;
+  margin-left: 6px;
 }
 
 /* Thanh cuộn mảnh cho lưới (góp ý người dùng, 2026-09-07): AG Grid tự vẽ thanh cuộn ngang/dọc
