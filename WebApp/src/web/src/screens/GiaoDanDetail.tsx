@@ -698,7 +698,23 @@ export function GiaoDanDetail({
           trái (`.canhan-top`), thu nhỏ và đặt cạnh Mã giáo dân/Tên thánh thay vì có cả cột
           riêng, để không lặp lại khoảng trống lớn mà người dùng đã phàn nàn một lần trước đó.
           Thứ tự trong `.canhan-top`: các trường TRƯỚC, ảnh SAU (ảnh nằm bên PHẢI của Mã giáo
-          dân/Tên thánh) — góp ý kiểm thử tiếp theo, xem can-review-sau.md. */}
+          dân/Tên thánh) — góp ý kiểm thử tiếp theo, xem can-review-sau.md.
+
+          Góp ý tiếp theo (2026-09-07, ảnh chụp khối "Thông tin cá nhân"): "Họ tên"/"Giáo họ"
+          trước đây nằm NGOÀI `.canhan-top-fields`, mỗi ô rộng hết cột trái — khiến khối trái
+          cao hơn khung ảnh 3x4 bên phải khá nhiều (ảnh chỉ cao 92px cố định, dư khoảng trắng
+          dưới ảnh) VÀ tạo ra khoảng trống thừa ngay dưới "Tên thánh": `.canhan-top` dùng
+          `align-items: flex-start` nên hàng flex cao theo phần tử cao nhất (khung ảnh 92px),
+          còn `.canhan-top-fields` (chỉ 2 dòng Mã giáo dân/Tên thánh, thấp hơn 92px) trôi nổi ở
+          trên, để lại khoảng trắng chính giữa khung ảnh và Họ tên bên dưới — không phải do
+          margin nào cả. Chuyển "Họ tên"/"Giáo họ" VÀO `.canhan-top-fields` (rộng hẹp bằng "Tên
+          thánh" — đúng ý người dùng "ngắn lại bằng tên thánh") để cột trái thành 4 dòng xếp
+          khít nhau (margin-bottom 6px như mọi `.frow`, không có khoảng hở nào xen giữa); đổi
+          `.canhan-top` sang `align-items: stretch` (CSS, xem qlgx.css) để khung ảnh bên phải tự
+          giãn cao bằng đúng 4 dòng đó — vừa hết khoảng trắng, vừa cho ảnh cao thêm cân đối như
+          yêu cầu. Field "Giáo xứ"/"Giáo phận" (chỉ hiện khi chọn "Ngoài xứ", hiếm gặp) CỐ Ý giữ
+          nguyên ngoài `.canhan-top-fields` — không phải trọng tâm góp ý này, để full-width như
+          cũ tránh cắt chữ "Giáo phận". */}
       <div className="card glass">
         <div className="card-head"><h2>Thông tin cá nhân</h2><span className="eyebrow">Hồ sơ giáo dân</span></div>
         <div className="canhan-cols">
@@ -711,6 +727,15 @@ export function GiaoDanDetail({
                 <GxField label="Tên thánh" id="gd-tenthanh">
                   <input id="gd-tenthanh" name="tenThanh" type="text" defaultValue={p.tenThanh ?? ''} />
                 </GxField>
+                <GxField label="Họ tên" id="gd-hoten">
+                  <input id="gd-hoten" name="hoTen" type="text" defaultValue={p.hoTen} />
+                </GxField>
+                <GxField label="Giáo họ" id="gd-giaoho">
+                  <select id="gd-giaoho" value={giaoHoId ?? NGOAI_XU} onChange={(e) => setGiaoHoId(e.target.value === NGOAI_XU ? null : e.target.value)}>
+                    <option value={NGOAI_XU}>{NGOAI_XU}</option>
+                    {dsGiaoHo.map((g) => <option key={g.id} value={g.id}>{g.tenGiaoHo}</option>)}
+                  </select>
+                </GxField>
               </div>
               <AnhDaiDien
                 id={moi ? null : p.id}
@@ -720,15 +745,6 @@ export function GiaoDanDetail({
                 nhan="ảnh 3x4"
               />
             </div>
-            <GxField label="Họ tên" id="gd-hoten">
-              <input id="gd-hoten" name="hoTen" type="text" defaultValue={p.hoTen} />
-            </GxField>
-            <GxField label="Giáo họ" id="gd-giaoho">
-              <select id="gd-giaoho" value={giaoHoId ?? NGOAI_XU} onChange={(e) => setGiaoHoId(e.target.value === NGOAI_XU ? null : e.target.value)}>
-                <option value={NGOAI_XU}>{NGOAI_XU}</option>
-                {dsGiaoHo.map((g) => <option key={g.id} value={g.id}>{g.tenGiaoHo}</option>)}
-              </select>
-            </GxField>
             {ngoaiXu && (
               <GxField label="Giáo xứ" id="gd-giaoxu">
                 <input id="gd-giaoxu" type="text" defaultValue="" />

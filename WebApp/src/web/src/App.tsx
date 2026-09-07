@@ -48,7 +48,12 @@ function App() {
       noiDung: (
         <GiaDinhDetailPage
           id={id}
-          moGiaoDan={moChiTietGiaoDan}
+          // Truyền `idThe` (khoá thẻ gia đình NÀY) làm "tab nguồn" — giáo dân mở từ lưới
+          // thành viên/ô Người nam/Người nữ của màn hình gia đình nhớ được mình mở ra từ
+          // đâu, để nút "Quay về" đóng đúng thẻ giáo dân đó thay vì mở "Danh sách giáo dân"
+          // (góp ý người dùng, 2026-09-07: "quay về" từ giáo dân mở qua gia đình lại nhảy
+          // sang danh sách thay vì đóng về đúng thẻ gia đình đang xem). Xem moChiTietGiaoDan.
+          moGiaoDan={(giaoDanId) => moChiTietGiaoDan(giaoDanId, idThe)}
           moDanhSachGiaDinh={moDanhSachGiaDinh}
           tenTaiKhoan={tenTaiKhoan}
           onTieuDe={(ten) => suaTieuDe(idThe, ten)}
@@ -57,8 +62,19 @@ function App() {
     })
   }
 
-  function moChiTietGiaoDan(id: string | null) {
+  // `nguonTabId`: khoá thẻ đã mở ra giáo dân này (ví dụ thẻ gia đình `giaDinh:9`) — CHỈ truyền
+  // khi mở từ một ngữ cảnh "thuộc về" tab khác (hiện chỉ có gia đình, xem moChiTietGiaDinh ở
+  // trên). Không truyền (mở trực tiếp từ "Danh sách giáo dân", hoặc giáo dân mới tạo xong ở
+  // GiaoDanDetailPage.tao) thì giữ nguyên hành vi cũ: "Quay về" mở/focus "Danh sách giáo dân".
+  function moChiTietGiaoDan(id: string | null, nguonTabId?: string) {
     const idThe = id ? `giaoDan:${id}` : `giaoDanMoi:${++moiDem.current}`
+    // Đơn giản nhất mà vẫn đúng ý người dùng: "Quay về" ĐÓNG thẻ giáo dân hiện tại thay vì mở
+    // thẻ khác — đóng thẻ tự nhiên lộ ra thẻ gia đình bên dưới nếu đó đúng là cách nó được mở
+    // (xem `dong()` của useTabDocs, chuyển tiêu điểm sang thẻ cuối cùng còn lại). Nếu thẻ nguồn
+    // đã bị người dùng đóng trước đó, `dong()` vẫn chọn ra một thẻ còn lại hợp lý — không văng
+    // về "Danh sách giáo dân" một cách vô điều kiện như trước, nhưng cũng không cần dò xem thẻ
+    // nguồn còn tồn tại hay không (đơn giản hoá theo đúng gợi ý trong đặc tả).
+    const quayVe = nguonTabId ? () => dong(idThe) : undefined
     mo({
       id: idThe,
       tieuDe: id ? 'Giáo dân' : 'Giáo dân mới',
@@ -68,6 +84,7 @@ function App() {
           moGiaDinh={moChiTietGiaDinh}
           moDanhSachGiaoDan={moDanhSachGiaoDan}
           moGiaoDan={moChiTietGiaoDan}
+          onQuayVe={quayVe}
           tenTaiKhoan={tenTaiKhoan}
           onTieuDe={(ten) => suaTieuDe(idThe, ten)}
         />

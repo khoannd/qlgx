@@ -711,7 +711,26 @@ input:disabled, textarea:disabled {
    bịa giá trị mới. */
 .ag-theme-quartz .ag-floating-filter-input input {
   font-size: 12px;
-  min-height: 22px;
+  /* `min-height: 22px` cũ KHÔNG PHẢI trị số thắng cuộc thật sự (góp ý người dùng, 2026-09-07,
+     lần 3: viền dưới focus vẫn không thấy dù đã tăng `border-bottom-width` lên 2px ở luật dưới).
+     Đo bằng `getBoundingClientRect()` trên trình duyệt thật mới lộ ra: theme Quartz đặt
+     `min-height` mặc định cho `.ag-input-field-input` là 32px, THẮNG luật 22px ở đây (min-height
+     luôn kẹp height nhỏ hơn nó lên bằng nó) — input cao 32px trong khi `.ag-header-cell` chứa nó
+     chỉ cao 30px (đúng bằng `floatingFiltersHeight={30}` ở GxGrid.tsx) và có `overflow: hidden`.
+     Input vì vậy LUÔN tràn xuống dưới ô 2px, bị cắt — viền dưới nằm ở mép đáy cùng của input nên
+     gần như toàn bộ viền (border-bottom-width 0.8px lúc nghỉ, 2px lúc focus) nằm NGOÀI vùng nhìn
+     thấy của ô (chỉ ~0.2px lọt qua), KHÔNG PHẢI do bề dày viền quá mảnh như lần sửa trước đoán.
+     Sửa: ép `height`/`min-height` input xuống 24px (nhỏ hơn 30px của ô, chừa dư ~3px trên dưới)
+     để viền dưới luôn nằm trọn trong vùng nhìn thấy, bất kể nghỉ hay focus. Xem
+     task-sua-3-van-de-giao-dien-2.md. */
+  /* `!important` bắt buộc ở hai dòng height/min-height dưới đây: luật gốc của AG Quartz
+     (`.ag-theme-quartz input[class^="ag-"]:not([type]), ...`) có độ đặc hiệu CAO HƠN luật này
+     dù trông "cụ thể hơn" — mỗi `[class^="ag-"]` và `:not([type])` đều tính là một lớp trong độ
+     đặc hiệu CSS, cộng lại thắng cả khi luật của ta nạp sau. Không có cách nào viết selector dài
+     hơn mà không tự lặp lại đúng danh sách thẻ `input[type=...]` của AG — `!important` là lựa
+     chọn rõ ràng nhất, phạm vi đã bị khoanh hẹp đúng một input trong hàng lọc. */
+  height: 24px !important;
+  min-height: 24px !important;
   border-color: transparent;
   background-color: transparent;
   transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
@@ -1154,7 +1173,16 @@ tbody tr[aria-selected="true"] .rowhead {
   align-items: start;
 }
 .canhan-cols .frow { grid-template-columns: 96px 1fr; }
-.canhan-top { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 6px; flex-wrap: wrap; }
+/* `align-items: stretch` (thay `flex-start` cũ, góp ý người dùng 2026-09-07 — xem chú thích ở
+   GiaoDanDetail.tsx cạnh "Họ tên"/"Giáo họ"): giờ `.canhan-top-fields` có 4 dòng (Mã giáo dân,
+   Tên thánh, Họ tên, Giáo họ) nên cao hơn 92px cố định của khung ảnh — `stretch` cho khung ảnh
+   tự giãn cao bằng đúng 4 dòng đó thay vì đứng yên ở 92px để lại khoảng trắng thừa bên dưới. */
+.canhan-top { display: flex; gap: 12px; align-items: stretch; margin-bottom: 6px; flex-wrap: wrap; }
+/* Bỏ `min-height: 92px` (từng dùng làm chiều cao ép cứng khi khung ảnh đứng riêng, giờ
+   `align-items: stretch` đã tự lo chiều cao theo `.canhan-top-fields`) — giữ 92px làm SÀN tối
+   thiểu qua `min-height` thay vì `height` để khung ảnh không co lại nhỏ hơn 92px trong trường
+   hợp `.canhan-top-fields` vì lý do nào đó thấp hơn (ví dụ màn hình rất hẹp, các `.frow` xuống
+   dòng). `width` giữ nguyên 92px — chỉ CAO thêm theo yêu cầu, không rộng thêm. */
 .canhan-top .photo-slot { width: 92px; min-height: 92px; flex: none; font-size: 10.5px; padding: 4px; line-height: 1.4; }
 .canhan-top-fields { flex: 1; min-width: 160px; }
 @media (max-width: 980px) {

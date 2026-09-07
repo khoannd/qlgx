@@ -21,6 +21,12 @@ type Props = {
   /** Mở (một thẻ tài liệu mới cho) chi tiết giáo dân theo id — dùng để chuyển từ thẻ "nháp"
    * sang thẻ thật ngay sau khi tạo mới thành công. */
   moGiaoDan?: (id: string | null) => void
+  /** Ghi đè hành vi nút "Quay về"/"← Danh sách" (xem `moDanhSachGiaoDan` ở `GiaoDanDetail`):
+   * đóng thẻ tài liệu hiện tại thay vì mở "Danh sách giáo dân" — dùng khi giáo dân này được mở
+   * từ ngữ cảnh gia đình (lưới thành viên, ô Người nam/Người nữ), xem `App.moChiTietGiaoDan`.
+   * Không truyền = giữ nguyên hành vi cũ (`moDanhSachGiaoDan`), ví dụ mở trực tiếp từ "Danh
+   * sách giáo dân". */
+  onQuayVe?: () => void
   /** Tên tài khoản đang đăng nhập — App.tsx truyền xuống từ `useAuth()` (không gọi thẳng
    * `useAuth()` ở đây để component này không bắt buộc phải render trong `<AuthProvider>`, giữ
    * nguyên khả năng test độc lập của các bài test hiện có). Dùng để khoá bản nháp ngoại tuyến
@@ -35,8 +41,11 @@ type Props = {
 /** Container nối `GiaoDanDetail` với `GET`/`PUT /api/giao-dan/{id}` — cùng khuôn tải lại sau
  * khi lưu và xử lý xung đột RowVersion như `GiaDinhDetailPage`. */
 export function GiaoDanDetailPage({
-  id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan, tenTaiKhoan = null, onTieuDe,
+  id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan, onQuayVe, tenTaiKhoan = null, onTieuDe,
 }: Props) {
+  // "Quay về"/"← Danh sách" của GiaoDanDetail gọi đúng MỘT prop `moDanhSachGiaoDan` — ghi đè
+  // tại đây bằng `onQuayVe` khi có (mở từ ngữ cảnh gia đình) để không phải sửa GiaoDanDetail.
+  const quayVe = onQuayVe ?? moDanhSachGiaoDan
   // Bản nháp ngoại tuyến (Task 16, xem lib/banNhap.ts) — khoá cố định cho suốt vòng đời thẻ
   // này (không phụ thuộc dữ liệu đã tải), gắn kèm tài khoản đang đăng nhập để không lẫn nháp
   // giữa hai người dùng chung một trình duyệt.
@@ -211,7 +220,7 @@ export function GiaoDanDetailPage({
         <GiaoDanDetail
           key={remountKey}
           moGiaDinh={moGiaDinh}
-          moDanhSachGiaoDan={moDanhSachGiaoDan}
+          moDanhSachGiaoDan={quayVe}
           onLuu={tao}
           dangLuu={dangLuu}
           thongBaoLuu={thongBaoLuu}
@@ -309,7 +318,7 @@ export function GiaoDanDetailPage({
           key={remountKey}
           duLieu={duLieu}
           moGiaDinh={moGiaDinh}
-          moDanhSachGiaoDan={moDanhSachGiaoDan}
+          moDanhSachGiaoDan={quayVe}
           onLuu={luu}
           dangLuu={dangLuu}
           thongBaoLuu={thongBaoLuu}

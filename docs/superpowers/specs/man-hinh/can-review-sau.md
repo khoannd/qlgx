@@ -2359,3 +2359,110 @@ giác, jsdom không dựng layout thật/`:focus` thật để bắt các thay �
 được. Không chạm backend. Ảnh chụp/kiểm thử: `99-loc-hep-rong-ra.png`,
 `99-loc-focus-hieu-ung.png`, `99-header-cao-bang-row.png`, `99-giadinh-9-luoi-thanhvien.png`
 trong `WebApp/anh-chup-kiem-thu/`.
+
+### 47. Task "sửa 3 vấn đề giao diện theo phản hồi trực tiếp lần 2" (2026-09-07) — hiệu ứng
+focus vẫn bị che dù mục 46 đo "đúng logic", điều hướng "Quay về" sai ngữ cảnh, gọn khối "Thông
+tin cá nhân"
+
+Người dùng thật tiếp tục ngồi kiểm tra, gửi ảnh cho thấy mục 46 (viền dưới 2px lúc `:focus`)
+**vẫn hoàn toàn không nhìn thấy** dù đo `getComputedStyle` lúc đó báo "đúng logic". Kèm hai góp ý
+khác: điều hướng "Quay về" sai và khối "Thông tin cá nhân" thừa khoảng trống dọc.
+
+**Việc 1 — nguyên nhân thật của viền focus bị che (khác hẳn suy đoán ở mục 46):**
+- Mục 46 kết luận viền `2px` đo đúng, chỉ lệch `1.6px` "do tỉ lệ scale phiên trình duyệt" —
+  **kết luận đó SAI**. Đo lại bằng `getBoundingClientRect()` trên CẢ input lẫn `.ag-header-cell`
+  cha của nó (không chỉ đọc `getComputedStyle` một mình input như mục 46 đã làm) mới lộ ra: input
+  ô lọc cao **32px** (từ `min-height: calc(var(--ag-grid-size) * 4)` mặc định của theme Quartz —
+  luật `min-height: 22px` cũ trong `qlgx.css` thua vì độ đặc hiệu CSS thấp hơn, mỗi
+  `[class^="ag-"]`/`:not([type])` trong selector gốc AG đều tính là một lớp), trong khi
+  `.ag-header-cell` chứa nó (hàng lọc) chỉ cao đúng **30px** (`floatingFiltersHeight={30}` ở
+  `GxGrid.tsx`) và có `overflow: hidden`. Input vì vậy LUÔN tràn xuống dưới ô **2px**, bị cắt —
+  viền dưới nằm ở mép đáy cùng của input nên gần như toàn bộ viền (kể cả `2px` lúc focus) nằm
+  NGOÀI vùng nhìn thấy của ô (đo được chỉ **~0.2px** lọt qua, bằng mắt thường coi như vô hình).
+  Không liên quan gì tới bề dày viền hay `box-shadow` như hai lần sửa trước đoán.
+- **Sửa** (`qlgx.css`, `.ag-floating-filter-input input`): ép `height: 24px !important;
+  min-height: 24px !important;` — nhỏ hơn hẳn 30px của ô, chừa dư khoảng trên/dưới để viền dưới
+  (kể cả lúc dày 2px ở `:focus`) luôn nằm trọn trong vùng nhìn thấy. `!important` là cần thiết ở
+  đây (không phải lười biếng): độ đặc hiệu CSS gốc của AG Quartz cho selector đó cao hơn bất kỳ
+  cách viết lại selector nào không lặp lại đúng danh sách `input[type=...]` dài của AG.
+- Đo lại (input "Người nam" lúc `input.focus()` thật): `height: 24px`, input nằm gọn trong ô 30px
+  (còn dư ~3px trên/dưới), `border-bottom-color: rgb(29, 93, 219)` (đúng `--brand`),
+  `border-bottom-width: 1.6px` đo được (2px logic, lệch do scale màn hình lúc đo — xác nhận đúng
+  như mục 46 từng nói, LẦN NÀY viền thật sự NẰM TRONG vùng nhìn thấy: viền dưới của input tại
+  y≈371.6, đáy ô tại y≈374.2, còn dư 2.6px chỗ trống bên dưới viền). Chụp ảnh focus thật xác nhận
+  vạch xanh rõ ràng dưới ô "Người nam" — `100-viec1-focus-loc-nguoi-nam.png`.
+- **Bài học cho agent sau:** khi viền/box-shadow "đo đúng logic nhưng không thấy", đừng dừng lại
+  ở `getComputedStyle` của riêng phần tử — phải đo thêm `getBoundingClientRect()` của phần tử VÀ
+  cha trực tiếp có `overflow: hidden`, so hai toạ độ để xác nhận phần vẽ có nằm trong vùng cắt
+  hay không.
+
+**Việc 2 — "Quay về" từ giáo dân mở qua ngữ cảnh gia đình:**
+- Hiện tượng: mở gia đình → mở một người trong lưới "Thành viên khác"/ô Người nam/Người nữ → tab
+  chi tiết giáo dân mới mở → bấm "Quay về"/"← Danh sách" → cả hai nút gọi thẳng
+  `moDanhSachGiaoDan()` (không điều kiện) → luôn mở/focus tab "Danh sách giáo dân", bỏ qua hoàn
+  toàn tab gia đình vừa đứng đó.
+- **Quyết định tự đưa ra** (đúng gợi ý đơn giản nhất trong đặc tả nhiệm vụ): thêm tham số
+  `nguonTabId` cho `App.moChiTietGiaoDan` — CHỈ truyền khi mở từ `GiaDinhDetail` (qua prop
+  `moGiaoDan`, dùng chung cho cả lưới thành viên, ô Người nam/Người nữ, VÀ context-menu mặc định
+  của lưới thành viên — tất cả đều "thuộc ngữ cảnh gia đình" như nhau). Khi có `nguonTabId`, nút
+  "Quay về" ĐÓNG thẳng tab giáo dân hiện tại (`dong(idThe)`) thay vì mở "Danh sách giáo dân" —
+  đóng tab tự lộ ra tab gia đình bên dưới (theo đúng logic `useTabDocs.dong`: chuyển tiêu điểm
+  sang tab cuối cùng còn lại). KHÔNG dò xem tab nguồn còn tồn tại hay không (đơn giản hoá theo
+  đúng gợi ý trong đặc tả) — nếu tab gia đình đã bị đóng trước đó, `dong()` vẫn tự chọn ra một tab
+  còn lại hợp lý, không còn "luôn văng về Danh sách giáo dân" như cũ.
+- Giáo dân mở TRỰC TIẾP từ "Danh sách giáo dân" (không qua gia đình) giữ NGUYÊN hành vi cũ: không
+  truyền `nguonTabId` → "Quay về" vẫn gọi `moDanhSachGiaoDan()`, mở/focus tab danh sách (không
+  đóng tab giáo dân đang xem) — đã kiểm chứng lại bằng tay, không bị đổi khác đi.
+- Triển khai không cần sửa `GiaoDanDetail.tsx` — `GiaoDanDetailPage.tsx` nhận thêm prop
+  `onQuayVe?: () => void`, ghi đè `moDanhSachGiaoDan` bằng nó trước khi truyền xuống
+  `GiaoDanDetail` (`const quayVe = onQuayVe ?? moDanhSachGiaoDan`), nút "Quay về"/"← Danh sách"
+  trong `GiaoDanDetail.tsx` không đổi gì (vẫn gọi đúng MỘT prop `moDanhSachGiaoDan` như trước).
+- Kiểm chứng trên trình duyệt thật (Playwright MCP): mở gia đình "Paul Trần Văn Thái" (mã 9) →
+  mở "Trần Đại Hiệp" (mã 1068) từ lưới thành viên → bấm "Quay về" → tab "Giuse Trần Đại Hiệp"
+  đóng lại, tab "Paul Trần Văn Thái" được chọn lại đúng — `101-viec2-quay-ve-tu-gia-dinh.png`. Mở
+  lại "Giuse Nguyễn Đức Mạnh" (mã 1) trực tiếp từ "Danh sách giáo dân" → bấm "Quay về" → tab giáo
+  dân VẪN CÒN MỞ trong thanh tab, tiêu điểm chuyển sang tab "Danh sách giáo dân" — đúng hành vi cũ
+  — `102-viec2-quay-ve-tu-danh-sach-truc-tiep.png`.
+
+**Việc 3 — gọn khối "Thông tin cá nhân" (`GiaoDanDetail.tsx`), ảnh 3×4 cao thêm cân đối:**
+- Nguyên nhân khoảng trống thừa giữa "Tên thánh" và "Họ tên": KHÔNG phải do margin nào — do
+  `.canhan-top` (chứa Mã giáo dân/Tên thánh VÀ khung ảnh) dùng `align-items: flex-start`, khung
+  ảnh cố định 92px cao hơn khối 2 dòng Mã giáo dân/Tên thánh (~64px), nên hàng flex đó cao 92px
+  trong khi khối trường chỉ chiếm ~64px rồi để trống phần còn lại — "Họ tên" (nằm ngoài
+  `.canhan-top`, ngay bên dưới) vì vậy bị đẩy xuống, tạo cảm giác khoảng cách dòng lớn.
+- **Sửa**: chuyển "Họ tên" và "Giáo họ" VÀO `.canhan-top-fields` (ngay sau "Tên thánh") — cùng độ
+  rộng hẹp với "Tên thánh" (đúng yêu cầu "ngắn lại bằng tên thánh"), xếp khít 4 dòng liên tiếp
+  không khoảng hở (margin-bottom 6px như mọi `.frow`, không đổi gì). Đổi `.canhan-top` sang
+  `align-items: stretch` (CSS) để khung ảnh 3×4 tự giãn cao bằng đúng chiều cao 4 dòng đó. Field
+  "Giáo xứ"/"Giáo phận" (chỉ hiện khi "Ngoài xứ", hiếm gặp) CỐ Ý giữ nguyên full-width bên ngoài
+  `.canhan-top-fields` — không phải trọng tâm góp ý, tránh cắt chữ "Giáo phận" nếu thu hẹp.
+- **Đo `getBoundingClientRect()` trên trình duyệt thật** (giáo dân "Giuse Trần Đại Hiệp", mã
+  1068), trước/sau:
+  | Đại lượng | Trước | Sau |
+  |---|---|---|
+  | `.canhan-top-fields` (khối 2→4 dòng) | 457.2 × **66** | 457.2 × **138** |
+  | Khung ảnh `.photo-slot` | 92 × **92** | 92 × **138** |
+  | Hàng "Họ tên" (rộng) | **561.2** × 30 | **457.2** × 30 (bằng "Tên thánh") |
+  | Hàng "Giáo họ" (rộng) | **561.2** × 30 | **457.2** × 30 (bằng "Tên thánh") |
+  | Hàng "Tên thánh" (đối chứng) | 457.2 × 30 | 457.2 × 30 (không đổi) |
+  | Thẻ "Thông tin cá nhân" (`.card`) | 1176 × 251.65 | 1176 × 251.65 (không đổi — cột phải
+    Giới tính/Ngày sinh/Nơi sinh/Tên Cha/Tên Mẹ/CMND vẫn quyết định chiều cao thẻ, không bị đụng
+    tới) |
+  Khung ảnh cao thêm đúng **50%** (92px → 138px), khớp hẳn chiều cao khối trường 4 dòng bên cạnh
+  — không còn khoảng trắng thừa dưới ảnh lẫn giữa "Tên thánh"/"Họ tên". Ảnh trước/sau:
+  `104-viec3-thong-tin-ca-nhan-truoc.png` / `103-viec3-thong-tin-ca-nhan-sau.png`.
+- Đo lấy số "trước" bằng cách `git stash push` tạm hai file đã sửa
+  (`GiaoDanDetail.tsx`/`qlgx.css`), đo trên bản HMR reload lại, rồi `git stash pop` khôi phục —
+  không tạo commit trung gian nào, không ảnh hưởng tiến trình khác đang chạy song song trên cùng
+  thư mục.
+
+**Không đụng gì khác:** không sửa `useTabDocs.ts` (logic `dong()` chọn tab cuối cùng còn lại vốn
+đã đúng, chỉ thiếu chỗ gọi đúng nó); không sửa `GiaDinhDetail.tsx`/`GiaDinhDetailPage.tsx` (chỉ
+`App.tsx` đổi cách bọc `moGiaoDan` truyền xuống); không đụng bố cục màn hình gia đình, header/
+hàng lọc lưới (ngoài chiều cao input đã nêu ở Việc 1), Phiếu gia đình A4 dọc.
+
+**Số test cuối:** frontend **254/254** (không thêm test mới — cả ba việc thuần CSS bố cục/hiệu
+ứng thị giác VÀ điều hướng UI thuần React state đã có `useTabDocs.test.ts` phủ logic `dong()`
+dùng chung; hành vi "gọi đúng callback nào" khó kiểm bằng jsdom hơn là bằng trình duyệt thật theo
+đúng yêu cầu nhiệm vụ). `npm run build` chạy được. Không chạm backend, không chạy
+`dotnet test`. Ảnh chụp: `100`–`104` trong `WebApp/anh-chup-kiem-thu/`.
