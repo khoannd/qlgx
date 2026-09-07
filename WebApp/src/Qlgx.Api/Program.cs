@@ -19,6 +19,15 @@ if (args.Length > 0 && args[0] == "tao-tai-khoan-quan-tri")
     return;
 }
 
+// Khoi phuc ngay thang thieu (chi nam, hoac thang+nam) dang kekt trong du_lieu_loi cua
+// giao_dan — xem KhoiPhucNgayThangThieu.cs. Chay tay mot lan sau khi sua NgayThangText.Doc,
+// idempotent nen chay lai nhieu lan khong hong gi.
+if (args.Length > 0 && args[0] == "khoi-phuc-ngay-thang-thieu")
+{
+    await KhoiPhucNgayThangThieu.Chay(builder.Configuration);
+    return;
+}
+
 // Xac thuc JWT — token tu chua, khong luu phien trong tien trinh (yeu cau HA). Khoa ky BAT
 // BUOC lay tu bien moi truong (Qlgx__JwtKey), khong duoc ghi vao file cau hinh trong repo.
 builder.Services.AddHttpContextAccessor();

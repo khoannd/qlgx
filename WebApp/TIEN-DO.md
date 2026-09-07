@@ -315,6 +315,38 @@ trị khác.
   `VIEC-TIEP-THEO.md`, khác nhiệm vụ này) — vẫn phải dùng `Qlgx.Migration` bằng dòng lệnh sau
   khi tạo giáo xứ mới.
 
+## Task 19 — Control nhập ngày tháng thông minh + khôi phục ngày tháng thiếu (2026-09-07)
+
+`docs/superpowers/specs/man-hinh/ho-tro-nhap-lieu.md` + `can-review-sau.md` mục 49.
+
+- **`GxDate`** (`WebApp/src/web/src/components/GxDate.tsx`, dùng chung mọi ô ngày): gõ liên tục
+  không cần dấu `/` (ví dụ `01021985` → `01/02/1985`), tự nhảy vị trí gõ, click/focus thẳng vào
+  ô tháng hoặc năm gõ luôn (không bắt buộc gõ ngày trước), chuẩn hoá ngày thiếu khi gõ xong năm
+  hoặc rời ô (chỉ năm → điền `01/01`, tháng+năm → điền ngày `01`), tự nhảy control kế tiếp trên
+  form khi vừa gõ xong năm hợp lệ. `Tab` không bị can thiệp.
+- **Tự nhảy khi chọn dropdown**: mọi `<select>` nằm trong `<form>` tự chuyển tiêu điểm sang
+  control kế tiếp khi chọn xong một mục — gắn một lần ở `App.tsx`
+  (`lib/focusDieuHuong.ts`, `useTuNhayKhiChonDropdown`), không cần sửa từng màn hình.
+- **Khôi phục ngày tháng thiếu trong `giao_dan.du_lieu_loi`** (238 giá trị/207 dòng, từ dữ liệu
+  Access cũ lưu thiếu — xem spec mục A.5-A.6): lệnh CLI mới, chạy MỘT LẦN sau khi nâng cấp, chạy
+  lại nhiều lần không hỏng gì (idempotent — chỉ ghi vào cột đang NULL):
+
+  ```
+  cd WebApp/src/Qlgx.Api
+  export ConnectionStrings__Qlgx="Host=localhost;Database=<ten_db>;Username=postgres;Password=<mat_khau>"
+  export Qlgx__JwtKey="<base64 32+ byte ngau nhien, dung chung khi chay API that>"
+  dotnet run -- khoi-phuc-ngay-thang-thieu
+  ```
+
+  Đọc `du_lieu_loi` của `giao_dan`, chỉ điền vào `ngay_sinh`/`ngay_rua_toi`/`ngay_ruoc_le`/
+  `ngay_them_suc`/`ngay_qua_doi` đang NULL mà giá trị gốc phân giải được (chỉ năm, hoặc
+  tháng+năm) — **giữ nguyên `du_lieu_loi`**, không xoá. Giá trị gốc thật sự hỏng (ví dụ mojibake
+  phông chữ cũ) tiếp tục nằm nguyên trong `du_lieu_loi`, không đoán bừa.
+- `NgayThangText.Doc` (`WebApp/src/Qlgx.Data/NgayThangText.cs`, dùng cả bởi API lẫn công cụ
+  chuyển dữ liệu Access `Qlgx.Migration.Core`) đã phân giải thêm hai khuôn `yyyy` và `MM/yyyy` —
+  các giáo xứ MỚI chuyển dữ liệu từ Access về sau **không cần** chạy lệnh khôi phục trên, công cụ
+  chuyển dữ liệu tự làm đúng ngay từ đầu.
+
 ## Bốn thay đổi lớn đã chốt ngày 2026-09-06
 
 Ghi lại vì chúng đảo ngược quyết định ban đầu và ràng buộc mọi việc còn lại.

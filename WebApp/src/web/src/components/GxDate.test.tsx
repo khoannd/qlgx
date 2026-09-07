@@ -9,14 +9,14 @@ describe('GxDate', () => {
     expect((screen.getByLabelText('Ngày sinh') as HTMLInputElement).value).toBe('25/04/2015')
   })
 
-  it('placeholder la dd/mm/yyyy, khong phai mm/dd/yyyy', () => {
+  it('o trong hien san dau ngan cach __/__/____ (khong phai o trang trong)', () => {
     render(<GxDate id="d2" ariaLabel="Ngày sinh" />)
-    expect((screen.getByLabelText('Ngày sinh') as HTMLInputElement).placeholder).toBe('dd/mm/yyyy')
+    expect((screen.getByLabelText('Ngày sinh') as HTMLInputElement).value).toBe('__/__/____')
   })
 
-  it('gia tri rong/null khong lam sap, hien o trong', () => {
+  it('gia tri rong/null hien khuon __/__/____, khong lam sap', () => {
     render(<GxDate id="d3" ariaLabel="Ngày mất" defaultValue={null} />)
-    expect((screen.getByLabelText('Ngày mất') as HTMLInputElement).value).toBe('')
+    expect((screen.getByLabelText('Ngày mất') as HTMLInputElement).value).toBe('__/__/____')
   })
 
   it('du lieu loi (chi co nam) hien nguyen van, khong sap', () => {
@@ -66,5 +66,76 @@ describe('GxDate', () => {
     const { container } = render(<GxDate ariaLabel="Ngày kết thúc khóa học" />)
     const native = container.querySelector('input.gx-date-native') as HTMLInputElement
     expect(native.name).toBe('')
+  })
+
+  it('go lien tuc 01021985 KHONG can go dau / van ra dung 01/02/1985', async () => {
+    const { container } = render(<GxDate name="ngaySinh" ariaLabel="Ngày sinh" />)
+    const o = screen.getByLabelText('Ngày sinh')
+    await userEvent.type(o, '01021985')
+    expect((o as HTMLInputElement).value).toBe('01/02/1985')
+    const oAn = container.querySelector('input[name="ngaySinh"]') as HTMLInputElement
+    expect(oAn.value).toBe('1985-02-01')
+  })
+
+  it('nhap thang xong tu nhay sang nam (khong can chuot), roi go xong nam tu nhay ra control ke tiep', async () => {
+    render(
+      <>
+        <GxDate name="ngaySinh" ariaLabel="Ngày sinh" />
+        <input aria-label="Ô kế tiếp trên form" />
+      </>,
+    )
+    const o = screen.getByLabelText('Ngày sinh')
+    await userEvent.type(o, '01021985')
+    expect(document.activeElement).toBe(screen.getByLabelText('Ô kế tiếp trên form'))
+  })
+
+  it('bam chuot/focus thang vao o nam roi go luon, roi o thi tu dien 01/01', async () => {
+    const { container } = render(<GxDate name="ngaySinh" ariaLabel="Ngày sinh" />)
+    const o = screen.getByLabelText('Ngày sinh') as HTMLInputElement
+    o.focus()
+    o.setSelectionRange(6, 6) // click thẳng vào ô năm — không cần gõ ngày/tháng trước
+    await userEvent.keyboard('1985')
+    fireEvent.blur(o)
+    expect(o.value).toBe('01/01/1985')
+    const oAn = container.querySelector('input[name="ngaySinh"]') as HTMLInputElement
+    expect(oAn.value).toBe('1985-01-01')
+  })
+
+  it('bam chuot thang vao o thang roi go, khong bat buoc phai go ngay truoc', async () => {
+    const { container } = render(<GxDate name="ngaySinh" ariaLabel="Ngày sinh" />)
+    const o = screen.getByLabelText('Ngày sinh') as HTMLInputElement
+    o.focus()
+    o.setSelectionRange(3, 3) // click thẳng vào ô tháng
+    await userEvent.keyboard('051985')
+    fireEvent.blur(o)
+    expect(o.value).toBe('01/05/1985')
+    const oAn = container.querySelector('input[name="ngaySinh"]') as HTMLInputElement
+    expect(oAn.value).toBe('1985-05-01')
+  })
+
+  it('xoa lui ve hoan toan trong thi dong bo NGAY o lich an ve rong, khong doi blur (tranh luu nham ngay da xoa)', async () => {
+    const { container } = render(<GxDate name="ngayRuaToi" ariaLabel="Ngày rửa tội" defaultValue="2015-04-25" />)
+    const o = screen.getByLabelText('Ngày rửa tội') as HTMLInputElement
+    o.focus()
+    o.setSelectionRange(9, 9)
+    for (let i = 0; i < 8; i++) await userEvent.keyboard('{Backspace}')
+    expect(o.value).toBe('__/__/____')
+    const oAn = container.querySelector('input[name="ngayRuaToi"]') as HTMLInputElement
+    // KHÔNG blur — mô phỏng tình huống bấm thẳng nút "Cập nhật" ngay sau khi xoá, không rời ô
+    // theo cách thông thường trước.
+    expect(oAn.value).toBe('')
+  })
+
+  it('Tab van hoat dong binh thuong, khong bi chan boi control ngay thang (khong bay focus)', async () => {
+    render(
+      <>
+        <GxDate ariaLabel="Ngày sinh" />
+        <input aria-label="Ô kế tiếp" />
+      </>,
+    )
+    const o = screen.getByLabelText('Ngày sinh')
+    o.focus()
+    await userEvent.tab()
+    expect(document.activeElement).toBe(screen.getByLabelText('Ô kế tiếp'))
   })
 })

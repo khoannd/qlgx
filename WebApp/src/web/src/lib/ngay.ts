@@ -54,3 +54,134 @@ export function ngayTuHienThi(hienThi: string): string | null | undefined {
   const p2 = (n: number) => String(n).padStart(2, '0')
   return `${nam}-${p2(thang)}-${p2(ngay)}`
 }
+
+// --- Control nhập ngày kiểu "mask" một ô (GxDate) ------------------------------------------
+// Bản desktop dùng ba ô rời `dd`/`mm`/`yyyy`; bản web dùng MỘT ô văn bản nhưng giữ đúng cảm
+// giác gõ liên tục không cần dấu `/`, tự nhảy giữa các phần — bằng cách luôn hiển thị đủ 10 ký
+// tự theo khuôn `__/__/____` (ký tự thiếu là `_`), gõ số ở đúng vị trí con trỏ, dấu `/` cố
+// định không gõ được. Xem docs/superpowers/specs/man-hinh/ho-tro-nhap-lieu.md mục A.2-A.4.
+
+export const KHUON_NGAY_RONG = '__/__/____'
+
+/** Vị trí ký tự có thể gõ số (bỏ qua hai dấu `/` cố định ở vị trí 2 và 5). */
+const VI_TRI_SO = [0, 1, 3, 4, 6, 7, 8, 9] as const
+/** Vị trí bắt đầu của từng phần (ngày/tháng/năm) — gõ số ở đây thì xoá sạch cả phần trước khi
+ * ghi, giống `SelectAll()` khi focus vào ô có sẵn số ở bản desktop (mục A.2). */
+const DAU_PHAN = new Set([0, 3, 6])
+
+function doDaiPhan(dauPhan: number): number {
+  return dauPhan === 6 ? 4 : 2
+}
+
+/** Đổi ISO `yyyy-MM-dd` sang khuôn 10 ký tự `dd/mm/yyyy`; rỗng/không phải ISO đầy đủ → khuôn
+ * trống `__/__/____`. */
+export function khuonTuIso(iso?: string | null): string {
+  if (!iso) return KHUON_NGAY_RONG
+  const m = RE_ISO.exec(iso)
+  if (!m) return KHUON_NGAY_RONG
+  const [, yyyy, mm, dd] = m
+  return `${dd}/${mm}/${yyyy}`
+}
+
+/** Vị trí gõ số đầu tiên còn trống (dùng khi control nhận focus từ Tab, không phải click trực
+ * tiếp vào một vị trí cụ thể) — trống hoàn toàn thì về đầu (vị trí 0), đã đủ thì cũng về đầu để
+ * người dùng gõ đè lại từ đầu. */
+export function viTriGoDauTien(khuon: string): number {
+  const trong = VI_TRI_SO.find((p) => khuon[p] === '_')
+  return trong ?? 0
+}
+
+/** Nếu `pos` rơi đúng vào dấu `/` (vị trí 2 hoặc 5), đẩy sang vị trí gõ số kế tiếp — dùng khi
+ * người dùng click/focus vào giữa hai dấu `/`. */
+export function chuanViTri(pos: number): number {
+  if (pos === 2) return 3
+  if (pos === 5) return 6
+  if (pos > 9) return 9
+  if (pos < 0) return 0
+  return pos
+}
+
+/** Ghi một chữ số vào `khuon` tại `pos`. Nếu `pos` là đầu một phần (ngày/tháng/năm), xoá sạch
+ * cả phần đó trước (xem `DAU_PHAN`). Trả về khuôn mới và vị trí gõ tiếp theo — `null` nghĩa là
+ * vừa gõ xong chữ số cuối cùng của năm (đã hết chỗ gõ), nơi gọi nên thử chuẩn hoá + tự nhảy
+ * sang control kế tiếp. */
+export function goSoVaoKhuon(khuon: string, pos: number, so: string): { khuon: string; viTriKe: number | null } {
+  const p = chuanViTri(pos)
+  const mang = khuon.split('')
+  if (DAU_PHAN.has(p)) {
+    for (let i = 0; i < doDaiPhan(p); i++) mang[p + i] = '_'
+  }
+  mang[p] = so
+  const idx = VI_TRI_SO.indexOf(p as (typeof VI_TRI_SO)[number])
+  const ke = idx >= 0 && idx + 1 < VI_TRI_SO.length ? VI_TRI_SO[idx + 1] : null
+  return { khuon: mang.join(''), viTriKe: ke }
+}
+
+/** Xử lý phím Backspace: xoá chữ số tại vị trí con trỏ hiện có (hoặc lùi về chữ số gần nhất
+ * phía trước rồi xoá, nếu con trỏ đang ở dấu `/` hoặc ô rỗng). */
+export function xoaLuiTrongKhuon(khuon: string, pos: number): { khuon: string; viTriKe: number } {
+  let p = chuanViTri(pos)
+  if (khuon[p] === '_') {
+    const truoc = [...VI_TRI_SO].reverse().find((e) => e < p)
+    if (truoc === undefined) return { khuon, viTriKe: p }
+    p = truoc
+  }
+  const mang = khuon.split('')
+  mang[p] = '_'
+  return { khuon: mang.join(''), viTriKe: p }
+}
+
+/** Trả về vị trí bắt đầu của phần KẾ TIẾP so với phần chứa `pos` — dùng khi người dùng tự gõ
+ * dấu `/` giữa chừng (coi là "xong phần này, sang phần sau"), hoặc `null` nếu đã ở phần cuối
+ * (năm). Gõ `/` khi đang đứng NGAY ĐẦU một phần (chưa gõ gì) thì bỏ qua (không nhảy), tránh
+ * nuốt mất phần đó khi người dùng gõ dư dấu `/` sau khi control đã tự nhảy sẵn. */
+export function phanKeTiep(pos: number): number | null {
+  if (pos === 0) return 3
+  if (pos === 3) return 6
+  return null
+}
+
+function toaDoPhan(pos: number): number {
+  if (pos <= 1) return 0
+  if (pos <= 4) return 3
+  return 6
+}
+
+export function dangODauPhan(pos: number): boolean {
+  return DAU_PHAN.has(chuanViTri(pos))
+}
+
+export function dauPhanCuaViTri(pos: number): number {
+  return toaDoPhan(chuanViTri(pos))
+}
+
+/** Tách khuôn 10 ký tự thành ba chuỗi số ngày/tháng/năm (bỏ ký tự `_`, có thể rỗng). */
+export function khuonSangPhan(khuon: string): { ngay: string; thang: string; nam: string } {
+  const bo = (s: string) => s.replace(/_/g, '')
+  return { ngay: bo(khuon.slice(0, 2)), thang: bo(khuon.slice(3, 5)), nam: bo(khuon.slice(6, 10)) }
+}
+
+/**
+ * Áp dụng đúng quy tắc bản desktop cho ngày-tháng-CÓ-THỂ-thiếu (mục A.4 của spec): chỉ năm,
+ * hoặc tháng+năm là hợp lệ; ngày một mình (không tháng) thì KHÔNG hợp lệ. Khác bản desktop ở
+ * một điểm — bản desktop giữ nguyên phần thiếu trong chuỗi lưu xuống Access, còn bản web đã
+ * chốt phương án "chuẩn hoá lúc nhập": thiếu ngày → điền `01`, thiếu cả ngày lẫn tháng → điền
+ * `01/01` (xem `Qlgx.Data/NgayThangText.cs`, cùng quy tắc, chỉ khác nơi áp dụng — server áp
+ * dụng lúc ĐỌC dữ liệu Access cũ, hàm này áp dụng lúc NGƯỜI DÙNG gõ trên web).
+ *
+ * Trả `null` khi cả ba phần đều rỗng (ô để trống — hợp lệ, nghĩa là "xoá ngày"), `undefined`
+ * khi có nội dung nhưng không hợp lệ (năm chưa đủ 4 số, có ngày mà thiếu tháng, hoặc ngày/tháng
+ * không tồn tại thật — ví dụ 31/02), ngược lại trả ISO `yyyy-MM-dd` đã chuẩn hoá.
+ */
+export function chuanHoaNgayThieu(ngay: string, thang: string, nam: string): string | null | undefined {
+  const d = ngay.trim()
+  const m = thang.trim()
+  const y = nam.trim()
+  if (d === '' && m === '' && y === '') return null
+  if (y.length !== 4) return undefined
+  if (d !== '' && m === '') return undefined
+
+  const dd = d === '' ? '01' : d.padStart(2, '0')
+  const mm = m === '' ? '01' : m.padStart(2, '0')
+  return ngayTuHienThi(`${dd}/${mm}/${y}`)
+}

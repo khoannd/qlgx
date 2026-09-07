@@ -14,6 +14,7 @@ import { LoginPage } from './screens/LoginPage'
 import { useAuth } from './api/AuthContext'
 import { TrangThaiMangBanner } from './components/TrangThaiMangBanner'
 import { CapNhatPWA } from './components/CapNhatPWA'
+import { useTuNhayKhiChonDropdown } from './lib/focusDieuHuong'
 
 /** Chỗ giữ chỗ — màn hình Tổng quan thật sẽ được dựng ở task sau. */
 function TongQuan() {
@@ -22,6 +23,10 @@ function TongQuan() {
 
 function App() {
   const { dangKiemTraPhien, nguoiDung } = useAuth()
+  // Tự nhảy sang control kế tiếp khi chọn xong một mục trong dropdown (Giáo họ, Phái, Tình
+  // trạng hôn phối…) — gắn MỘT LẦN ở gốc ứng dụng để mọi màn hình/mọi ô mới thêm sau này đều tự
+  // có, không cần sửa từng nơi. Xem lib/focusDieuHuong.ts.
+  useTuNhayKhiChonDropdown()
   const { danhSach, dangChon, mo, chon, dong, suaTieuDe } = useTabDocs()
   // Đếm số bản ghi mới đang mở dở, giống biến moiDem của bản mẫu — mỗi lần bấm "Thêm mới"
   // là một thẻ nháp riêng, không trùng khoá với thẻ nháp khác đang mở.

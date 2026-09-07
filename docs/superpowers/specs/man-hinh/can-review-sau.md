@@ -2591,3 +2591,113 @@ test gọi đúng `api.*.xuatExcel` với đúng tham số lọc), `npm run buil
 (`Qlgx.Data.Tests` 25 + `Qlgx.Api.Tests` 201 [tăng từ 195, thêm 6 test Excel] +
 `Qlgx.Migration.Tests` 24) — không xoá test nào. Ảnh chụp: `105`–`107` trong
 `WebApp/anh-chup-kiem-thu/`.
+
+### 49. Task "control nhập ngày tháng thông minh + khôi phục 239 bản ghi ngày tháng thiếu"
+(2026-09-07) — các quyết định tự đưa ra
+
+Người dùng đang chờ, yêu cầu không dừng lại hỏi. Ba việc: nâng cấp `GxDate` cho gõ liên tục/tự
+nhảy ô, tự nhảy ô khi chọn dropdown, và khôi phục dữ liệu ngày tháng thiếu đang kẹt trong
+`du_lieu_loi`. Người dùng đã CHỐT SẴN hướng xử lý ngày thiếu — phương án (a) "chuẩn hoá lúc
+nhập" (không thêm cột độ chính xác, xem `docs/superpowers/specs/man-hinh/ho-tro-nhap-lieu.md`
+mục 1 — spec đó khuyến nghị hướng (b) nhưng người dùng đã cân nhắc và chọn khác, không tự ý làm
+theo khuyến nghị của spec).
+
+**Việc 1 — `GxDate` gõ liên tục không cần `/`, tự nhảy ô, click thẳng vào tháng/năm:**
+- Bản desktop (`GxDateInput`) dùng BA `TextBox` con rời biệt (xem spec mục A.1). Bản web hiện có
+  `GxDate` (`WebApp/src/web/src/components/GxDate.tsx`) lại dùng MỘT `<input type="text">` duy
+  nhất (thêm ở nhiệm vụ trước, không phải nhiệm vụ này) — quyết định: KHÔNG viết lại thành ba ô
+  DOM riêng (sẽ phải sửa lại toàn bộ chỗ gọi `querySelector('[name=...]')`/`FormData` đang dựa
+  vào đúng một ô ẩn kiểu `date` mang `name`), mà mô phỏng cảm giác ba-ô-rời bằng kỹ thuật
+  "mask một ô": ô luôn hiển thị đủ khuôn 10 ký tự `dd/mm/yyyy` (thiếu là `_`, ví dụ trống là
+  `__/__/____`), gõ số ghi đúng vào vị trí con trỏ, dấu `/` cố định không gõ được, tự nhảy vị trí
+  gõ tiếp theo khi một phần (ngày/tháng) đã đủ số — bỏ qua dấu `/` một cách tự nhiên. Logic mask
+  thuần (không đụng DOM, test độc lập được) tách ra `WebApp/src/web/src/lib/ngay.ts` (các hàm
+  `khuonTuIso`, `goSoVaoKhuon`, `xoaLuiTrongKhuon`, `chuanHoaNgayThieu`, ...), `GxDate.tsx` chỉ
+  nối dây sự kiện bàn phím.
+- Chuẩn hoá ngày thiếu (đúng phương án đã chốt): `chuanHoaNgayThieu(ngay, thang, nam)` — chỉ năm
+  hợp lệ (điền `01/01`), tháng+năm hợp lệ (điền ngày `01`), ngày một mình KHÔNG hợp lệ (đúng quy
+  tắc desktop, spec mục A.4) — áp dụng NGAY khi gõ xong chữ số cuối của năm (không cần rời ô) và
+  lại một lần nữa lúc `blur` (phòng người dùng Tab đi giữa chừng).
+- Tự nhảy ra control KHÁC trên form: chỉ xảy ra đúng một thời điểm — vừa gõ xong chữ số cuối của
+  năm VÀ kết quả hợp lệ (không nhảy khi chuẩn hoá xảy ra lúc blur, không nhảy khi gõ sai) — đúng
+  khuyến nghị khả năng tiếp cận ở spec mục 3 (không đổi ngữ cảnh ngoài lúc người dùng vừa tự hoàn
+  tất một hành động). `Tab` không hề bị can thiệp — kiểm tra bằng test `userEvent.tab()`.
+- Hàm dùng chung để tìm/focus control kế tiếp: `WebApp/src/web/src/lib/focusDieuHuong.ts`
+  (`focusKeTiep`) — tìm phần tử focus-được kế tiếp theo thứ tự DOM trong `<form>` bao quanh, bỏ
+  qua các phần tử con của chính control đang đứng (nút mở lịch, ô ISO ẩn của `GxDate`).
+- Dữ liệu lỗi cũ không map được vào khuôn (`defaultValue` không phải ISO đầy đủ, ví dụ `"1958"`
+  còn sót ở các bảng KHÔNG thuộc phạm vi khôi phục việc 3) vẫn hiện NGUYÊN VĂN lúc mới dựng
+  (hành vi cũ, có test giữ nguyên) — chỉ khi người dùng bắt đầu sửa (focus/gõ) mới chuyển sang
+  khuôn trống để nhập lại từ đầu, không cố "vá" chuỗi lỗi vào từng ô.
+- **Lỗi tự phát hiện khi kiểm thử bằng trình duyệt thật, đã sửa**: Backspace xoá về hoàn toàn
+  trống chỉ cập nhật `text` hiển thị, KHÔNG đồng bộ ngay giá trị ISO trên ô lịch ẩn — nếu người
+  dùng xoá xong rồi bấm thẳng nút "Cập nhật" mà không rời ô theo cách thường (blur), giá trị ISO
+  CŨ vẫn còn nằm trên ô ẩn và bị lưu nhầm xuống CSDL (bắt gặp thật: xoá "Ngày sinh" đang có rồi
+  lưu, hộp thoại xác nhận tuổi "chưa được 7 tuổi" hiện ra dù màn hình đang hiển thị ô trống — dấu
+  hiệu ISO ẩn lệch với hiển thị). Sửa: xoá về khuôn rỗng hoàn toàn thì `setIso('')` ngay lập tức,
+  không đợi blur. Thêm test `GxDate.test.tsx` xác nhận (mô phỏng đúng tình huống không blur).
+- Việc kiểm thử bằng Playwright MCP phát hiện một điều KHÔNG PHẢI lỗi của mã: hàm
+  `browser_type`/`pressSequentially` của Playwright (kể cả `slowly: true`) gửi các phím quá
+  nhanh với một ô nhập có mask tự viết (chặn `preventDefault` trên `keydown`), làm hỏng thứ tự
+  ký tự khi gõ liên tục nhiều số. Gõ từng phím riêng lẻ (`browser_press_key`, mỗi lệnh một round
+  trip thật) thì đúng tuyệt đối ở mọi bước — và bài test tự động (`userEvent.type` của
+  `@testing-library/user-event`, tôn trọng `preventDefault` đúng chuẩn DOM) cũng xanh 100%. Kết
+  luận: đây là giới hạn của công cụ tự động hoá khi gõ quá nhanh, không phải hành vi với người
+  dùng thật (bàn phím thật không gửi 8 phím trong cùng một khung hình).
+
+**Việc 2 — tự nhảy ô kế tiếp khi chọn xong một mục trong `<select>`:**
+- Spec (mục B) không tìm thấy bằng chứng mã tự viết cho hành vi này ở bản desktop (nghi ngờ do
+  thư viện đóng gói `UIComboBox`/`AutoCompleteTextBox`) — coi đây là quyết định UX MỚI, làm ở
+  tầng dùng chung bằng event delegation: một `useEffect` gắn MỘT LẦN ở gốc ứng dụng
+  (`App.tsx`, hook `useTuNhayKhiChonDropdown` trong `lib/focusDieuHuong.ts`) lắng nghe sự kiện
+  `change` nổi bọt lên `document`, chỉ xử lý khi mục tiêu là `<select>` VÀ nằm trong một
+  `<form>` — nhờ vậy MỌI `<select>` hiện có và mọi ô mới thêm sau này trong các form chi tiết
+  đều tự có hành vi, không cần sửa từng màn hình.
+- Cố ý loại trừ `<select>` KHÔNG nằm trong `<form>` (ví dụ ô lọc "Giáo họ" ở đầu lưới danh sách
+  — xác nhận bằng cách đọc DOM thật: `gdl-giaoho`/`gdanl-giaoho` không có `form`, trong khi
+  `gd-giaoho`/`gd-phai`/... trong màn hình chi tiết đều có) — tránh đá focus khỏi thao tác lọc dữ
+  liệu ngoài ý muốn.
+- Kiểm chứng bằng trình duyệt thật: đổi `<select id="gd-giaoho">` (Giáo họ) sang "Ngoài xứ" →
+  tiêu điểm tự chuyển sang `#gd-cmnd` (ô CMND/CCCD, control kế tiếp đúng thứ tự DOM) — không lưu
+  thay đổi này (tải lại trang, không bấm "Cập nhật").
+
+**Việc 3 — khôi phục 238/239 bản ghi ngày tháng thiếu trong `giao_dan.du_lieu_loi`:**
+- Sửa `NgayThangText.Doc` (`WebApp/src/Qlgx.Data/NgayThangText.cs`): thêm hai khuôn `MM/yyyy`
+  (chuẩn hoá về ngày 01) và số 4 chữ số đứng riêng (chuẩn hoá về `01/01`) — đúng phương án đã
+  chốt. Sửa lại doc-comment SAI của tệp (từng viết "Access lưu mọi ngày dưới dạng dd/MM/yyyy") —
+  giờ ghi rõ Access lưu CẢ chuỗi thiếu, trích dẫn bằng chứng `Memory.GetDateString`
+  (`CMemory.cs:755-763`) không tự điền `01/01`. TDD: viết test cho `"1985"`, `"05/1985"`,
+  `"09/11/1996"`, chuỗi rác TRƯỚC — xác nhận đỏ (6 test thất bại, lỗi "Expected ... but found
+  null"), rồi sửa mã cho xanh.
+- Vì `ChuyenDoiDuLieu.cs` (công cụ chuyển Access) đã gọi `NgayThangText.Doc` cho mọi trường ngày
+  từ trước — sửa xong hàm là ĐỦ để các lần chuyển dữ liệu Access MỚI (giáo xứ khác, về sau) không
+  còn tạo lại vấn đề này, không cần sửa gì thêm ở `ChuyenDoiDuLieu.cs`.
+- Khôi phục dữ liệu ĐANG CÓ trong `qlgx_thu`: viết lệnh CLI mới `KhoiPhucNgayThangThieu.cs`
+  (mô phỏng đúng khuôn `TaoTaiKhoanQuanTri.cs` sẵn có — nhánh dòng lệnh trong `Program.cs`,
+  KHÔNG phải endpoint HTTP), chạy bằng `dotnet run -- khoi-phuc-ngay-thang-thieu` (dùng chuỗi kết
+  nối QUẢN TRỊ, có `BYPASSRLS`, chạy trên toàn bộ giáo xứ). Đọc `du_lieu_loi` (JSON dạng
+  `{tên trường: giá trị gốc}`, đúng cấu trúc `GhiLoi` của `ChuyenDoiDuLieu.cs` ghi ra), với đúng
+  5 trường `NgaySinh`/`NgayRuaToi`/`NgayRuocLe`/`NgayThemSuc`/`NgayQuaDoi`: nếu cột ngày tương
+  ứng đang NULL và `NgayThangText.Doc` phân giải được giá trị gốc thì ghi vào cột — **giữ nguyên
+  `du_lieu_loi`, không xoá, không sửa** (bản gốc từ sổ giấy, còn dùng đối chiếu sau này).
+  Idempotent tự nhiên (chỉ ghi khi cột đang NULL) — đã CHẠY LẠI LẦN HAI để chứng minh, kết quả
+  "khôi phục 0 giá trị trên 0 dòng", không đụng gì thêm.
+- Kết quả thật KHÁC ước lượng ban đầu của nhiệm vụ (239) một đơn vị — 238: rà lại bằng `psql`,
+  phát hiện MỘT trong ba bản ghi `NgayQuaDoi` thiếu ban đầu không phải dạng năm/tháng-năm mà là
+  dữ liệu rác thật (mojibake phông chữ cũ VNI/TCVN). `NgayThangText.Doc` ĐÚNG khi từ chối phân
+  giải nó, giữ nguyên trong `du_lieu_loi` (không phải lỗi của lệnh khôi phục, mà đúng dữ liệu gốc
+  thật sự hỏng, không thể đoán ra ngày). Ghi rõ số thật, không sửa số 239 ban đầu trong đặc tả
+  nhiệm vụ thành số đã kiểm chứng — coi 238 là số đúng.
+- Hướng dẫn chạy lệnh đã ghi vào `WebApp/TIEN-DO.md`.
+
+**Không đụng gì khác:** không sửa `NgayThangText.Ghi`/hợp đồng API ngày tháng (vẫn ISO
+`yyyy-MM-dd`); không thêm cột đánh dấu độ chính xác (đúng quyết định người dùng); không sửa cấu
+trúc `du_lieu_loi`; không đụng bố cục "Thông tin cá nhân"/CMND/CCCD cột trái, biểu tượng lịch
+không viền, header/hàng lọc lưới, nút "Quay về", xuất Excel — đo `getBoundingClientRect()` các
+khối chứa ô ngày trên trình duyệt thật sau khi sửa, không lệch so với trước.
+
+**Số test cuối:** frontend 287/287 (thêm 31: 20 cho `lib/ngay.ts` mới, 6 cho `GxDate.test.tsx`
+mới + sửa 2 test cũ theo đúng hành vi mới `__/__/____`, 5 cho `lib/focusDieuHuong.test.tsx` mới),
+`npm run build` chạy được. Backend: `Qlgx.Data.Tests` 38/38 (thêm 15, gồm bằng chứng đỏ→xanh cho
+`NgayThangText`), `Qlgx.Api.Tests` 201/201, `Qlgx.Migration.Tests` 24/24 — không xoá test nào.
+Ảnh chụp: `108`–`110` trong `WebApp/anh-chup-kiem-thu/`.
