@@ -3138,3 +3138,86 @@ lần này). Tổng **2050 giáo dân / 40 gia đình** không đổi sau khi ki
 trong `GiaoDanDetail.test.tsx`, xem chi tiết ở trên). `npm run build` chạy được. Không đụng
 backend (`GiaoDanService.KiemTraNghiepVu` không sửa dòng nào) nên không chạy `dotnet test`.
 không đổi. Ảnh chụp: `121`–`127` trong `WebApp/anh-chup-kiem-thu/`.
+
+### 55. Task "migrate Danh sách sổ bí tích + Danh sách rao hôn phối" (2026-09-08)
+
+Hai spec mới: `so-bi-tich.md`, `rao-hon-phoi.md`. Tổng hợp các quyết định/thiếu sót đã ghi rải
+rác trong hai spec đó, gom lại đây theo đúng quy ước của file này.
+
+**Sổ bí tích — phạm vi cố ý thu hẹp:**
+
+- **Không migrate "Chọn gia đình" cho người nhận bí tích** (cột Mã GĐ/Tên GĐ, nút "Chọn &gia
+  đình" của `GxBiTichChiTiet`) — luồng gắn giáo dân mới rửa tội làm "con cái" của một gia đình
+  có sẵn đòi hỏi toàn bộ kiểm tra trùng vai trò vợ/chồng riêng (`isValidGiaDinh`). Người dùng
+  cần liên kết gia đình thì làm ở màn hình Gia đình/Giáo dân. Ưu tiên: Trung bình.
+- **Không migrate 3 cảnh báo mềm khi thao tác đợt**: (a) cảnh báo "đã qua đời/chuyển xứ/xoá"
+  khi thêm người vào đợt, (b) hộp thoại "chưa nhập Số bí tích, vẫn muốn lưu?" trước khi Cập
+  nhật, (c) hộp thoại xác nhận xoá đợt/xoá người (chuyển hẳn sang phía client dùng
+  `window.confirm`, không phải thiếu logic — chỉ đổi tầng thực thi). Ưu tiên: Thấp — không mất
+  dữ liệu, chỉ mất một lớp nhắc nhở.
+- **Chép nguyên văn 2 lỗi chính tả** của bản gốc khi thao tác ĐỢT BÍ TÍCH: "Mã gia đình phải
+  được nhập số" và "Mã gia đình này đã tồn tại. Hãy nhập mã khác!" (`frmBiTichChiTiet.cs:281,
+  302`) — bản gốc copy-paste nhầm thông báo từ màn hình gia đình, không tự sửa theo đúng nguyên
+  tắc chi phối đầu file. Ưu tiên: Thấp (chỉ là chữ hiển thị, đã ghi rõ trong `so-bi-tich.md`).
+- **Sửa một lỗi CỦA CHÍNH BẢN WEB** phát hiện lúc kiểm thử bằng trình duyệt thật (không phải
+  hành vi desktop): `DotBiTichService.LayDanhSach` lần viết đầu tiên loại bỏ NHẦM các đợt chưa
+  có `NgayBiTich` khỏi cả hai vế lọc "Từ năm"/"Đến năm" — trong khi bản gốc Access
+  (`INT(IIF(LEN(...)>=1, RIGHT(...,4), "0000"))`) chỉ loại ở vế "Từ năm" (năm 0 gần như không
+  bao giờ `>=`), còn vế "Đến năm" (mặc định luôn có giá trị = năm hiện tại) năm 0 LUÔN `<=` nên
+  đợt chưa có ngày vẫn phải hiện. Phát hiện được vì số liệu sai lệch rõ (754 đợt Rửa tội thay vì
+  780 đợt thật đã biết trước) — đã sửa lại đúng công thức bất đối xứng và xác nhận lại 780/2050
+  trước khi bàn giao. Ghi vào đây làm bài học: **luôn đối chiếu số liệu tổng đã biết trước khi
+  tin một con số lọc "có vẻ hợp lý".**
+- Chưa migrate In danh sách/In chứng nhận cho màn hình này (hạ tầng in chứng nhận bí tích đã có
+  sẵn cho màn hình Giáo dân, `in-an.md` — chỉ chưa nối nút ở đây). Ưu tiên: Trung bình.
+
+**Rao hôn phối — phạm vi cố ý thu hẹp và MỘT quyết định lệch nguyên tắc "migrate y hệt":**
+
+- **CỐ Ý KHÔNG migrate quy tắc "bắt buộc đủ cả 3 ngày Rao lần 1/2/3 hợp lệ mới cho lưu"**
+  (`frmRaoHonPhoi.checkInput`, dòng 131-150) — đây là trường hợp DUY NHẤT trong hai màn hình
+  của task này lệch khỏi nguyên tắc chi phối "migrate y hệt kể cả chỗ sai". Lý do: ba cột CSDL
+  vốn `DateOnly?` (nullable), và nghiệp vụ rao hôn phối vốn kéo dài ba tuần liên tiếp — chặn
+  cứng "phải đủ cả 3 ngày mới lưu được" khiến người dùng KHÔNG THỂ tạo một đôi rao ngay từ tuần
+  đầu tiên khi chỉ mới có Rao lần 1. Đây không phải "kỳ quặc nhưng vô hại" như lỗi chính tả —
+  giữ nguyên sẽ chặn đứng cách dùng thực tế. Đã cân nhắc rõ ràng, ghi lại đây để **người dùng
+  xác nhận lại quyết định này** (có thể có lý do nghiệp vụ khác mà agent chưa biết, ví dụ giáo
+  xứ luôn nhập cả ba ngày ngay từ đầu theo lịch cố định của giáo xứ).
+- **Không migrate toàn bộ khối "In điều tra"/"In kết quả rao"/"In danh sách"** (`UsePrint`,
+  `cbChaGui`, `ExcelReport.ReportRaoHP`) — chưa có hạ tầng xuất báo cáo dạng bảng tạm + Excel
+  này ở web. Vì đây là toàn bộ lý do tồn tại của hai trường "Kính gửi cha xứ:"/"Giáo phận:"
+  (`txtChaNhan`/`txtGiaoXuNhan`, mục 2.1 `rao-hon-phoi.md`) bắt buộc nhập, bản web đổi hẳn hai
+  trường này thành ô tự do LUÔN LUÔN không bắt buộc, đặt nhãn tiếng Việt trực diện hơn ("Cha
+  nhận điều tra"/"Giáo xứ nhận") thay vì giữ nguyên nhãn gốc (vốn đã tự lệch tên biến/nhãn hiển
+  thị trên chính bản desktop). Ưu tiên: Trung bình-Cao nếu giáo xứ cần in tờ điều tra/kết quả
+  rao — đây là tài liệu giấy nộp giáo phận, có thể là nhu cầu thật.
+- **Không migrate 3 hành vi tự động lúc chọn Người thứ nhất/thứ hai**: tự điền Giáo xứ/Giáo
+  phận/Xứ trước từ hồ sơ + lịch sử chuyển xứ; tự giới hạn picker người còn lại theo giới tính
+  đối lập; tự gợi ý "Đôi rao" = "Tên1 - Tên2". `GxPicker` dùng chung toàn hệ thống, không có
+  chỗ cắm logic riêng cho từng màn hình gọi nó mà không sửa chính component dùng chung. Ưu
+  tiên: Thấp-Trung bình (không mất dữ liệu, chỉ mất tiện lợi nhập liệu).
+- Thêm 3 ô "Tạm 1/2/3" cho các cột `Tam1/Tam2/Tam3` — desktop KHÔNG có UI nào cho ba cột này
+  (không tìm thấy tham chiếu trong `frmRaoHonPhoi.cs`), nghi là cột Access cũ còn sót lại. Bản
+  web thêm ô nhập tự do để không mất khả năng xem/sửa nếu giáo xứ khác lỡ có ghi gì vào đó qua
+  đường khác (nhập liệu Access cũ) — nếu xác nhận đây thực sự là cột chết, nên ẨN hẳn 3 ô này
+  ở lượt sau cho gọn màn hình.
+- Chưa xác nhận được hành vi lọc "chưa hoàn tất" khi `NgayRaoLan3` rỗng trên Access thật (biểu
+  thức ghép chuỗi `Right/Mid/Left` trên giá trị rỗng) — bản web coi NULL = "chưa hoàn tất" theo
+  suy luận hợp lý nhất (một đôi chưa rao xong lần 3 thì chưa xong), không phải xác nhận trực
+  tiếp bằng cách chạy Access thật.
+
+**Kiểm thử bằng trình duyệt thật (2026-09-08, giáo xứ Vô Nhiễm, tài khoản `giaoxu`):**
+
+- Sổ bí tích: lọc "Rửa tội" → đúng **780 đợt / 2050 người** (khớp số liệu thật đã biết trước) —
+  mở đợt "02/04/2000" (12 người) → thấy đúng Số rửa tội/Tên thánh/Ngày sinh/Người đỡ đầu thật
+  của cả 12 người. Ảnh: `132`, `133`.
+- Rao hôn phối: bảng rỗng tại giáo xứ này → dùng CHÍNH chức năng Thêm (không phải `psql` thô)
+  tạo một đôi rao mẫu (giáo dân thật #493 + #602, tất cả 26 trường), sửa lại Rao lần 1 (gõ lần
+  đầu bị lỗi thao tác kiểm thử — không phải lỗi ứng dụng, xác minh lại bằng cách sửa và tải lại
+  đúng cả 3 ngày), tải lại xác nhận dữ liệu đúng, sau đó XOÁ sạch qua nút "Xóa" của chính màn
+  hình. Ảnh: `134`, `135`. `psql` xác nhận `rao_hon_phoi` về lại 0 dòng, `giao_dan`/`gia_dinh`/
+  `dot_bi_tich`/`bi_tich_chi_tiet` không đổi (2050/40/1108/6150).
+
+**Số test cuối:** backend **278/278** (216 `Qlgx.Api.Tests` gồm 12 test mới `DotBiTichTests`/
+`RaoHonPhoiTests` + 38 `Qlgx.Data.Tests` + 24 `Qlgx.Migration.Tests`), frontend **336/336** (330
+cũ + 6 test mới `DotBiTichList.test.tsx`/`RaoHonPhoiList.test.tsx`). `dotnet build`/`npm run
+build` đều chạy được.

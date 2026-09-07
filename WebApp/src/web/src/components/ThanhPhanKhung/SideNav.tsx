@@ -26,8 +26,8 @@ const DANH_SACH_DIEU_HUONG: NhomDieuHuong[] = [
   {
     nhan: 'Bí tích',
     muc: [
-      { nhan: 'Danh sách sổ bí tích' },
-      { nhan: 'Danh sách rao hôn phối' },
+      { id: 'dotBiTichList', nhan: 'Danh sách sổ bí tích' },
+      { id: 'raoHonPhoiList', nhan: 'Danh sách rao hôn phối' },
     ],
   },
   {

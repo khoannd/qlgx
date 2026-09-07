@@ -3,6 +3,7 @@ import type {
   HoiDoanCuaGiaoDan, HoiDoanDanhMuc, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
   TaiKhoanItem, DangNhapKetQua, GiaoXuLuaChon, SucKhoe,
   GiaoPhan, GiaoHatQuanLy, GiaoXuQuanLy, BaoCaoXemTruoc, TrangThaiNhapDuLieu,
+  DotBiTichListItem, DotBiTichDetail, LoaiBiTich, RaoHonPhoiListItem, RaoHonPhoiDetail,
 } from './types'
 import { authStore } from './authStore'
 
@@ -323,6 +324,39 @@ export const api = {
   },
   hoiDoan: {
     danhMuc: () => goi<HoiDoanDanhMuc[]>('/api/hoi-doan'),
+  },
+  /** "Danh sách sổ bí tích" (frmDotBiTichList.cs + frmBiTichChiTiet.cs) — xem
+   * docs/superpowers/specs/man-hinh/so-bi-tich.md. */
+  dotBiTich: {
+    danhSach: (loaiBiTich: LoaiBiTich, tuNam?: number, denNam?: number) => {
+      const p = new URLSearchParams({ loaiBiTich: String(loaiBiTich) })
+      if (tuNam) p.set('tuNam', String(tuNam))
+      if (denNam) p.set('denNam', String(denNam))
+      return goi<DotBiTichListItem[]>(`/api/dot-bi-tich?${p.toString()}`)
+    },
+    chiTiet: (id: string) => goi<DotBiTichDetail>(`/api/dot-bi-tich/${id}`),
+    tao: (than: unknown) => goi<DotBiTichDetail>('/api/dot-bi-tich', { method: 'POST', body: JSON.stringify(than) }),
+    capNhat: (id: string, than: unknown) =>
+      goi<void>(`/api/dot-bi-tich/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoa: (id: string) => goi<void>(`/api/dot-bi-tich/${id}`, { method: 'DELETE' }),
+    themNguoiNhan: (id: string, than: unknown) =>
+      goi<void>(`/api/dot-bi-tich/${id}/nguoi-nhan`, { method: 'POST', body: JSON.stringify(than) }),
+    suaNguoiNhan: (id: string, giaoDanId: string, than: unknown) =>
+      goi<void>(`/api/dot-bi-tich/${id}/nguoi-nhan/${giaoDanId}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoaNguoiNhan: (id: string, giaoDanId: string, xoaThongTinBiTich: boolean) =>
+      goi<void>(`/api/dot-bi-tich/${id}/nguoi-nhan/${giaoDanId}?xoaThongTinBiTich=${xoaThongTinBiTich}`,
+        { method: 'DELETE' }),
+  },
+  /** "Danh sách rao hôn phối" (frmRaoHonPhoiList.cs + frmRaoHonPhoi.cs) — xem
+   * docs/superpowers/specs/man-hinh/rao-hon-phoi.md. */
+  raoHonPhoi: {
+    danhSach: (xemTatCa?: boolean) =>
+      goi<RaoHonPhoiListItem[]>(`/api/rao-hon-phoi${xemTatCa ? '?xemTatCa=true' : ''}`),
+    chiTiet: (id: string) => goi<RaoHonPhoiDetail>(`/api/rao-hon-phoi/${id}`),
+    tao: (than: unknown) => goi<RaoHonPhoiDetail>('/api/rao-hon-phoi', { method: 'POST', body: JSON.stringify(than) }),
+    capNhat: (id: string, than: unknown) =>
+      goi<void>(`/api/rao-hon-phoi/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoa: (id: string) => goi<void>(`/api/rao-hon-phoi/${id}`, { method: 'DELETE' }),
   },
   danhMuc: {
     // Danh sách "Tên thánh" tĩnh (bảng `du_lieu_chung`, 343 dòng đã chuyển từ Access) — một

@@ -84,15 +84,16 @@ Cập nhật bảng này mỗi khi thêm spec.
 | Danh sách giáo dân | `ChuongTrinh/frmGiaoDanList.cs` | 357 | xong (`giao-dan-danh-sach.md`) | xong |
 | Màn hình chính | `ChuongTrinh/frmMain.cs` | 993 | chưa | một phần |
 | Hôn phối | `GXControl/frmHonPhoi.cs` + `GXControl/GxHonPhoiGiaDinh.cs` | 422 + 300 | xong (`hon-phoi.md`) | một phần (xem mục 10) |
-| Rao hôn phối | `GXControl/frmRaoHonPhoi.cs` | 637 | chưa | chưa |
+| Rao hôn phối | `ChuongTrinh/frmRaoHonPhoiList.cs` + `GXControl/frmRaoHonPhoi.cs` | 177 + 637 | xong (`rao-hon-phoi.md`) | một phần (xem mục 10) |
 | Ơn gọi tận hiến | `GXControl/GxTanHien.cs` | 291 | xong (`tan-hien.md`) | một phần (xem mục 10) |
 | Hội đoàn | `GXControl/frmHoiDoan.cs` + `GXControl/GxHistoryHoiDoan.cs` | 663 + 311 | xong (`hoi-doan.md`) | một phần (xem mục 10) |
 | Quản lý giáo phận/giáo hạt/giáo xứ | `ChuongTrinh/frmGiaoXu.cs` | 280 | xong (`quan-ly-giao-xu.md`) | xong |
 | Giáo họ | `ChuongTrinh/frmGiaoHo.cs` | 598 | một phần (`quan-ly-giao-xu.md` mục 9, chỉ phần thêm/sửa) | xong (danh sách + thêm/sửa; không có nút xoá, xem `can-review-sau.md` mục 37) |
-| Bí tích chi tiết | `ChuongTrinh/frmBiTichChiTiet.cs` | 574 | chưa | chưa |
+| Danh sách sổ bí tích | `ChuongTrinh/frmDotBiTichList.cs` + `ChuongTrinh/frmBiTichChiTiet.cs` | 176 + 574 | xong (`so-bi-tich.md`) | một phần (xem mục 10) |
 | Lớp giáo lý | `Giaoly/frmLopGiaoLy.cs` | 724 | chưa | chưa |
 | Quản lý tài khoản | `ChuongTrinh/frmAccoutList.cs` | 440 | xong (`quan-ly-tai-khoan.md`) | xong |
 | Đăng nhập | `ChuongTrinh/frmLogin.cs` | 89 | (gộp trong `quan-ly-tai-khoan.md` mục 8) | xong |
 | In ấn và chứng nhận | `DBAccess/WordEngine.cs` + `ExcelReport/Report*.cs` (14 mô-đun) | ~140 + nhiều | xong (`in-an.md`) | một phần (hạ tầng + Lý lịch cá nhân xong, 4 mẫu ưu tiên còn lại + phần còn lại chưa) |
+| Hỗ trợ nhập liệu (control ngày tháng, tự nhảy ô, gợi ý theo tần suất — xuyên màn hình) | `GXControl/GxDateInput.cs` + `GxTextField.cs` + `DBAccess/CMemory.cs` | 633 + nhiều | xong (`ho-tro-nhap-lieu.md`) | chưa |
 
 Còn khoảng 60 màn hình nhỏ hơn — bổ sung dần theo thứ tự migrate.

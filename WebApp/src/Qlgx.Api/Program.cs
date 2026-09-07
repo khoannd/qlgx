@@ -74,6 +74,10 @@ builder.Services.AddScoped<AnhDaiDienService>();
 // Xuat Excel that (ClosedXML, khong Office Interop) cho hai man hinh danh sach — xem
 // XuatExcelService.cs. Scoped vi phu thuoc GiaoDanService/GiaDinhService (deu Scoped).
 builder.Services.AddScoped<XuatExcelService>();
+// Sổ bí tích + Rao hôn phối (nhóm màn hình Bí tích) — xem
+// docs/superpowers/specs/man-hinh/so-bi-tich.md và rao-hon-phoi.md.
+builder.Services.AddScoped<DotBiTichService>();
+builder.Services.AddScoped<RaoHonPhoiService>();
 
 // Ha tang in an (VIEC-TIEP-THEO.md muc 1.1) — xem docs/superpowers/specs/man-hinh/in-an.md.
 // BoTrinhDuyet la Singleton CO CHU DICH: giu dung MOT trinh duyet Chromium headless (Playwright)
@@ -161,6 +165,8 @@ app.MapTaiKhoan();
 app.MapQuanLyGiaoXu();
 app.MapNhapDuLieu();
 app.MapDanhMuc();
+app.MapDotBiTich();
+app.MapRaoHonPhoi();
 
 // Fallback SPA: moi GET khong khop route API/tep tinh nao o tren tra ve index.html de React
 // Router tu xu ly duong dan phia trinh duyet. Loai tru "/api" bang rang buoc regex phu dinh de

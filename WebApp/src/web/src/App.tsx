@@ -8,6 +8,11 @@ import { GiaoDanListPage } from './screens/GiaoDanListPage'
 import { GiaoDanDetailPage } from './screens/GiaoDanDetailPage'
 import { TaiKhoanListPage } from './screens/TaiKhoanListPage'
 import { GiaoHoListPage } from './screens/GiaoHoListPage'
+import { DotBiTichListPage } from './screens/DotBiTichListPage'
+import { DotBiTichDetail } from './screens/DotBiTichDetail'
+import { RaoHonPhoiListPage } from './screens/RaoHonPhoiListPage'
+import { RaoHonPhoiDetail } from './screens/RaoHonPhoiDetail'
+import type { LoaiBiTich } from './api/types'
 import { QuanLyGiaoXuPage } from './screens/QuanLyGiaoXuPage'
 import { NhapDuLieuPage } from './screens/NhapDuLieuPage'
 import { LoginPage } from './screens/LoginPage'
@@ -123,6 +128,41 @@ function App() {
     })
   }
 
+  function moDanhSachSoBiTich() {
+    mo({ id: 'dotBiTichList', tieuDe: 'Danh sách sổ bí tích', noiDung: <DotBiTichListPage moDot={moChiTietDotBiTich} /> })
+  }
+
+  function moChiTietDotBiTich(id: string | null, loaiBiTich: LoaiBiTich) {
+    const idThe = id ? `dotBiTich:${id}` : `dotBiTichMoi:${++moiDem.current}`
+    mo({
+      id: idThe,
+      tieuDe: id ? 'Đợt bí tích' : 'Đợt bí tích mới',
+      noiDung: (
+        <DotBiTichDetail
+          id={id}
+          loaiBiTich={loaiBiTich}
+          onTieuDe={(ten) => suaTieuDe(idThe, ten)}
+          onDaLuu={moDanhSachSoBiTich}
+        />
+      ),
+    })
+  }
+
+  function moDanhSachRaoHonPhoi() {
+    mo({ id: 'raoHonPhoiList', tieuDe: 'Danh sách rao hôn phối', noiDung: <RaoHonPhoiListPage moRao={moChiTietRao} /> })
+  }
+
+  function moChiTietRao(id: string | null) {
+    const idThe = id ? `raoHonPhoi:${id}` : `raoHonPhoiMoi:${++moiDem.current}`
+    mo({
+      id: idThe,
+      tieuDe: id ? 'Đôi rao' : 'Đôi rao mới',
+      noiDung: (
+        <RaoHonPhoiDetail id={id} onTieuDe={(ten) => suaTieuDe(idThe, ten)} onDaLuu={moDanhSachRaoHonPhoi} />
+      ),
+    })
+  }
+
   function moQuanLyTaiKhoan() {
     mo({ id: 'taiKhoanList', tieuDe: 'Quản lý tài khoản', noiDung: <TaiKhoanListPage /> })
   }
@@ -156,6 +196,8 @@ function App() {
     else if (id === 'giaoDanList') moDanhSachGiaoDan()
     else if (id === 'taiKhoanList') moQuanLyTaiKhoan()
     else if (id === 'giaoHoList') moGiaoHoList()
+    else if (id === 'dotBiTichList') moDanhSachSoBiTich()
+    else if (id === 'raoHonPhoiList') moDanhSachRaoHonPhoi()
     else if (id === 'quanLyGiaoXu') moQuanLyGiaoXu()
     else if (id === 'nhapDuLieu') moNhapDuLieu()
   }

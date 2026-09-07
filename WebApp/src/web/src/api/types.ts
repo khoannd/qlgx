@@ -247,6 +247,93 @@ export type TanHienCuaGiaoDan = {
 
 /** Ánh xạ 1-1 với HoiDoanDanhMucDto — một hội đoàn trong danh mục của giáo xứ, dùng cho combo
  * "Tên hội đoàn" khi thêm một lượt tham gia mới. */
+/** LoaiBiTich phía backend — chỉ 3 giá trị có màn hình "Danh sách sổ bí tích" xử lý (Hôn
+ * phối có màn hình riêng, xem hon-phoi.md; An táng/Xức dầu chưa có cột GiaoDan tương ứng). */
+export type LoaiBiTich = 0 | 1 | 2
+
+/** Một dòng trên lưới "Danh sách sổ bí tích" — xem so-bi-tich.md mục 6. */
+export type DotBiTichListItem = {
+  id: string
+  maDotBiTichCu: number
+  loaiBiTich: LoaiBiTich
+  ngayBiTich: string | null
+  moTa: string | null
+  linhMuc: string | null
+  noiBiTich: string | null
+  soLuong: number
+}
+
+/** Một người trong danh sách nhận bí tích của một đợt — xem so-bi-tich.md mục 6. */
+export type NguoiNhanBiTich = {
+  giaoDanId: string
+  maGiaoDanCu: number
+  tenThanh: string | null
+  hoTen: string
+  phai: string | null
+  ngaySinh: string | null
+  soBiTich: string | null
+  nguoiDoDau: string | null
+  ghiChu: string | null
+}
+
+export type DotBiTichDetail = {
+  id: string
+  maDotBiTichCu: number
+  loaiBiTich: LoaiBiTich
+  ngayBiTich: string | null
+  moTa: string | null
+  linhMuc: string | null
+  noiBiTich: string | null
+  rowVersion: number
+  nguoiNhan: NguoiNhanBiTich[]
+}
+
+/** Một dòng trên lưới "Danh sách rao hôn phối" — xem rao-hon-phoi.md mục 6. */
+export type RaoHonPhoiListItem = {
+  id: string
+  maRaoHonPhoiCu: number
+  tenRaoHonPhoi: string | null
+  nguoi1: string | null
+  nguoi2: string | null
+  ngayRaoLan1: string | null
+  ngayRaoLan2: string | null
+  ngayRaoLan3: string | null
+  ghiChu: string | null
+}
+
+/** Chi tiết đầy đủ 26 cột — xem rao-hon-phoi.md mục 2. */
+export type RaoHonPhoiDetail = {
+  id: string
+  maRaoHonPhoiCu: number
+  tenRaoHonPhoi: string | null
+  giaoDan1Id: string | null
+  tenGiaoDan1: string | null
+  giaoDan2Id: string | null
+  tenGiaoDan2: string | null
+  ngayRaoLan1: string | null
+  ngayRaoLan2: string | null
+  ngayRaoLan3: string | null
+  giaoXu1: string | null
+  giaoPhan1: string | null
+  giaoXuTruoc1: string | null
+  giaoPhanTruoc1: string | null
+  giaoXu2: string | null
+  giaoPhan2: string | null
+  giaoXuTruoc2: string | null
+  giaoPhanTruoc2: string | null
+  linhMucNhan: string | null
+  giaoXuNhan: string | null
+  ghiChu: string | null
+  tam1: string | null
+  tam2: string | null
+  tam3: string | null
+  giaoXuNQ1: string | null
+  giaoPhanNQ1: string | null
+  giaoXuNQ2: string | null
+  giaoPhanNQ2: string | null
+  rowVersion: number
+}
+
 export type HoiDoanDanhMuc = {
   id: string
   tenHoiDoan: string
