@@ -1,9 +1,8 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { api } from '../api/client'
 import type { GiaoDanListItem, GiaoHo } from '../api/types'
-import type { GxGridHandle } from '../components/GxGrid'
 import { GxGiaoDanList, menuGiaoDanMacDinh } from '../components/GxGiaoDanList'
 import { GxToolbar } from '../components/GxToolbar'
-import { taiXuongCsv } from '../lib/csv'
 import { chuaHoTro } from '../lib/thongBao'
 
 /** Sentinel hiển thị cho "Ngoài xứ" — đúng quy ước `MaGiaoHo = 0` của bản desktop; ở bản web
@@ -48,11 +47,11 @@ export function GiaoDanList({
   const [giaoHo, setGiaoHo] = useState('-1')
   const [chiKhongThongKe, setChiKhongThongKe] = useState(false)
   const [dongChon, setDongChon] = useState<GiaoDanListItem | null>(null)
-  const luoiRef = useRef<GxGridHandle>(null)
   // 'hoi' = đang hiện 3 lựa chọn Xoá vĩnh viễn/Xoá mềm/Huỷ (thay cho MessageBoxButtons.YesNoCancel
   // của desktop, xem giao-dan-danh-sach.md mục 4); 'dang-xoa' = đã bấm, chờ máy chủ trả lời.
   const [trangThaiXoa, setTrangThaiXoa] = useState<'hoi' | 'dang-xoa' | null>(null)
   const [loiXoa, setLoiXoa] = useState<string | null>(null)
+  const [dangXuatExcel, setDangXuatExcel] = useState(false)
 
   async function thucHienXoa(vinhVien: boolean) {
     if (!dongChon || !onXoa) return
@@ -92,10 +91,29 @@ export function GiaoDanList({
     [moGiaoDan, moGiaDinh],
   )
 
-  function xuatCsv() {
-    const csv = luoiRef.current?.layCsv()
-    if (!csv) return
-    taiXuongCsv(csv, `danh-sach-giao-dan-${new Date().toISOString().slice(0, 10)}.csv`)
+  // "Xuất Excel" (thay CSV cũ theo góp ý người dùng: "người dùng thông thường không dùng CSV") —
+  // gọi thẳng máy chủ (ClosedXML, xem XuatExcelService.cs) thay vì đọc dữ liệu đang hiển thị
+  // trên lưới như `layCsv()` cũ, để tệp Excel LUÔN khớp với chính LayDanhSach() đã dựng nên
+  // `rows` — không có nguy cơ máy khách và máy chủ lọc lệch nhau. Ba bộ lọc đang áp dụng trên
+  // màn hình (Giáo họ/"chỉ xem không thống kê"/"hiện cả người đã mất, chuyển xứ") được truyền
+  // y hệt tên tham số của GET "" (`api.giaoDan.danhSach`). Riêng lựa chọn "Ngoài xứ" (giaoHo ===
+  // '0') KHÔNG có tham số máy chủ tương ứng — LayDanhSach chỉ nhận `giaoHoId` là một khoá ngoại
+  // GUID thật hoặc bỏ trống (không lọc), không có "chỉ lấy người không có giáo họ" — nên trường
+  // hợp này tạm xuất NHƯ "Tất cả" (không lọc), đúng giới hạn sẵn có của LayDanhSach mà endpoint
+  // xuất Excel cố ý tái dùng nguyên vẹn (xem quyết định ghi ở can-review-sau.md).
+  async function xuatExcel() {
+    const idGiaoHo = giaoHo === '-1' || giaoHo === '0'
+      ? undefined
+      : danhMucGiaoHo.find((g) => g.tenGiaoHo === giaoHo)?.id
+    setDangXuatExcel(true)
+    try {
+      await api.giaoDan.xuatExcel(idGiaoHo, chiKhongThongKe, hienCaDaMat)
+    } catch (e) {
+      console.error('Không xuất được Excel danh sách giáo dân', e)
+      window.alert(e instanceof Error ? e.message : 'Xuất Excel thất bại, thử lại sau.')
+    } finally {
+      setDangXuatExcel(false)
+    }
   }
 
   return (
@@ -112,8 +130,9 @@ export function GiaoDanList({
         items={[
           { label: 'Tải lại', icon: 'reload', onClick: onTaiLai,
             title: 'Lấy lại dữ liệu trong chương trình và hiện lên lưới như khi chưa thực hiện tìm kiếm' },
-          { label: 'Xuất dữ liệu (CSV)', icon: 'excel', onClick: xuatCsv,
-            title: 'Xuất danh sách đang hiện trên lưới ra tệp CSV' },
+          { label: dangXuatExcel ? 'Đang xuất…' : 'Xuất Excel', icon: 'excel',
+            onClick: dangXuatExcel ? undefined : () => { void xuatExcel() },
+            title: 'Xuất danh sách đang hiện trên lưới ra tệp Excel (.xlsx)' },
           '|',
           { label: 'Thêm giáo dân', icon: 'plus', kind: 'primary', onClick: () => moGiaoDan(null), title: 'Thêm' },
           { label: 'Xóa giáo dân', icon: 'trash', needSel: true, onClick: () => setTrangThaiXoa('hoi'),
@@ -181,7 +200,7 @@ export function GiaoDanList({
       </div>
       </div>
 
-      <GxGiaoDanList ref={luoiRef} rows={rowsLoc} onMo={(d) => moGiaoDan(d.id)} onChon={setDongChon} menuChuotPhai={menu} />
+      <GxGiaoDanList rows={rowsLoc} onMo={(d) => moGiaoDan(d.id)} onChon={setDongChon} menuChuotPhai={menu} />
     </section>
   )
 }

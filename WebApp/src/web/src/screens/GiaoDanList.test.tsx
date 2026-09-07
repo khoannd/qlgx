@@ -2,8 +2,16 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { GiaoDanList } from './GiaoDanList'
+import { api } from '../api/client'
 import type { GiaoDanListItem } from '../api/types'
-import * as csv from '../lib/csv'
+
+vi.mock('../api/client', () => ({
+  api: {
+    giaoDan: {
+      xuatExcel: vi.fn(() => Promise.resolve()),
+    },
+  },
+}))
 
 const nguoi = (p: Partial<GiaoDanListItem> = {}): GiaoDanListItem => ({
   id: 'p1', maGiaoDanCu: 4401, tenThanh: 'Giuse', hoTen: 'Trần Văn Bình',
@@ -182,17 +190,25 @@ describe('GiaoDanList', () => {
     expect(onTaiLai).toHaveBeenCalledOnce()
   })
 
-  it('nut Xuat du lieu (CSV) goi taiXuongCsv voi noi dung tu luoi', async () => {
-    const spy = vi.spyOn(csv, 'taiXuongCsv').mockImplementation(() => {})
-    render(<GiaoDanList rows={rows} moGiaoDan={vi.fn()} />)
+  it('nut Xuat Excel goi api.giaoDan.xuatExcel voi dung bo loc dang ap dung', async () => {
+    render(<GiaoDanList rows={rows} moGiaoDan={vi.fn()} hienCaDaMat={false}
+      danhMucGiaoHo={[{ id: 'gh-1', tenGiaoHo: 'Giáo họ Thánh Tâm', maGiaoHoCu: 1, giaoHoChaId: null }]} />)
     await screen.findByText('Trần Văn Bình')
 
-    await userEvent.click(screen.getByRole('button', { name: 'Xuất dữ liệu (CSV)' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Xuất Excel' }))
 
-    expect(spy).toHaveBeenCalledOnce()
-    const [noiDung, tenTep] = spy.mock.calls[0]
-    expect(typeof noiDung).toBe('string')
-    expect(tenTep).toMatch(/^danh-sach-giao-dan-.*\.csv$/)
+    expect(api.giaoDan.xuatExcel).toHaveBeenCalledWith(undefined, false, false)
+  })
+
+  it('nut Xuat Excel truyen dung giaoHoId thuc khi da chon mot Giao ho', async () => {
+    render(<GiaoDanList rows={rows} moGiaoDan={vi.fn()}
+      danhMucGiaoHo={[{ id: 'gh-1', tenGiaoHo: 'Giáo họ Thánh Tâm', maGiaoHoCu: 1, giaoHoChaId: null }]} />)
+    await screen.findByText('Trần Văn Bình')
+    await userEvent.selectOptions(screen.getByLabelText('Giáo họ'), 'Giáo họ Thánh Tâm')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Xuất Excel' }))
+
+    expect(api.giaoDan.xuatExcel).toHaveBeenCalledWith('gh-1', false, false)
   })
 
   it('nut In danh sach hien thong bao chua ho tro', async () => {

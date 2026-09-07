@@ -1,9 +1,8 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { api } from '../api/client'
 import type { GiaDinhListItem, GiaoHo } from '../api/types'
 import { GxGiaDinhList, menuGiaDinhMacDinh } from '../components/GxGiaDinhList'
-import type { GxGridHandle } from '../components/GxGrid'
 import { GxToolbar } from '../components/GxToolbar'
-import { taiXuongCsv } from '../lib/csv'
 import { chuaHoTro } from '../lib/thongBao'
 
 /** Sentinel hiển thị cho "Ngoài xứ" — xem cùng hằng số ở GiaoDanList.tsx. */
@@ -38,7 +37,7 @@ export function GiaDinhList({ rows, moGiaDinh, danhMucGiaoHo = [], onXoa, onTaiL
   const [dongChon, setDongChon] = useState<GiaDinhListItem | null>(null)
   const [trangThaiXoa, setTrangThaiXoa] = useState<'hoi' | 'dang-xoa' | null>(null)
   const [loiXoa, setLoiXoa] = useState<string | null>(null)
-  const luoiRef = useRef<GxGridHandle>(null)
+  const [dangXuatExcel, setDangXuatExcel] = useState(false)
 
   async function thucHienXoa(vinhVien: boolean) {
     if (!dongChon || !onXoa) return
@@ -72,10 +71,23 @@ export function GiaDinhList({ rows, moGiaDinh, danhMucGiaoHo = [], onXoa, onTaiL
 
   const menu = useMemo(() => menuGiaDinhMacDinh((d) => moGiaDinh(d.id)), [moGiaDinh])
 
-  function xuatCsv() {
-    const csv = luoiRef.current?.layCsv()
-    if (!csv) return
-    taiXuongCsv(csv, `danh-sach-gia-dinh-${new Date().toISOString().slice(0, 10)}.csv`)
+  // "Xuất Excel" (thay CSV cũ) — cùng lý do/thiết kế với GiaoDanList.tsx: gọi thẳng máy chủ
+  // (ClosedXML) với đúng hai tham số lọc đang áp dụng trên màn hình, thay vì đọc dữ liệu qua
+  // `layCsv()` của lưới. Gia đình không có công tắc "hiện cả người đã mất/chuyển xứ" nào (xem
+  // `api.giaDinh.danhSach` — chỉ nhận giaoHoId/chiKhongThongKe) nên không có tham số thứ ba.
+  async function xuatExcel() {
+    const idGiaoHo = giaoHo === '-1' || giaoHo === '0'
+      ? undefined
+      : danhMucGiaoHo.find((g) => g.tenGiaoHo === giaoHo)?.id
+    setDangXuatExcel(true)
+    try {
+      await api.giaDinh.xuatExcel(idGiaoHo, chiKhongThongKe)
+    } catch (e) {
+      console.error('Không xuất được Excel danh sách gia đình', e)
+      window.alert(e instanceof Error ? e.message : 'Xuất Excel thất bại, thử lại sau.')
+    } finally {
+      setDangXuatExcel(false)
+    }
   }
 
   return (
@@ -92,8 +104,9 @@ export function GiaDinhList({ rows, moGiaDinh, danhMucGiaoHo = [], onXoa, onTaiL
         items={[
           { label: 'Tải lại', icon: 'reload', onClick: onTaiLai,
             title: 'Lấy lại dữ liệu trong chương trình và hiện lên lưới như khi chưa thực hiện tìm kiếm' },
-          { label: 'Xuất dữ liệu (CSV)', icon: 'excel', onClick: xuatCsv,
-            title: 'Xuất danh sách đang hiện trên lưới ra tệp CSV' },
+          { label: dangXuatExcel ? 'Đang xuất…' : 'Xuất Excel', icon: 'excel',
+            onClick: dangXuatExcel ? undefined : () => { void xuatExcel() },
+            title: 'Xuất danh sách đang hiện trên lưới ra tệp Excel (.xlsx)' },
           '|',
           { label: 'Thêm gia đình', icon: 'plus', kind: 'primary', onClick: () => moGiaDinh(null), title: 'Thêm' },
           { label: 'Xóa gia đình', icon: 'trash', needSel: true, onClick: () => setTrangThaiXoa('hoi'),
@@ -153,7 +166,7 @@ export function GiaDinhList({ rows, moGiaDinh, danhMucGiaoHo = [], onXoa, onTaiL
       </div>
       </div>
 
-      <GxGiaDinhList ref={luoiRef} rows={rowsLoc} onMo={(d) => moGiaDinh(d.id)} onChon={setDongChon} menuChuotPhai={menu} />
+      <GxGiaDinhList rows={rowsLoc} onMo={(d) => moGiaDinh(d.id)} onChon={setDongChon} menuChuotPhai={menu} />
     </section>
   )
 }

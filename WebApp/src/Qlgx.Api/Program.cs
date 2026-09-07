@@ -62,6 +62,9 @@ builder.Services.AddScoped<GiaDinhService>();
 builder.Services.AddScoped<GiaoDanService>();
 // Anh dai dien (Task 1.2 VIEC-TIEP-THEO.md) — xem AnhDaiDienService.cs.
 builder.Services.AddScoped<AnhDaiDienService>();
+// Xuat Excel that (ClosedXML, khong Office Interop) cho hai man hinh danh sach — xem
+// XuatExcelService.cs. Scoped vi phu thuoc GiaoDanService/GiaDinhService (deu Scoped).
+builder.Services.AddScoped<XuatExcelService>();
 
 // Ha tang in an (VIEC-TIEP-THEO.md muc 1.1) — xem docs/superpowers/specs/man-hinh/in-an.md.
 // BoTrinhDuyet la Singleton CO CHU DICH: giu dung MOT trinh duyet Chromium headless (Playwright)

@@ -11,6 +11,7 @@
   <ItemGroup>
     <!-- Xac thuc JWT (Task 14). PasswordHasher<T> (Microsoft.Extensions.Identity.Core) da co
          san qua Microsoft.NET.Sdk.Web nen khong can khai bao rieng. -->
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
     <PackageReference Include="Microsoft.Playwright" Version="1.55.0" />
     <!-- Xử lý ảnh đại diện (Task 1.2 VIEC-TIEP-THEO.md): giải mã + kiểm chữ ký thật + thu nhỏ

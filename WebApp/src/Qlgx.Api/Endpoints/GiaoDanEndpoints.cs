@@ -13,6 +13,22 @@ public static class GiaoDanEndpoints
             bool? hienCaDaMat, CancellationToken ct) =>
             Results.Ok(await dv.LayDanhSach(giaoHoId, chiKhongThongKe ?? false, hienCaDaMat ?? false, ct)));
 
+        // "Xuất Excel" (thay nút "Xuất dữ liệu (CSV)" cũ theo góp ý người dùng) — CÙNG BA tham số
+        // lọc với GET "" phía trên (giaoHoId/chiKhongThongKe/hienCaDaMat), tôn trọng đúng bộ lọc
+        // đang áp dụng trên màn hình "Danh sách giáo dân". "/xuat-excel" không khớp mẫu
+        // "/{id:guid}" ở dưới (không phải GUID) nên hai route không giẫm nhau, giống "/tim" đã
+        // có sẵn. Route nằm trong `nhom` nên đã kế thừa RequireAuthorization(); GiaoXuId lọc qua
+        // HasQueryFilter chung của QlgxDbContext (bộ lọc chung áp dụng ngay trong LayDanhSach mà
+        // XuatExcelService gọi lại, KHÔNG lọc thêm ở đây) — xem XuatExcelService.cs.
+        nhom.MapGet("/xuat-excel", async (XuatExcelService dv, Guid? giaoHoId, bool? chiKhongThongKe,
+            bool? hienCaDaMat, CancellationToken ct) =>
+        {
+            var noiDung = await dv.XuatGiaoDan(giaoHoId, chiKhongThongKe ?? false, hienCaDaMat ?? false, ct);
+            var tenTep = $"danh-sach-giao-dan-{DateTime.Now:yyyy-MM-dd}.xlsx";
+            return Results.File(noiDung,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", tenTep);
+        });
+
         nhom.MapGet("/{id:guid}", async (GiaoDanService dv, Guid id, CancellationToken ct) =>
             await dv.LayChiTiet(id, ct) is { } chiTiet ? Results.Ok(chiTiet) : Results.NotFound());
 

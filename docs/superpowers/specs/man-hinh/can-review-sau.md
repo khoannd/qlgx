@@ -2466,3 +2466,128 @@ hàng lọc lưới (ngoài chiều cao input đã nêu ở Việc 1), Phiếu g
 dùng chung; hành vi "gọi đúng callback nào" khó kiểm bằng jsdom hơn là bằng trình duyệt thật theo
 đúng yêu cầu nhiệm vụ). `npm run build` chạy được. Không chạm backend, không chạy
 `dotnet test`. Ảnh chụp: `100`–`104` trong `WebApp/anh-chup-kiem-thu/`.
+
+### 48. Task "ba việc theo phản hồi trực tiếp lần 3" (2026-09-07) — CMND/CCCD sang cột trái,
+bỏ viền icon lịch, Xuất Excel thay CSV
+
+Người dùng thật tiếp tục ngồi kiểm tra, gửi ảnh và ba góp ý trực tiếp. Không dừng lại hỏi, tự
+quyết hướng hợp lý nhất theo đúng chỉ dẫn nhiệm vụ, ghi lại quyết định ở đây.
+
+**Việc 1 — CMND/CCCD + checkbox "Là giáo dân không được thống kê" sang cột trái, dưới Giáo họ:**
+- Trước: `GxField` "CMND / CCCD" (kèm `extra` là checkbox) nằm ở CỘT PHẢI của `.canhan-cols`
+  (dưới "Tên Mẹ"). Người dùng: "nên đưa CCCD và checkbox trong hình qua bên trái, bên dưới giáo
+  họ".
+- Quyết định: chuyển nguyên khối `GxField` đó (không tách checkbox riêng — vẫn dùng `extra` như
+  cũ) vào `.canhan-top-fields` (cột trái, khối chứa Mã giáo dân/Tên thánh/Họ tên/Giáo họ), ngay
+  sau field "Giáo họ" — thành dòng thứ 5. Không cần sửa CSS: mục 47 đã đổi `.canhan-top` sang
+  `align-items: stretch` nên khung ảnh 3x4 bên phải TỰ giãn cao theo đúng số dòng của
+  `.canhan-top-fields`, dù dòng đó là 4 hay 5 — cơ chế đã đúng sẵn từ trước, chỉ cần thêm dòng là
+  đủ cân đối, không có khoảng trắng thừa mới nào.
+- Đo `getBoundingClientRect()` trên trình duyệt thật (giáo dân "Giuse Nguyễn Đức Mạnh", mã 1),
+  dùng đúng kỹ thuật `git stash` tạm hai file đã sửa rồi đo lại bản HMR reload như mục 47 đã làm
+  để lấy số "trước" chính xác, không đoán:
+  - Trước (CMND ở cột phải, `.canhan-top-fields` chỉ 4 dòng): `.canhan-top-fields` cao 138px,
+    khung ảnh cao 138px (khớp nhau, đúng trạng thái sau mục 47).
+  - Sau (CMND chuyển vào cột trái, `.canhan-top-fields` thành 5 dòng): `.canhan-top-fields` cao
+    178.6px, khung ảnh cao 178.6px — vẫn khớp tuyệt đối nhau (chênh 0px), ảnh cao thêm 40.6px
+    tương ứng đúng một dòng `.frow` mới (30px + 6px margin, dòng cuối không margin nên lệch chút
+    do wrap) — không có khoảng trắng thừa nào phát sinh, đúng yêu cầu "ảnh bên phải cũng cao thêm
+    tương ứng, giữ hai cột cân đối".
+  - Ảnh chụp: `105-viec1-cccd-checkbox-cot-trai.png`.
+
+**Việc 2 — bỏ viền hộp vuông quanh biểu tượng lịch (component `GxDate` dùng chung):**
+- Hiện tượng: nút tròn `<button className="mini gx-date-btn">` (biểu tượng lịch mở lịch) trong
+  `GxDate.tsx` không có CSS riêng nào bỏ viền — class `.mini` CHỈ được định nghĩa dưới scope
+  `.picker .mini` trong `qlgx.css` (dùng cho nút "bỏ chọn" của `GxPicker`), không khớp một
+  `<button>` đứng một mình trong `.gx-date-row`. CSS gốc chỉ có `.gx-date-btn { width: 26px;
+  height: 26px; }` — không có `border: 0`/`appearance: none`/`background` nào, nên trình duyệt tự
+  vẽ viền/nền `<button>` mặc định (hộp xám nhạt có viền rõ) quanh biểu tượng lịch, đúng như ảnh
+  người dùng gửi.
+- Sửa (`qlgx.css`, `.gx-date-btn`): thêm `appearance: none; border: 0; border-radius: 50%;
+  background: transparent; cursor: pointer;` cùng `:hover`/`:disabled` tương ứng (nền tròn nhạt
+  lúc hover, giống các nút `.mini` khác trong ứng dụng) — không tạo class mới, không đụng
+  `GxDate.tsx` (chỉ CSS). Vì `GxDate` là component DÙNG CHUNG cho mọi ô ngày (Ngày sinh, Ngày rửa
+  tội, Ngày hôn phối, Ngày qua đời…), sửa một chỗ áp dụng khắp ứng dụng, không vá riêng lẻ.
+- Kiểm chứng bằng `getComputedStyle()` trên trình duyệt thật: `border: "0px none …"`, `background:
+  "rgba(0, 0, 0, 0)"`, `borderRadius: "50%"` — không còn viền hộp nào. Ảnh chụp cận cảnh ô "Ngày
+  sinh": `106-viec2-icon-lich-khong-vien.png`.
+
+**Việc 3 — "Xuất Excel" (.xlsx thật, ClosedXML) thay "Xuất dữ liệu (CSV)":**
+- Người dùng: "Xuất CSV tôi muốn xuất Excel có format như trên grid, vì người dùng thông thường
+  không dùng CSV".
+- Quyết định kiến trúc quan trọng nhất: endpoint Excel mới (`XuatExcelService.cs`) KHÔNG viết lại
+  điều kiện lọc nào — gọi thẳng lại `GiaoDanService.LayDanhSach`/`GiaDinhService.LayDanhSach`
+  (đúng những hàm GET danh sách JSON hiện có đang dùng), rồi chỉ dựng workbook từ kết quả trả về.
+  Nhờ vậy Excel xuất ra LUÔN khớp 100% với JSON mà chính bộ lọc đó trả, không có nguy cơ hai nơi
+  lọc lệch nhau theo thời gian nếu sau này ai đó sửa `LayDanhSach` mà quên sửa chỗ xuất Excel.
+- Cột/tiêu đề: chép nguyên văn tên cột và THỨ TỰ cột từ `cotGiaoDan.ts` (29 cột)/`cotGiaDinh.ts`
+  (12 cột) — không tự nghĩ tên khác. Boolean hiển thị dấu tích/dấu gạch ngang giống hệt
+  `valueFormatter` của lưới; ngày hiển thị `dd/MM/yyyy` (chuỗi, không phải kiểu ngày Excel — cố ý
+  để khớp CHỮ với những gì đang hiện trên lưới, không phải để sort được theo kiểu ngày Excel; nếu
+  sau này cần sort/tính toán trên cột ngày thì đây là chỗ cần đổi sang kiểu `DateTime` thật của
+  ClosedXML). Tiêu đề in đậm (`Style.Font.Bold`), đóng băng hàng 1 (`FreezeRows(1)`), độ rộng cột
+  tự co theo nội dung (`Columns().AdjustToContents()`), có auto-filter.
+- Gạch ngang — quyết định CỐ Ý khác nhau giữa hai lưới, đúng những gì lưới web ĐANG hiển thị
+  (không phải đúng những gì nghe "hợp lý" từ mô tả nhiệm vụ):
+  - Lưới giáo dân đứng một mình ở "Danh sách giáo dân": KHÔNG gạch ngang dòng nào. Lý do:
+    `GxGiaoDanList` chỉ gạch (`toDo`) khi `quanHeGiaDinh=true` (lưới "Thành viên khác" nhúng
+    trong form gia đình) — màn hình "Danh sách giáo dân" gọi component này KHÔNG truyền
+    `quanHeGiaDinh`, nên `toDo` là `undefined`, không có `ghiChuChan` "Gạch ngang đỏ" nào hiện ra
+    (xem mục 7 cũ). Excel xuất từ đúng màn hình đó phải khớp — nếu gạch ngang người "Qua đời"/
+    "Đã chuyển đi" ở đây sẽ SAI KHÁC với lưới đang hiển thị, dù mô tả nhiệm vụ liệt kê "qua
+    đời/chuyển xứ/đã lập gia đình riêng" như một quy tắc chung. Đã viết test xác nhận không có ô
+    nào gạch ngang trong toàn bộ tệp giáo dân.
+  - Lưới gia đình: gạch từng Ô (không phải cả dòng) — "Người nam" gạch khi `Gach` là 0 hoặc 2,
+    "Người nữ" gạch khi `Gach` là 1 hoặc 2 — chép nguyên văn điều kiện `cellClass` của
+    `cotGiaDinh.ts`.
+  - "Đã lập gia đình riêng" (`lapGd`/`daCoGiaDinh`) KHÔNG gạch ngang ở bất cứ đâu — đúng quyết
+    định đã ghi ở mục 7 cũ (gạch người đã lập gia đình gây hiểu nhầm, phần lớn giáo dân trưởng
+    thành đã lập gia đình).
+- Bộ lọc: endpoint nhận đúng ba tham số của `GET /api/giao-dan` (`giaoHoId`, `chiKhongThongKe`,
+  `hienCaDaMat`) và hai tham số của `GET /api/gia-dinh` (`giaoHoId`, `chiKhongThongKe` — gia đình
+  không có `hienCaDaMat`, `LayDanhSach` của `GiaDinhService` chưa hỗ trợ). Phía web: combobox
+  "Giáo họ" trên màn hình vốn lọc THEO TÊN ở máy khách (so khớp `tenGiaoHo`, không gọi lại API) —
+  để truyền đúng `giaoHoId` (khoá GUID thật) cho endpoint Excel, tra ngược tên đang chọn trong
+  `danhMucGiaoHo` (đã có sẵn, `GET /api/giao-ho`) để lấy `id`. Giới hạn đã biết, chấp nhận được:
+  lựa chọn "Ngoài xứ" trong combobox không có tham số máy chủ tương ứng
+  (`LayDanhSach(giaoHoId: null)` nghĩa là "không lọc gì", không phải "chỉ lấy người không có giáo
+  họ") — khi đang chọn "Ngoài xứ" mà bấm "Xuất Excel", tệp xuất ra là TOÀN BỘ danh sách (như đang
+  chọn "Tất cả"), không riêng người Ngoài xứ. Không mở rộng `LayDanhSach` cho trường hợp hiếm này
+  (đúng chỉ dẫn nhiệm vụ "đừng viết lại logic lọc").
+- Không dùng Office Interop — ClosedXML 0.105.1 (MIT, sinh `.xlsx` thuần OpenXML, không cần Excel
+  cài trên máy chủ), thêm vào `Qlgx.Api.csproj` bằng `dotnet add package`.
+- Đổi nút "Xuất dữ liệu (CSV)" thành "Xuất Excel" ở cả hai màn hình danh sách, gọi
+  `api.giaoDan.xuatExcel`/`api.giaDinh.xuatExcel` (dùng lại `taiTepIn()` sẵn có — đọc tên tệp thật
+  từ `Content-Disposition`, tự tải về máy). `layCsv()`/`taiXuongCsv()`/`lib/csv.ts` GIỮ NGUYÊN
+  (không xoá) — `layCsv()` vẫn được `GxGiaoDanList.test.tsx` dùng để kiểm tra thứ tự sắp xếp thật
+  của lưới, không liên quan gì tới nút xuất dữ liệu nữa.
+- Kiểm chứng bằng đọc tệp thật: gọi endpoint qua `fetch()` trong trang (Playwright MCP mất kết
+  nối khi bấm nút tải file thật, đúng lưu ý đã biết ở đầu nhiệm vụ), lưu base64 ra tệp `.xlsx`,
+  đọc lại bằng `openpyxl` (Python):
+  - `/api/giao-dan/xuat-excel`: 200, `Content-Type`
+    `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, `Content-Disposition`
+    đúng tên `danh-sach-giao-dan-2026-09-07.xlsx`, sheet "Giáo dân", 2039 dòng dữ liệu (khớp số
+    "2039 giáo dân" hiện trên màn hình lúc đó), đúng 29 cột, tiêu đề đúng tên/in đậm (`A1`= "Mã
+    GD" bold=True, `C1`="Họ tên" bold=True), cột ngày dạng chuỗi `dd/MM/yyyy` (ví dụ
+    "18/12/2014"), 0 ô gạch ngang trong toàn bộ sheet (đúng quyết định ở trên).
+  - `/api/gia-dinh/xuat-excel`: 200, cùng loại nội dung, sheet "Gia đình", 40 dòng (khớp "40 gia
+    đình"), đúng 12 cột, tiêu đề in đậm, và có gạch ngang đúng ô — ví dụ dòng "Nguyễn Văn Sơ" (mã
+    10): cả "Người nam" (Dom Nguyễn Văn Sơ) VÀ "Người nữ" (Anna Nguyễn Thị Nghĩa) đều gạch ngang;
+    dòng "Trần Hữu Chính" (mã 11): chỉ "Người nam" gạch, "Người nữ" không — đúng theo từng trường
+    hợp `Gach` khác nhau, không phải gạch cả dòng đồng loạt.
+  - Ảnh chụp nút "Xuất Excel" trên thanh công cụ: `107-viec3-nut-xuat-excel-danh-sach-giao-dan.png`.
+- Viết 6 test mới ở `WebApp/tests/Qlgx.Api.Tests/XuatExcelTests.cs` (đọc lại `.xlsx` sinh ra bằng
+  chính `ClosedXML.Excel.XLWorkbook` phía test — thư viện sinh ra cũng đọc lại được): đúng loại
+  nội dung/tiêu đề in đậm, không gạch ngang dòng nào ở giáo dân, tôn trọng lọc giáo họ, không lộ
+  dữ liệu giáo xứ khác, gạch đúng ô ở gia đình theo `Gach`, tôn trọng lọc `chiKhongThongKe`.
+
+**Không đụng gì khác:** không sửa `GxGrid.tsx`/`GxGiaoDanList.tsx`/`GxGiaDinhList.tsx` (giữ
+nguyên `layCsv()` cho mục đích test); không sửa cột/quy tắc gạch ngang trong `cotGiaoDan.ts`/
+`cotGiaDinh.ts` (chỉ ĐỌC LẠI để chép đúng ở `XuatExcelService.cs`); không đụng bố cục Rửa tội/
+Rước lễ/Thêm sức/Xức dầu, header/hàng lọc lưới, Phiếu gia đình A4 dọc.
+
+**Số test cuối:** frontend 256/256 (thêm 2, thay 2 test CSV cũ của hai màn hình danh sách bằng
+test gọi đúng `api.*.xuatExcel` với đúng tham số lọc), `npm run build` chạy được. Backend 250/250
+(`Qlgx.Data.Tests` 25 + `Qlgx.Api.Tests` 201 [tăng từ 195, thêm 6 test Excel] +
+`Qlgx.Migration.Tests` 24) — không xoá test nào. Ảnh chụp: `105`–`107` trong
+`WebApp/anh-chup-kiem-thu/`.

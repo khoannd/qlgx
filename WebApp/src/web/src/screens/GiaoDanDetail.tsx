@@ -711,10 +711,17 @@ export function GiaoDanDetail({
           thánh" — đúng ý người dùng "ngắn lại bằng tên thánh") để cột trái thành 4 dòng xếp
           khít nhau (margin-bottom 6px như mọi `.frow`, không có khoảng hở nào xen giữa); đổi
           `.canhan-top` sang `align-items: stretch` (CSS, xem qlgx.css) để khung ảnh bên phải tự
-          giãn cao bằng đúng 4 dòng đó — vừa hết khoảng trắng, vừa cho ảnh cao thêm cân đối như
+          giãn cao bằng đúng số dòng đó — vừa hết khoảng trắng, vừa cho ảnh cao thêm cân đối như
           yêu cầu. Field "Giáo xứ"/"Giáo phận" (chỉ hiện khi chọn "Ngoài xứ", hiếm gặp) CỐ Ý giữ
           nguyên ngoài `.canhan-top-fields` — không phải trọng tâm góp ý này, để full-width như
-          cũ tránh cắt chữ "Giáo phận". */}
+          cũ tránh cắt chữ "Giáo phận".
+
+          Góp ý tiếp theo (2026-09-07, người dùng): "đưa CCCD và checkbox trong hình qua bên
+          trái, bên dưới giáo họ" — chuyển GxField "CMND / CCCD" (kèm ô đánh dấu "Là giáo dân
+          không được thống kê" qua prop `extra`) từ cột phải sang cột trái, làm dòng thứ 5 trong
+          `.canhan-top-fields` ngay dưới "Giáo họ". Không cần sửa gì thêm ở CSS: `.canhan-top`
+          vẫn `align-items: stretch` nên khung ảnh bên phải tự giãn cao theo đúng 5 dòng mới —
+          xem `getBoundingClientRect()` đo trước/sau trong task-3-viec-giao-dien-excel.md. */}
       <div className="card glass">
         <div className="card-head"><h2>Thông tin cá nhân</h2><span className="eyebrow">Hồ sơ giáo dân</span></div>
         <div className="canhan-cols">
@@ -735,6 +742,15 @@ export function GiaoDanDetail({
                     <option value={NGOAI_XU}>{NGOAI_XU}</option>
                     {dsGiaoHo.map((g) => <option key={g.id} value={g.id}>{g.tenGiaoHo}</option>)}
                   </select>
+                </GxField>
+                <GxField label="CMND / CCCD" id="gd-cmnd"
+                  extra={
+                    <label className="toggle">
+                      <input type="checkbox" checked={giaoDanAo} onChange={(e) => doiGiaoDanAo(e.target.checked)} />
+                      Là giáo dân không được thống kê
+                    </label>
+                  }>
+                  <input id="gd-cmnd" name="cmnd" type="text" defaultValue={p.cmnd ?? ''} />
                 </GxField>
               </div>
               <AnhDaiDien
@@ -773,15 +789,6 @@ export function GiaoDanDetail({
             <GxField label="Tên Mẹ" id="gd-tenme">
               <GxPicker id="gd-tenme" value={tenMe} onChon={chonMe}
                 onBoChon={() => { setMeId(null); setTenMe(null) }} />
-            </GxField>
-            <GxField label="CMND / CCCD" id="gd-cmnd"
-              extra={
-                <label className="toggle">
-                  <input type="checkbox" checked={giaoDanAo} onChange={(e) => doiGiaoDanAo(e.target.checked)} />
-                  Là giáo dân không được thống kê
-                </label>
-              }>
-              <input id="gd-cmnd" name="cmnd" type="text" defaultValue={p.cmnd ?? ''} />
             </GxField>
           </div>
         </div>

@@ -17,6 +17,18 @@ public static class GiaDinhEndpoints
             bool? chiKhongThongKe, CancellationToken ct) =>
             Results.Ok(await dichVu.LayDanhSach(giaoHoId, chiKhongThongKe ?? false, ct)));
 
+        // "Xuất Excel" — cùng lý do/thiết kế với "/api/giao-dan/xuat-excel", xem chú thích ở
+        // GiaoDanEndpoints.cs. Cùng hai tham số lọc với GET "" phía trên (gia đình không có
+        // "hienCaDaMat" — LayDanhSach của GiaDinhService chưa hỗ trợ tham số đó).
+        nhom.MapGet("/xuat-excel", async (XuatExcelService dv, Guid? giaoHoId,
+            bool? chiKhongThongKe, CancellationToken ct) =>
+        {
+            var noiDung = await dv.XuatGiaDinh(giaoHoId, chiKhongThongKe ?? false, ct);
+            var tenTep = $"danh-sach-gia-dinh-{DateTime.Now:yyyy-MM-dd}.xlsx";
+            return Results.File(noiDung,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", tenTep);
+        });
+
         nhom.MapGet("/{id:guid}", async (GiaDinhService dichVu, Guid id, CancellationToken ct) =>
             await dichVu.LayChiTiet(id, ct) is { } ct2 ? Results.Ok(ct2) : Results.NotFound());
 

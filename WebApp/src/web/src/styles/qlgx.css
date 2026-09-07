@@ -1246,7 +1246,26 @@ tbody tr[aria-selected="true"] .rowhead {
   border-color: var(--rose-ink);
   box-shadow: 0 0 0 3px rgba(225,29,72,.14);
 }
-.gx-date-btn { width: 26px; height: 26px; }
+/* `<button>` không thừa hưởng reset nào của `.picker .mini` (khác scope) nên trước đây hiện
+ * nguyên viền/nền mặc định của trình duyệt — trông như một hộp vuông nặng nề quanh biểu tượng
+ * lịch (góp ý người dùng, ảnh chụp ô "Ngày sinh"). Component dùng chung cho MỌI ô ngày trong
+ * ứng dụng nên bỏ viền ở đây áp dụng khắp nơi, không vá riêng lẻ. */
+.gx-date-btn {
+  width: 26px; height: 26px;
+  appearance: none;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+.gx-date-btn:hover { background: rgba(29,93,219,.1); }
+.gx-date-btn:disabled { cursor: not-allowed; opacity: .45; }
+.gx-date-btn:disabled:hover { background: transparent; }
 /* Input ngày gốc chỉ dùng làm cửa ngõ mở lịch bấm chọn (showPicker()) — ẩn khỏi mắt nhưng
  * KHÔNG dùng `hidden`/`display:none`: một số trình duyệt chặn showPicker() trên phần tử ẩn
  * kiểu đó. Thu về 0 kích thước, đặt ngoài luồng bố cục là đủ để không chiếm chỗ. */

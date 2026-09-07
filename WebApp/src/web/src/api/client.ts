@@ -266,6 +266,11 @@ export const api = {
     /** In "Chứng nhận hôn phối" — 404 khi gia đình chưa có hôn phối nào để chứng nhận. */
     inChungNhanHonPhoi: (id: string) =>
       taiTepIn(`/api/gia-dinh/${id}/in/chung-nhan-hon-phoi`, 'ChungNhanHonPhoi.pdf'),
+    /** "Xuất Excel" (thay CSV cũ) — tải tệp .xlsx thật về máy, tôn trọng đúng bộ lọc đang áp
+     * dụng trên màn hình "Danh sách gia đình" (giáo họ đã chọn/ô "chỉ xem không thống kê"),
+     * dùng lại `thamSo()` giống `danhSach()` ở trên — cùng tham số, không viết lại logic lọc. */
+    xuatExcel: (giaoHoId?: string, chiKhongThongKe?: boolean) =>
+      taiTepIn(`/api/gia-dinh/xuat-excel${thamSo(giaoHoId, chiKhongThongKe)}`, 'DanhSachGiaDinh.xlsx'),
     /** Ảnh đại diện gia đình (Task 1.2) — cùng ba thao tác với giaoDan bên dưới. */
     layAnh: (id: string) => layAnhBlobUrl(`/api/gia-dinh/${id}/anh-dai-dien`),
     taiAnhLen: (id: string, tep: File) => taiAnhLen(`/api/gia-dinh/${id}/anh-dai-dien`, tep),
@@ -274,6 +279,10 @@ export const api = {
   giaoDan: {
     danhSach: (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: boolean) =>
       goi<GiaoDanListItem[]>(`/api/giao-dan${thamSo(giaoHoId, chiKhongThongKe, hienCaDaMat)}`),
+    /** "Xuất Excel" (thay CSV cũ) — cùng ba tham số lọc với `danhSach()` ở trên, tôn trọng đúng
+     * bộ lọc đang áp dụng trên màn hình "Danh sách giáo dân". */
+    xuatExcel: (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: boolean) =>
+      taiTepIn(`/api/giao-dan/xuat-excel${thamSo(giaoHoId, chiKhongThongKe, hienCaDaMat)}`, 'DanhSachGiaoDan.xlsx'),
     chiTiet: (id: string) => goi<GiaoDanDetail>(`/api/giao-dan/${id}`),
     // 201 (đã lưu) hoặc 200 (còn cảnh báo chưa xác nhận) — cả hai đọc cùng KetQuaLuuGiaoDan.
     taoMoi: (than: unknown) =>
