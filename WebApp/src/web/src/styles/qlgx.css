@@ -1206,6 +1206,20 @@ tbody tr[aria-selected="true"] .rowhead {
   .canhan-cols { grid-template-columns: 1fr; }
 }
 
+/* Khối "Thông tin khác" (frmGiaoDan) — cùng kiểu 2 cột với `.canhan-cols` ở trên (yêu cầu người
+   dùng 2026-09-08: "chia hiển thị dạng 2 cột như trên phần thông tin cá nhân"), nhưng nhãn ở đây
+   dài hơn hẳn ("Trình độ văn hóa", "Biết ngoại ngữ"...) nên KHÔNG dùng chung `.frow` 96px của
+   `.canhan-cols` (sẽ xuống dòng liên tục, trông rối) — giữ nguyên 132px mặc định của `.frow`. */
+.khac-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 24px;
+  align-items: start;
+}
+@media (max-width: 980px) {
+  .khac-cols { grid-template-columns: 1fr; }
+}
+
 .frow {
   display: grid;
   grid-template-columns: 132px 1fr;
@@ -1317,6 +1331,39 @@ tbody tr[aria-selected="true"] .rowhead {
   overflow-wrap: anywhere;
   box-sizing: border-box;
 }
+
+/* Biểu tượng cảnh báo MỀM cạnh ô ngày (GxCanhBaoNgay.tsx) — CỐ Ý dùng màu hổ phách (--amber*),
+   KHÔNG dùng đỏ (--rose*, đã là màu của `.invalid`/`.gx-date-loi` ở trên) để người dùng phân
+   biệt ngay: đây là NHẮC NHỞ (vẫn lưu được bình thường), không phải lỗi chặn. Yêu cầu người
+   dùng 2026-09-07, xem can-review-sau.md mục "Việc 1". */
+.gx-canhbao-ngay-nut {
+  flex: none;
+  width: 22px; height: 22px;
+  appearance: none;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(217,119,6,.14);
+  color: var(--amber-ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
+}
+.gx-canhbao-ngay-nut:hover, .gx-canhbao-ngay-nut[aria-expanded="true"] { background: rgba(217,119,6,.28); }
+.gx-canhbao-ngay-giaithich {
+  padding: 10px 12px;
+  background: var(--bg, #fff);
+  border: 1px solid rgba(217,119,6,.35);
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(15,47,110,.15);
+  font-size: 12.5px;
+  color: var(--ink);
+}
+.gx-canhbao-ngay-giaithich p { margin: 0; }
+.gx-canhbao-ngay-giaithich p + p { margin-top: 6px; }
 
 /* Gợi ý nhập liệu theo tần suất (GxGoiY.tsx) — dropdown nổi trên, cùng khuôn với
    .picker-dropdown (GxPicker) để giao diện nhất quán giữa hai kiểu "gợi ý" trong ứng dụng.

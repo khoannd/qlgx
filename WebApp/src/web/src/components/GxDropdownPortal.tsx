@@ -8,6 +8,11 @@ type Props = {
   open: boolean
   children: ReactNode
   className?: string
+  /** Bề rộng tối thiểu (px) — mặc định danh sách nổi rộng bằng đúng ô neo (`r.width`), phù hợp
+   * cho gợi ý/kết quả tìm kiếm; một số nội dung khác (ví dụ giải thích cảnh báo ngày tháng, neo
+   * vào một nút biểu tượng nhỏ) cần rộng hơn hẳn bề rộng nút — dùng `Math.max(r.width, minWidth)`
+   * khi có giá trị này, không đổi hành vi cũ khi bỏ trống. */
+  minWidth?: number
 }
 
 /** Chiều cao ước lượng tối đa của danh sách nổi — phải khớp `max-height` ở CSS
@@ -32,7 +37,7 @@ const CAO_UOC_LUONG = 240
  * luôn nổi trên mọi khối khác. Tự tính lại vị trí khi cuộn/đổi cỡ cửa sổ, và tự LẬT LÊN TRÊN ô
  * neo khi không đủ chỗ phía dưới (ô nằm sát đáy trang) — đúng hành vi combobox chuẩn.
  */
-export function GxDropdownPortal({ anchorRef, open, children, className }: Props) {
+export function GxDropdownPortal({ anchorRef, open, children, className, minWidth }: Props) {
   const [style, setStyle] = useState<CSSProperties | null>(null)
 
   useLayoutEffect(() => {
@@ -49,7 +54,7 @@ export function GxDropdownPortal({ anchorRef, open, children, className }: Props
       setStyle({
         position: 'fixed',
         left: r.left,
-        width: r.width,
+        width: minWidth ? Math.max(r.width, minWidth) : r.width,
         zIndex: 1000,
         ...(lenTren ? { bottom: window.innerHeight - r.top + 2 } : { top: r.bottom + 2 }),
       })
@@ -61,7 +66,7 @@ export function GxDropdownPortal({ anchorRef, open, children, className }: Props
       window.removeEventListener('resize', dat)
       window.removeEventListener('scroll', dat, true)
     }
-  }, [open, anchorRef])
+  }, [open, anchorRef, minWidth])
 
   if (!open || !style) return null
   return createPortal(

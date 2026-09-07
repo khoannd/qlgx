@@ -38,6 +38,12 @@ type Props = {
   defaultValue?: string | null
   style?: CSSProperties
   disabled?: boolean
+  /** Gọi lại mỗi khi giá trị ISO thật sự đổi (gõ xong, chọn lịch, hoặc xoá về trống) — dùng cho
+   * nơi gọi cần theo dõi giá trị SỐNG để tính cảnh báo liên-trường (ví dụ so ngày rửa tội với
+   * ngày sinh, xem `lib/canhBaoNgayThang.ts`). Không gọi lúc mới dựng — nơi gọi đã có giá trị
+   * ban đầu qua `defaultValue`. Ô này vẫn là input KHÔNG kiểm soát (`defaultValue`), callback
+   * chỉ để ĐỌC, không dùng để áp giá trị mới xuống ô. */
+  onIsoChange?: (iso: string) => void
 }
 
 /**
@@ -66,7 +72,7 @@ type Props = {
  * (không cần rời ô) VÀ khi rời ô (blur, phòng trường hợp người dùng Tab đi giữa chừng) — đúng
  * quyết định người dùng đã chốt, phương án "chuẩn hoá lúc nhập" (xem `chuanHoaNgayThieu`).
  */
-export function GxDate({ id, name, ariaLabel, defaultValue, style, disabled }: Props) {
+export function GxDate({ id, name, ariaLabel, defaultValue, style, disabled, onIsoChange }: Props) {
   const gtBanDau = defaultValue ?? ''
   // Dữ liệu lỗi cũ không map được vào khuôn 10 ký tự (ví dụ "1958" — chỉ có năm, xem
   // du_lieu_loi) được hiện NGUYÊN VĂN lúc mới dựng, không nhét ép vào khuôn — nhưng ngay khi
@@ -119,6 +125,7 @@ export function GxDate({ id, name, ariaLabel, defaultValue, style, disabled }: P
       setIso(ket ?? '')
       if (ket !== null) setText(dinhDangNgay(ket))
     })
+    onIsoChange?.(ket ?? '')
     if (ket !== null) {
       // Chỉ tự nhảy control kế tiếp khi hành động vừa rồi là "vừa gõ xong chữ số cuối của năm"
       // — không nhảy khi chuẩn hoá xảy ra lúc blur (người dùng đã tự chủ động rời ô bằng cách
@@ -200,7 +207,10 @@ export function GxDate({ id, name, ariaLabel, defaultValue, style, disabled }: P
       // đợi tới lúc rời ô (blur). Quan trọng: nếu không làm ngay, ISO cũ vẫn còn nằm trên ô ẩn
       // cho tới khi blur, và có tình huống blur không kịp xảy ra trước khi form được lưu (ví dụ
       // bấm thẳng nút Cập nhật) — lưu nhầm giá trị ngày ĐÃ XOÁ trên màn hình xuống CSDL.
-      if (khuon === KHUON_NGAY_RONG) setIso('')
+      if (khuon === KHUON_NGAY_RONG) {
+        setIso('')
+        onIsoChange?.('')
+      }
       datCaretSau(viTriKe)
     }
     // Mọi phím khác (Tab, mũi tên, Enter…) để trình duyệt xử lý bình thường — KHÔNG bẫy focus.
@@ -216,6 +226,7 @@ export function GxDate({ id, name, ariaLabel, defaultValue, style, disabled }: P
     setIso(giaTriIso)
     setText(khuonTuIso(giaTriIso))
     setLoi(null)
+    onIsoChange?.(giaTriIso)
   }
 
   return (

@@ -3044,4 +3044,97 @@ gia đình, xuất Excel: không đụng.
 `npm run build` chạy được. Không đụng backend (`GiaoDanService.KiemTraNghiepVu` chỉ ĐỌC để rà soát,
 không sửa dòng nào) nên không chạy `dotnet test`. Dữ liệu xác nhận không đổi bằng `psql`: giáo dân
 mã 3 vẫn `ngay_xuc_dau` rỗng (không lưu nhầm dữ liệu test), tổng **2050 giáo dân / 40 gia đình**
+không đổi.
+
+### 54. Task "biểu tượng cảnh báo ngày tháng bất thường + Thông tin khác chia 2 cột" (2026-09-08)
+
+**Việc 1 — biểu tượng cảnh báo MỀM, không chặn lưu.** Người dùng thật báo trực tiếp: *"ngày rửa
+tội trước ngày sinh, mặc dù vẫn cho phép nhưng nên có warning icon, click vào có giải thích"*.
+Xác nhận trước bằng `psql` trên `qlgx_thu`: **38 giáo dân thật** có `ngay_rua_toi < ngay_sinh` —
+dữ liệu sổ sách nhiều năm, không được chặn cứng.
+
+- Tính năng MỚI, KHÔNG phải migrate hành vi cũ — không bị ràng buộc "giống hệt bản desktop kể cả
+  chỗ sai" của quyết định chi phối ở đầu file này. Hoàn toàn tách biệt với hai cơ chế hiện có:
+  - Quy tắc CHẶN CỨNG (Rule 6, `GiaoDanService.KiemTraNghiepVu`) — bắt buộc phải có Ngày sinh.
+  - Cảnh báo Yes/No trước khi lưu (Rule 9, cùng hàm — CHỈ so Ngày sinh với Ngày rửa tội, đúng bug
+    copy-paste `isValidDateInputRelations` đã ghi ở mục 1 phía trên) — đây LÀ backend, chạy lúc
+    bấm "Cập nhật", hiện `window.confirm`, KHÔNG đụng gì ở task này.
+  - Biểu tượng cảnh báo mới hoàn toàn ở CLIENT, tính lại NGAY khi gõ (không cần lưu), không hỏi
+    lại, không chặn — bấm "Cập nhật" là lưu thẳng dù còn cảnh báo hiện trên màn hình.
+- **Danh sách quan hệ ngày tháng đưa vào cảnh báo** (tự quyết, xem
+  `WebApp/src/web/src/lib/canhBaoNgayThang.ts`, hàm `tinhCanhBaoNgayThang`) — tái hiện đúng tinh
+  thần chuỗi mà bản desktop ĐỊNH kiểm tra nhưng bug khiến chỉ so được 1 cặp (thông điệp Rule 9:
+  "Ngày sinh <= Ngày rửa tội <= Ngày rước lễ lần đầu <= Ngày thêm sức"), cộng thêm hai mốc nữa:
+  - Ngày rửa tội, Ngày rước lễ, Ngày thêm sức, Ngày xức dầu, Ngày qua đời — mỗi mốc so với Ngày
+    sinh (không được đứng trước).
+  - Ngày rước lễ so với Ngày rửa tội; Ngày thêm sức so với Ngày rửa tội VÀ Ngày rước lễ (đúng thứ
+    tự ba bí tích khai tâm).
+  - Ngày xức dầu so với Ngày rửa tội (ngoài Ngày sinh ở trên).
+  - Ngày qua đời so với TẤT CẢ các mốc còn lại (rửa tội/rước lễ/thêm sức/xức dầu) — không thể qua
+    đời trước một mốc đã ghi nhận lúc còn sống.
+  - Ngày hôn phối (tab "Hôn phối", `KhoiHonPhoi`) so với Ngày sinh của chính giáo dân đó — hàm
+    riêng `canhBaoHonPhoiTruocSinh` vì nằm ở component/state độc lập.
+  - **Cố ý CHƯA làm**: hôn phối so với rửa tội/rước lễ, giáo lý (Bao đồng/Vào đời/Giáo lý hôn
+    nhân), ơn gọi tận hiến — phạm vi rộng hơn nhiều, để dành review sau nếu người dùng muốn.
+- **UI**: `WebApp/src/web/src/components/GxCanhBaoNgay.tsx` — `<button>` thật (bấm được bằng Tab +
+  Enter, có `aria-label`/`aria-expanded`), màu **hổ phách** (`--amber`/`--amber-ink`, CSS ở
+  `qlgx.css` ngay sau `.gx-date-loi`) — cố ý KHÁC màu đỏ của viền `.invalid`/`.gx-date-loi` (lỗi
+  chặn cứng) để người dùng phân biệt ngay đây chỉ là nhắc nhở. Giải thích nổi qua
+  `GxDropdownPortal` (component portal có sẵn từ commit `853f033`, dùng lại — thêm prop
+  `minWidth` tuỳ chọn, không đổi hành vi cũ của `GxGoiY`/`GxPicker`) để không bị cắt bởi
+  `overflow: hidden` của `.tabpages` hay stacking context riêng của `.card.glass`.
+- **Cách theo dõi giá trị sống**: `GxDate` vốn là input KHÔNG kiểm soát (đọc bằng `FormData` lúc
+  lưu) nên thêm prop tuỳ chọn `onIsoChange?: (iso: string) => void`, gọi mỗi khi ISO thật sự đổi
+  (gõ xong, chọn lịch, xoá về trống) — KHÔNG đổi hành vi input, chỉ để nơi gọi "nghe" giá trị hiện
+  tại. `GiaoDanDetail` giữ một `useState<CacMocNgayGiaoDan>` riêng (không phải payload) chỉ để
+  tính cảnh báo hiển thị.
+- Test: `WebApp/src/web/src/lib/canhBaoNgayThang.test.ts` (7 test thuần hàm) và 5 test mới trong
+  `GiaoDanDetail.test.tsx` — khẳng định: icon hiện đúng lúc + đúng nội dung có con số, bấm icon
+  hiện/ẩn giải thích, bấm "Cập nhật" vẫn gọi `onLuu` bình thường (KHÔNG chặn), gõ trực tiếp trên
+  màn hình cũng cập nhật cảnh báo ngay (không cần lưu lại), thứ tự hợp lệ thì không icon nào cả.
+
+**Việc 2 — "Thông tin khác" chia 2 cột.** Người dùng: *"chia hiển thị dạng 2 cột như trên phần
+thông tin cá nhân... cho gọn"*. Dùng lại đúng khuôn `.canhan-cols` (2 cột `1fr 1fr`) nhưng tạo lớp
+riêng `.khac-cols` vì nhãn ở khối này dài hơn hẳn ("Trình độ văn hóa", "Biết ngoại ngữ"...) — dùng
+chung `.frow` 96px của `.canhan-cols` sẽ xuống dòng liên tục, nên giữ nguyên 132px mặc định.
+
+Nhóm theo nghiệp vụ, KHÔNG cắt đôi máy móc theo thứ tự cũ:
+- **Cột trái** (học vấn/nghề nghiệp): Trình độ văn hóa + Trình độ ch.môn, Biết ngoại ngữ + Còn
+  học, Nghề nghiệp + Dân tộc.
+- **Cột phải** (liên lạc + tình trạng): Địa chỉ, Điện thoại + Email, ba ô tick Tân tòng/Có gia
+  đình/Qua đời, rồi Ngày/Nơi qua đời khi tick Qua đời.
+- **Ghi chú chung** giữ NGOÀI hai cột, full-width bên dưới — nội dung tự do dài ngắn khác nhau,
+  ép vào nửa cột sẽ chật không cần thiết; đúng tinh thần "Ghi chú" cũng full-width ở khối "Thông
+  tin gia đình"/"Đôi hôn phối" hiện có.
+- Không đổi `id`/`name` của bất kỳ ô nào — thuần bố cục, `dungPayloadTuForm` không đổi.
+
+**Đo `getBoundingClientRect()` trên trình duyệt thật** (Chromium, giáo dân "F.X Nguyễn Ngọc Duy",
+mã 1859, khi CHƯA tick "Qua đời" — 3 hàng mỗi cột):
+
+| Phần tử | Bề rộng | Cao |
+|---|---|---|
+| `.card` (cả khối "Thông tin khác") | 1172,8px | 218,45px |
+| `.khac-cols` | 1139,2px | 106,6px |
+| Cột trái (3 hàng: Trình độ văn hóa/Biết ngoại ngữ/Nghề nghiệp) | **557,6px** | **106,6px** |
+| Cột phải (3 hàng: Địa chỉ/Điện thoại/3 ô tick) | **557,6px** | **106,6px** |
+
+Hai cột **cao bằng nhau tuyệt đối** (106,6px = 106,6px) — không có khoảng trống thừa ở cột nào.
+Khi tick "Qua đời" (đo lại cùng bản ghi): cột phải nhận thêm 2 hàng (Ngày/Nơi qua đời) nên cao
+178,6px trong khi cột trái vẫn 106,6px (`align-items: start`, không `stretch`) — lệch có chủ đích,
+KHÔNG phải lỗi bố cục: hàng Qua đời hiếm gặp, ép cột trái giãn theo sẽ tạo khoảng trắng vô nghĩa
+phía dưới các trường học vấn/nghề nghiệp.
+
+**Chứng minh bằng chạy thật**: đăng nhập `giaoxu`, tìm giáo dân mã **1859** (một trong 38 bản ghi
+thật có `ngay_rua_toi < ngay_sinh`, tìm bằng `psql` chỉ ĐỌC) → mở hồ sơ → icon cảnh báo hiện đúng
+cạnh "Ngày rửa tội" (`128-canh-bao-ngay-icon.png`) → bấm icon → giải thích "Ngày rửa tội
+(06/01/1990) trước ngày sinh (16/08/1995). Thông tin vẫn được lưu — hãy đối chiếu lại với sổ gốc."
+(`129-canh-bao-ngay-giaithich.png`) → bấm "Cập nhật" → backend vẫn hiện `window.confirm` Rule 9
+(cơ chế CŨ, không đụng) → chấp nhận → "Đã lưu thành công." → `psql` xác nhận dữ liệu KHÔNG đổi
+(cùng giá trị cũ, không phải dữ liệu thử) → khối "Thông tin khác" chia 2 cột cân đối
+(`130-thongtinkhac-2cot.png`, `131-thongtinkhac-quadoi.png` khi tick thử "Qua đời", KHÔNG lưu lại
+lần này). Tổng **2050 giáo dân / 40 gia đình** không đổi sau khi kiểm thử.
+
+**Số test cuối:** frontend **330/330** (317 cũ + 8 test `canhBaoNgayThang.test.ts` + 5 test mới
+trong `GiaoDanDetail.test.tsx`, xem chi tiết ở trên). `npm run build` chạy được. Không đụng
+backend (`GiaoDanService.KiemTraNghiepVu` không sửa dòng nào) nên không chạy `dotnet test`.
 không đổi. Ảnh chụp: `121`–`127` trong `WebApp/anh-chup-kiem-thu/`.

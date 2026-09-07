@@ -4,11 +4,13 @@ import type {
   HoiDoanDanhMuc, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
 } from '../api/types'
 import { AnhDaiDien } from '../components/AnhDaiDien'
+import { GxCanhBaoNgay } from '../components/GxCanhBaoNgay'
 import { GxDate } from '../components/GxDate'
 import { GxField, GxInline } from '../components/GxField'
 import { GxFormTabs } from '../components/GxFormTabs'
 import { GxGoiY } from '../components/GxGoiY'
 import { GxPicker } from '../components/GxPicker'
+import { canhBaoHonPhoiTruocSinh, tinhCanhBaoNgayThang, type CacMocNgayGiaoDan } from '../lib/canhBaoNgayThang'
 import { dinhDangNgay } from '../lib/ngay'
 import { useTuDongLuuBanNhap, xoaBanNhap } from '../lib/banNhap'
 
@@ -47,12 +49,15 @@ const CACH_THUC_HON_PHOI = [
  * hon-phoi.md mục 8) — chỉ xem tên người phối ngẫu và sửa các trường còn lại.
  */
 function KhoiHonPhoi({
-  hp, thuTu, onLuu, giaoXuId,
+  hp, thuTu, onLuu, giaoXuId, ngaySinh,
 }: {
   hp: HonPhoiCuaGiaoDan
   thuTu: number
   onLuu?: (honPhoiId: string, payload: YeuCauCapNhatHonPhoi) => Promise<void>
   giaoXuId: string | null
+  /** Ngày sinh của CHÍNH giáo dân đang xem (không phải người phối ngẫu) — chỉ để tính cảnh báo
+   * mềm "Ngày hôn phối trước ngày sinh" (`GxCanhBaoNgay`), xem can-review-sau.md mục "Việc 1". */
+  ngaySinh: string | null
 }) {
   // KHÔNG dùng thẻ <form> ở đây: toàn bộ tab này được `GxFormTabs` render bên trong thẻ
   // <form> duy nhất bọc cả trang của `GiaoDanDetail` (dùng cho nút "Cập nhật" chính) — lồng
@@ -63,6 +68,8 @@ function KhoiHonPhoi({
   const containerRef = useRef<HTMLDivElement>(null)
   const [dangLuu, setDangLuu] = useState(false)
   const [thongBao, setThongBao] = useState<string | null>(null)
+  const [ngayHonPhoi, setNgayHonPhoi] = useState(hp.ngayHonPhoi)
+  const canhBaoNgayHonPhoi = canhBaoHonPhoiTruocSinh(ngayHonPhoi, ngaySinh)
 
   function docGiaTri(ten: string): string | null {
     const el = containerRef.current?.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(`[name="${ten}"]`)
@@ -106,7 +113,9 @@ function KhoiHonPhoi({
             <input id={`${idBase}-so`} name="soHonPhoi" type="text" defaultValue={hp.soHonPhoi ?? ''} />
           </GxField>
           <GxField label="Ngày hôn phối" id={`${idBase}-ngay`}>
-            <GxDate id={`${idBase}-ngay`} name="ngayHonPhoi" defaultValue={hp.ngayHonPhoi} style={{ maxWidth: 180 }} />
+            <GxDate id={`${idBase}-ngay`} name="ngayHonPhoi" defaultValue={hp.ngayHonPhoi} style={{ maxWidth: 180 }}
+              onIsoChange={(iso) => setNgayHonPhoi(iso || null)} />
+            {canhBaoNgayHonPhoi && <GxCanhBaoNgay thongDiep={[canhBaoNgayHonPhoi]} nhanO="Ngày hôn phối" />}
           </GxField>
           <GxField label="Nơi hôn phối" id={`${idBase}-noi`}>
             <GxGoiY id={`${idBase}-noi`} name="noiHonPhoi" truong="noiHonPhoi" giaoXuId={giaoXuId}
@@ -685,6 +694,18 @@ export function GiaoDanDetail({
   // ba ô Ngày/Nơi/Ghi chú bên dưới, đúng `cbChuyenXu_SelectedIndexChanged`.
   const [loaiChuyenXu, setLoaiChuyenXu] = useState(p.chuyenXu?.loaiChuyen ?? 0)
 
+  // Các mốc ngày dùng để tính cảnh báo MỀM (không chặn lưu) khi thứ tự thời gian bất thường —
+  // xem lib/canhBaoNgayThang.ts và can-review-sau.md mục "Việc 1". State RIÊNG với các input
+  // GxDate (vẫn không kiểm soát, đọc bằng FormData lúc lưu) — chỉ dùng để tính cảnh báo hiển thị
+  // trực tiếp lúc gõ, không ảnh hưởng gì tới `dungPayloadTuForm`.
+  const [ngayMoc, setNgayMoc] = useState<CacMocNgayGiaoDan>(() => ({
+    ngaySinh: p.ngaySinh, ngayRuaToi: p.ngayRuaToi, ngayRuocLe: p.ngayRuocLe,
+    ngayThemSuc: p.ngayThemSuc, ngayXucDau: p.ngayXucDau, ngayQuaDoi: p.ngayQuaDoi,
+  }))
+  const capNhatNgayMoc = (khoa: keyof CacMocNgayGiaoDan) => (iso: string) =>
+    setNgayMoc((cu) => ({ ...cu, [khoa]: iso || null }))
+  const canhBaoNgay = tinhCanhBaoNgayThang(ngayMoc)
+
   const doiQuaDoi = (v: boolean) => { setQuaDoi(v); if (v) setConHoc(false) }
   const doiConHoc = (v: boolean) => { setConHoc(v); if (v) setQuaDoi(false) }
   const doiGiaoDanAo = (v: boolean) => { setGiaoDanAo(v); if (v) setGiaoHoId(null) }
@@ -807,7 +828,8 @@ export function GiaoDanDetail({
                * rộng còn lại (không có flex-grow, đúng cỡ nội dung của khuôn `dd/mm/yyyy`) nên
                * trước đây để trống một khoảng trắng lớn phía sau, trông lệch trái so với các
                * hàng khác (góp ý người dùng: "ngày sinh cho dock bên phải"). */}
-              <GxDate ariaLabel="Ngày sinh" name="ngaySinh" defaultValue={p.ngaySinh} style={{ marginLeft: 'auto' }} />
+              <GxDate ariaLabel="Ngày sinh" name="ngaySinh" defaultValue={p.ngaySinh} style={{ marginLeft: 'auto' }}
+                onIsoChange={capNhatNgayMoc('ngaySinh')} />
             </GxField>
             <GxField label="Nơi sinh" id="gd-noisinh">
               <GxGoiY id="gd-noisinh" name="noiSinh" truong="noiSinh" giaoXuId={giaoXuId} defaultValue={p.noiSinh} />
@@ -828,7 +850,9 @@ export function GiaoDanDetail({
         <div className="card glass">
           <div className="card-head"><h2>Rửa tội</h2></div>
           <GxField label="Ngày rửa tội" id="gd-ngayruatoi">
-            <GxDate id="gd-ngayruatoi" name="ngayRuaToi" defaultValue={p.ngayRuaToi} style={{ maxWidth: 170 }} />
+            <GxDate id="gd-ngayruatoi" name="ngayRuaToi" defaultValue={p.ngayRuaToi} style={{ maxWidth: 170 }}
+              onIsoChange={capNhatNgayMoc('ngayRuaToi')} />
+            <GxCanhBaoNgay thongDiep={canhBaoNgay.ngayRuaToi} nhanO="Ngày rửa tội" />
             <GxInline>Số sổ</GxInline>
             <input aria-label="Số sổ rửa tội" name="soRuaToi" type="text" defaultValue={p.soRuaToi ?? ''} style={{ maxWidth: 150 }} />
           </GxField>
@@ -844,7 +868,9 @@ export function GiaoDanDetail({
         <div className="card glass">
           <div className="card-head"><h2>Rước lễ lần đầu</h2></div>
           <GxField label="Ngày rước lễ" id="gd-ngayruocle">
-            <GxDate id="gd-ngayruocle" name="ngayRuocLe" defaultValue={p.ngayRuocLe} style={{ maxWidth: 170 }} />
+            <GxDate id="gd-ngayruocle" name="ngayRuocLe" defaultValue={p.ngayRuocLe} style={{ maxWidth: 170 }}
+              onIsoChange={capNhatNgayMoc('ngayRuocLe')} />
+            <GxCanhBaoNgay thongDiep={canhBaoNgay.ngayRuocLe} nhanO="Ngày rước lễ" />
             <GxInline>Số sổ</GxInline>
             <input aria-label="Số sổ rước lễ" name="soRuocLe" type="text" defaultValue={p.soRuocLe ?? ''} style={{ maxWidth: 150 }} />
           </GxField>
@@ -859,7 +885,9 @@ export function GiaoDanDetail({
         <div className="card glass">
           <div className="card-head"><h2>Thêm sức</h2></div>
           <GxField label="Ngày thêm sức" id="gd-ngaythemsuc">
-            <GxDate id="gd-ngaythemsuc" name="ngayThemSuc" defaultValue={p.ngayThemSuc} style={{ maxWidth: 170 }} />
+            <GxDate id="gd-ngaythemsuc" name="ngayThemSuc" defaultValue={p.ngayThemSuc} style={{ maxWidth: 170 }}
+              onIsoChange={capNhatNgayMoc('ngayThemSuc')} />
+            <GxCanhBaoNgay thongDiep={canhBaoNgay.ngayThemSuc} nhanO="Ngày thêm sức" />
             <GxInline>Số sổ</GxInline>
             <input aria-label="Số sổ thêm sức" name="soThemSuc" type="text" defaultValue={p.soThemSuc ?? ''} style={{ maxWidth: 150 }} />
           </GxField>
@@ -875,7 +903,9 @@ export function GiaoDanDetail({
         <div className="card glass">
           <div className="card-head"><h2>Xức dầu</h2></div>
           <GxField label="Ngày xức dầu" id="gd-ngayxucdau">
-            <GxDate id="gd-ngayxucdau" name="ngayXucDau" defaultValue={p.ngayXucDau} style={{ maxWidth: 170 }} />
+            <GxDate id="gd-ngayxucdau" name="ngayXucDau" defaultValue={p.ngayXucDau} style={{ maxWidth: 170 }}
+              onIsoChange={capNhatNgayMoc('ngayXucDau')} />
+            <GxCanhBaoNgay thongDiep={canhBaoNgay.ngayXucDau} nhanO="Ngày xức dầu" />
             <GxInline>Tình trạng</GxInline>
             <select aria-label="Tình trạng xức dầu" name="tinhTrangXucDau" defaultValue={p.tinhTrangXucDau ?? ''} style={{ maxWidth: 180 }}>
               {TINH_TRANG_XUC_DAU.map((t) => <option key={t} value={t}>{t || 'Chưa xác định'}</option>)}
@@ -922,62 +952,81 @@ export function GiaoDanDetail({
         </div>
       )}
 
-      {/* Đúng khối `uiGroupBox5` "Thông tin khác" — thứ tự/gộp hàng theo toạ độ Designer. */}
+      {/* Đúng khối `uiGroupBox5` "Thông tin khác" của bản desktop (một cột dọc) — CỐ Ý đổi thành
+          HAI cột theo yêu cầu trực tiếp người dùng 2026-09-08 ("chia hiển thị dạng 2 cột như
+          trên phần thông tin cá nhân... cho gọn"), dùng lại đúng lớp `.khac-cols` (mirror của
+          `.canhan-cols`, xem qlgx.css) để cùng phong cách 2 cột đã có. Nhóm theo nghiệp vụ, KHÔNG
+          cắt đôi máy móc theo thứ tự cũ: cột trái = học vấn/nghề nghiệp (Trình độ văn hóa, Biết
+          ngoại ngữ, Nghề nghiệp — ba trường "hồ sơ cá nhân/xã hội" đi liền nhau); cột phải = liên
+          lạc + tình trạng đặc biệt (Địa chỉ, Điện thoại, ba ô tick Tân tòng/Có gia đình/Qua đời,
+          rồi Ngày/Nơi qua đời khi tick Qua đời — các trường này đều "về một người còn sống hay
+          không, liên lạc được ở đâu"). "Ghi chú chung" giữ NGOÀI hai cột, full-width bên dưới —
+          nội dung tự do dài ngắn khác nhau, ép vào một nửa cột sẽ chật hơn không cần thiết, đúng
+          tinh thần "Ghi chú" cũng đứng full-width ở khối "Thông tin gia đình"/"Thông tin đôi hôn
+          phối" hiện có (GiaDinhDetail.tsx). Không đổi id/name của bất kỳ ô nào — thuần bố cục. */}
       <div className="card glass">
         <div className="card-head"><h2>Thông tin khác</h2></div>
-        <GxField label="Trình độ văn hóa" id="gd-vanhoa">
-          <input id="gd-vanhoa" name="trinhDoVanHoa" type="text" defaultValue={p.trinhDoVanHoa ?? ''} style={{ maxWidth: 180 }} />
-          <GxInline>Trình độ ch.môn</GxInline>
-          <input aria-label="Trình độ chuyên môn" name="trinhDoChuyenMon" type="text" defaultValue={p.trinhDoChuyenMon ?? ''} />
-        </GxField>
-        <GxField label="Biết ngoại ngữ" id="gd-ngoaingu">
-          <input id="gd-ngoaingu" name="bietNgoaiNgu" type="text" defaultValue={p.bietNgoaiNgu ?? ''} style={{ maxWidth: 180 }} />
-          <label className="toggle">
-            <input type="checkbox" name="conHoc" checked={conHoc} onChange={(e) => doiConHoc(e.target.checked)} />
-            Còn học
-          </label>
-        </GxField>
-        <GxField label="Địa chỉ" id="gd-diachi">
-          <input id="gd-diachi" name="diaChi" type="text" defaultValue={p.diaChi ?? ''} />
-        </GxField>
-        <GxField label="Nghề nghiệp" id="gd-nghenghiep">
-          <input id="gd-nghenghiep" name="ngheNghiep" type="text" defaultValue={p.ngheNghiep ?? ''} style={{ maxWidth: 180 }} />
-          <GxInline>Dân tộc</GxInline>
-          <input aria-label="Dân tộc" name="danToc" type="text" defaultValue={p.danToc ?? ''} />
-        </GxField>
-        <GxField label="Điện thoại" id="gd-dienthoai">
-          <input id="gd-dienthoai" name="dienThoai" type="text" defaultValue={p.dienThoai ?? ''} style={{ maxWidth: 180 }} />
-          <GxInline>Email</GxInline>
-          <input aria-label="Email" name="email" type="text" defaultValue={p.email ?? ''} />
-        </GxField>
-        <GxField label="">
-          <label className="toggle">
-            <input type="checkbox" name="tanTong" defaultChecked={p.tanTong} />
-            Tân tòng
-          </label>
-          <label className="toggle">
-            <input type="checkbox" name="daCoGiaDinh" defaultChecked={p.daCoGiaDinh} />
-            Có gia đình
-          </label>
-          <label className="toggle">
-            <input type="checkbox" name="quaDoi" checked={quaDoi} onChange={(e) => doiQuaDoi(e.target.checked)} />
-            Qua đời
-          </label>
-        </GxField>
-        {quaDoi && (
-          <>
-            <GxField label="Ngày qua đời" id="gd-ngayquadoi">
-              <GxDate id="gd-ngayquadoi" name="ngayQuaDoi" defaultValue={p.ngayQuaDoi} style={{ maxWidth: 180 }} />
-              <GxInline>Số sổ</GxInline>
-              <input aria-label="Số sổ qua đời" name="soAnTang" type="text" defaultValue={p.soAnTang ?? ''} style={{ maxWidth: 140 }} />
+        <div className="khac-cols">
+          <div>
+            <GxField label="Trình độ văn hóa" id="gd-vanhoa">
+              <input id="gd-vanhoa" name="trinhDoVanHoa" type="text" defaultValue={p.trinhDoVanHoa ?? ''} style={{ maxWidth: 180 }} />
+              <GxInline>Trình độ ch.môn</GxInline>
+              <input aria-label="Trình độ chuyên môn" name="trinhDoChuyenMon" type="text" defaultValue={p.trinhDoChuyenMon ?? ''} />
             </GxField>
-            <GxField label="Nơi qua đời" id="gd-noiquadoi">
-              <input id="gd-noiquadoi" name="noiQuaDoi" type="text" defaultValue={p.noiQuaDoi ?? ''} />
-              <GxInline>Nơi an táng</GxInline>
-              <input aria-label="Nơi an táng" name="noiAnTang" type="text" defaultValue={p.noiAnTang ?? ''} />
+            <GxField label="Biết ngoại ngữ" id="gd-ngoaingu">
+              <input id="gd-ngoaingu" name="bietNgoaiNgu" type="text" defaultValue={p.bietNgoaiNgu ?? ''} style={{ maxWidth: 180 }} />
+              <label className="toggle">
+                <input type="checkbox" name="conHoc" checked={conHoc} onChange={(e) => doiConHoc(e.target.checked)} />
+                Còn học
+              </label>
             </GxField>
-          </>
-        )}
+            <GxField label="Nghề nghiệp" id="gd-nghenghiep">
+              <input id="gd-nghenghiep" name="ngheNghiep" type="text" defaultValue={p.ngheNghiep ?? ''} style={{ maxWidth: 180 }} />
+              <GxInline>Dân tộc</GxInline>
+              <input aria-label="Dân tộc" name="danToc" type="text" defaultValue={p.danToc ?? ''} />
+            </GxField>
+          </div>
+          <div>
+            <GxField label="Địa chỉ" id="gd-diachi">
+              <input id="gd-diachi" name="diaChi" type="text" defaultValue={p.diaChi ?? ''} />
+            </GxField>
+            <GxField label="Điện thoại" id="gd-dienthoai">
+              <input id="gd-dienthoai" name="dienThoai" type="text" defaultValue={p.dienThoai ?? ''} style={{ maxWidth: 180 }} />
+              <GxInline>Email</GxInline>
+              <input aria-label="Email" name="email" type="text" defaultValue={p.email ?? ''} />
+            </GxField>
+            <GxField label="">
+              <label className="toggle">
+                <input type="checkbox" name="tanTong" defaultChecked={p.tanTong} />
+                Tân tòng
+              </label>
+              <label className="toggle">
+                <input type="checkbox" name="daCoGiaDinh" defaultChecked={p.daCoGiaDinh} />
+                Có gia đình
+              </label>
+              <label className="toggle">
+                <input type="checkbox" name="quaDoi" checked={quaDoi} onChange={(e) => doiQuaDoi(e.target.checked)} />
+                Qua đời
+              </label>
+            </GxField>
+            {quaDoi && (
+              <>
+                <GxField label="Ngày qua đời" id="gd-ngayquadoi">
+                  <GxDate id="gd-ngayquadoi" name="ngayQuaDoi" defaultValue={p.ngayQuaDoi} style={{ maxWidth: 180 }}
+                    onIsoChange={capNhatNgayMoc('ngayQuaDoi')} />
+                  <GxCanhBaoNgay thongDiep={canhBaoNgay.ngayQuaDoi} nhanO="Ngày qua đời" />
+                  <GxInline>Số sổ</GxInline>
+                  <input aria-label="Số sổ qua đời" name="soAnTang" type="text" defaultValue={p.soAnTang ?? ''} style={{ maxWidth: 140 }} />
+                </GxField>
+                <GxField label="Nơi qua đời" id="gd-noiquadoi">
+                  <input id="gd-noiquadoi" name="noiQuaDoi" type="text" defaultValue={p.noiQuaDoi ?? ''} />
+                  <GxInline>Nơi an táng</GxInline>
+                  <input aria-label="Nơi an táng" name="noiAnTang" type="text" defaultValue={p.noiAnTang ?? ''} />
+                </GxField>
+              </>
+            )}
+          </div>
+        </div>
         <GxField label="Ghi chú chung" id="gd-ghichu">
           <textarea id="gd-ghichu" name="ghiChu" defaultValue={p.ghiChu ?? ''} placeholder="Ghi chú nội bộ về giáo dân…" />
         </GxField>
@@ -1052,7 +1101,7 @@ export function GiaoDanDetail({
         </div>
       )}
       {danhSachHonPhoi.map((hp, i) => (
-        <KhoiHonPhoi key={hp.id} hp={hp} thuTu={i} onLuu={onLuuHonPhoi} giaoXuId={giaoXuId} />
+        <KhoiHonPhoi key={hp.id} hp={hp} thuTu={i} onLuu={onLuuHonPhoi} giaoXuId={giaoXuId} ngaySinh={p.ngaySinh} />
       ))}
     </>
   )

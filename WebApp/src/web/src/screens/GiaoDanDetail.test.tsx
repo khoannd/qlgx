@@ -441,4 +441,71 @@ describe('GiaoDanDetail', () => {
 
     expect(screen.getByRole('button', { name: 'Đang tạo PDF…' })).toHaveProperty('disabled', true)
   })
+
+  // --- Canh bao MEM ngay thang bat thuong (yeu cau nguoi dung 2026-09-08, xem
+  // lib/canhBaoNgayThang.ts va can-review-sau.md muc "Viec 1"): KHONG chan luu, chi nhac. -----
+
+  it('ngay rua toi truoc ngay sinh thi hien icon canh bao co con so, KHONG chan luu', async () => {
+    const onLuu = vi.fn()
+    render(<GiaoDanDetail duLieu={chiTiet({ ngaySinh: '1992-07-25', ngayRuaToi: '1990-03-12' })} onLuu={onLuu} />)
+
+    const icon = screen.getByRole('button', { name: /Cảnh báo ngày tháng.*Ngày rửa tội/i })
+    expect(icon.getAttribute('aria-label')).toContain('12/03/1990')
+    expect(icon.getAttribute('aria-label')).toContain('25/07/1992')
+
+    // Bấm "Cập nhật" vẫn lưu bình thường dù còn cảnh báo hiện trên màn hình — không hỏi lại,
+    // không chặn (khác hẳn cảnh báo Yes/No BoQuaCanhBao ở backend, không đụng tới ở đây).
+    await userEvent.click(screen.getByRole('button', { name: 'Cập nhật' }))
+    expect(onLuu).toHaveBeenCalledWith(expect.objectContaining({
+      ngaySinh: '1992-07-25', ngayRuaToi: '1990-03-12',
+    }))
+  })
+
+  it('bam icon canh bao thi hien giai thich cu the co ca hai ngay, bam lai thi an di', async () => {
+    render(<GiaoDanDetail duLieu={chiTiet({ ngaySinh: '1992-07-25', ngayRuaToi: '1990-03-12' })} />)
+    const icon = screen.getByRole('button', { name: /Cảnh báo ngày tháng/i })
+
+    expect(screen.queryByRole('note')).toBeNull()
+    await userEvent.click(icon)
+    const giaiThich = screen.getByRole('note')
+    expect(giaiThich.textContent).toContain('12/03/1990')
+    expect(giaiThich.textContent).toContain('25/07/1992')
+    expect(giaiThich.textContent).toMatch(/vẫn được lưu/)
+
+    await userEvent.click(icon)
+    expect(screen.queryByRole('note')).toBeNull()
+  })
+
+  it('thu tu ngay hop le thi khong hien icon canh bao nao', () => {
+    render(<GiaoDanDetail duLieu={chiTiet({
+      ngaySinh: '1990-01-01', ngayRuaToi: '1990-02-01', ngayRuocLe: '1998-01-01', ngayThemSuc: '2004-01-01',
+    })} />)
+
+    expect(screen.queryByRole('button', { name: /Cảnh báo ngày tháng/i })).toBeNull()
+  })
+
+  it('go ngay rua toi truoc ngay sinh ngay tren man hinh thi icon canh bao tu xuat hien (khong can luu lai)', async () => {
+    render(<GiaoDanDetail duLieu={chiTiet({ ngaySinh: '2000-01-01' })} />)
+    expect(screen.queryByRole('button', { name: /Cảnh báo ngày tháng/i })).toBeNull()
+
+    await userEvent.type(screen.getByLabelText('Ngày rửa tội'), '01/01/1995')
+
+    expect(screen.getByRole('button', { name: /Cảnh báo ngày tháng.*Ngày rửa tội/i })).toBeDefined()
+  })
+
+  // --- "Thông tin khác" chia 2 cột (yeu cau nguoi dung 2026-09-08) — kiem tra moi truong van
+  // con day du (jsdom KHONG bat duoc loi bo cuc CSS Grid, xem can-review-sau.md). -------------
+
+  it('khoi Thong tin khac van du moi truong sau khi chia 2 cot', () => {
+    // Dùng id/name thay vì getByLabelText: vài nhãn ("Địa chỉ") CỐ Ý trùng chữ với tab khác
+    // (Ơn gọi tận hiến) đang cùng nằm trong DOM — xem GiaoDanDetail.tsx dòng 288.
+    const { container } = render(<GiaoDanDetail duLieu={chiTiet({ quaDoi: true, ngayQuaDoi: '2020-01-01' })} />)
+
+    for (const id of [
+      '#gd-vanhoa', '#gd-ngoaingu', '#gd-nghenghiep', '#gd-diachi', '#gd-dienthoai',
+      '#gd-ngayquadoi', '#gd-noiquadoi', '#gd-ghichu',
+    ]) expect(container.querySelector(id)).not.toBeNull()
+    for (const name of ['tanTong', 'daCoGiaDinh', 'quaDoi'])
+      expect(container.querySelector(`input[name="${name}"]`)).not.toBeNull()
+  })
 })
