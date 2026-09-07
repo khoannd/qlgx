@@ -4,6 +4,7 @@ import type {
   TaiKhoanItem, DangNhapKetQua, GiaoXuLuaChon, SucKhoe,
   GiaoPhan, GiaoHatQuanLy, GiaoXuQuanLy, BaoCaoXemTruoc, TrangThaiNhapDuLieu,
   DotBiTichListItem, DotBiTichDetail, LoaiBiTich, RaoHonPhoiListItem, RaoHonPhoiDetail,
+  KhoiGiaoLy, LopGiaoLy, HocVienLopGiaoLy, GiaoLyVienLop,
 } from './types'
 import { authStore } from './authStore'
 
@@ -354,6 +355,32 @@ export const api = {
       goi<void>(`/api/hoi-doan/thanh-vien/${chiTietId}`, { method: 'PUT', body: JSON.stringify(than) }),
     xoaThanhVien: (chiTietId: string) =>
       goi<void>(`/api/hoi-doan/thanh-vien/${chiTietId}`, { method: 'DELETE' }),
+  },
+  /** Phân hệ Giáo lý — Khối/Lớp/Học viên/Giáo lý viên (`frmKhoiGiaoLyList.cs` +
+   * `frmKhoiGiaoLy.cs` + `frmLopGiaoLy.cs`) — xem docs/superpowers/specs/man-hinh/giao-ly.md. */
+  giaoLy: {
+    khoi: () => goi<KhoiGiaoLy[]>('/api/giao-ly/khoi'),
+    themKhoi: (than: unknown) => goi<{ id: string }>('/api/giao-ly/khoi', { method: 'POST', body: JSON.stringify(than) }),
+    suaKhoi: (id: string, than: unknown) =>
+      goi<void>(`/api/giao-ly/khoi/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoaKhoi: (id: string) => goi<void>(`/api/giao-ly/khoi/${id}`, { method: 'DELETE' }),
+    lop: (khoiId: string, nam?: number | null) =>
+      goi<LopGiaoLy[]>(`/api/giao-ly/khoi/${khoiId}/lop${nam ? `?nam=${nam}` : ''}`),
+    themLop: (khoiId: string, than: unknown) =>
+      goi<{ id: string }>(`/api/giao-ly/khoi/${khoiId}/lop`, { method: 'POST', body: JSON.stringify(than) }),
+    suaLop: (id: string, than: unknown) =>
+      goi<void>(`/api/giao-ly/lop/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoaLop: (id: string) => goi<void>(`/api/giao-ly/lop/${id}`, { method: 'DELETE' }),
+    hocVien: (lopId: string) => goi<HocVienLopGiaoLy[]>(`/api/giao-ly/lop/${lopId}/hoc-vien`),
+    themHocVien: (lopId: string, giaoDanId: string) =>
+      goi<void>(`/api/giao-ly/lop/${lopId}/hoc-vien`, { method: 'POST', body: JSON.stringify({ giaoDanId }) }),
+    suaHocVien: (chiTietId: string, than: unknown) =>
+      goi<void>(`/api/giao-ly/hoc-vien/${chiTietId}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoaHocVien: (chiTietId: string) => goi<void>(`/api/giao-ly/hoc-vien/${chiTietId}`, { method: 'DELETE' }),
+    giaoLyVien: (lopId: string) => goi<GiaoLyVienLop[]>(`/api/giao-ly/lop/${lopId}/giao-ly-vien`),
+    themGiaoLyVien: (lopId: string, giaoDanId: string) =>
+      goi<void>(`/api/giao-ly/lop/${lopId}/giao-ly-vien`, { method: 'POST', body: JSON.stringify({ giaoDanId }) }),
+    xoaGiaoLyVien: (id: string) => goi<void>(`/api/giao-ly/giao-ly-vien/${id}`, { method: 'DELETE' }),
   },
   /** "Danh sách sổ bí tích" (frmDotBiTichList.cs + frmBiTichChiTiet.cs) — xem
    * docs/superpowers/specs/man-hinh/so-bi-tich.md. */

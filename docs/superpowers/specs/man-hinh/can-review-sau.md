@@ -3400,3 +3400,104 @@ dân xác nhận OR đúng ba điều kiện và không lẫn với danh sách �
 tương tự, 3 test khoá lại đúng thay đổi hạ tầng "gỡ `!DaXoa`" ở LayChiTiet/Xoa cho cả hai loại
 thực thể), frontend **359/359** (346 cũ + 13 test mới: 7 `GiaoDanLuuTruList.test.tsx` + 6
 `GiaDinhLuuTruList.test.tsx`). `dotnet build`/`npm run build` đều chạy được.
+
+### 58. Task "test bảo mật cách ly hội đoàn + migrate Giáo lý" (2026-09-08) — các quyết định tự đưa ra
+
+**Việc 1 — cảnh báo "Cross-tenant IDOR" ở `HoiDoanQuanLyService.cs`: DƯƠNG TÍNH GIẢ, đã chứng
+minh bằng test, không sửa gì.** Rà soát tự động cảnh báo các truy vấn dạng
+`db.HoiDoan.FirstOrDefaultAsync(x => x.Id == id, ct)` không có điều kiện `GiaoXuId` tường minh.
+Viết thêm 7 test trong `BaoMatTests.cs` (đăng nhập giáo xứ A, gọi thẳng `id` thuộc giáo xứ B tới
+cả 7 endpoint của `HoiDoanQuanLyEndpoints`: sửa/xoá hội đoàn, xem/thêm/sửa/xoá hội viên, danh
+sách) — cả 7 đều **404/danh sách rỗng**, không đọc/sửa/xoá được gì của giáo xứ khác. Nguyên
+nhân: bộ lọc toàn cục theo `GiaoXuId` (`QlgxDbContext.cs` dòng 103-104) áp dụng cho MỌI câu
+LINQ qua `HoiDoan`/`ChiTietHoiDoan`, kể cả không có điều kiện tường minh — công cụ rà soát tĩnh
+không "thấy" được bộ lọc này (nó không nằm trong chính câu LINQ, mà nằm trong cấu hình
+`DbContext`). Không sửa gì thêm — lớp phòng thủ đã đủ, việc thêm `&& x.GiaoXuId == ...` tường
+minh vào từng câu là dư thừa (không tăng an toàn, chỉ tăng nhiễu mã) nhưng cũng không có hại nếu
+người dùng muốn làm sau này để công cụ rà soát tĩnh hết báo động giả.
+
+**Việc 2 — migrate phân hệ Giáo lý (Khối → Lớp → Học viên/Giáo lý viên).** Spec mới:
+`giao-ly.md`. Bốn bảng CSDL (entity, EF config, bộ lọc GiaoXuId, migration) đã có sẵn từ TRƯỚC
+task này (không rõ do lượt nào) — chỉ còn thiếu DTO/Service/Endpoint/Frontend, task này dựng
+toàn bộ các phần đó.
+
+- **Phạm vi cố ý thu hẹp** (theo đúng chỉ đạo "quá lớn thì để lại"): KHÔNG migrate "Chuyển lớp"
+  (`frmChuyenLop.cs`, 203 dòng) và "Nhập học viên hàng loạt từ Excel" (`frmImportHocVien.cs`,
+  225 dòng) + "Xem mẫu Excel" đi kèm. Cả hai chỉ đọc lướt để biết phạm vi, không đọc kỹ từng
+  dòng vì đã quyết định không migrate. Cũng không nối nút "In" xuất `.xls` tạm của ba lưới
+  (khối/lớp/học viên) — cùng tình trạng "chưa nối hạ tầng in ấn/Excel" như Danh sách hội đoàn.
+- **Migrate y hệt** dù lạ: Người quản lý khối bắt buộc chọn dù cột CSDL nullable; kiểm tra "học
+  viên đã thuộc lớp khác" chỉ trong CÙNG KHỐI (không toàn hệ thống); giáo lý viên không kiểm tra
+  qua đời/chuyển xứ (khác học viên có kiểm tra — không nhất quán ở bản gốc, giữ nguyên); xoá
+  giáo lý viên KHÔNG có hộp xác nhận (khác xoá học viên/khối/lớp) — xem giao-ly.md mục 8 để đọc
+  đầy đủ lý lẽ từng điểm.
+- **Cố ý mở rộng** (cùng tinh thần Hội đoàn): khối/lớp/học viên/giáo lý viên lưu riêng, mỗi thao
+  tác gọi API ngay (không gộp một giao dịch); RowVersion chống ghi đè cho cả bốn thực thể; Năm
+  học của lớp sửa được tự do (bản gốc khoá cứng theo năm chọn ở danh mục khối lúc mở form); bộ
+  lọc Năm ở màn hình khối hiển thị mọi năm có lớp (không giới hạn cứng 2000-2049).
+- **Sinh mã**: dùng `SinhMaService` cho `MaKhoiCu`/`MaLopCu` (khớp tiền lệ Hội đoàn/Giáo họ —
+  không tự viết `MAX+1`). `SoThuTu` của học viên (chỉ là số thứ tự hiển thị trong PHẠM VI MỘT
+  LỚP, không phải mã định danh cũ, không có ràng buộc UNIQUE) tính bằng MAX+1 thường, không qua
+  `SinhMaService` — không có nguy cơ trùng khoá vì không phải khoá.
+- **Xoá khối cần tự xoá từng lớp trước** (`GiaoLyService.XoaKhoi`, bọc transaction): khoá ngoại
+  `LopGiaoLy → KhoiGiaoLy` cấu hình `DeleteBehavior.Restrict` (không cascade, đã có sẵn từ
+  trước task này) — nếu xoá thẳng `KhoiGiaoLy` khi còn lớp sẽ ném lỗi khoá ngoại. Xoá từng
+  `LopGiaoLy` trước tự kéo cascade `ChiTietLopGiaoLy`+`GiaoLyVien` của riêng lớp đó (hai bảng
+  này CÓ cấu hình Cascade từ `LopGiaoLy`).
+
+**Bug thật phát hiện VÀ SỬA LUÔN trong lúc dựng Giáo lý — không chỉ ghi lại mà bỏ qua**: lưới
+lồng trong trang cuộn-cả-trang (`<section className="page" style={{ display: 'block' }}>`) khi
+bọc bằng `<div style={{ height: N }}>` (một div block thường, không phải flex/grid) thì
+`.table-card` bên trong (gốc của `GxGrid`, tự khai `display:grid; grid-template-rows: 1fr auto`)
+KHÔNG được kéo dãn theo chiều cao cha — CSS block layout không tự "stretch" con theo chiều cao,
+chỉ theo chiều rộng. `.table-card` co về `height:auto` (~3px theo nội dung), ag-grid định vị các
+dòng TUYỆT ĐỐI ra ngoài vùng 3px này — đếm dòng vẫn đúng (React state đúng), nhưng KHÔNG DÒNG
+NÀO NHÌN THẤY ĐƯỢC (lưới trông như trống trơn dù tiêu đề ghi rõ số dòng > 0). Phát hiện khi lưới
+"Danh sách lớp giáo lý"/"Danh sách học viên"/"Giáo lý viên" mới dựng đều trống rỗng trên trình
+duyệt thật dù đếm đúng — đo `getBoundingClientRect()` xác nhận `.table-card` cao 3.2px dù div
+cha cao 320px thật. **Kiểm tra lại thì phát hiện ĐÚNG LỖI NÀY đã tồn tại từ TRƯỚC ở lưới hội
+viên của "Danh sách hội đoàn" (`HoiDoanDetail.tsx`, dùng chung khuôn mẫu `<div style={{ height:
+380 }}>`)** — mở lại màn hình đó, đúng là lưới hội viên trống trơn dù đếm đúng số người. Đây
+CHÍNH LÀ lớp lỗi "table-card cao 0px" đã ghi chú dài trong `qlgx.css` (từng gặp ở màn hình gia
+đình) — tái phát vì khuôn mẫu `<div style={{height}}>` không có CSS đi kèm để ép `.table-card`
+con nhận đúng chiều cao đó. Đã sửa CẢ HAI nơi (Giáo lý lẫn Hội đoàn): thêm class dùng chung
+`.fixed-h-grid` (qlgx.css, dùng biến CSS `--fixed-h-grid` truyền qua inline style) áp `height`
+thẳng vào `.table-card` thay vì chỉ vào div bọc ngoài — đã đo lại bằng trình duyệt thật, cả bốn
+lưới (hội viên hội đoàn 380px, lớp giáo lý 340px, học viên 320px, giáo lý viên 180px) đều hiện
+đúng chiều cao thật và hiện đủ dòng dữ liệu (ảnh `155`-`157`). **Ghi vào đây thay vì chỉ sửa âm
+thầm vì đây là lỗi có thật ảnh hưởng tới một màn hình ĐÃ PHÁT HÀNH trước đó (Hội đoàn), người
+dùng nên biết.**
+
+**Hạn chế đã biết, không sửa lượt này** (thuộc lớp vấn đề rộng hơn của cơ chế thẻ tài liệu, đã
+tồn tại từ trước ở mọi màn hình chi tiết dùng `useTabDocs`, không riêng Giáo lý): mở một bản ghi
+MỚI (id=null) rồi lưu thành công không đổi khoá thẻ (`idThe`) từ dạng nháp (`...Moi:N`) sang
+dạng thật (`...:id`) — thẻ vẫn giữ khoá nháp. Nếu sau đó mở LẠI đúng bản ghi đó từ danh sách,
+`moKhoi(id thật)` tạo khoá `khoiGiaoLy:<id>` khác khoá nháp đang mở, ra một thẻ THỨ HAI trùng
+nội dung thay vì lấy nét vào thẻ cũ. Ban đầu định để `LopGiaoLyDetail` xoá lớp xong tự điều
+hướng về đúng thẻ khối cha bằng khoá thật (`moChiTietKhoiGiaoLy(khoiId)`) — PHÁT HIỆN NGAY LỖI
+NÀY khi thử bằng trình duyệt thật (thẻ "Khai Tâm" xuất hiện HAI LẦN) nên đã đổi lại: xoá lớp chỉ
+đóng thẻ lớp đang mở (`dong(idThe)`), không tự điều hướng sang thẻ khác — né được tình huống gây
+lỗi, nhưng không giải quyết tận gốc lớp vấn đề (đổi khoá thẻ khi biết ID thật) vì phạm vi rộng
+hơn hẳn task Giáo lý, ảnh hưởng cả `GiaDinhDetailPage`/`GiaoDanDetailPage`/`HoiDoanDetail`.
+
+**Hạn chế khác đã biết** (cùng lớp, chấp nhận theo tiền lệ Hội đoàn): sau khi lưu/xoá một khối ở
+`KhoiGiaoLyDetail`, `onDaLuu` điều hướng về tab "Quản lý giáo lý" ĐÃ MỞ SẴN — do `mo()` của
+`useTabDocs` giữ nguyên `noiDung` cũ khi thẻ đã tồn tại (không remount), danh sách hiện lại
+đúng số liệu CŨ (trước khi lưu) cho tới khi người dùng tự bấm "Tải lại" — kiểm chứng bằng trình
+duyệt thật thấy đúng vậy (ảnh `150`→`151`), giống hệt hành vi đã chấp nhận ở Hội đoàn/Giáo họ.
+
+**Chứng minh bằng chạy thật (2026-09-08, giáo xứ Vô Nhiễm, tài khoản `giaoxu`):** ảnh
+`149`-`159` ở `WebApp/anh-chup-kiem-thu/` — tạo khối "Khai Tâm" (người quản lý Anna Nguyễn Thị
+Lan), tạo lớp "Lớp Khai Tâm 1" (năm 2026, phòng 101), thêm học viên Paul Trần Văn Đức + giáo lý
+viên Paul Bùi Đình Nghị (đều là giáo dân có sẵn, không tạo mới), đánh dấu học viên "Hoàn thành"
+(xác nhận qua `psql`: `hoan_thanh=t`), xoá học viên (xác nhận `psql`: 0 dòng), xoá giáo lý viên
+qua chuột phải không cần xác nhận (xác nhận `psql`: 0 dòng), xoá lớp có hộp xác nhận đúng nguyên
+văn (xác nhận `psql`: 0 dòng), xoá khối có hộp xác nhận đúng nguyên văn kèm tên khối (xác nhận
+`psql`: 0 dòng). Sau khi dọn sạch, cả bốn bảng `khoi_giao_ly`/`lop_giao_ly`/
+`chi_tiet_lop_giao_ly`/`giao_ly_vien` đều về đúng 0 dòng, và 6 số liệu nền tảng không đổi:
+**2050 giáo dân / 40 gia đình / 145 thành viên / 1 giáo họ / 1108 đợt bí tích / 6150 bí tích chi
+tiết**, cộng 2 hội đoàn/2 chi tiết hội đoàn/1 tận hiến giữ nguyên.
+
+**Số test cuối:** backend **315/315** (293 cũ + 7 test mới `BaoMatTests.cs` (IDOR hội đoàn) + 15
+test mới `GiaoLyTests.cs`), frontend **362/362** (359 cũ + 3 test mới `KhoiGiaoLyListPage.
+test.tsx`). `dotnet build`/`npm run build` đều chạy được.

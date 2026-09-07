@@ -498,3 +498,53 @@ export type TrangThaiNhapDuLieu = {
   batDauLuc: string
   ketThucLuc: string | null
 }
+
+/** Ánh xạ 1-1 với KhoiGiaoLyDto — một dòng trên màn hình "Danh mục khối giáo lý"
+ * (`frmKhoiGiaoLyList.cs`) — xem docs/superpowers/specs/man-hinh/giao-ly.md. */
+export type KhoiGiaoLy = {
+  id: string
+  maKhoiCu: number
+  tenKhoi: string
+  nguoiQuanLyId: string | null
+  tenNguoiQuanLy: string | null
+  ghiChu: string | null
+  soLop: number
+  rowVersion: number
+}
+
+/** Ánh xạ 1-1 với LopGiaoLyDto — một lớp thuộc một khối giáo lý (`frmLopGiaoLy.cs`). */
+export type LopGiaoLy = {
+  id: string
+  maLopCu: number
+  tenLop: string
+  khoiGiaoLyId: string
+  nam: number | null
+  phongHoc: string | null
+  ghiChu: string | null
+  soHocVien: number
+  tenGiaoLyVien: string | null
+  rowVersion: number
+}
+
+/** Ánh xạ 1-1 với HocVienLopGiaoLyDto — một học viên trên lưới `gxHocSinhList1`. */
+export type HocVienLopGiaoLy = {
+  chiTietId: string
+  giaoDanId: string
+  soThuTu: number | null
+  hoTen: string
+  tenThanh: string | null
+  phai: string | null
+  ngaySinh: string | null
+  hoanThanh: boolean
+  ghiChuGLy: string | null
+  rowVersion: number
+}
+
+/** Ánh xạ 1-1 với GiaoLyVienDto — một giáo lý viên phụ trách một lớp. */
+export type GiaoLyVienLop = {
+  id: string
+  giaoDanId: string
+  hoTen: string
+  tenThanh: string | null
+  rowVersion: number
+}

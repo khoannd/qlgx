@@ -1595,3 +1595,19 @@ tbody tr[aria-selected="true"] .rowhead {
   box-shadow: 0 12px 36px rgba(14, 23, 41, 0.35);
   max-width: 360px;
 }
+
+/* ĐÚNG lỗi "table-card cao 0px" đã ghi ở khai báo `.table-card` phía trên — phát hiện lại khi
+   dựng phân hệ Giáo lý (task 2026-09-08): mọi lưới lồng trong một trang cuộn-cả-trang
+   (`<section className="page" style={{ display: 'block' }}>` — HoiDoanDetail.tsx,
+   KhoiGiaoLyDetail.tsx, LopGiaoLyDetail.tsx) đều bọc `<GxGrid>` trong một `<div style={{
+   height: N }}>` THƯỜNG (không phải flex/grid), nhưng CSS block layout KHÔNG tự "kéo dãn" con
+   theo chiều cao cha — `.table-card` (display:grid, hàng `1fr`) bên trong vẫn tự nhận
+   `height:auto` và co về ~3px theo nội dung (ag-grid định vị các dòng TUYỆT ĐỐI ra ngoài vùng
+   3px này — đếm số dòng vẫn đúng, nhưng không dòng nào nhìn thấy được). Bài test jsdom không
+   bắt được (kích thước giả lập cố định) — chỉ lộ khi đo `getBoundingClientRect()` trên trình
+   duyệt thật (đã đo: `.table-card` cao 3.2px dù div cha cao 320px). Xác nhận CÙNG LỖI Y HỆT đã
+   tồn tại từ trước ở lưới hội viên của "Danh sách hội đoàn" (HoiDoanDetail.tsx) — sửa luôn tại
+   đây, không chỉ sửa cho Giáo lý. Cách sửa giống hệt `.detail-page-giadinh .members-block >
+   .table-card` phía trên: cho ĐÚNG `.table-card` (không phải div bọc ngoài) một chiều cao thật
+   qua CSS, không dựa vào inline style của div cha nữa. */
+.fixed-h-grid > .table-card { height: var(--fixed-h-grid, 320px); }

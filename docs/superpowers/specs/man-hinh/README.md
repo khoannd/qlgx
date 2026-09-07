@@ -91,7 +91,7 @@ Cập nhật bảng này mỗi khi thêm spec.
 | Giáo họ | `ChuongTrinh/frmGiaoHo.cs` | 598 | xong (`giao-ho.md`, thay cho phần cũ ở `quan-ly-giao-xu.md` mục 9) | xong (danh sách + thêm/sửa + chọn giáo họ cha; không có nút xoá, xem `can-review-sau.md` mục 37) |
 | Danh sách hội đoàn | `ChuongTrinh/frmHoiDoanList.cs` + `GXControl/frmHoiDoan.cs` | 89 + 663 | xong (`hoi-doan-danh-sach.md`) | xong (danh mục + thêm/sửa/xoá hội đoàn + quản lý hội viên) |
 | Danh sách sổ bí tích | `ChuongTrinh/frmDotBiTichList.cs` + `ChuongTrinh/frmBiTichChiTiet.cs` | 176 + 574 | xong (`so-bi-tich.md`) | một phần (xem mục 10) |
-| Lớp giáo lý | `Giaoly/frmLopGiaoLy.cs` | 724 | chưa | chưa |
+| Giáo lý (Khối/Lớp/Học viên/Giáo lý viên) | `Giaoly/frmKhoiGiaoLyList.cs` + `frmKhoiGiaoLy.cs` + `frmLopGiaoLy.cs` + `frmHocSinh.cs` | 215+313+724+177 | xong (`giao-ly.md`) | một phần (quản lý khối/lớp/học viên/giáo lý viên xong; Chuyển lớp và Nhập học viên hàng loạt từ Excel chưa migrate, xem `giao-ly.md` mục 8) |
 | Quản lý tài khoản | `ChuongTrinh/frmAccoutList.cs` | 440 | xong (`quan-ly-tai-khoan.md`) | xong |
 | Đăng nhập | `ChuongTrinh/frmLogin.cs` | 89 | (gộp trong `quan-ly-tai-khoan.md` mục 8) | xong |
 | In ấn và chứng nhận | `DBAccess/WordEngine.cs` + `ExcelReport/Report*.cs` (14 mô-đun) | ~140 + nhiều | xong (`in-an.md`) | một phần (hạ tầng + Lý lịch cá nhân xong, 4 mẫu ưu tiên còn lại + phần còn lại chưa) |

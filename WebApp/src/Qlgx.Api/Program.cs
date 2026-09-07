@@ -79,6 +79,8 @@ builder.Services.AddScoped<XuatExcelService>();
 builder.Services.AddScoped<DotBiTichService>();
 builder.Services.AddScoped<RaoHonPhoiService>();
 builder.Services.AddScoped<HoiDoanQuanLyService>();
+// Giáo lý (Khối/Lớp/Học viên/Giáo lý viên) — xem docs/superpowers/specs/man-hinh/giao-ly.md.
+builder.Services.AddScoped<GiaoLyService>();
 
 // Ha tang in an (VIEC-TIEP-THEO.md muc 1.1) — xem docs/superpowers/specs/man-hinh/in-an.md.
 // BoTrinhDuyet la Singleton CO CHU DICH: giu dung MOT trinh duyet Chromium headless (Playwright)
@@ -169,6 +171,7 @@ app.MapDanhMuc();
 app.MapDotBiTich();
 app.MapRaoHonPhoi();
 app.MapHoiDoanQuanLy();
+app.MapGiaoLy();
 
 // Fallback SPA: moi GET khong khop route API/tep tinh nao o tren tra ve index.html de React
 // Router tu xu ly duong dan phia trinh duyet. Loai tru "/api" bang rang buoc regex phu dinh de

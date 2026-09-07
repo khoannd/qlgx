@@ -421,4 +421,141 @@ public class BaoMatTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
 
         res.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
+
+    // --- Rà soát tự động cảnh báo "Cross-tenant IDOR" o HoiDoanQuanLyService.cs: cac truy van
+    // dang FirstOrDefaultAsync(x => x.Id == id) khong co dieu kien GiaoXuId tuong minh. HoiDoan
+    // va ChiTietHoiDoan deu co bo loc toan cuc theo GiaoXuId (QlgxDbContext.cs dong 103-104) nen
+    // ve ly thuyet da an toan — cac test duoi day chung minh bang hanh vi that o tang endpoint,
+    // khong chi dua vao lap luan. Neu bat ky test nao FAIL tuc la co lo hong that. -------------
+
+    private async Task<(Guid hoiDoanId, Guid chiTietId, Guid giaoDanId)> TaoHoiDoanVaHoiVien(
+        Guid giaoXuId, string tenHoiDoan)
+    {
+        await using var db = app.TaoContextThuan();
+        var gd = new GiaoDan
+        {
+            GiaoXuId = giaoXuId, HoTen = "Hoi vien " + tenHoiDoan, TenThanh = "Test", Phai = "Nam",
+            MaGiaoDanCu = Interlocked.Increment(ref _maGiaoDanKeTiep),
+        };
+        db.GiaoDan.Add(gd);
+        var hd = new HoiDoan { GiaoXuId = giaoXuId, TenHoiDoan = tenHoiDoan, MaHoiDoanCu = new Random().Next(80000, 89999) };
+        db.HoiDoan.Add(hd);
+        await db.SaveChangesAsync();
+        var ct2 = new ChiTietHoiDoan
+        {
+            GiaoXuId = giaoXuId, HoiDoanId = hd.Id, GiaoDanId = gd.Id,
+            MaChiTietHoiDoanCu = new Random().Next(80000, 89999), VaiTro = "Hội viên",
+        };
+        db.ChiTietHoiDoan.Add(ct2);
+        await db.SaveChangesAsync();
+        return (hd.Id, ct2.Id, gd.Id);
+    }
+
+    [Fact]
+    public async Task Xem_chi_tiet_thanh_vien_hoi_doan_cua_xu_khac_tra_ve_danh_sach_rong()
+    {
+        var giaoXuB = await TaoGiaoXuKhac("Giao xu IDOR-1");
+        var (hoiDoanIdB, _, _) = await TaoHoiDoanVaHoiVien(giaoXuB, "Hoi doan cua xu B");
+        var clientA = app.CreateAuthClient(app.GiaoXuId);
+
+        var res = await clientA.GetAsync($"/api/hoi-doan/{hoiDoanIdB}/thanh-vien");
+
+        res.StatusCode.Should().Be(HttpStatusCode.OK, "endpoint nay khong tra 404 cho hoi doan khong ton tai, ma tra danh sach rong");
+        var ds = await res.Content.ReadFromJsonAsync<List<object>>();
+        ds.Should().BeEmpty("bo loc toan cuc theo GiaoXuId phai chan khong cho thay hoi vien cua xu khac");
+    }
+
+    [Fact]
+    public async Task Sua_hoi_doan_cua_xu_khac_tra_ve_404_khong_sua_duoc()
+    {
+        var giaoXuB = await TaoGiaoXuKhac("Giao xu IDOR-2");
+        var (hoiDoanIdB, _, _) = await TaoHoiDoanVaHoiVien(giaoXuB, "Hoi doan xu B truoc khi sua");
+
+        var clientA = app.CreateAuthClient(app.GiaoXuId);
+        var res = await clientA.PutAsJsonAsync($"/api/hoi-doan/{hoiDoanIdB}",
+            new LuuHoiDoanRequest("Bi doi ten boi xu A", null, null, null, null, null));
+
+        res.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await using var db = app.TaoContextThuan();
+        var hd = await db.HoiDoan.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == hoiDoanIdB);
+        hd!.TenHoiDoan.Should().Be("Hoi doan xu B truoc khi sua", "du lieu cua xu B khong duoc thay doi");
+    }
+
+    [Fact]
+    public async Task Xoa_hoi_doan_cua_xu_khac_tra_ve_404_khong_xoa_duoc()
+    {
+        var giaoXuB = await TaoGiaoXuKhac("Giao xu IDOR-3");
+        var (hoiDoanIdB, _, _) = await TaoHoiDoanVaHoiVien(giaoXuB, "Hoi doan xu B khong duoc xoa");
+
+        var clientA = app.CreateAuthClient(app.GiaoXuId);
+        var res = await clientA.DeleteAsync($"/api/hoi-doan/{hoiDoanIdB}");
+
+        res.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await using var db = app.TaoContextThuan();
+        (await db.HoiDoan.IgnoreQueryFilters().AnyAsync(x => x.Id == hoiDoanIdB)).Should().BeTrue(
+            "hoi doan cua xu B phai con nguyen, khong bi xu A xoa mat");
+    }
+
+    [Fact]
+    public async Task Them_hoi_vien_vao_hoi_doan_cua_xu_khac_tra_ve_404()
+    {
+        var giaoXuB = await TaoGiaoXuKhac("Giao xu IDOR-4");
+        var (hoiDoanIdB, _, _) = await TaoHoiDoanVaHoiVien(giaoXuB, "Hoi doan xu B them hoi vien");
+        var giaoDanA = await TaoGiaoDan(app.GiaoXuId, "Giao dan xu A bi loi dung");
+
+        var clientA = app.CreateAuthClient(app.GiaoXuId);
+        var res = await clientA.PostAsJsonAsync($"/api/hoi-doan/{hoiDoanIdB}/thanh-vien",
+            new ThemThanhVienHoiDoanRequest(giaoDanA, null, null, null));
+
+        res.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await using var db = app.TaoContextThuan();
+        (await db.ChiTietHoiDoan.IgnoreQueryFilters().AnyAsync(x => x.HoiDoanId == hoiDoanIdB && x.GiaoDanId == giaoDanA)).Should().BeFalse(
+            "khong duoc chen duoc hoi vien vao hoi doan cua xu khac");
+    }
+
+    [Fact]
+    public async Task Sua_hoi_vien_cua_xu_khac_tra_ve_404_khong_sua_duoc()
+    {
+        var giaoXuB = await TaoGiaoXuKhac("Giao xu IDOR-5");
+        var (_, chiTietIdB, _) = await TaoHoiDoanVaHoiVien(giaoXuB, "Hoi doan xu B sua hoi vien");
+
+        var clientA = app.CreateAuthClient(app.GiaoXuId);
+        var res = await clientA.PutAsJsonAsync($"/api/hoi-doan/thanh-vien/{chiTietIdB}",
+            new SuaThanhVienHoiDoanRequest(null, null, "Bi doi vai tro boi xu A", 0));
+
+        res.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await using var db = app.TaoContextThuan();
+        var ct2 = await db.ChiTietHoiDoan.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == chiTietIdB);
+        ct2!.VaiTro.Should().Be("Hội viên", "du lieu hoi vien cua xu B khong duoc thay doi boi xu A");
+    }
+
+    [Fact]
+    public async Task Xoa_hoi_vien_cua_xu_khac_tra_ve_404_khong_xoa_duoc()
+    {
+        var giaoXuB = await TaoGiaoXuKhac("Giao xu IDOR-6");
+        var (_, chiTietIdB, _) = await TaoHoiDoanVaHoiVien(giaoXuB, "Hoi doan xu B xoa hoi vien");
+
+        var clientA = app.CreateAuthClient(app.GiaoXuId);
+        var res = await clientA.DeleteAsync($"/api/hoi-doan/thanh-vien/{chiTietIdB}");
+
+        res.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await using var db = app.TaoContextThuan();
+        (await db.ChiTietHoiDoan.IgnoreQueryFilters().AnyAsync(x => x.Id == chiTietIdB)).Should().BeTrue(
+            "hoi vien cua xu B phai con nguyen, khong bi xu A xoa mat");
+    }
+
+    [Fact]
+    public async Task Danh_sach_hoi_doan_cua_xu_A_khong_lan_hoi_doan_xu_khac()
+    {
+        var giaoXuB = await TaoGiaoXuKhac("Giao xu IDOR-7");
+        await TaoHoiDoanVaHoiVien(giaoXuB, "Hoi doan chi thuoc xu B");
+        await TaoHoiDoanVaHoiVien(app.GiaoXuId, "Hoi doan chi thuoc xu A");
+
+        var clientA = app.CreateAuthClient(app.GiaoXuId);
+        var res = await clientA.GetAsync("/api/hoi-doan/danh-sach");
+        var than = await res.Content.ReadAsStringAsync();
+
+        than.Should().Contain("Hoi doan chi thuoc xu A");
+        than.Should().NotContain("Hoi doan chi thuoc xu B");
+    }
 }

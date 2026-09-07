@@ -12,6 +12,9 @@ import { TaiKhoanListPage } from './screens/TaiKhoanListPage'
 import { GiaoHoListPage } from './screens/GiaoHoListPage'
 import { HoiDoanListPage } from './screens/HoiDoanListPage'
 import { HoiDoanDetail } from './screens/HoiDoanDetail'
+import { KhoiGiaoLyListPage } from './screens/KhoiGiaoLyListPage'
+import { KhoiGiaoLyDetail } from './screens/KhoiGiaoLyDetail'
+import { LopGiaoLyDetail } from './screens/LopGiaoLyDetail'
 import { DotBiTichListPage } from './screens/DotBiTichListPage'
 import { DotBiTichDetail } from './screens/DotBiTichDetail'
 import { RaoHonPhoiListPage } from './screens/RaoHonPhoiListPage'
@@ -215,6 +218,35 @@ function App() {
     })
   }
 
+  function moDanhSachKhoiGiaoLy() {
+    mo({ id: 'khoiGiaoLyList', tieuDe: 'Quản lý giáo lý', noiDung: <KhoiGiaoLyListPage moKhoi={moChiTietKhoiGiaoLy} /> })
+  }
+
+  function moChiTietKhoiGiaoLy(id: string | null) {
+    const idThe = id ? `khoiGiaoLy:${id}` : `khoiGiaoLyMoi:${++moiDem.current}`
+    mo({
+      id: idThe,
+      tieuDe: id ? 'Khối giáo lý' : 'Khối giáo lý mới',
+      noiDung: (
+        <KhoiGiaoLyDetail id={id} onTieuDe={(ten) => suaTieuDe(idThe, ten)} onDaLuu={moDanhSachKhoiGiaoLy}
+          moLop={moChiTietLopGiaoLy} />
+      ),
+    })
+  }
+
+  function moChiTietLopGiaoLy(id: string | null, khoiId: string, namMoi?: number) {
+    const idThe = id ? `lopGiaoLy:${id}` : `lopGiaoLyMoi:${++moiDem.current}`
+    mo({
+      id: idThe,
+      tieuDe: id ? 'Lớp giáo lý' : 'Lớp giáo lý mới',
+      noiDung: (
+        <LopGiaoLyDetail id={id} khoiId={khoiId} namMoi={namMoi}
+          onTieuDe={(ten) => suaTieuDe(idThe, ten)}
+          onXoaThanhCong={() => dong(idThe)} />
+      ),
+    })
+  }
+
   function moQuanLyGiaoXu() {
     mo({ id: 'quanLyGiaoXu', tieuDe: 'Quản lý giáo xứ', noiDung: <QuanLyGiaoXuPage /> })
   }
@@ -241,6 +273,7 @@ function App() {
     else if (id === 'taiKhoanList') moQuanLyTaiKhoan()
     else if (id === 'giaoHoList') moGiaoHoList()
     else if (id === 'hoiDoanList') moDanhSachHoiDoan()
+    else if (id === 'khoiGiaoLyList') moDanhSachKhoiGiaoLy()
     else if (id === 'giaoDanLuuTruList') moDanhSachHoSoLuuTruGiaoDan()
     else if (id === 'giaDinhLuuTruList') moDanhSachHoSoLuuTruGiaDinh()
     else if (id === 'dotBiTichList') moDanhSachSoBiTich()

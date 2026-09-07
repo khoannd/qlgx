@@ -34,7 +34,7 @@ const DANH_SACH_DIEU_HUONG: NhomDieuHuong[] = [
     nhan: 'Thông tin giáo xứ',
     muc: [
       { id: 'giaoHoList', nhan: 'Giáo họ' },
-      { nhan: 'Quản lý giáo lý' },
+      { id: 'khoiGiaoLyList', nhan: 'Quản lý giáo lý' },
     ],
   },
   {

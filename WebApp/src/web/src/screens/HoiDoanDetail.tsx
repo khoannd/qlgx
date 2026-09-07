@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { api, LoiXungDot } from '../api/client'
 import type { GiaoDanTimKiem, HoiDoanQuanLy, ThanhVienHoiDoan } from '../api/types'
 import { GxGrid } from '../components/GxGrid'
@@ -270,7 +270,10 @@ export function HoiDoanDetail({ id, onTieuDe, onDaLuu }: Props) {
                 <GxPicker onChon={(gd) => { void themThanhVien(gd) }} onBoChon={() => {}} />
               </div>
               {loiTV && <p className="hint" role="alert">{loiTV}</p>}
-              <div style={{ height: 380 }}>
+              {/* `.fixed-h-grid` (qlgx.css) — KHÔNG đổi lại thành inline `style={{ height }}`
+                  đơn thuần: đã là lỗi thật "table-card cao ~3px" phát hiện lại 2026-09-08 khi
+                  dựng phân hệ Giáo lý, xem chú thích dài trong qlgx.css. */}
+              <div className="fixed-h-grid" style={{ '--fixed-h-grid': '380px' } as CSSProperties}>
                 <GxGrid<ThanhVienHoiDoan>
                   columnDefs={cotThanhVienHoiDoan}
                   rowData={thanhVien ?? []}
