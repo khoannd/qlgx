@@ -64,6 +64,9 @@ export type GiaoDanListItem = {
 
 export type ThanhVien = {
   giaoDanId: string
+  /** Mã giáo dân hệ cũ (Access) — khác `giaoDanId` (Guid). Lưới "Thành viên khác trong gia
+   * đình" hiển thị cột "Mã GD" từ đây (người dùng làm việc theo mã cũ này). */
+  maGiaoDanCu: number
   /** Quy ước đã chốt của dự án: 0 = Chồng, 1 = Vợ, 2 = Con. Dùng để tách "Người nam"/"Người
    * nữ" (0/1) khỏi lưới "Thành viên khác" (2) — KHÔNG dùng `chuHo` cho việc này, xem bên dưới. */
   vaiTro: number

@@ -118,7 +118,7 @@ describe('GiaDinhDetailPage', () => {
   it('doi Nguoi nam khi vai tro dang co nguoi: hoi Yes (xoa han) roi gui lai voi xuLyNguoiCu', async () => {
     const coNguoiNam = chiTiet({
       thanhVien: [
-        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p1', maGiaoDanCu: 1001, vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
       ],
     })
     vi.mocked(api.giaDinh.chiTiet).mockResolvedValue(coNguoiNam)
@@ -175,7 +175,7 @@ describe('GiaDinhDetailPage', () => {
   it('xoa mot thanh vien: hoi xac nhan nguyen van roi goi DELETE va tai lai', async () => {
     const coThanhVien = chiTiet({
       thanhVien: [
-        { giaoDanId: 'p3', vaiTro: 4, chuHo: false, tenThanh: 'Anna', hoTen: 'Nguyễn Thị Cha Mẹ', phai: 'Nữ', ngaySinh: '1950-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p3', maGiaoDanCu: 1003, vaiTro: 4, chuHo: false, tenThanh: 'Anna', hoTen: 'Nguyễn Thị Cha Mẹ', phai: 'Nữ', ngaySinh: '1950-01-01', quaDoi: false, daXoa: false },
       ],
     })
     vi.mocked(api.giaDinh.chiTiet).mockResolvedValue(coThanhVien)

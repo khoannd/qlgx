@@ -1865,3 +1865,56 @@ DevTools MCP + `getBoundingClientRect()` đo trực tiếp, không phải các t
 **k) Số test cuối:** backend **244/244** (không đổi — lỗi #5 chỉ sửa CSS/PDF options, không có
 logic C# mới cần test riêng). Frontend **254/254** (239 cũ + 15 test mới). `npm run build` chạy
 được. Ảnh chụp/PDF kiểm thử: `73`–`77` trong `WebApp/anh-chup-kiem-thu/`.
+
+### 40. Task "sửa 2 lỗi tự phát hiện sau khi chuyển Hôn phối sang cột phải" (2026-09-07) —
+các quyết định tự đưa ra
+
+Người dùng tự kiểm tra ngay sau khi khối "Hôn phối" chuyển sang cột phải (mục 39 phần d) và
+phát hiện thêm 2 lỗi: khối Hôn phối bị bóp hẹp cắt cụt chữ, và cột "Mã GD" trên lưới thành viên
+luôn hiện `0`.
+
+**a) Nguyên nhân lỗi #1 (Hôn phối bị cắt cụt):** cột phải hẹp (`.cols`, `minmax(360px, .85fr)`)
+trừ padding thẻ (2×16px) chỉ còn ~328px bề ngang. Bố cục CŨ (giữ nguyên từ hồi còn ở cột trái,
+mục 39 phần c) dùng `.card-row` chia đôi thành hai cột con, MỖI cột con lại dùng `.frow` mặc
+định (nhãn cố định 132px bên trái): mỗi cột con chỉ còn ~158px, trừ nhãn 132px và gap 10px thì
+ô nhập còn ĐÚNG ~16PX — đúng khớp ảnh chụp người dùng gửi (`78-gia-dinh-hon-phoi-duoi-hinh-gia-
+dinh.png`: "04/", "Chính Tâ", "Hợp p"). Bóp HAI LỚP (chia cột con + trừ nhãn cố định) là gốc
+lỗi, không phải riêng độ rộng cột phải.
+
+**b) Sửa bằng lớp CSS mới `.honphoi-fields` (qlgx.css) — nhãn chuyển lên TRÊN, ô nhập xuống
+DƯỚI cho từng `.frow` bên trong (thay `grid-template-columns: 132px 1fr` bằng `1fr` một cột),
+NHƯNG vẫn giữ khối chia HAI CỘT (như `.card-row`) thay vì xếp nguyên một cột dọc 8 hàng.**
+Thử xếp một cột dọc trước (8 hàng) thì khối cao gần gấp đôi thẻ "Thông tin gia đình" bên cột
+trái — do `.cols` khai `align-items: stretch`, cột trái không tự nở theo nên lộ một khoảng
+trống ~268px dưới thẻ trái (đo bằng `getBoundingClientRect()` qua Chrome DevTools MCP), ĐÚNG
+loại "khoảng trống thừa" người dùng vừa yêu cầu bỏ ở mục 39 — quay lại 2 cột (4 hàng) đưa khoảng
+trống còn ~91px (chấp nhận được, không còn là khoảng trống LỚN). "Ghi chú hôn phối" (textarea,
+trường cuối) cho chiếm trọn 2 cột (`grid-column: 1 / -1`) vì là trường nhiều chữ nhất.
+
+**c) Nguyên nhân gốc lỗi #2 (Mã GD luôn = 0):** `ThanhVienDto` (backend,
+`Qlgx.Api/Dtos/GiaDinhDtos.cs`) CHƯA BAO GIỜ mang trường `MaGiaoDanCu` — comment cũ ở
+`GiaDinhDetail.tsx` (hàm `tuThanhVien`) đã tự nhận đây là placeholder tạm ("các trường còn lại
+của `GiaoDanListItem` chưa có... tạm điền `null`/giá trị mặc định"), hard-code `maGiaoDanCu: 0`
+cho MỌI dòng. Giá trị thật đã có sẵn trên entity `GiaoDan.MaGiaoDanCu` — chỉ chưa được đưa vào
+DTO trả về từ `GET /api/gia-dinh/{id}`. Sửa xuyên suốt 3 lớp: (1) `ThanhVienDto` thêm tham số
+`int MaGiaoDanCu`; (2) `GiaDinhService.LayChiTiet` truyền `tv.GiaoDan!.MaGiaoDanCu` khi dựng
+DTO; (3) frontend `api/types.ts` (`ThanhVien.maGiaoDanCu: number`) và `tuThanhVien` đọc thẳng
+`tv.maGiaoDanCu` thay vì hard-code `0`. Có test hồi quy mới ở `GiaDinhDetail.test.tsx` (assert
+"1002" hiện trên lưới ứng với fixture `maGiaoDanCu: 1002`) — test CŨ (fixtures không có trường
+này) đã được thêm `maGiaoDanCu` cho tất cả các dòng `thanhVien` (giá trị `1000 + số thứ tự pN`,
+không cần khớp dữ liệu thật vì chỉ kiểm tra hành vi component).
+
+**d) Không tìm thấy nơi nào khác dựng `ThanhVienDto` thủ công (chỉ một chỗ trong
+`GiaDinhService.LayChiTiet`) nên không có rủi ro sót constructor cũ thiếu tham số.**
+
+**e) Số test cuối:** backend **244/244** (thêm tham số DTO không đổi số test, không cần test
+C# riêng vì đã có `GiaDinhDetailTests.cs` phủ `LayChiTiet` sẵn — kiểm tra thủ công qua ảnh chụp
+trình duyệt thật là bằng chứng chính cho cả 2 lỗi). Frontend **254/254** (1 assertion mới thêm
+vào test có sẵn, không tăng số `it`). `npm run build` chạy được cả hai phía. Đo
+`getBoundingClientRect()` qua trình duyệt thật (gia đình "Paul Trần Văn Thái", mã 9): thẻ
+"Thông tin gia đình" (cột trái) cao 416px; cột phải (`.col-stack`) cao 507px (Hình gia đình
+126px + gap 12px + Hôn phối 369px) — khoảng trống dưới thẻ trái ~91px, không còn khoảng trống
+LỚN như trước khi sửa phần (b). Ảnh chụp: `80-gia-dinh-hon-phoi-va-mgd-da-sua.png` (đầu trang,
+đọc được trọn `04/01/1996`/`Chính Tâm`/`Hợp pháp`), `81-gia-dinh-cuon-het-trang.png` (cuộn hết
+trang, lưới thành viên hiện đúng Mã GD 1068/1069/1070/1071, không còn khoảng trống thừa trước
+`.cmdbar`).

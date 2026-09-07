@@ -65,20 +65,23 @@ describe('GiaDinhDetail', () => {
   it('hien luoi thanh vien voi dung so nguoi', async () => {
     render(<GiaDinhDetail duLieu={chiTiet({
       thanhVien: [
-        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
-        { giaoDanId: 'p2', vaiTro: 2, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1998-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p1', maGiaoDanCu: 1001, vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p2', maGiaoDanCu: 1002, vaiTro: 2, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1998-01-01', quaDoi: false, daXoa: false },
       ],
     })} />)
 
     expect(await screen.findByText('Trần Thị B')).toBeDefined()
+    // Cot "Ma GD" phai hien dung ma giao dan he cu (1002) — tung bi bo sot o ThanhVienDto
+    // (backend) nen frontend luon dien 0 lam gia tri tam, xem can-review-sau.md muc 40.
+    expect(await screen.findByText('1002')).toBeDefined()
   })
 
   it('luoi Thanh vien khac loai tru vo chong (chuHo), da hien rieng o Nguoi nam/Nguoi nu', async () => {
     render(<GiaDinhDetail duLieu={chiTiet({
       thanhVien: [
-        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
-        { giaoDanId: 'p2', vaiTro: 1, chuHo: true, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
-        { giaoDanId: 'p3', vaiTro: 2, chuHo: false, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn C', phai: 'Nam', ngaySinh: '2000-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p1', maGiaoDanCu: 1001, vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p2', maGiaoDanCu: 1002, vaiTro: 1, chuHo: true, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p3', maGiaoDanCu: 1003, vaiTro: 2, chuHo: false, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn C', phai: 'Nam', ngaySinh: '2000-01-01', quaDoi: false, daXoa: false },
       ],
     })} />)
 
@@ -92,8 +95,8 @@ describe('GiaDinhDetail', () => {
     // theo chuHo thay vì vaiTro thì "Người nữ" sẽ hiện rỗng ("—") thay vì đúng tên vợ.
     const { container } = render(<GiaDinhDetail duLieu={chiTiet({
       thanhVien: [
-        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
-        { giaoDanId: 'p2', vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p1', maGiaoDanCu: 1001, vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p2', maGiaoDanCu: 1002, vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
       ],
     })} />)
 
@@ -122,8 +125,8 @@ describe('GiaDinhDetail', () => {
     const nguoiDung = userEvent.setup()
     render(<GiaDinhDetail duLieu={chiTiet({
       thanhVien: [
-        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
-        { giaoDanId: 'p2', vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p1', maGiaoDanCu: 1001, vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p2', maGiaoDanCu: 1002, vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
       ],
     })} onBoChonVoChong={onBoChonVoChong} />)
 
@@ -155,7 +158,7 @@ describe('GiaDinhDetail', () => {
     const onXoaThanhVien = vi.fn()
     render(<GiaDinhDetail duLieu={chiTiet({
       thanhVien: [
-        { giaoDanId: 'p3', vaiTro: 4, chuHo: false, tenThanh: 'Anna', hoTen: 'Nguyễn Thị Cha Me', phai: 'Nữ', ngaySinh: '1950-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p3', maGiaoDanCu: 1003, vaiTro: 4, chuHo: false, tenThanh: 'Anna', hoTen: 'Nguyễn Thị Cha Me', phai: 'Nữ', ngaySinh: '1950-01-01', quaDoi: false, daXoa: false },
       ],
     })} onXoaThanhVien={onXoaThanhVien} />)
 
@@ -172,8 +175,8 @@ describe('GiaDinhDetail', () => {
   it('dang co Nguoi nam la chu ho thi radio Chu ho canh Nguoi nam duoc check san', () => {
     render(<GiaDinhDetail duLieu={chiTiet({
       thanhVien: [
-        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
-        { giaoDanId: 'p2', vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p1', maGiaoDanCu: 1001, vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p2', maGiaoDanCu: 1002, vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
       ],
     })} />)
 
@@ -195,8 +198,8 @@ describe('GiaDinhDetail', () => {
     const nguoiDung = userEvent.setup()
     render(<GiaDinhDetail duLieu={chiTiet({
       thanhVien: [
-        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
-        { giaoDanId: 'p2', vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p1', maGiaoDanCu: 1001, vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p2', maGiaoDanCu: 1002, vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
       ],
     })} onLuu={onLuu} />)
 
@@ -213,8 +216,8 @@ describe('GiaDinhDetail', () => {
     const nguoiDung = userEvent.setup()
     render(<GiaDinhDetail duLieu={chiTiet({
       thanhVien: [
-        { giaoDanId: 'p1', vaiTro: 0, chuHo: false, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
-        { giaoDanId: 'p2', vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p1', maGiaoDanCu: 1001, vaiTro: 0, chuHo: false, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p2', maGiaoDanCu: 1002, vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
       ],
     })} onLuu={onLuu} />)
 
@@ -280,7 +283,7 @@ describe('GiaDinhDetail', () => {
   it('co Nguoi nam: khoi Hon phoi duoc mo va hien dung du lieu da co', () => {
     render(<GiaDinhDetail duLieu={chiTiet({
       thanhVien: [
-        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p1', maGiaoDanCu: 1001, vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
       ],
       honPhoi: {
         id: 'hp1', soHonPhoi: 'HP-01', ngayHonPhoi: '1995-05-20', noiHonPhoi: 'Nhà thờ Chính toà',
@@ -301,7 +304,7 @@ describe('GiaDinhDetail', () => {
     const nguoiDung = userEvent.setup()
     render(<GiaDinhDetail duLieu={chiTiet({
       thanhVien: [
-        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p1', maGiaoDanCu: 1001, vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
       ],
       honPhoi: {
         id: 'hp1', soHonPhoi: null, ngayHonPhoi: null, noiHonPhoi: null, linhMucChung: null,
@@ -331,7 +334,7 @@ describe('GiaDinhDetail', () => {
     const nguoiDung = userEvent.setup()
     render(<GiaDinhDetail duLieu={chiTiet({
       thanhVien: [
-        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p1', maGiaoDanCu: 1001, vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
       ],
     })} moGiaoDan={moGiaoDan} />)
 
@@ -349,10 +352,10 @@ describe('GiaDinhDetail', () => {
   it('luoi thanh vien hien DUNG so dong (khong con co 0px nhu loi bo cuc da bao)', async () => {
     const { container } = render(<GiaDinhDetail duLieu={chiTiet({
       thanhVien: [
-        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
-        { giaoDanId: 'p2', vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
-        { giaoDanId: 'p3', vaiTro: 2, chuHo: false, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn C', phai: 'Nam', ngaySinh: '2000-01-01', quaDoi: false, daXoa: false },
-        { giaoDanId: 'p4', vaiTro: 2, chuHo: false, tenThanh: 'Maria', hoTen: 'Nguyễn Thị D', phai: 'Nữ', ngaySinh: '2002-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p1', maGiaoDanCu: 1001, vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p2', maGiaoDanCu: 1002, vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p3', maGiaoDanCu: 1003, vaiTro: 2, chuHo: false, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn C', phai: 'Nam', ngaySinh: '2000-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p4', maGiaoDanCu: 1004, vaiTro: 2, chuHo: false, tenThanh: 'Maria', hoTen: 'Nguyễn Thị D', phai: 'Nữ', ngaySinh: '2002-01-01', quaDoi: false, daXoa: false },
       ],
     })} />)
 

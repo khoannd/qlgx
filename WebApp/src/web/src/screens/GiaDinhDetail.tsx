@@ -121,10 +121,11 @@ const CACH_THUC_HON_PHOI = [
 /** `ThanhVien` (tóm tắt trong `GiaDinhDetail`) chỉ mang vài trường hiển thị; các trường còn
  * lại của `GiaoDanListItem` chưa có (sẽ do endpoint thành viên riêng — Task 6/7 — trả về đầy
  * đủ hơn khi nối API thật) nên tạm điền `null`/giá trị mặc định để dùng chung cột với
- * `GxGiaoDanList`. */
+ * `GxGiaoDanList`. `maGiaoDanCu` KHÔNG nằm trong nhóm "chưa có" đó — lấy thẳng từ `tv` (đã có
+ * từ `GET /api/gia-dinh/{id}`, cột "Mã GD" trên lưới cần đúng mã hệ cũ này, không phải 0). */
 function tuThanhVien(tv: ThanhVien, giaDinhId: string): GiaoDanListItem {
   return {
-    id: tv.giaoDanId, maGiaoDanCu: 0, tenThanh: tv.tenThanh, hoTen: tv.hoTen, phai: tv.phai,
+    id: tv.giaoDanId, maGiaoDanCu: tv.maGiaoDanCu, tenThanh: tv.tenThanh, hoTen: tv.hoTen, phai: tv.phai,
     ngaySinh: tv.ngaySinh, namSinh: tv.ngaySinh?.slice(0, 4) ?? '', ngayRuaToi: null,
     ngayRuocLe: null, ngayThemSuc: null, lapGd: false, hoTenCha: null, hoTenMe: null,
     tanTong: false, conHoc: false, ngheNghiep: null, ghiChu: null, dienThoai: null,
@@ -422,45 +423,49 @@ export function GiaDinhDetail({
                 Chọn Người nam hoặc Người nữ ở trên trước khi nhập hôn phối.
               </p>
             )}
-            <div className="card-row">
-              <div>
-                <GxField label="Số hôn phối" id="gdinh-hp-so">
-                  <input id="gdinh-hp-so" name="honPhoiSoHonPhoi" type="text"
-                    defaultValue={f.honPhoi?.soHonPhoi ?? ''} disabled={!nguoiNam && !nguoiNu} />
-                </GxField>
-                <GxField label="Ngày hôn phối" id="gdinh-hp-ngay">
-                  <GxDate id="gdinh-hp-ngay" name="honPhoiNgay" defaultValue={f.honPhoi?.ngayHonPhoi ?? null}
-                    style={{ maxWidth: 180 }} disabled={!nguoiNam && !nguoiNu} />
-                </GxField>
-                <GxField label="Nơi hôn phối" id="gdinh-hp-noi">
-                  <input id="gdinh-hp-noi" name="honPhoiNoi" type="text"
-                    defaultValue={f.honPhoi?.noiHonPhoi ?? ''} disabled={!nguoiNam && !nguoiNu} />
-                </GxField>
-                <GxField label="Linh mục chứng" id="gdinh-hp-lm">
-                  <input id="gdinh-hp-lm" name="honPhoiLinhMuc" type="text"
-                    defaultValue={f.honPhoi?.linhMucChung ?? ''} disabled={!nguoiNam && !nguoiNu} />
-                </GxField>
-              </div>
-              <div>
-                <GxField label="Người chứng 1" id="gdinh-hp-c1">
-                  <input id="gdinh-hp-c1" name="honPhoiChung1" type="text"
-                    defaultValue={f.honPhoi?.nguoiChung1 ?? ''} disabled={!nguoiNam && !nguoiNu} />
-                </GxField>
-                <GxField label="Người chứng 2" id="gdinh-hp-c2">
-                  <input id="gdinh-hp-c2" name="honPhoiChung2" type="text"
-                    defaultValue={f.honPhoi?.nguoiChung2 ?? ''} disabled={!nguoiNam && !nguoiNu} />
-                </GxField>
-                <GxField label="Tình trạng hôn phối" id="gdinh-hp-ct">
-                  <select id="gdinh-hp-ct" name="honPhoiCachThuc" defaultValue={f.honPhoi?.cachThucHonPhoi ?? ''}
-                    disabled={!nguoiNam && !nguoiNu}>
-                    {CACH_THUC_HON_PHOI.map((c) => <option key={c} value={c}>{c || '(chưa xác định)'}</option>)}
-                  </select>
-                </GxField>
-                <GxField label="Ghi chú hôn phối" id="gdinh-hp-ghichu">
-                  <textarea id="gdinh-hp-ghichu" name="honPhoiGhiChu"
-                    defaultValue={f.honPhoi?.ghiChu ?? ''} disabled={!nguoiNam && !nguoiNu} />
-                </GxField>
-              </div>
+            {/* Cột phải hẹp (tối thiểu 360px, trừ padding thẻ 2*16px chỉ còn ~328px) — bố cục
+                CŨ dùng `.card-row` chia đôi thành hai cột con rồi mỗi cột con lại dùng `.frow`
+                nhãn-trái/ô-phải (nhãn cố định 132px): mỗi cột con chỉ còn ~158px, trừ nhãn 132px
+                và gap 10px thì Ô NHẬP CÒN ĐÚNG ~16PX — đúng lỗi người dùng chụp được ("04/",
+                "Chính Tâ", "Hợp p"). Sửa bằng lớp `.honphoi-fields` (xem qlgx.css): xếp MỘT cột
+                dọc (bỏ hẳn `.card-row`) và đổi từng `.frow` bên trong sang nhãn-trên/ô-dưới —
+                ô nhập khi đó rộng gần hết bề ngang thẻ (~328px) thay vì bị bóp hai lần. Xem
+                docs/superpowers/specs/man-hinh/can-review-sau.md mục 40. */}
+            <div className="honphoi-fields">
+              <GxField label="Số hôn phối" id="gdinh-hp-so">
+                <input id="gdinh-hp-so" name="honPhoiSoHonPhoi" type="text"
+                  defaultValue={f.honPhoi?.soHonPhoi ?? ''} disabled={!nguoiNam && !nguoiNu} />
+              </GxField>
+              <GxField label="Ngày hôn phối" id="gdinh-hp-ngay">
+                <GxDate id="gdinh-hp-ngay" name="honPhoiNgay" defaultValue={f.honPhoi?.ngayHonPhoi ?? null}
+                  style={{ maxWidth: 180 }} disabled={!nguoiNam && !nguoiNu} />
+              </GxField>
+              <GxField label="Nơi hôn phối" id="gdinh-hp-noi">
+                <input id="gdinh-hp-noi" name="honPhoiNoi" type="text"
+                  defaultValue={f.honPhoi?.noiHonPhoi ?? ''} disabled={!nguoiNam && !nguoiNu} />
+              </GxField>
+              <GxField label="Linh mục chứng" id="gdinh-hp-lm">
+                <input id="gdinh-hp-lm" name="honPhoiLinhMuc" type="text"
+                  defaultValue={f.honPhoi?.linhMucChung ?? ''} disabled={!nguoiNam && !nguoiNu} />
+              </GxField>
+              <GxField label="Người chứng 1" id="gdinh-hp-c1">
+                <input id="gdinh-hp-c1" name="honPhoiChung1" type="text"
+                  defaultValue={f.honPhoi?.nguoiChung1 ?? ''} disabled={!nguoiNam && !nguoiNu} />
+              </GxField>
+              <GxField label="Người chứng 2" id="gdinh-hp-c2">
+                <input id="gdinh-hp-c2" name="honPhoiChung2" type="text"
+                  defaultValue={f.honPhoi?.nguoiChung2 ?? ''} disabled={!nguoiNam && !nguoiNu} />
+              </GxField>
+              <GxField label="Tình trạng hôn phối" id="gdinh-hp-ct">
+                <select id="gdinh-hp-ct" name="honPhoiCachThuc" defaultValue={f.honPhoi?.cachThucHonPhoi ?? ''}
+                  disabled={!nguoiNam && !nguoiNu}>
+                  {CACH_THUC_HON_PHOI.map((c) => <option key={c} value={c}>{c || '(chưa xác định)'}</option>)}
+                </select>
+              </GxField>
+              <GxField label="Ghi chú hôn phối" id="gdinh-hp-ghichu">
+                <textarea id="gdinh-hp-ghichu" name="honPhoiGhiChu"
+                  defaultValue={f.honPhoi?.ghiChu ?? ''} disabled={!nguoiNam && !nguoiNu} />
+              </GxField>
             </div>
           </div>
         </div>

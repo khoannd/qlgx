@@ -128,8 +128,8 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
             g.ThanhVien
                 .OrderBy(tv => tv.VaiTro).ThenBy(tv => tv.GiaoDan!.NgaySinh)
                 .Select(tv => new ThanhVienDto(
-                    tv.GiaoDanId, (int)tv.VaiTro, tv.ChuHo,
-                    tv.GiaoDan!.TenThanh, tv.GiaoDan.HoTen, tv.GiaoDan.Phai,
+                    tv.GiaoDanId, tv.GiaoDan!.MaGiaoDanCu, (int)tv.VaiTro, tv.ChuHo,
+                    tv.GiaoDan.TenThanh, tv.GiaoDan.HoTen, tv.GiaoDan.Phai,
                     tv.GiaoDan.NgaySinh, tv.GiaoDan.QuaDoi, tv.GiaoDan.DaXoa))
                 .ToArray(),
             honPhoi);

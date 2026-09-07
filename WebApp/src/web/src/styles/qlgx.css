@@ -945,6 +945,35 @@ tbody tr[aria-selected="true"] .rowhead {
 .detail-page-giadinh .members-block { display: block; min-height: auto; }
 .detail-page-giadinh .members-block > .table-card { height: 320px; }
 
+/* Khối "Hôn phối" — nằm trong cột phải hẹp (`.cols`, minmax(360px, .85fr)), trừ padding thẻ
+   (2*16px) chỉ còn ~328px bề ngang. `.frow` mặc định (nhãn 132px cố định bên trái) đã chật, nếu
+   còn chia đôi bằng `.card-row` như các khối 2-cột khác thì mỗi ô nhập chỉ còn ~16px — đúng lỗi
+   "04/", "Chính Tâ", "Hợp p" bị cắt cụt người dùng chụp được (can-review-sau.md mục 40). Đổi
+   nhãn lên TRÊN, ô nhập xuống DƯỚI (`.honphoi-fields .frow` bên dưới) để ô không còn bị bóp bởi
+   nhãn cố định 132px nữa — nhưng nếu xếp NGUYÊN MỘT CỘT DỌC (8 hàng) thì khối cao gần gấp đôi
+   card "Thông tin gia đình" bên cột trái, kéo lại đúng "khoảng trống thừa" người dùng vừa yêu
+   cầu bỏ (do `.cols` khai `align-items: stretch`, card trái không tự nở theo — xem chú thích
+   dài ở JSX chỗ dựng `.cols`). Xếp `.honphoi-fields` thành LƯỚI HAI CỘT (như `.card-row`) để 8
+   trường co lại còn 4 hàng — chiều cao khối khi đó xấp xỉ card trái, không còn khoảng trống. */
+.honphoi-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+.honphoi-fields .frow {
+  grid-template-columns: 1fr;
+  row-gap: 3px;
+  margin-bottom: 8px;
+}
+.honphoi-fields .frow > label { font-size: 12px; }
+.honphoi-fields .frow .val > input[type="text"],
+.honphoi-fields .frow .val > select,
+.honphoi-fields .frow .val > textarea { width: 100%; }
+/* "Ghi chú hôn phối" (textarea) là trường cuối, lẻ hàng — cho nó chiếm trọn bề ngang (2 cột)
+   thay vì kẹt một nửa, đỡ chật khi gõ nhiều chữ. */
+.honphoi-fields .frow:last-child { grid-column: 1 / -1; }
+@media (max-width: 1120px) { .honphoi-fields { grid-template-columns: 1fr; } }
+
 /* Khối "Thông tin cá nhân" của frmGiaoDan (bản desktop): bản desktop chia BA cột
    (`grbCaNhan`), nhưng người dùng góp ý lệch trực quan so với hai tấm 50/50 ngay bên dưới
    (Rửa tội ‖ Rước lễ lần đầu) nên CỐ Ý đổi thành HAI cột bằng nhau, cùng `grid-template-columns:

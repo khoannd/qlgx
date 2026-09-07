@@ -29,8 +29,14 @@ public record GiaDinhListItemDto(
     Guid? HonPhoiId,
     string? NgayHonPhoiHienThi);
 
+/// <summary>
+/// <c>MaGiaoDanCu</c>: mã giáo dân hệ cũ (Access) — người dùng làm việc theo mã này (khác
+/// <c>GiaoDanId</c> kiểu Guid), lưới "Thành viên khác trong gia đình" hiển thị cột "Mã GD" từ
+/// đây. Thiếu trường này khiến cột đó luôn hiện 0 (frontend tạm điền mặc định) — xem
+/// can-review-sau.md mục 40.
+/// </summary>
 public record ThanhVienDto(
-    Guid GiaoDanId, int VaiTro, bool ChuHo,
+    Guid GiaoDanId, int MaGiaoDanCu, int VaiTro, bool ChuHo,
     string? TenThanh, string HoTen, string? Phai, DateOnly? NgaySinh, bool QuaDoi, bool DaXoa);
 
 /// <summary>
