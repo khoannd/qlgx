@@ -33,7 +33,21 @@ export type YeuCauCapNhatGiaDinh = {
   noiChuyen: string | null
   khongThongKe: boolean
   rowVersion: number
-  honPhoi: null
+  /** `null` khi màn hình KHÔNG hiện khối hôn phối (chưa có Người nam lẫn Người nữ — máy chủ
+   * chặn gán hôn phối "mồ côi", xem `KhongTheGanHonPhoiMoCoi`) — nghĩa là "không đụng tới hôn
+   * phối hiện có". Có giá trị thì máy chủ tạo mới (nếu gia đình chưa có hôn phối) hoặc cập
+   * nhật bản ghi hôn phối hiện tại — xem `GiaDinhService.GhiHonPhoi`. */
+  honPhoi: {
+    soHonPhoi: string | null
+    ngayHonPhoi: string | null
+    noiHonPhoi: string | null
+    linhMucChung: string | null
+    nguoiChung1: string | null
+    nguoiChung2: string | null
+    cachThucHonPhoi: string | null
+    ghiChu: string | null
+    rowVersion: number
+  } | null
   /** Chủ hộ CHỈ có thể là Người nam (0) hay Người nữ (1) — hai radio `name="chuho"` cạnh hai ô
    * đó (xem `GiaDinhService.CapNhat`, chỉ ghi `ChuHo` vào dòng Chồng/Vợ). `null` = không radio
    * nào được chọn (kể cả trường hợp cả hai đều bị disable vì chưa có Người nam/nữ) — máy chủ ghi
@@ -91,10 +105,18 @@ const rong = (): GiaDinhDetailDuLieu => ({
   id: '', maGiaDinhCu: 0, maGiaDinhRieng: null, tenGiaDinh: null, giaoHoId: null,
   dienThoai: null, diaChi: null, soHoKhau: null, dienGiaDinh: null, ghiChu: null,
   daChuyenXu: false, ngayChuyen: null, noiChuyen: null, khongThongKe: false,
-  rowVersion: 0, thanhVien: [],
+  rowVersion: 0, thanhVien: [], honPhoi: null,
 })
 
 const DIEN_GIA_DINH = ['', 'Nghèo', 'Cận nghèo', 'Neo đơn', 'Khuyết tật']
+
+/** Bản 9 giá trị của `GxCachThucHonPhoi` — đúng danh sách dùng ở tab "Hôn phối" của
+ * `GiaoDanDetail.tsx` (xem `CACH_THUC_HON_PHOI` cùng tên ở đó, không export dùng chung vì mỗi
+ * màn hình chỉ cần một bản hằng số nhỏ, xem quy ước `DIEN_GIA_DINH` phía trên). */
+const CACH_THUC_HON_PHOI = [
+  '', 'Hợp pháp', 'Hợp thức hóa', 'Chuẩn', 'Không theo phép đạo',
+  'Ly thân', 'Ly dị', 'Đã được tháo gỡ', 'Không xác định',
+]
 
 /** `ThanhVien` (tóm tắt trong `GiaDinhDetail`) chỉ mang vài trường hiển thị; các trường còn
  * lại của `GiaoDanListItem` chưa có (sẽ do endpoint thành viên riêng — Task 6/7 — trả về đầy
@@ -198,6 +220,21 @@ export function GiaDinhDetail({
     const chuoi = (ten: string) => (fd.get(ten) as string | null)?.trim() || null
     const chuHoThoRaw = fd.get('chuho')
     const chuHoVaiTro: 0 | 1 | null = chuHoThoRaw === '0' ? 0 : chuHoThoRaw === '1' ? 1 : null
+    // Chỉ gửi khối hôn phối khi màn hình có hiện nó (cần ít nhất Người nam hoặc Người nữ, xem
+    // JSX bên dưới và `KhongTheGanHonPhoiMoCoi`) — gửi `null` khi không đủ điều kiện để KHÔNG
+    // đụng gì tới hôn phối hiện có (không thể có hôn phối "mồ côi" nên trường hợp này chỉ xảy
+    // ra khi cả hai đã bị bỏ chọn ngay trong phiên đang sửa).
+    const honPhoi = (nguoiNam || nguoiNu) ? {
+      soHonPhoi: chuoi('honPhoiSoHonPhoi'),
+      ngayHonPhoi: chuoi('honPhoiNgay'),
+      noiHonPhoi: chuoi('honPhoiNoi'),
+      linhMucChung: chuoi('honPhoiLinhMuc'),
+      nguoiChung1: chuoi('honPhoiChung1'),
+      nguoiChung2: chuoi('honPhoiChung2'),
+      cachThucHonPhoi: chuoi('honPhoiCachThuc'),
+      ghiChu: chuoi('honPhoiGhiChu'),
+      rowVersion: f.honPhoi?.rowVersion ?? 0,
+    } : null
     return {
       tenGiaDinh: chuoi('tenGiaDinh'),
       giaoHoId,
@@ -212,7 +249,7 @@ export function GiaDinhDetail({
       noiChuyen: daChuyenXu ? chuoi('noiChuyen') : null,
       khongThongKe: fd.get('khongThongKe') === 'on',
       rowVersion: f.rowVersion,
-      honPhoi: null,
+      honPhoi,
     }
   }
 
@@ -250,7 +287,7 @@ export function GiaDinhDetail({
   }, [luuThanhCongDem])
 
   return (
-    <form className="page detail-page" ref={formRef} onSubmit={xuLySubmit}>
+    <form className="page detail-page detail-page-giadinh" ref={formRef} onSubmit={xuLySubmit}>
       <div className="page-head detail-head">
         <button type="button" className="btn btn-sm btn-quiet" onClick={() => moDanhSachGiaDinh?.()}>
           ← Danh sách
@@ -266,77 +303,148 @@ export function GiaDinhDetail({
       </div>
 
       <div className="cols">
-        <div className="card glass">
-          <div className="card-head"><h2>Thông tin gia đình</h2><span className="eyebrow">Sổ gia đình</span></div>
-          <GxField label="Mã gia đình" id="gdinh-ma"
-            extra={<><GxInline>Số hộ khẩu</GxInline><input aria-label="Số hộ khẩu" name="soHoKhau" type="text" defaultValue={f.soHoKhau ?? ''} /></>}>
-            <input id="gdinh-ma" type="text" value={moi ? '(tự sinh khi lưu)' : String(f.maGiaDinhCu)} disabled style={{ maxWidth: 150 }} />
-          </GxField>
-          <GxField label="Người nam" id="gdinh-nguoinam"
-            extra={<label className="seg">
-              <input type="radio" name="chuho" value="0" disabled={!nguoiNam}
-                defaultChecked={!!nguoiNam && chuHo?.giaoDanId === nguoiNam.giaoDanId} />Chủ hộ
-            </label>}>
-            <GxPicker id="gdinh-nguoinam" value={nguoiNam ? `${nguoiNam.tenThanh ?? ''} ${nguoiNam.hoTen}`.trim() : null}
-              onChon={moi ? undefined : (gd) => onGanVoChong?.(0, gd)}
-              onBoChon={moi || !nguoiNam ? undefined : () => onBoChonVoChong?.(0)} />
-          </GxField>
-          <GxField label="Người nữ" id="gdinh-nguoinu"
-            extra={<label className="seg">
-              <input type="radio" name="chuho" value="1" disabled={!nguoiNu}
-                defaultChecked={!!nguoiNu && chuHo?.giaoDanId === nguoiNu.giaoDanId} />Chủ hộ
-            </label>}>
-            <GxPicker id="gdinh-nguoinu" value={nguoiNu ? `${nguoiNu.tenThanh ?? ''} ${nguoiNu.hoTen}`.trim() : null}
-              onChon={moi ? undefined : (gd) => onGanVoChong?.(1, gd)}
-              onBoChon={moi || !nguoiNu ? undefined : () => onBoChonVoChong?.(1)} />
-          </GxField>
-          <GxField label="Tên gia đình" id="gdinh-ten">
-            <input id="gdinh-ten" name="tenGiaDinh" type="text" defaultValue={f.tenGiaDinh ?? ''} />
-          </GxField>
-          <GxField label="Giáo họ" id="gdinh-giaoho">
-            <select id="gdinh-giaoho" value={giaoHoId ?? NGOAI_XU}
-              onChange={(e) => setGiaoHoId(e.target.value === NGOAI_XU ? null : e.target.value)}>
-              <option value={NGOAI_XU}>{NGOAI_XU}</option>
-              {dsGiaoHo.map((g) => <option key={g.id} value={g.id}>{g.tenGiaoHo}</option>)}
-            </select>
-          </GxField>
-          <GxField label="Điện thoại" id="gdinh-dienthoai"
-            extra={
+        {/* Cột trái gộp HAI tấm xếp chồng (Thông tin gia đình + Hôn phối) — bọc bằng flex-column
+            thường thay vì `.col-stack` (dành cho tấm co giãn `1fr` như "Hình gia đình" bên
+            phải): cả hai tấm ở đây đều cao tự nhiên, không tấm nào cần nở lấp chỗ trống. Đây
+            CHÍNH LÀ chỗ sửa lỗi "vỡ bố cục" người dùng báo — bản trước `.detail-page` khai đúng
+            4 hàng lưới nhưng lại có 6 phần tử con trực tiếp (tiêu đề "Thành viên khác", thanh
+            công cụ thêm, `GxGiaoDanList`, `.cmdbar`), khiến trình duyệt đẩy hai phần tử thừa
+            vào các hàng ẩn tự sinh không có chiều cao tối thiểu — hàng `.cols` (khai `minmax(0,
+            auto)`) bị bóp gần về 0 nên cuộn cụt ngay sau "Địa chỉ", còn `GxGiaoDanList` rơi vào
+            hàng ẩn cao ~0px dù đếm đúng 4 người. Sửa bằng cách gộp lại đúng 4 phần tử con thật
+            (đầu trang, `.cols`, khối thành viên, `.cmdbar`) — KHÔNG đổi `grid-template-rows`.
+            Xem docs/superpowers/specs/man-hinh/can-review-sau.md mục layout gia đình. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+          <div className="card glass">
+            <div className="card-head"><h2>Thông tin gia đình</h2><span className="eyebrow">Sổ gia đình</span></div>
+            <GxField label="Mã gia đình" id="gdinh-ma"
+              extra={<><GxInline>Số hộ khẩu</GxInline><input aria-label="Số hộ khẩu" name="soHoKhau" type="text" defaultValue={f.soHoKhau ?? ''} /></>}>
+              <input id="gdinh-ma" type="text" value={moi ? '(tự sinh khi lưu)' : String(f.maGiaDinhCu)} disabled style={{ maxWidth: 150 }} />
+            </GxField>
+            <GxField label="Người nam" id="gdinh-nguoinam"
+              extra={<label className="seg">
+                <input type="radio" name="chuho" value="0" disabled={!nguoiNam}
+                  defaultChecked={!!nguoiNam && chuHo?.giaoDanId === nguoiNam.giaoDanId} />Chủ hộ
+              </label>}>
+              <GxPicker id="gdinh-nguoinam" value={nguoiNam ? `${nguoiNam.tenThanh ?? ''} ${nguoiNam.hoTen}`.trim() : null}
+                onChon={moi ? undefined : (gd) => onGanVoChong?.(0, gd)}
+                onBoChon={moi || !nguoiNam ? undefined : () => onBoChonVoChong?.(0)}
+                onXem={nguoiNam ? () => moGiaoDan?.(nguoiNam.giaoDanId) : undefined} />
+            </GxField>
+            <GxField label="Người nữ" id="gdinh-nguoinu"
+              extra={<label className="seg">
+                <input type="radio" name="chuho" value="1" disabled={!nguoiNu}
+                  defaultChecked={!!nguoiNu && chuHo?.giaoDanId === nguoiNu.giaoDanId} />Chủ hộ
+              </label>}>
+              <GxPicker id="gdinh-nguoinu" value={nguoiNu ? `${nguoiNu.tenThanh ?? ''} ${nguoiNu.hoTen}`.trim() : null}
+                onChon={moi ? undefined : (gd) => onGanVoChong?.(1, gd)}
+                onBoChon={moi || !nguoiNu ? undefined : () => onBoChonVoChong?.(1)}
+                onXem={nguoiNu ? () => moGiaoDan?.(nguoiNu.giaoDanId) : undefined} />
+            </GxField>
+            <GxField label="Tên gia đình" id="gdinh-ten">
+              <input id="gdinh-ten" name="tenGiaDinh" type="text" defaultValue={f.tenGiaDinh ?? ''} />
+            </GxField>
+            <GxField label="Giáo họ" id="gdinh-giaoho">
+              <select id="gdinh-giaoho" value={giaoHoId ?? NGOAI_XU}
+                onChange={(e) => setGiaoHoId(e.target.value === NGOAI_XU ? null : e.target.value)}>
+                <option value={NGOAI_XU}>{NGOAI_XU}</option>
+                {dsGiaoHo.map((g) => <option key={g.id} value={g.id}>{g.tenGiaoHo}</option>)}
+              </select>
+            </GxField>
+            <GxField label="Điện thoại" id="gdinh-dienthoai"
+              extra={
+                <>
+                  <GxInline>Diện</GxInline>
+                  <select aria-label="Diện gia đình" name="dienGiaDinh" defaultValue={f.dienGiaDinh ?? ''}>
+                    {DIEN_GIA_DINH.map((d) => <option key={d} value={d}>{d || 'Không thuộc diện nào'}</option>)}
+                  </select>
+                </>
+              }>
+              <input id="gdinh-dienthoai" name="dienThoai" type="text" defaultValue={f.dienThoai ?? ''} style={{ maxWidth: 150 }} />
+            </GxField>
+            <GxField label="Địa chỉ" id="gdinh-diachi" extra={<button type="button" className="btn btn-sm btn-quiet">Bản đồ</button>}>
+              <input id="gdinh-diachi" name="diaChi" type="text" defaultValue={f.diaChi ?? ''} />
+            </GxField>
+            <GxField label="Ghi chú" id="gdinh-ghichu">
+              <textarea id="gdinh-ghichu" name="ghiChu" defaultValue={f.ghiChu ?? ''} placeholder="Ghi chú nội bộ về gia đình…" />
+            </GxField>
+            <GxField label="">
+              <label className="toggle">
+                <input type="checkbox" checked={daChuyenXu} onChange={(e) => setDaChuyenXu(e.target.checked)} />
+                Đã chuyển đi xứ khác
+              </label>
+              <label className="toggle">
+                <input type="checkbox" name="khongThongKe" defaultChecked={f.khongThongKe} />
+                Không tính vào thống kê
+              </label>
+            </GxField>
+            {daChuyenXu && (
               <>
-                <GxInline>Diện</GxInline>
-                <select aria-label="Diện gia đình" name="dienGiaDinh" defaultValue={f.dienGiaDinh ?? ''}>
-                  {DIEN_GIA_DINH.map((d) => <option key={d} value={d}>{d || 'Không thuộc diện nào'}</option>)}
-                </select>
+                <GxField label="Ngày chuyển" id="gdinh-ngaychuyen">
+                  <GxDate id="gdinh-ngaychuyen" name="ngayChuyen" defaultValue={f.ngayChuyen} style={{ maxWidth: 190 }} />
+                </GxField>
+                <GxField label="Nơi chuyển" id="gdinh-noichuyen">
+                  <input id="gdinh-noichuyen" name="noiChuyen" type="text" defaultValue={f.noiChuyen ?? ''} placeholder="Giáo xứ / địa phương chuyển đến" />
+                </GxField>
               </>
-            }>
-            <input id="gdinh-dienthoai" name="dienThoai" type="text" defaultValue={f.dienThoai ?? ''} style={{ maxWidth: 150 }} />
-          </GxField>
-          <GxField label="Địa chỉ" id="gdinh-diachi" extra={<button type="button" className="btn btn-sm btn-quiet">Bản đồ</button>}>
-            <input id="gdinh-diachi" name="diaChi" type="text" defaultValue={f.diaChi ?? ''} />
-          </GxField>
-          <GxField label="Ghi chú" id="gdinh-ghichu">
-            <textarea id="gdinh-ghichu" name="ghiChu" defaultValue={f.ghiChu ?? ''} placeholder="Ghi chú nội bộ về gia đình…" />
-          </GxField>
-          <GxField label="">
-            <label className="toggle">
-              <input type="checkbox" checked={daChuyenXu} onChange={(e) => setDaChuyenXu(e.target.checked)} />
-              Đã chuyển đi xứ khác
-            </label>
-            <label className="toggle">
-              <input type="checkbox" name="khongThongKe" defaultChecked={f.khongThongKe} />
-              Không tính vào thống kê
-            </label>
-          </GxField>
-          {daChuyenXu && (
-            <>
-              <GxField label="Ngày chuyển" id="gdinh-ngaychuyen">
-                <GxDate id="gdinh-ngaychuyen" name="ngayChuyen" defaultValue={f.ngayChuyen} style={{ maxWidth: 190 }} />
-              </GxField>
-              <GxField label="Nơi chuyển" id="gdinh-noichuyen">
-                <input id="gdinh-noichuyen" name="noiChuyen" type="text" defaultValue={f.noiChuyen ?? ''} placeholder="Giáo xứ / địa phương chuyển đến" />
-              </GxField>
-            </>
-          )}
+            )}
+          </div>
+
+          {/* Khối hôn phối (`GxHonPhoiGiaDinh` bản desktop) — trước đây bản web ĐỌC được dữ liệu
+              này (`GET /api/gia-dinh/{id}` đã trả `HonPhoi`) nhưng KHÔNG hề hiện lên đâu cả, và
+              luôn gửi `honPhoi: null` khi lưu — người dùng không thấy, không sửa được, dù máy
+              chủ đã sẵn sàng (gia-dinh-chi-tiet.md mục 10, "Trung bình #5"). Chỉ hiện được khi
+              có Người nam hoặc Người nữ — hôn phối không thể "mồ côi" (KhongTheGanHonPhoiMoCoi),
+              vô hiệu hoá cả khối kèm gợi ý rõ ràng khi chưa đủ điều kiện thay vì ẩn hẳn (ẩn hẳn
+              sẽ khiến người dùng lại tưởng "màn hình thiếu mục hôn phối" như lần góp ý này). */}
+          <div className="card glass">
+            <div className="card-head"><h2>Hôn phối</h2></div>
+            {!nguoiNam && !nguoiNu && (
+              <p className="hint" style={{ margin: '0 0 8px' }}>
+                Chọn Người nam hoặc Người nữ ở trên trước khi nhập hôn phối.
+              </p>
+            )}
+            <div className="card-row">
+              <div>
+                <GxField label="Số hôn phối" id="gdinh-hp-so">
+                  <input id="gdinh-hp-so" name="honPhoiSoHonPhoi" type="text"
+                    defaultValue={f.honPhoi?.soHonPhoi ?? ''} disabled={!nguoiNam && !nguoiNu} />
+                </GxField>
+                <GxField label="Ngày hôn phối" id="gdinh-hp-ngay">
+                  <GxDate id="gdinh-hp-ngay" name="honPhoiNgay" defaultValue={f.honPhoi?.ngayHonPhoi ?? null}
+                    style={{ maxWidth: 180 }} disabled={!nguoiNam && !nguoiNu} />
+                </GxField>
+                <GxField label="Nơi hôn phối" id="gdinh-hp-noi">
+                  <input id="gdinh-hp-noi" name="honPhoiNoi" type="text"
+                    defaultValue={f.honPhoi?.noiHonPhoi ?? ''} disabled={!nguoiNam && !nguoiNu} />
+                </GxField>
+                <GxField label="Linh mục chứng" id="gdinh-hp-lm">
+                  <input id="gdinh-hp-lm" name="honPhoiLinhMuc" type="text"
+                    defaultValue={f.honPhoi?.linhMucChung ?? ''} disabled={!nguoiNam && !nguoiNu} />
+                </GxField>
+              </div>
+              <div>
+                <GxField label="Người chứng 1" id="gdinh-hp-c1">
+                  <input id="gdinh-hp-c1" name="honPhoiChung1" type="text"
+                    defaultValue={f.honPhoi?.nguoiChung1 ?? ''} disabled={!nguoiNam && !nguoiNu} />
+                </GxField>
+                <GxField label="Người chứng 2" id="gdinh-hp-c2">
+                  <input id="gdinh-hp-c2" name="honPhoiChung2" type="text"
+                    defaultValue={f.honPhoi?.nguoiChung2 ?? ''} disabled={!nguoiNam && !nguoiNu} />
+                </GxField>
+                <GxField label="Tình trạng hôn phối" id="gdinh-hp-ct">
+                  <select id="gdinh-hp-ct" name="honPhoiCachThuc" defaultValue={f.honPhoi?.cachThucHonPhoi ?? ''}
+                    disabled={!nguoiNam && !nguoiNu}>
+                    {CACH_THUC_HON_PHOI.map((c) => <option key={c} value={c}>{c || '(chưa xác định)'}</option>)}
+                  </select>
+                </GxField>
+                <GxField label="Ghi chú hôn phối" id="gdinh-hp-ghichu">
+                  <textarea id="gdinh-hp-ghichu" name="honPhoiGhiChu"
+                    defaultValue={f.honPhoi?.ghiChu ?? ''} disabled={!nguoiNam && !nguoiNu} />
+                </GxField>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="col-stack">
@@ -353,31 +461,38 @@ export function GiaDinhDetail({
         </div>
       </div>
 
-      <div className="card-head" style={{ padding: '0 2px' }}>
-        <h2>Thành viên khác trong gia đình</h2>
-        <div className="spacer" />
-        <span className="count-pill"><b>{thanhVien.length}</b> người</span>
-      </div>
-      {!moi && (
-        <div className="thanhvien-them" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 2px 10px' }}>
-          <GxPicker id="gdinh-them-thanhvien" value={dangThem ? `${dangThem.tenThanh ?? ''} ${dangThem.hoTen}`.trim() : null}
-            onChon={setDangThem} onBoChon={() => setDangThem(null)} />
-          <select aria-label="Vai trò thành viên mới" value={vaiTroMoi} onChange={(e) => setVaiTroMoi(Number(e.target.value))}>
-            {DANH_SACH_VAI_TRO_THANH_VIEN.map((v) => <option key={v.giaTri} value={v.giaTri}>{v.nhan}</option>)}
-          </select>
-          <button type="button" className="btn btn-sm" disabled={!dangThem}
-            onClick={() => { if (dangThem) { onThemThanhVien?.(dangThem, vaiTroMoi); setDangThem(null) } }}>
-            Thêm vào gia đình
-          </button>
+      {/* Khối thành viên gộp làm MỘT phần tử con duy nhất của `.detail-page` (tiêu đề + thanh
+          công cụ thêm + lưới) — lý do gộp: xem chú thích dài ở `.cols` phía trên. `.table-card`
+          do `GxGiaoDanList` dựng (min-height:0, hàng `1fr` bên trong) cần chính khối bọc này
+          cấp chiều cao thật qua `flex: 1` (CSS `.members-block`, xem qlgx.css) — nếu không lưới
+          lại co về 0px y hệt lỗi đã ghi ở đầu `.table-card` trong qlgx.css. */}
+      <div className="members-block">
+        <div className="card-head" style={{ padding: '0 2px' }}>
+          <h2>Thành viên khác trong gia đình</h2>
+          <div className="spacer" />
+          <span className="count-pill"><b>{thanhVien.length}</b> người</span>
         </div>
-      )}
-      <GxGiaoDanList
-        quanHeGiaDinh
-        rows={thanhVien}
-        hangLoc={false}
-        onMo={(d) => moGiaoDan?.(d.id)}
-        menuChuotPhai={menuThanhVien}
-      />
+        {!moi && (
+          <div className="thanhvien-them" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 2px 10px' }}>
+            <GxPicker id="gdinh-them-thanhvien" value={dangThem ? `${dangThem.tenThanh ?? ''} ${dangThem.hoTen}`.trim() : null}
+              onChon={setDangThem} onBoChon={() => setDangThem(null)} />
+            <select aria-label="Vai trò thành viên mới" value={vaiTroMoi} onChange={(e) => setVaiTroMoi(Number(e.target.value))}>
+              {DANH_SACH_VAI_TRO_THANH_VIEN.map((v) => <option key={v.giaTri} value={v.giaTri}>{v.nhan}</option>)}
+            </select>
+            <button type="button" className="btn btn-sm" disabled={!dangThem}
+              onClick={() => { if (dangThem) { onThemThanhVien?.(dangThem, vaiTroMoi); setDangThem(null) } }}>
+              Thêm vào gia đình
+            </button>
+          </div>
+        )}
+        <GxGiaoDanList
+          quanHeGiaDinh
+          rows={thanhVien}
+          hangLoc={false}
+          onMo={(d) => moGiaoDan?.(d.id)}
+          menuChuotPhai={menuThanhVien}
+        />
+      </div>
 
       <div className="cmdbar">
         <span className="hint" role={thongBaoLuu ? 'status' : undefined}>

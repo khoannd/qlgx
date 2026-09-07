@@ -22,7 +22,7 @@ function TongQuan() {
 
 function App() {
   const { dangKiemTraPhien, nguoiDung } = useAuth()
-  const { danhSach, dangChon, mo, chon, dong } = useTabDocs()
+  const { danhSach, dangChon, mo, chon, dong, suaTieuDe } = useTabDocs()
   // Đếm số bản ghi mới đang mở dở, giống biến moiDem của bản mẫu — mỗi lần bấm "Thêm mới"
   // là một thẻ nháp riêng, không trùng khoá với thẻ nháp khác đang mở.
   const moiDem = useRef(0)
@@ -30,9 +30,11 @@ function App() {
   // Mở thẻ chi tiết gia đình: khoá thẻ theo mã bản ghi để mở lại đúng bản ghi thì chuyển tiêu
   // điểm thay vì tạo thẻ trùng (tương đương moChiTietGiaDinh của bản mẫu); id null tương ứng
   // nút "Thêm gia đình" nên luôn mở một thẻ nháp mới.
-  // Tiêu đề thẻ chi tiết không còn biết trước tên bản ghi (dữ liệu giờ tải bất đồng bộ từ
-  // API thay vì tra ngay trong mảng tĩnh) — dùng tiêu đề tạm rồi để chính `GiaDinhDetailPage`/
-  // `GiaoDanDetailPage` hiển thị tên thật trong nội dung thẻ khi tải xong.
+  // Tiêu đề thẻ chi tiết không biết trước tên bản ghi (dữ liệu tải bất đồng bộ từ API thay vì
+  // tra ngay trong mảng tĩnh) — mở thẻ với tiêu đề tạm ("Gia đình"/"Giáo dân") rồi
+  // `GiaDinhDetailPage`/`GiaoDanDetailPage` tự gọi `onTieuDe` (→ `suaTieuDe` của `useTabDocs`)
+  // để đổi lại đúng tên thật khi tải xong — trước đây KHÔNG đổi, mọi thẻ cùng loại hiện y hệt
+  // nhau, mở 4 gia đình ra 4 thẻ "Gia đình" không phân biệt nổi (can-review-sau.md).
   // Tên tài khoản đang đăng nhập — truyền xuống các form chi tiết để khoá bản nháp ngoại tuyến
   // theo tài khoản (Task 16, xem lib/banNhap.ts). Component chi tiết không tự gọi useAuth() để
   // giữ khả năng test độc lập (không bắt buộc bọc <AuthProvider> trong test).
@@ -49,6 +51,7 @@ function App() {
           moGiaoDan={moChiTietGiaoDan}
           moDanhSachGiaDinh={moDanhSachGiaDinh}
           tenTaiKhoan={tenTaiKhoan}
+          onTieuDe={(ten) => suaTieuDe(idThe, ten)}
         />
       ),
     })
@@ -66,6 +69,7 @@ function App() {
           moDanhSachGiaoDan={moDanhSachGiaoDan}
           moGiaoDan={moChiTietGiaoDan}
           tenTaiKhoan={tenTaiKhoan}
+          onTieuDe={(ten) => suaTieuDe(idThe, ten)}
         />
       ),
     })

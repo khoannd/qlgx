@@ -26,11 +26,17 @@ type Props = {
    * nguyên khả năng test độc lập của các bài test hiện có). Dùng để khoá bản nháp ngoại tuyến
    * theo tài khoản (Task 16, xem `lib/banNhap.ts`) — không truyền = tắt tính năng bản nháp. */
   tenTaiKhoan?: string | null
+  /** Gọi khi tải xong dữ liệu (và mỗi lần tên đổi) để `App.tsx` cập nhật lại tiêu đề thẻ tài
+   * liệu đang mở — trước đây thẻ luôn ghi tĩnh "Giáo dân", mở nhiều giáo dân không phân biệt
+   * nổi. Xem `useTabDocs.suaTieuDe`. */
+  onTieuDe?: (tieuDe: string) => void
 }
 
 /** Container nối `GiaoDanDetail` với `GET`/`PUT /api/giao-dan/{id}` — cùng khuôn tải lại sau
  * khi lưu và xử lý xung đột RowVersion như `GiaDinhDetailPage`. */
-export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan, tenTaiKhoan = null }: Props) {
+export function GiaoDanDetailPage({
+  id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan, tenTaiKhoan = null, onTieuDe,
+}: Props) {
   // Bản nháp ngoại tuyến (Task 16, xem lib/banNhap.ts) — khoá cố định cho suốt vòng đời thẻ
   // này (không phụ thuộc dữ liệu đã tải), gắn kèm tài khoản đang đăng nhập để không lẫn nháp
   // giữa hai người dùng chung một trình duyệt.
@@ -91,6 +97,12 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan,
   }, [id])
 
   useEffect(tai, [tai])
+
+  // Đổi tiêu đề thẻ tài liệu sang đúng tên giáo dân khi tải xong (xem chú thích ở `Props`).
+  useEffect(() => {
+    if (duLieu) onTieuDe?.(`${duLieu.tenThanh ?? ''} ${duLieu.hoTen}`.trim() || `Giáo dân #${duLieu.maGiaoDanCu}`)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duLieu?.tenThanh, duLieu?.hoTen, duLieu?.maGiaoDanCu])
 
   // Tải riêng, độc lập với `tai()` — tab "Hôn phối" lưu qua endpoint riêng
   // (`PUT /api/giao-dan/hon-phoi/{id}`), không đi qua nút "Cập nhật" của form giáo dân chính.

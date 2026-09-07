@@ -96,6 +96,22 @@ export type GiaDinhDetail = {
   khongThongKe: boolean
   rowVersion: number
   thanhVien: ThanhVien[]
+  /** Ánh xạ 1-1 với `HonPhoiDto?` phía backend — hôn phối "hiện tại" của gia đình (chọn theo
+   * `ChonHonPhoiHienTai`, xem GiaDinhService), `null` khi gia đình chưa có hôn phối nào (chưa
+   * đủ Người nam + Người nữ, hoặc chưa từng lưu khối hôn phối). Trước đây bản web chỉ ĐỌC field
+   * này chứ không hiện lên đâu cả — xem can-review-sau.md mục "Khối hôn phối". */
+  honPhoi: {
+    id: string
+    soHonPhoi: string | null
+    ngayHonPhoi: string | null
+    noiHonPhoi: string | null
+    linhMucChung: string | null
+    nguoiChung1: string | null
+    nguoiChung2: string | null
+    cachThucHonPhoi: string | null
+    ghiChu: string | null
+    rowVersion: number
+  } | null
 }
 
 /** Các trường màn hình chi tiết giáo dân dùng tới; xem GiaoDanDetailDto phía backend. */

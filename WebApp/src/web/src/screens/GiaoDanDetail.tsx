@@ -696,19 +696,14 @@ export function GiaoDanDetail({
           thẳng hàng với hai tấm 50/50 ngay bên dưới (Rửa tội ‖ Rước lễ lần đầu) — xem
           can-review-sau.md mục "W2 — khác biệt có chủ đích". Ảnh đại diện chuyển vào đầu cột
           trái (`.canhan-top`), thu nhỏ và đặt cạnh Mã giáo dân/Tên thánh thay vì có cả cột
-          riêng, để không lặp lại khoảng trống lớn mà người dùng đã phàn nàn một lần trước đó. */}
+          riêng, để không lặp lại khoảng trống lớn mà người dùng đã phàn nàn một lần trước đó.
+          Thứ tự trong `.canhan-top`: các trường TRƯỚC, ảnh SAU (ảnh nằm bên PHẢI của Mã giáo
+          dân/Tên thánh) — góp ý kiểm thử tiếp theo, xem can-review-sau.md. */}
       <div className="card glass">
         <div className="card-head"><h2>Thông tin cá nhân</h2><span className="eyebrow">Hồ sơ giáo dân</span></div>
         <div className="canhan-cols">
           <div>
             <div className="canhan-top">
-              <AnhDaiDien
-                id={moi ? null : p.id}
-                onLayAnh={onLayAnh ?? (async () => null)}
-                onTaiLen={onTaiAnhLen ?? (async () => {})}
-                onXoa={onXoaAnh ?? (async () => {})}
-                nhan="ảnh 3x4"
-              />
               <div className="canhan-top-fields">
                 <GxField label="Mã giáo dân" id="gd-ma">
                   <input id="gd-ma" type="text" value={moi ? '(tự sinh khi lưu)' : String(p.maGiaoDanCu)} disabled />
@@ -717,6 +712,13 @@ export function GiaoDanDetail({
                   <input id="gd-tenthanh" name="tenThanh" type="text" defaultValue={p.tenThanh ?? ''} />
                 </GxField>
               </div>
+              <AnhDaiDien
+                id={moi ? null : p.id}
+                onLayAnh={onLayAnh ?? (async () => null)}
+                onTaiLen={onTaiAnhLen ?? (async () => {})}
+                onXoa={onXoaAnh ?? (async () => {})}
+                nhan="ảnh 3x4"
+              />
             </div>
             <GxField label="Họ tên" id="gd-hoten">
               <input id="gd-hoten" name="hoTen" type="text" defaultValue={p.hoTen} />

@@ -73,6 +73,31 @@ describe('GxPicker', () => {
     expect(onBoChon).toHaveBeenCalled()
   })
 
+  // Loi so 6 (kiem thu nguoi dung 2026-09-07): o Nguoi nam/Nguoi nu tren man hinh gia dinh
+  // chi co nut chon/them/xoa, thieu nut mo ho so giao dan trong the moi.
+  it('co onXem va da chon nguoi: hien nut "Mo ho so trong the moi", bam thi goi onXem', async () => {
+    const onXem = vi.fn()
+    const nguoiDung = userEvent.setup()
+
+    render(<GxPicker value="Giuse Nguyễn Văn A" onXem={onXem} />)
+    await nguoiDung.click(screen.getByTitle('Mở hồ sơ trong thẻ mới'))
+
+    expect(onXem).toHaveBeenCalled()
+  })
+
+  it('co onXem nhung CHUA chon ai: nut "Mo ho so trong the moi" bi vo hieu hoa', () => {
+    render(<GxPicker value={null} onXem={vi.fn()} />)
+
+    const nut = screen.getByTitle('Mở hồ sơ trong thẻ mới') as HTMLButtonElement
+    expect(nut.disabled).toBe(true)
+  })
+
+  it('khong truyen onXem thi KHONG hien nut "Mo ho so trong the moi"', () => {
+    render(<GxPicker value="Giuse Nguyễn Văn A" />)
+
+    expect(screen.queryByTitle('Mở hồ sơ trong thẻ mới')).toBeNull()
+  })
+
   it('hien ten da chon, chua chon thi hien dau gach ngang', () => {
     const { rerender } = render(<GxPicker value={null} />)
     expect(screen.getByText('—')).toBeDefined()

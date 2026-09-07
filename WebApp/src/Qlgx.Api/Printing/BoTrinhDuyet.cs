@@ -57,6 +57,11 @@ public sealed class BoTrinhDuyet : IAsyncDisposable
             return await trang.PdfAsync(new PagePdfOptions
             {
                 Format = "A4",
+                // Khổ dọc — nêu RÕ (không dựa vào mặc định của Playwright) vì "Phiếu gia đình"
+                // từng bị người dùng thật báo "chưa đúng khổ" khi kiểm thử (2026-09-07); đặt
+                // tường minh ở đây để không phụ thuộc hành vi mặc định có thể đổi giữa các bản
+                // Playwright, và khớp đúng `@page { size: A4 portrait; }` của mẫu HTML.
+                Landscape = false,
                 PrintBackground = true,
                 Margin = new Margin { Top = "12mm", Bottom = "12mm", Left = "15mm", Right = "15mm" },
             });

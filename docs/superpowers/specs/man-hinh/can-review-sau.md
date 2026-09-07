@@ -1765,3 +1765,103 @@ khoản tạm `tmp_qthethong`/`tmp_gxmoi`) bằng `psql` trực tiếp — xác 
 **j) Số test cuối:** backend **244/244** (235 cũ + 9 `NhapDuLieuTests` mới), frontend
 **239/239** (235 cũ + 4 `NhapDuLieuPage.test.tsx` mới). `npm run build` chạy được. `dotnet build
 Qlgx.sln` sạch (Windows-only `Qlgx.Migration` build được cùng lượt, không tách CI riêng).
+
+### 39. Task "sửa 6 lỗi giao diện do người dùng thật tự phát hiện" (2026-09-07) — các quyết
+định tự đưa ra
+
+Người dùng ngồi kiểm tra ứng dụng thật, tự tay phát hiện 6 lỗi giao diện (lỗi #1 — vỡ bố cục
+màn hình gia đình — nghiêm trọng nhất). Ghi ở đây các quyết định KHÔNG có trong yêu cầu gốc.
+
+**a) Nguyên nhân gốc của lỗi #1 KHÔNG phải là commit `6d00343` (thêm ảnh gia đình) như nghi ngờ
+ban đầu — đã đọc lại `git show 6d00343` và xác nhận file đó chỉ thay `<div class="photo-slot">`
+tĩnh bằng `<AnhDaiDien>`, không đụng số phần tử con của `.detail-page`.** Nguyên nhân thật: JSX
+của `GiaDinhDetail.tsx` có **6 phần tử con trực tiếp** của `.detail-page` (đầu trang, `.cols`,
+tiêu đề "Thành viên khác", thanh công cụ thêm, `GxGiaoDanList`, `.cmdbar`) trong khi CSS
+`grid-template-rows` của `.detail-page` chỉ khai **4 hàng** — lỗi này đã tồn tại từ trước
+`6d00343` rất lâu (xác nhận bằng `git show a062a7b:...GiaDinhDetail.tsx`, cùng cấu trúc 6 phần
+tử). CSS Grid tự đẩy 2 phần tử thừa vào các hàng ẩn (`grid-auto-rows`, mặc định `auto`) không
+có ràng buộc chiều cao tối thiểu nào — hàng `.cols` (khai `minmax(0, auto)`, MIN là 0!) bị bóp
+gần về 0 nên nội dung cuộn cụt ngay sau "Địa chỉ", còn `GxGiaoDanList` (đáng lẽ nhận hàng
+`minmax(200px, 1fr)`) lại rơi vào một hàng ẩn khác, co về ~0px dù đếm đúng số người — ĐÚNG kiểu
+lỗi "lưới AG Grid co về 0px" đã tái diễn 2 lần trước (`.table-card` cần chiều cao THẬT từ cha,
+không tự có), chỉ khác ở chỗ lần này do đếm sai số phần tử con thay vì do `grid-template-rows`
+không khớp trực tiếp. **Test jsdom không bắt được vì jsdom không tính layout CSS Grid thật** —
+đúng như đã cảnh báo trong nhiệm vụ.
+
+**b) Sửa bằng cách gộp lại đúng SỐ phần tử con khớp số hàng khai — KHÔNG đổi
+`grid-template-rows` của `.detail-page` (dùng chung với `GiaoDanDetail.tsx`).** Bọc "Thành viên
+khác" + thanh công cụ thêm + `GxGiaoDanList` vào một `<div className="members-block">` duy
+nhất — `.detail-page` quay lại đúng 4 phần tử con (đầu trang, `.cols`, `.members-block`,
+`.cmdbar`), khớp 4 hàng khai. Đã thêm CSS `.members-block { display: flex; flex-direction:
+column; min-height: 0 } .members-block > .table-card { flex: 1 }` để `GxGiaoDanList` nhận đúng
+chiều cao từ hàng lưới cha.
+
+**c) Thêm khối "Hôn phối" MỚI HOÀN TOÀN vào `GiaDinhDetail.tsx` — trước đây bản web CHỈ ĐỌC
+được dữ liệu này (`GET /api/gia-dinh/{id}` đã trả `HonPhoiDto`) nhưng KHÔNG có UI nào hiện lên,
+và luôn gửi `honPhoi: null` khi lưu (biết trước, ghi rõ trong comment cũ) — đúng mục "Trung
+bình #5" đã ghi ở `gia-dinh-chi-tiet.md`. Đây là lý do thật khiến người dùng "không thấy hôn
+phối" — không chỉ là bị cắt bởi lỗi bố cục, mà UI chưa từng tồn tại.** Dựng đủ 8 trường sửa
+được (Số/Ngày/Nơi hôn phối, Linh mục chứng, Người chứng 1/2, Tình trạng, Ghi chú — đúng thứ tự
+`CapNhatHonPhoiRequest`), tái dùng CSS `.card-row`/`GxField`/`GxDate` sẵn có, danh sách "Tình
+trạng hôn phối" 9 giá trị SAO CHÉP nguyên từ `CACH_THUC_HON_PHOI` của `GiaoDanDetail.tsx` (không
+export dùng chung — hằng số nhỏ, giữ đúng quy ước `DIEN_GIA_DINH` cùng file). Khối này VÔ HIỆU
+HOÁ (kèm gợi ý rõ) khi chưa có Người nam lẫn Người nữ, đúng ràng buộc backend
+`KhongTheGanHonPhoiMoCoi` (hôn phối không thể "mồ côi"). `dungPayloadTuForm` giờ gửi object hôn
+phối thật (đọc từ form, `rowVersion` lấy từ `f.honPhoi?.rowVersion ?? 0`) thay vì luôn `null`
+khi có ít nhất một trong hai người — đã lưu thử qua trình duyệt thật (điền "Số hôn phối", bấm
+Cập nhật, tải lại xác nhận còn nguyên, rồi xoá lại để không để sót dữ liệu thử trên `qlgx_thu`).
+
+**d) Bố cục màn hình gia đình đổi HẲN sang kiểu CUỘN CẢ TRANG THAY VÌ "Dock" cứng (mọi thứ vừa
+đúng khung nhìn, không cuộn) — chỉ riêng `GiaDinhDetail.tsx` (`className` thêm
+`detail-page-giadinh`), KHÔNG đụng `.detail-page` gốc mà `GiaoDanDetail.tsx` vẫn dùng.** Lý do:
+thêm khối "Hôn phối" (8 trường) làm `.cols` cao hơn hẳn, kiểu Dock cũ (mọi thứ phải vừa màn
+hình phổ biến ~900px) không còn đủ chỗ — ép vừa sẽ lại cắt cụt/giấu hôn phối y hệt lỗi vừa sửa.
+Bước kiểm chứng của chính nhiệm vụ này ("Cuộn hết trang từ trên xuống dưới") đã ngầm xác nhận
+cuộn cả trang là hành vi CHẤP NHẬN ĐƯỢC, nên chọn hướng đơn giản, chắc chắn hơn là cố nhồi vừa
+khung nhìn. **Gặp lại ĐÚNG kiểu lỗi "khối cao 0px" một lần nữa khi làm việc này** — `.members-
+block` (kế thừa `min-height: 0` từ bản gốc, cần cho hàng `1fr`) trong hàng `auto` mới của
+`.detail-page-giadinh` lại co về đúng 0px (con `.table-card` vẫn có chiều cao thật 320px nhưng
+TRÀN RA NGOÀI khối cha 0px, đẩy `.cmdbar` đè lên trên lưới) — phát hiện bằng cách đo trực tiếp
+`getBoundingClientRect()` qua Chrome DevTools MCP trên trình duyệt thật (KHÔNG phải chỉ nhìn ảnh
+chụp), sửa bằng cách trả lại `min-height: auto` cho `.detail-page-giadinh .members-block`. Ghi
+lại đầy đủ trong comment CSS tại chỗ để không ai lặp lại lần thứ tư.
+
+**e) Nút "Mở hồ sơ trong thẻ mới" (⧉) thêm thẳng vào `GxPicker.tsx` (prop `onXem?: () => void`,
+chỉ hiện khi có `onXem`, vô hiệu hoá khi chưa chọn ai) — dùng CHUNG component cho cả Người
+nam/Người nữ ở màn hình gia đình, không tạo control riêng.** Nối `onXem={() => moGiaoDan?.(...)}`
+ở hai ô Người nam/Người nữ trong `GiaDinhDetail.tsx`. Lưới "Thành viên khác" đã sẵn có cách mở
+(`onMo`/menu "Xem chi tiết") từ trước, không cần sửa gì thêm cho phần lưới.
+
+**f) Tiêu đề thẻ tài liệu: thêm `suaTieuDe(id, tieuDeMoi)` vào `useTabDocs.ts`, gọi từ
+`GiaDinhDetailPage`/`GiaoDanDetailPage` (prop `onTieuDe`) trong một `useEffect` mỗi khi tên bản
+ghi đổi (kể cả sau khi lưu).** `App.tsx` truyền `onTieuDe={(ten) => suaTieuDe(idThe, ten)}` khi
+mở thẻ. Chuỗi dự phòng khi chưa có tên: `"Gia đình #{maGiaDinhCu}"` / `"Giáo dân #{maGiaoDanCu}"`
+(hiếm gặp — chỉ khi tên rỗng thật sự trong dữ liệu cũ).
+
+**g) Thanh cuộn ngang của dải thẻ tài liệu (`.tabstrip`): thêm CSS `::-webkit-scrollbar` 8px,
+SAO CHÉP nguyên giá trị từ `.nav-scroll` (SideNav) như yêu cầu — không tạo kiểu mới.**
+
+**h) Ảnh giáo dân: đổi thứ tự JSX trong `.canhan-top` (fields trước, `<AnhDaiDien>` sau) — vì
+đây là `display: flex` một hàng, đổi thứ tự phần tử con là đủ để ảnh hiện bên PHẢI mà không cần
+CSS `order` hay đổi cấu trúc gì khác.**
+
+**i) In "Phiếu gia đình" A4 dọc: thêm `Landscape = false` TƯỜNG MINH vào `PagePdfOptions` của
+`BoTrinhDuyet.XuatPdfAsync` (dù mặc định của Playwright vốn đã là dọc — nêu rõ để không phụ
+thuộc hành vi mặc định), sửa `@page { size: A4; }` thành `@page { size: A4 portrait; }`, thêm
+`table-layout: fixed` + `word-break: break-word` cho bảng thành viên (12 cột trên vùng in chỉ
+~180mm) để chống tràn ngang với dữ liệu tên/địa danh dài.** Đã in thử thật cho gia đình "Paul
+Trần Văn Thái" (mã 9) qua `fetch()` trong trang đã đăng nhập, đọc `/MediaBox` của PDF xác nhận
+`[0 0 595.92 842.88]` (rộng < cao, đúng A4 dọc), mở PDF xem nội dung: bảng 6 thành viên gọn
+trong một trang, không tràn.
+
+**j) Test mới thêm cho lỗi #1 (ở mức làm được trong jsdom — KHÔNG coi là bằng chứng thay ảnh
+chụp trình duyệt thật):** `GiaDinhDetail.test.tsx` (khối Hôn phối hiện/vô hiệu hoá đúng điều
+kiện, hiện đúng dữ liệu đã có, `onLuu` nhận đúng payload hôn phối hoặc `null`, nút "Mở hồ sơ
+trong thẻ mới" hiện/gọi đúng, lưới thành viên đúng SỐ DÒNG `.ag-row`), `GxPicker.test.tsx` (nút
+`onXem`), `useTabDocs.test.ts` (`suaTieuDe`), `GiaDinhDetailPage.test.tsx`/
+`GiaoDanDetailPage.test.tsx` (gọi đúng `onTieuDe`). **Bằng chứng bố cục thật là ảnh chụp Chrome
+DevTools MCP + `getBoundingClientRect()` đo trực tiếp, không phải các test này.**
+
+**k) Số test cuối:** backend **244/244** (không đổi — lỗi #5 chỉ sửa CSS/PDF options, không có
+logic C# mới cần test riêng). Frontend **254/254** (239 cũ + 15 test mới). `npm run build` chạy
+được. Ảnh chụp/PDF kiểm thử: `73`–`77` trong `WebApp/anh-chup-kiem-thu/`.

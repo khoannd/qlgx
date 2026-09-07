@@ -17,6 +17,10 @@ type Props = {
   moDanhSachGiaDinh?: () => void
   /** Tên tài khoản đang đăng nhập — xem chú thích cùng tên ở `GiaoDanDetailPage.Props`. */
   tenTaiKhoan?: string | null
+  /** Gọi khi tải xong dữ liệu (và mỗi lần tên gia đình đổi) để `App.tsx` cập nhật lại tiêu đề
+   * thẻ tài liệu đang mở — trước đây thẻ luôn ghi tĩnh "Gia đình", mở nhiều gia đình không
+   * phân biệt nổi. Xem `useTabDocs.suaTieuDe`. */
+  onTieuDe?: (tieuDe: string) => void
 }
 
 const tenHienThi = (nguoi: { tenThanh: string | null; hoTen: string }) =>
@@ -29,7 +33,7 @@ const tenHienThi = (nguoi: { tenThanh: string | null; hoTen: string }) =>
  * `window.confirm`/`alert` — bắt buộc cho chuỗi hỏi nhiều bước của `NguoiCu`, xem
  * docs/superpowers/specs/man-hinh/can-review-sau.md mục 3.
  */
-export function GiaDinhDetailPage({ id, moGiaoDan, moDanhSachGiaDinh, tenTaiKhoan = null }: Props) {
+export function GiaDinhDetailPage({ id, moGiaoDan, moDanhSachGiaDinh, tenTaiKhoan = null, onTieuDe }: Props) {
   const [idThat, setIdThat] = useState(id)
   const [duLieu, setDuLieu] = useState<GiaDinhDetailDuLieu | null>(null)
   const [dangTai, setDangTai] = useState(idThat !== null)
@@ -87,6 +91,13 @@ export function GiaDinhDetailPage({ id, moGiaoDan, moDanhSachGiaDinh, tenTaiKhoa
   }, [idThat])
 
   useEffect(tai, [tai])
+
+  // Đổi tiêu đề thẻ tài liệu sang đúng tên gia đình khi tải xong (xem chú thích ở `Props`) —
+  // chạy lại mỗi lần tên đổi (kể cả tự đổi ngay sau khi lưu) để tiêu đề luôn khớp dữ liệu.
+  useEffect(() => {
+    if (duLieu) onTieuDe?.(duLieu.tenGiaDinh?.trim() || `Gia đình #${duLieu.maGiaDinhCu}`)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duLieu?.tenGiaDinh, duLieu?.maGiaDinhCu])
 
   /** Nút "Tạo gia đình" khi đang thêm mới — tương đương `Memory.Instance.GetNextId` lúc mở
    * `frmGiaDinh` ở chế độ Thêm mới của bản desktop (sinh mã ngay), chỉ khác thời điểm: bản web

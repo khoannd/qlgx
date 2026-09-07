@@ -46,6 +46,28 @@ describe('GiaDinhDetailPage', () => {
     expect(api.giaDinh.chiTiet).toHaveBeenCalledWith('g1')
   })
 
+  // Loi so 2 (kiem thu nguoi dung 2026-09-07): tieu de the tai lieu phai hien TEN gia dinh,
+  // khong phai chu "Gia dinh" chung chung — App.tsx doi tieu de qua callback nay khi tai xong.
+  it('tai xong thi goi onTieuDe voi dung ten gia dinh', async () => {
+    vi.mocked(api.giaDinh.chiTiet).mockResolvedValue(chiTiet({ tenGiaDinh: 'Paul Trần Văn Thái' }))
+    const onTieuDe = vi.fn()
+
+    render(<GiaDinhDetailPage id="g1" onTieuDe={onTieuDe} />)
+
+    await screen.findByRole('heading', { name: /Paul Trần Văn Thái/ })
+    expect(onTieuDe).toHaveBeenCalledWith('Paul Trần Văn Thái')
+  })
+
+  it('gia dinh chua co ten thi onTieuDe nhan chuoi du phong theo ma gia dinh', async () => {
+    vi.mocked(api.giaDinh.chiTiet).mockResolvedValue(chiTiet({ tenGiaDinh: null, maGiaDinhCu: 42 }))
+    const onTieuDe = vi.fn()
+
+    render(<GiaDinhDetailPage id="g1" onTieuDe={onTieuDe} />)
+
+    await screen.findByLabelText('Tên gia đình')
+    expect(onTieuDe).toHaveBeenCalledWith('Gia đình #42')
+  })
+
   it('luu thanh cong thi goi PUT va tai lai chi tiet', async () => {
     vi.mocked(api.giaDinh.chiTiet).mockResolvedValue(chiTiet())
     vi.mocked(api.giaDinh.capNhat).mockResolvedValue(undefined)

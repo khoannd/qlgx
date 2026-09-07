@@ -398,6 +398,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
   overflow-x: auto;
   flex: none;
 }
+/* Thanh cuộn ngang mảnh, giống hệt `.nav-scroll` của SideNav (xem cùng khai báo phía trên) —
+   trước đây dùng thanh cuộn mặc định của hệ điều hành, dày và thô, lệch hẳn phong cách phần
+   còn lại của giao diện. */
+.tabstrip::-webkit-scrollbar { height: 8px; }
+.tabstrip::-webkit-scrollbar-thumb { background: rgba(14,32,76,.14); border-radius: 99px; }
 .tab {
   display: flex;
   align-items: center;
@@ -420,7 +425,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
   font-weight: 600;
   box-shadow: 0 6px 16px -10px rgba(14,32,76,.5);
 }
-.tab .lbl { overflow: hidden; text-overflow: ellipsis; }
+/* `min-width: 0` bắt buộc để ellipsis hoạt động: `.lbl` là con flex của `.tab`, không có nó
+   trình duyệt để nhãn tràn theo chiều rộng nội dung thay vì co lại rồi cắt "…" — tên gia
+   đình/giáo dân dài (thay cho chữ tĩnh "Gia đình"/"Giáo dân" trước đây) mới thật sự cần cắt. */
+.tab .lbl { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .tab .x {
   appearance: none; border: 0; background: none;
   color: var(--ink-faint); cursor: pointer;
@@ -895,6 +903,47 @@ tbody tr[aria-selected="true"] .rowhead {
   .cols { grid-template-columns: 1fr; }
   .col-stack { grid-template-rows: auto auto; }
 }
+
+/* Khối "Thành viên khác" của `GiaDinhDetail.tsx` — PHẢI là đúng MỘT phần tử con trực tiếp của
+   `.detail-page` (tiêu đề + thanh công cụ thêm + lưới gộp lại), khớp đúng 4 hàng khai ở
+   `grid-template-rows` của `.detail-page`. Từng có lỗi 3 phần tử con rời rạc lấn vào hàng lưới
+   `minmax(200px, 1fr)` dành cho `GxGiaoDanList`, đẩy chính lưới đó ra hàng ẩn cao ~0px dù đếm
+   đúng số người — xem chú thích dài tại chỗ dùng class này. `.table-card` (gốc của
+   `GxGiaoDanList`, tự khai `min-height: 0` + hàng trong `1fr`) cần `flex: 1` ở đây để nhận
+   chiều cao thật từ hàng lưới cha thay vì co theo nội dung. */
+.members-block {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.members-block > .table-card { flex: 1; }
+
+/* Man hinh chi tiet gia dinh — thêm khối "Hôn phối" (đầy đủ 8 trường) làm nội dung `.cols`
+   (cột trái) cao hơn hẳn so với lúc chỉ có "Thông tin gia đình", nên kiểu "Dock" gốc của
+   `.detail-page` (mọi thứ PHẢI vừa đúng khung nhìn, không cuộn cả trang, xem chú thích ở
+   `.detail-page`) không còn đủ chỗ trên màn hình phổ biến — ép vừa sẽ lại cắt cụt/giấu mất
+   khối hôn phối y hệt lỗi người dùng vừa báo. Đổi riêng màn hình gia đình (`.detail-page-
+   giadinh`, KHÔNG đụng `.detail-page` dùng chung với màn hình giáo dân) sang kiểu cuộn cả
+   trang bình thường — đúng như bước kiểm chứng đã chốt ("Cuộn hết trang từ trên xuống dưới").
+   `.members-block > .table-card` cần chiều cao THẬT (không phải `flex: 1` phụ thuộc hàng lưới
+   cha) vì trong bố cục "auto" ở đây không có hàng `1fr` nào cấp chiều cao cho nó — nếu không sẽ
+   lại đúng lỗi "table-card cao 0px" đã ghi ở khai báo `.table-card` phía trên. */
+.detail-page-giadinh {
+  grid-template-rows: auto auto auto auto;
+  overflow-y: auto;
+}
+.detail-page-giadinh .cols { overflow-y: visible; min-height: auto; }
+/* Vừa gặp lại ĐÚNG kiểu lỗi "khối cao 0px" ghi ở `.members-block` phía trên, lần này do
+   `min-height: 0` (kế thừa từ `.members-block` gốc, cần cho hàng `1fr` của `.detail-page` bản
+   dock) — trong hàng `auto` của `.detail-page-giadinh` (không phải `1fr`), `min-height: 0` bị
+   dùng làm "kích thước tối thiểu tự động" của phần tử lưới thay vì kích thước theo NỘI DUNG,
+   khiến `.members-block` co về đúng 0px dù `.table-card` con vẫn có chiều cao 320px thật (vẽ
+   tràn ra ngoài khối cha 0px — nhìn như lưới vẫn hiện, nhưng khối cha 0px đẩy `.cmdbar` ngay
+   sau đó đè lên trên lưới). Trả lại `min-height: auto` (bỏ ép về 0) để phần tử lấy đúng tổng
+   chiều cao nội dung — `display: block` thay `flex` cũng để tránh trộn thêm quy tắc kích
+   thước flex-column không cần thiết ở bố cục cuộn-cả-trang này. */
+.detail-page-giadinh .members-block { display: block; min-height: auto; }
+.detail-page-giadinh .members-block > .table-card { height: 320px; }
 
 /* Khối "Thông tin cá nhân" của frmGiaoDan (bản desktop): bản desktop chia BA cột
    (`grbCaNhan`), nhưng người dùng góp ý lệch trực quan so với hai tấm 50/50 ngay bên dưới

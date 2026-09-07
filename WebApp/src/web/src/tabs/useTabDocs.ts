@@ -45,5 +45,16 @@ export function useTabDocs() {
     })
   }, [])
 
-  return { danhSach: trangThai.danhSach, dangChon: trangThai.dangChon, mo, chon, dong }
+  /** Đổi tiêu đề một thẻ ĐANG MỞ — dùng khi mở thẻ chưa biết tên bản ghi (tải bất đồng bộ từ
+   * API), rồi cập nhật lại đúng tên thật khi tải xong (ví dụ "Gia đình" tĩnh → "Paul Trần Văn
+   * Thái") để mở nhiều thẻ cùng loại vẫn phân biệt được — xem can-review-sau.md. Không đổi gì
+   * nếu thẻ đã đóng trước khi tải xong (không tìm thấy `id`, `map` giữ nguyên mảng cũ). */
+  const suaTieuDe = useCallback((id: string, tieuDeMoi: string) => {
+    setTrangThai((truoc) => ({
+      ...truoc,
+      danhSach: truoc.danhSach.map((t) => (t.id === id ? { ...t, tieuDe: tieuDeMoi } : t)),
+    }))
+  }, [])
+
+  return { danhSach: trangThai.danhSach, dangChon: trangThai.dangChon, mo, chon, dong, suaTieuDe }
 }

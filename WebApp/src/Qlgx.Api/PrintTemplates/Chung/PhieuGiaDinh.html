@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <style>
-  @page { size: A4; margin: 0; }
+  @page { size: A4 portrait; margin: 0; }
   * { box-sizing: border-box; }
   body {
     font-family: "Times New Roman", "Liberation Serif", Georgia, serif;
@@ -34,9 +34,14 @@
   table.thong-tin-gd td.nhan { font-weight: bold; white-space: nowrap; }
   table.thong-tin-gd td.gia-tri { border-bottom: 1px dotted #666; }
 
-  table.thanh-vien { width: 100%; border-collapse: collapse; margin-top: 2mm; font-size: 8.5pt; }
+  /* `table-layout: fixed` + `word-break` — 12 cột trên khổ A4 dọc (vùng in chỉ ~180mm sau lề
+     15mm hai bên) dễ tràn ngang nếu một ô có chữ dài không ngắt được (địa danh, ghi chú bí
+     tích nhiều dòng) — ép bảng chia đều theo `width`, chữ dài tự xuống dòng thay vì đẩy bảng
+     rộng hơn trang. Xem góp ý kiểm thử "in phiếu gia đình phải đúng khổ A4 dọc". */
+  table.thanh-vien { width: 100%; border-collapse: collapse; margin-top: 2mm; font-size: 8.5pt; table-layout: fixed; }
   table.thanh-vien th, table.thanh-vien td {
     border: 1px solid #000; padding: 1mm 1.2mm; vertical-align: top; text-align: left;
+    word-break: break-word; overflow-wrap: break-word;
   }
   table.thanh-vien th { text-align: center; font-weight: bold; background: #f0f0f0; }
   table.thanh-vien td.stt { text-align: center; white-space: nowrap; }

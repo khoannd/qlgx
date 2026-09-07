@@ -261,4 +261,103 @@ describe('GiaDinhDetail', () => {
 
     expect(screen.getByRole('button', { name: 'In phiếu gia đình' })).toHaveProperty('disabled', true)
   })
+
+  // --- Loi so 1 (kiem thu nguoi dung 2026-09-07): man hinh gia dinh vo bo cuc — khong thay khoi
+  // hon phoi, khong thay luoi thanh vien. Nguyen nhan goc: `.detail-page` khai dung 4 hang luoi
+  // nhung co 6 phan tu con truc tiep, day GxGiaoDanList vao hang an cao ~0px. Cac bai duoi day
+  // xac nhan (o muc lam duoc trong jsdom — KHONG thay the anh chup trinh duyet that) ca khoi hon
+  // phoi lan luoi thanh vien deu co mat trong DOM va dung so dong. -----------------------------
+
+  it('chua co Nguoi nam/nu: khoi Hon phoi VAN hien tren DOM nhung cac o bi vo hieu hoa', () => {
+    render(<GiaDinhDetail duLieu={chiTiet()} />)
+
+    expect(screen.getByRole('heading', { name: 'Hôn phối' })).toBeDefined()
+    const oSo = screen.getByLabelText('Số hôn phối') as HTMLInputElement
+    expect(oSo.disabled).toBe(true)
+    expect(screen.getByText(/Chọn Người nam hoặc Người nữ ở trên trước khi nhập hôn phối/)).toBeDefined()
+  })
+
+  it('co Nguoi nam: khoi Hon phoi duoc mo va hien dung du lieu da co', () => {
+    render(<GiaDinhDetail duLieu={chiTiet({
+      thanhVien: [
+        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+      ],
+      honPhoi: {
+        id: 'hp1', soHonPhoi: 'HP-01', ngayHonPhoi: '1995-05-20', noiHonPhoi: 'Nhà thờ Chính toà',
+        linhMucChung: 'Cha Phêrô', nguoiChung1: 'Ông Ba', nguoiChung2: 'Bà Tư',
+        cachThucHonPhoi: 'Hợp pháp', ghiChu: 'Không có gì đặc biệt', rowVersion: 3,
+      },
+    })} />)
+
+    const oSo = screen.getByLabelText('Số hôn phối') as HTMLInputElement
+    expect(oSo.disabled).toBe(false)
+    expect(oSo.value).toBe('HP-01')
+    expect((screen.getByLabelText('Nơi hôn phối') as HTMLInputElement).value).toBe('Nhà thờ Chính toà')
+    expect(screen.queryByText(/Chọn Người nam hoặc Người nữ ở trên trước khi nhập hôn phối/)).toBeNull()
+  })
+
+  it('bam Cap nhat voi Nguoi nam da chon thi onLuu nhan dung honPhoi tu form', async () => {
+    const onLuu = vi.fn()
+    const nguoiDung = userEvent.setup()
+    render(<GiaDinhDetail duLieu={chiTiet({
+      thanhVien: [
+        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+      ],
+      honPhoi: {
+        id: 'hp1', soHonPhoi: null, ngayHonPhoi: null, noiHonPhoi: null, linhMucChung: null,
+        nguoiChung1: null, nguoiChung2: null, cachThucHonPhoi: null, ghiChu: null, rowVersion: 7,
+      },
+    })} onLuu={onLuu} />)
+
+    await nguoiDung.type(screen.getByLabelText('Nơi hôn phối'), 'Nhà thờ Vô Nhiễm')
+    await nguoiDung.click(screen.getByRole('button', { name: 'Cập nhật' }))
+
+    expect(onLuu).toHaveBeenCalledTimes(1)
+    expect(onLuu.mock.calls[0][0].honPhoi).toMatchObject({ noiHonPhoi: 'Nhà thờ Vô Nhiễm', rowVersion: 7 })
+  })
+
+  it('chua co Nguoi nam/nu thi onLuu nhan honPhoi: null (khong dung tro gi ca)', async () => {
+    const onLuu = vi.fn()
+    const nguoiDung = userEvent.setup()
+    render(<GiaDinhDetail duLieu={chiTiet()} onLuu={onLuu} />)
+
+    await nguoiDung.click(screen.getByRole('button', { name: 'Cập nhật' }))
+
+    expect(onLuu.mock.calls[0][0].honPhoi).toBeNull()
+  })
+
+  it('co Nguoi nam: nut "Mo ho so trong the moi" canh Nguoi nam goi dung moGiaoDan', async () => {
+    const moGiaoDan = vi.fn()
+    const nguoiDung = userEvent.setup()
+    render(<GiaDinhDetail duLieu={chiTiet({
+      thanhVien: [
+        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+      ],
+    })} moGiaoDan={moGiaoDan} />)
+
+    await nguoiDung.click(screen.getAllByTitle('Mở hồ sơ trong thẻ mới')[0])
+
+    expect(moGiaoDan).toHaveBeenCalledWith('p1')
+  })
+
+  it('chua co Nguoi nam/nu thi KHONG hien nut "Mo ho so trong the moi"', () => {
+    render(<GiaDinhDetail duLieu={chiTiet()} moGiaoDan={vi.fn()} />)
+
+    expect(screen.queryByTitle('Mở hồ sơ trong thẻ mới')).toBeNull()
+  })
+
+  it('luoi thanh vien hien DUNG so dong (khong con co 0px nhu loi bo cuc da bao)', async () => {
+    const { container } = render(<GiaDinhDetail duLieu={chiTiet({
+      thanhVien: [
+        { giaoDanId: 'p1', vaiTro: 0, chuHo: true, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn A', phai: 'Nam', ngaySinh: '1970-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p2', vaiTro: 1, chuHo: false, tenThanh: 'Maria', hoTen: 'Trần Thị B', phai: 'Nữ', ngaySinh: '1975-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p3', vaiTro: 2, chuHo: false, tenThanh: 'Giuse', hoTen: 'Nguyễn Văn C', phai: 'Nam', ngaySinh: '2000-01-01', quaDoi: false, daXoa: false },
+        { giaoDanId: 'p4', vaiTro: 2, chuHo: false, tenThanh: 'Maria', hoTen: 'Nguyễn Thị D', phai: 'Nữ', ngaySinh: '2002-01-01', quaDoi: false, daXoa: false },
+      ],
+    })} />)
+
+    await screen.findByText('Nguyễn Văn C')
+    expect(container.querySelectorAll('.ag-row').length).toBe(2) // loai vo chong (p1/p2), con p3+p4
+    expect(container.querySelector('.count-pill')?.textContent).toContain('2')
+  })
 })

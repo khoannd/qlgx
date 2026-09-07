@@ -12,6 +12,11 @@ type Props = {
   onChon?: (gd: GiaoDanTimKiem) => void
   onThemMoi?: () => void
   onBoChon?: () => void
+  /** Mở hồ sơ giáo dân đang chọn trong một thẻ tài liệu mới (`useTabDocs`) — chỉ hiện khi có
+   * `value` (đã chọn ai đó) VÀ nơi gọi truyền hàm này (màn hình gia đình mới nối, xem
+   * can-review-sau.md). Dùng lại đúng cơ chế "Xem gia đình" của `GxGiaoDanList`, không phát
+   * minh cách mở tab khác. */
+  onXem?: () => void
 }
 
 /**
@@ -25,7 +30,7 @@ type Props = {
  * (kiểm thử khám phá 2026-09-07 mục 5) — người dùng không biết là hỏng hay chưa hỗ trợ. Vô
  * hiệu hoá hẳn nút kèm tooltip rõ ràng cho tới khi có nơi gọi thật nối `onThemMoi`.
  */
-export function GxPicker({ value, id, onChon, onThemMoi, onBoChon }: Props) {
+export function GxPicker({ value, id, onChon, onThemMoi, onBoChon, onXem }: Props) {
   const [dangMo, setDangMo] = useState(false)
   const [tuKhoa, setTuKhoa] = useState('')
   const [ketQua, setKetQua] = useState<GiaoDanTimKiem[]>([])
@@ -75,6 +80,12 @@ export function GxPicker({ value, id, onChon, onThemMoi, onBoChon }: Props) {
   return (
     <span className="picker" id={id} style={{ position: 'relative' }}>
       <span className={'who' + (value ? '' : ' empty')}>{value || '—'}</span>
+      {onXem && (
+        <button type="button" className="mini" title="Mở hồ sơ trong thẻ mới"
+          disabled={!value} onClick={onXem}>
+          ⧉
+        </button>
+      )}
       <button type="button" className="mini" title="Chọn từ danh sách giáo dân"
         onClick={() => setDangMo((m) => !m)}>
         &#9678;

@@ -58,6 +58,18 @@ describe('GiaoDanDetailPage', () => {
     expect(api.giaoDan.chiTiet).toHaveBeenCalledWith('p1')
   })
 
+  // Loi so 2 (kiem thu nguoi dung 2026-09-07): tieu de the tai lieu phai hien TEN giao dan,
+  // khong phai chu "Giao dan" chung chung.
+  it('tai xong thi goi onTieuDe voi dung ten thanh + ho ten', async () => {
+    vi.mocked(api.giaoDan.chiTiet).mockResolvedValue(chiTiet({ tenThanh: 'Giuse', hoTen: 'Nguyễn Đức Mạnh' }))
+    const onTieuDe = vi.fn()
+
+    render(<GiaoDanDetailPage id="p1" onTieuDe={onTieuDe} />)
+
+    await screen.findByRole('heading', { name: /Nguyễn Đức Mạnh/ })
+    expect(onTieuDe).toHaveBeenCalledWith('Giuse Nguyễn Đức Mạnh')
+  })
+
   it('luu thanh cong thi goi PUT va tai lai chi tiet', async () => {
     vi.mocked(api.giaoDan.chiTiet).mockResolvedValue(chiTiet())
     vi.mocked(api.giaoDan.capNhat).mockResolvedValue({ id: 'p1', canhBao: [] })
