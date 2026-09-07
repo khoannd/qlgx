@@ -19,6 +19,7 @@ function ThamDo() {
   return (
     <div>
       <div>{nguoiDung ? `da-dang-nhap:${nguoiDung.tenTaiKhoan}` : 'chua-dang-nhap'}</div>
+      <div>{nguoiDung ? `giao-xu:${nguoiDung.tenGiaoXu}` : ''}</div>
       <button onClick={() => dangNhap('vanphong', 'matkhau')}>dang-nhap</button>
       <button onClick={() => dangXuat()}>dang-xuat</button>
     </div>
@@ -43,12 +44,15 @@ describe('AuthContext', () => {
   it('co token cu hop le thi tu dong vao thang trang thai da dang nhap', async () => {
     authStore.datToken('token-cu')
     vi.mocked(api.auth.toi).mockResolvedValue({
-      tenTaiKhoan: 'vanphong', hoTen: 'Van Phong', loaiTaiKhoan: 0, giaoXuId: 'x',
+      tenTaiKhoan: 'vanphong', hoTen: 'Van Phong', loaiTaiKhoan: 0, giaoXuId: 'x', tenGiaoXu: 'Vo Nhiem',
     })
 
     render(<AuthProvider><ThamDo /></AuthProvider>)
 
     expect(await screen.findByText('da-dang-nhap:vanphong')).toBeDefined()
+    // can-review-sau.md muc 32: thanh tren (AppShell) phai hien dung ten giao xu THAT lay tu
+    // /api/auth/toi, khong con viet cung "Giao xu Thanh Tam" nhu truoc.
+    expect(screen.getByText('giao-xu:Vo Nhiem')).toBeDefined()
   })
 
   it('token cu khong con hop le thi xoa token va coi nhu chua dang nhap', async () => {
@@ -64,7 +68,7 @@ describe('AuthContext', () => {
   it('dangNhap thanh cong luu token va cap nhat nguoiDung', async () => {
     vi.mocked(api.auth.dangNhap).mockResolvedValue({
       token: 'token-moi', hetHanSau: 28800,
-      nguoiDung: { id: '1', tenTaiKhoan: 'vanphong', hoTen: 'Van Phong', loaiTaiKhoan: 0, giaoXuId: 'x' },
+      nguoiDung: { id: '1', tenTaiKhoan: 'vanphong', hoTen: 'Van Phong', loaiTaiKhoan: 0, giaoXuId: 'x', tenGiaoXu: 'Vo Nhiem' },
     })
     render(<AuthProvider><ThamDo /></AuthProvider>)
     await screen.findByText('chua-dang-nhap')
@@ -73,12 +77,13 @@ describe('AuthContext', () => {
 
     await waitFor(() => expect(screen.getByText('da-dang-nhap:vanphong')).toBeDefined())
     expect(authStore.layToken()).toBe('token-moi')
+    expect(screen.getByText('giao-xu:Vo Nhiem')).toBeDefined()
   })
 
   it('dangXuat xoa token va tro ve chua dang nhap', async () => {
     vi.mocked(api.auth.dangNhap).mockResolvedValue({
       token: 'token-moi', hetHanSau: 28800,
-      nguoiDung: { id: '1', tenTaiKhoan: 'vanphong', hoTen: null, loaiTaiKhoan: 1, giaoXuId: 'x' },
+      nguoiDung: { id: '1', tenTaiKhoan: 'vanphong', hoTen: null, loaiTaiKhoan: 1, giaoXuId: 'x', tenGiaoXu: 'Vo Nhiem' },
     })
     render(<AuthProvider><ThamDo /></AuthProvider>)
     await screen.findByText('chua-dang-nhap')
@@ -94,7 +99,7 @@ describe('AuthContext', () => {
   it('goi baoHet401 (tu goi() khi may chu tra 401) cung tu dong dang xuat', async () => {
     vi.mocked(api.auth.dangNhap).mockResolvedValue({
       token: 'token-moi', hetHanSau: 28800,
-      nguoiDung: { id: '1', tenTaiKhoan: 'vanphong', hoTen: null, loaiTaiKhoan: 1, giaoXuId: 'x' },
+      nguoiDung: { id: '1', tenTaiKhoan: 'vanphong', hoTen: null, loaiTaiKhoan: 1, giaoXuId: 'x', tenGiaoXu: 'Vo Nhiem' },
     })
     render(<AuthProvider><ThamDo /></AuthProvider>)
     await screen.findByText('chua-dang-nhap')
@@ -111,7 +116,7 @@ describe('AuthContext', () => {
   it('dang xuat CHU DONG (bam nut) xoa het ban nhap cua tai khoan dang dung', async () => {
     vi.mocked(api.auth.dangNhap).mockResolvedValue({
       token: 'token-moi', hetHanSau: 28800,
-      nguoiDung: { id: '1', tenTaiKhoan: 'vanphong', hoTen: null, loaiTaiKhoan: 1, giaoXuId: 'x' },
+      nguoiDung: { id: '1', tenTaiKhoan: 'vanphong', hoTen: null, loaiTaiKhoan: 1, giaoXuId: 'x', tenGiaoXu: 'Vo Nhiem' },
     })
     render(<AuthProvider><ThamDo /></AuthProvider>)
     await screen.findByText('chua-dang-nhap')
@@ -130,7 +135,7 @@ describe('AuthContext', () => {
   it('bi dang xuat BUOC vi token het han (401 luc mat mang) KHONG xoa ban nhap — dang nhap lai van khoi phuc duoc', async () => {
     vi.mocked(api.auth.dangNhap).mockResolvedValue({
       token: 'token-moi', hetHanSau: 28800,
-      nguoiDung: { id: '1', tenTaiKhoan: 'vanphong', hoTen: null, loaiTaiKhoan: 1, giaoXuId: 'x' },
+      nguoiDung: { id: '1', tenTaiKhoan: 'vanphong', hoTen: null, loaiTaiKhoan: 1, giaoXuId: 'x', tenGiaoXu: 'Vo Nhiem' },
     })
     render(<AuthProvider><ThamDo /></AuthProvider>)
     await screen.findByText('chua-dang-nhap')

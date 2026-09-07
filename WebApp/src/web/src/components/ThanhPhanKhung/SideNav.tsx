@@ -1,3 +1,6 @@
+import { useEffect, useState } from 'react'
+import { api } from '../../api/client'
+
 /** Một mục điều hướng. `id` chỉ có mặt khi mục đó đã nối được vào một thẻ tài
  * liệu thật (xem `onNavigate` trong `App.tsx`) — các mục còn lại là chỗ giữ
  * chỗ cho màn hình sẽ dựng ở task sau, bấm vào chưa làm gì. */
@@ -76,6 +79,20 @@ export function SideNav({ dangChonId, onNavigate, laQuanTri }: Props) {
       ]
     : DANH_SACH_DIEU_HUONG
 
+  // Phiên bản THẬT của bản web (GET /api/suc-khoe, anonymous) — trước đây viết cứng
+  // "Bản 4.0.0 · dữ liệu cục bộ": "4.0.0" là số hiệu bản DESKTOP, và "dữ liệu cục bộ" mâu
+  // thuẫn thẳng với mô hình đã chốt (một máy chủ tập trung phục vụ nhiều giáo xứ, xem
+  // WebApp/TIEN-DO.md mục "Bốn thay đổi lớn") — xem can-review-sau.md mục 32. `null` khi
+  // chưa tải xong hoặc gọi lỗi — hiện chữ trung lập thay vì để trống đột ngột.
+  const [phienBan, setPhienBan] = useState<string | null>(null)
+  useEffect(() => {
+    let huy = false
+    api.he.sucKhoe()
+      .then((tt) => { if (!huy) setPhienBan(tt.phienBan) })
+      .catch(() => { if (!huy) setPhienBan(null) })
+    return () => { huy = true }
+  }, [])
+
   return (
     <nav className="sidenav glass">
       <div className="nav-scroll">
@@ -97,10 +114,10 @@ export function SideNav({ dangChonId, onNavigate, laQuanTri }: Props) {
         ))}
       </div>
 
+      {/* "Sao lưu gần nhất: hôm nay 06:15" cũ là chữ tĩnh bịa ra — chưa có API trạng thái sao
+          lưu nào, thà không hiện gì còn hơn hiện một lời hứa sai (can-review-sau.md mục 32). */}
       <div className="nav-foot">
-        <b>Bản 4.0.0 · dữ liệu cục bộ</b>
-        <br />
-        Sao lưu gần nhất: hôm nay 06:15
+        <b>Bản web{phienBan ? ` ${phienBan}` : ''}</b>
       </div>
     </nav>
   )

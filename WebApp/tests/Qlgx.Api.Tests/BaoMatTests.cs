@@ -143,7 +143,44 @@ public class BaoMatTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     }
 
     private sealed record DangNhapOkDto(string Token, ThongTinNguoiDungDto NguoiDung);
-    private sealed record ThongTinNguoiDungDto(Guid GiaoXuId);
+    private sealed record ThongTinNguoiDungDto(Guid GiaoXuId, string TenGiaoXu);
+
+    [Fact]
+    public async Task Dang_nhap_thanh_cong_tra_ve_dung_ten_giao_xu_that()
+    {
+        // AppShell.tsx thanh tren truoc day viet cung "Giao xu Thanh Tam" — sau khi noi du
+        // lieu that (can-review-sau.md muc 32), dang nhap phai tra ve dung ten giao xu cua
+        // TAI KHOAN dang nhap, khong phai mot chuoi tinh nao khac.
+        var giaoXuRieng = await TaoGiaoXuKhac("Giao xu Vo Nhiem (test ten that)");
+        var (tenTaiKhoan, matKhau) = ("nguoidung_tengiaoxu", "MatKhauManh123!");
+        await using (var db = app.TaoContextThuan())
+        {
+            var taiKhoan = new TaiKhoan { GiaoXuId = giaoXuRieng, TenTaiKhoan = tenTaiKhoan, HoTenNguoiDung = "Z" };
+            taiKhoan.MatKhauBam = new PasswordHasher<TaiKhoan>().HashPassword(taiKhoan, matKhau);
+            db.TaiKhoan.Add(taiKhoan);
+            await db.SaveChangesAsync();
+        }
+
+        var res = await app.CreateClient().PostAsJsonAsync("/api/auth/dang-nhap",
+            new DangNhapRequest(tenTaiKhoan, matKhau));
+
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var than = await res.Content.ReadFromJsonAsync<DangNhapOkDto>();
+        than!.NguoiDung.TenGiaoXu.Should().Be("Giao xu Vo Nhiem (test ten that)");
+    }
+
+    private sealed record ToiDto(string? GiaoXuId, string? TenGiaoXu);
+
+    [Fact]
+    public async Task Auth_toi_tra_ve_dung_ten_giao_xu_cua_claim_khong_phai_tham_so_trinh_duyet()
+    {
+        var client = app.CreateAuthClient(app.GiaoXuId);
+
+        var toi = await client.GetFromJsonAsync<ToiDto>("/api/auth/toi");
+
+        toi!.GiaoXuId.Should().Be(app.GiaoXuId.ToString());
+        toi.TenGiaoXu.Should().Be("Giao xu Thanh Tam"); // seed trong QlgxApiFactory.InitializeAsync
+    }
 
     [Fact]
     public async Task Dang_nhap_sai_mat_khau_bi_tu_choi_khong_lo_thong_tin()

@@ -174,7 +174,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
   border: 1px solid rgba(255,255,255,.9);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
   font-size: 13px;
-  cursor: pointer;
 }
 .parish-chip .dot {
   width: 7px; height: 7px; border-radius: 50%;
@@ -183,7 +182,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
   flex: none;
 }
 .parish-chip b { font-weight: 600; }
-.parish-chip .caret { color: var(--ink-faint); font-size: 10px; }
 
 .searchbox {
   flex: 1;
@@ -964,6 +962,8 @@ tbody tr[aria-selected="true"] .rowhead {
   flex: none;
 }
 .picker .mini:hover { background: var(--brand); color: #fff; }
+.picker .mini:disabled { cursor: not-allowed; opacity: .45; }
+.picker .mini:disabled:hover { background: rgba(29,93,219,.1); color: var(--brand-ink); }
 
 /* Ô nhập ngày dùng chung (GxDate) — thay input[type=date] gốc để không phụ thuộc locale máy
  * người dùng, xem docs/superpowers/specs/man-hinh/can-review-sau.md mục W1. */

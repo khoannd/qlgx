@@ -1113,3 +1113,87 @@ nhiệm vụ này không yêu cầu (và người dùng đang ngủ, không xác
 Dữ liệu thử tạo trong lúc chạy test nằm trong các CSDL tạm `qlgx_api_*` do `QlgxApiFactory` tự
 tạo/xoá cho mỗi lượt `dotnet test` — không chạm `qlgx_thu`; đã xác nhận lại bằng `psql` sau khi
 xong rằng `qlgx_thu` vẫn đúng 2050 giáo dân/40 gia đình/145 thành viên.
+
+### 32. Task "sửa khung ứng dụng hiển thị dữ liệu giả" (2026-09-07) — các quyết định tự đưa ra
+
+Ba việc phát hiện ở `kiem-thu-2-man-hinh.md` mục 4 và 5 (thanh trên viết cứng sai tên giáo xứ,
+chân thanh bên viết cứng số hiệu bản desktop + "Sao lưu gần nhất" bịa, nút "+" của `GxPicker`
+im lặng không phản hồi). Người dùng đang bận, không hỏi được — ghi lại các quyết định tự đưa ra.
+
+**a) Tên giáo xứ — nối vào `/api/auth/toi` VÀ vào luôn thân trả về của `POST /api/auth/dang-nhap`,
+không chỉ một trong hai.** `ThongTinNguoiDungDto` (đã có sẵn `GiaoXuId`) được thêm trường
+`TenGiaoXu`, tra từ `db.GiaoXu` bằng `FirstOrDefaultAsync` (không dùng `Find`/`FindAsync` — đúng
+ràng buộc cấm) ngay trong `AuthService.DangNhap` (đã có sẵn một `QlgxDbContext` dùng chuỗi kết
+nối QUẢN TRỊ cho bước xác thực chéo giáo xứ) và trong `AuthEndpoints.MapAuth` (`/toi`, dùng
+`QlgxDbContext` tiêm qua DI, lọc theo `giaoXuId` đọc từ claim của token — KHÔNG BAO GIỜ từ tham
+số trình duyệt, đúng `BoiCanhGiaoXuTuNguoiDung`). Lý do làm cả hai nơi thay vì chỉ gọi `/toi`
+sau khi đăng nhập: `AppShell` cần hiện đúng tên giáo xứ NGAY từ màn hình đầu tiên sau khi đăng
+nhập, tránh một khung hình nhấp nháy "—" rồi mới ra tên thật sau một round-trip nữa.
+
+**b) Bỏ hẳn hình tam giác thả xuống VÀ đổi `<button>` (parish-chip) thành `<span role="status">`
+(không phải bấm được nữa).** Nhiệm vụ chỉ nói "đừng làm chức năng chuyển giáo xứ", nhưng giữ
+nguyên phần tử `<button>` không có `onClick` sẽ tự nó gây hiểu nhầm y hệt vấn đề gốc (con trỏ
+tay, có vẻ bấm được) — đổi hẳn ngữ nghĩa HTML cho khớp với thực tế "chỉ hiển thị, không tương
+tác" thay vì chỉ xoá mỗi cái tam giác mà để lại một nút chết. Bỏ luôn CSS `cursor: pointer` và
+rule `.parish-chip .caret` không còn dùng.
+
+**c) `/api/auth/toi` giữ nguyên `AllowAnonymous` = KHÔNG (vẫn `RequireAuthorization()`), và
+KHÔNG thêm endpoint tra cứu tên giáo xứ theo id riêng.** Không có nhu cầu tra tên giáo xứ khi
+chưa đăng nhập (điểm dùng duy nhất là thanh trên sau khi đã có phiên), thêm một endpoint như
+vậy chỉ mở thêm bề mặt rò rỉ tên tất cả giáo xứ trên máy chủ cho người chưa xác thực.
+
+**d) Phiên bản bản web lấy qua `GET /api/suc-khoe` (đã có sẵn, anonymous, trả `phienBan` từ
+`Assembly.GetExecutingAssembly().GetName().Version`) — KHÔNG thêm trường phiên bản vào
+`/api/auth/toi`.** Hai mối quan tâm khác nhau (danh tính người dùng vs. phiên bản triển khai);
+`/api/suc-khoe` vốn được thiết kế làm liveness/health-check công khai, tận dụng lại đúng mục
+đích thay vì trộn thêm vào endpoint xác thực. `client.ts` thêm nhóm `api.he.sucKhoe()` mới cho
+mục đích này — client vẫn đính kèm token qua `goi()` như mọi lời gọi khác (không hại gì vì
+endpoint là anonymous, và giữ một hàm `goi()` DUY NHẤT cho toàn bộ client thay vì phân nhánh
+"endpoint nào cần token, endpoint nào không" ở tầng gọi).
+
+**e) Bỏ hẳn dòng "Sao lưu gần nhất", KHÔNG thay bằng "Chưa có thông tin sao lưu" hay tương tự.**
+Nhiệm vụ cho phép cả hai hướng ("bỏ hẳn" hoặc "giữ chỗ nhưng ghi rõ chưa có"); chọn bỏ hẳn vì
+chưa có bất kỳ API trạng thái sao lưu nào (thêm một dòng "chưa có" vẫn chiếm chỗ nhắc nhở về
+một tính năng chưa tồn tại, trong khi phần khung này nên tối giản — thêm lại dễ dàng khi API
+thật ra đời).
+
+**f) `SideNav` gọi `GET /api/suc-khoe` bằng `useEffect` cục bộ trong chính component, KHÔNG
+nâng lên `AuthContext`/App-level state.** Thông tin phiên bản không phụ thuộc phiên đăng nhập
+(anonymous, không đổi theo người dùng), không có lý do chia sẻ qua context toàn cục; giữ gọn
+trong component duy nhất cần nó. Lỗi mạng khi gọi (hiếm, vì cùng máy chủ và request không cần
+token) chỉ khiến chữ phiên bản không hiện (hiện "Bản web" trơn) — không crash, không banner lỗi
+gây rối cho một mẩu thông tin phụ ở chân trang.
+
+**g) Nút "+" trong `GxPicker` — vô hiệu hoá (`disabled`) khi KHÔNG có `onThemMoi` truyền vào,
+thay vì xoá hẳn nút.** Xoá nút sẽ đổi bố cục ba nút tròn quen thuộc (giống UserControl
+`GxGiaoDan` bản desktop) thành hai, và làm việc nối `onThemMoi` thật sau này (task màn hình chi
+tiết giáo dân) phải sửa lại bố cục thay vì chỉ bỏ `disabled`. Điều kiện `disabled={!onThemMoi}`
+nghĩa là nút TỰ ĐỘNG hoạt động lại ngay khi một nơi gọi nối `onThemMoi` thật, không cần sửa gì
+thêm ở `GxPicker`. Tooltip đổi thành "Thêm giáo dân mới — chưa hỗ trợ" (rõ ràng là CHƯA có, không
+phải hỏng) thay vì disable âm thầm không giải thích.
+
+**h) Rà thêm dữ liệu giả/viết cứng khác — không tìm thấy chỗ nào cần sửa.** Đã grep toàn bộ
+`WebApp/src/web/src` tìm các mẫu nghi vấn (tên riêng viết cứng, ngày giờ bịa, số liệu tĩnh,
+"demo"/"fake"/"dummy"/"lorem"). Chữ "VP" ở avatar góc phải ĐÃ được nối vào tên đăng nhập thật từ
+một task trước đó (xem chú thích `chuVietTat()` trong `AppShell.tsx` — "giống 'VP' cũ nhưng suy
+từ tên thật"), không phải việc còn tồn đọng của nhiệm vụ này. Nhãn "MÔI TRƯỜNG THỬ NGHIỆM" giữ
+nguyên (cố ý, theo đúng chỉ dẫn). Các cụm "hard-code"/"hard coded" còn lại trong bình luận mã
+nguồn đều là chú thích NHẮC LẠI một hard-code đã được thay bằng dữ liệu thật ở các task trước
+(`data/giaoHoTam.ts`, danh mục Vai trò hội đoàn) — không phải hard-code đang tồn tại.
+
+**i) Xác nhận bằng trình duyệt thật trên `qlgx_thu`.** Chạy `Qlgx.Api` (Production, nối
+`qlgx_thu` qua biến môi trường, không ghi vào file nào) và `npm run dev` (đặt
+`VITE_API_PROXY_TARGET=http://localhost:5080` — giá trị mặc định trong `vite.config.ts` là cổng
+5096, không khớp cổng đã chọn cho API, gây lỗi 502 lúc thử lần đầu; đã sửa bằng biến môi trường
+khi chạy `npm run dev`, không đổi giá trị mặc định trong mã nguồn vì 5096 vẫn có thể đúng cho
+người khác chạy theo hướng dẫn cũ). Tạo tài khoản quản trị tạm `kiemthu_khung` bằng đúng lệnh
+CLI chính thức (`dotnet run -- tao-tai-khoan-quan-tri`, mật khẩu chỉ tồn tại trong biến môi
+trường của lượt gọi, không ghi ra file nào). Đăng nhập thật, chụp ảnh xác nhận thanh trên hiện
+đúng "Vô Nhiễm" (không còn tam giác thả xuống), chân thanh bên hiện "Bản web 1.0.0.0" (không còn
+"4.0.0"/"dữ liệu cục bộ"/"Sao lưu gần nhất"), và cả ba nút "+" của `GxPicker` (Người nam, Người
+nữ, thành viên mới) đều ở trạng thái `disabled` trên màn hình chi tiết gia đình thật — lưu tại
+`WebApp/anh-chup-kiem-thu/45-thanh-tren-hien-dung-ten-giao-xu-that.png` và
+`46-nut-them-moi-gxpicker-vo-hieu-hoa.png`. Xoá tài khoản `kiemthu_khung` ngay sau khi chụp xong,
+xác nhận lại bằng `psql`: `tai_khoan` chỉ còn `quantri`, `giao_dan`/`gia_dinh` vẫn đúng
+2050/40 bản ghi (không đổi gì trên `qlgx_thu`). Tắt cả `Qlgx.Api` và `npm run dev` đã mở cho
+lượt kiểm thử này.

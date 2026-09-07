@@ -2,7 +2,12 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { SideNav } from './SideNav'
 import { useAuth } from '../../api/AuthContext'
 
-type NguoiDungHienTai = { tenTaiKhoan: string; hoTen: string | null; loaiTaiKhoan: number | null }
+type NguoiDungHienTai = {
+  tenTaiKhoan: string
+  hoTen: string | null
+  loaiTaiKhoan: number | null
+  tenGiaoXu: string | null
+}
 
 type Props = {
   dangChonNav: string
@@ -66,11 +71,15 @@ export function AppShell({ dangChonNav, onNavigate, children, nguoiDung }: Props
           </span>
         </div>
 
-        <button className="parish-chip" type="button">
+        {/* Tên giáo xứ THẬT của tài khoản đang đăng nhập — trước đây viết cứng "Giáo xứ Thánh
+            Tâm" (xem can-review-sau.md mục 32), sai và gây hiểu nhầm trên một máy chủ phục vụ
+            nhiều giáo xứ. Không phải nút bấm: máy chủ hiện chỉ phục vụ một giáo xứ cho mỗi tài
+            khoản, chưa có chức năng chuyển đổi, nên bỏ luôn hình tam giác thả xuống cũ để không
+            gợi ý một chức năng chưa tồn tại. */}
+        <span className="parish-chip" role="status">
           <span className="dot" />
-          <b>Giáo xứ Thánh Tâm</b>
-          <span className="caret">&#9660;</span>
-        </button>
+          <b>{nguoiDung.tenGiaoXu ?? '—'}</b>
+        </span>
 
         <label className="searchbox">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">

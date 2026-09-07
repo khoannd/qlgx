@@ -13,7 +13,9 @@ public enum KetQuaDangNhap
 
 public record DangNhapKetQua(KetQuaDangNhap Ket, string? Token, ThongTinNguoiDungDto? NguoiDung);
 
-public record ThongTinNguoiDungDto(Guid Id, string TenTaiKhoan, string? HoTen, int LoaiTaiKhoan, Guid GiaoXuId);
+/// <summary>TenGiaoXu đi kèm ngay từ lúc đăng nhập để thanh trên (AppShell.tsx) hiện đúng tên
+/// giáo xứ ngay khi vào ứng dụng, không phải chờ thêm một round-trip tới /api/auth/toi.</summary>
+public record ThongTinNguoiDungDto(Guid Id, string TenTaiKhoan, string? HoTen, int LoaiTaiKhoan, Guid GiaoXuId, string TenGiaoXu);
 
 /// <summary>
 /// Xác thực tên đăng nhập/mật khẩu. TenTaiKhoan chỉ duy nhất TRONG một giáo xứ (xem
@@ -92,9 +94,13 @@ public class AuthService(IConfiguration cauHinh, TokenService tokenService)
                         .SetProperty(t => t.KhoaDangNhapDenLuc, (DateTimeOffset?)null), ct);
 
                 var token = tokenService.PhatHanh(taiKhoan);
+                var tenGiaoXu = await db.GiaoXu
+                    .Where(g => g.Id == taiKhoan.GiaoXuId)
+                    .Select(g => g.TenGiaoXu)
+                    .FirstOrDefaultAsync(ct) ?? "";
                 return new DangNhapKetQua(KetQuaDangNhap.ThanhCong, token,
                     new ThongTinNguoiDungDto(taiKhoan.Id, taiKhoan.TenTaiKhoan, taiKhoan.HoTenNguoiDung,
-                        taiKhoan.LoaiTaiKhoan, taiKhoan.GiaoXuId));
+                        taiKhoan.LoaiTaiKhoan, taiKhoan.GiaoXuId, tenGiaoXu));
             }
         }
 

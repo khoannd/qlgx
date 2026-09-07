@@ -41,6 +41,28 @@ describe('GxPicker', () => {
     expect(screen.queryByPlaceholderText('Gõ tên hoặc mã cũ để tìm…')).toBeNull()
   })
 
+  // Kiem thu kham pha 2026-09-07 muc 5: nut "+" truoc day im lang khong lam gi khi bam, nguoi
+  // dung khong biet la hong hay chua ho tro. Vo hieu hoa han kem tooltip ro rang khi khong co
+  // noi goi thuc su noi onThemMoi.
+  it('nut Them moi bi vo hieu hoa kem tooltip "chua ho tro" khi chua co onThemMoi', () => {
+    render(<GxPicker value={null} />)
+
+    const nutThemMoi = screen.getByTitle('Thêm giáo dân mới — chưa hỗ trợ') as HTMLButtonElement
+    expect(nutThemMoi.disabled).toBe(true)
+  })
+
+  it('nut Them moi goi duoc onThemMoi khi noi goi co truyen vao', async () => {
+    const onThemMoi = vi.fn()
+    const nguoiDung = userEvent.setup()
+
+    render(<GxPicker value={null} onThemMoi={onThemMoi} />)
+    const nutThemMoi = screen.getByTitle('Thêm giáo dân mới — chưa hỗ trợ') as HTMLButtonElement
+    expect(nutThemMoi.disabled).toBe(false)
+    await nguoiDung.click(nutThemMoi)
+
+    expect(onThemMoi).toHaveBeenCalled()
+  })
+
   it('bam nut Bo chon thi goi onBoChon', async () => {
     const onBoChon = vi.fn()
     const nguoiDung = userEvent.setup()

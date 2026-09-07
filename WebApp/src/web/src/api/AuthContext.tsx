@@ -7,6 +7,10 @@ type NguoiDungHienTai = {
   tenTaiKhoan: string
   hoTen: string | null
   loaiTaiKhoan: number | null
+  /** Tên giáo xứ thật của tài khoản đang đăng nhập — hiện ở thanh trên (AppShell), thay cho
+   * chữ viết cứng "Giáo xứ Thánh Tâm" trước đây (can-review-sau.md mục 32). `null` chỉ trong
+   * lúc dữ liệu chưa kịp tải (không nên xảy ra vì backend luôn trả kèm ngay từ lúc đăng nhập). */
+  tenGiaoXu: string | null
 }
 
 type AuthContextValue = {
@@ -54,7 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Token có trong localStorage từ phiên trước — xác nhận nó còn hợp lệ (chưa hết hạn) và
     // lấy lại họ tên/vai trò mới nhất trước khi cho vào thẳng ứng dụng.
     api.auth.toi()
-      .then((tt) => setNguoiDung({ tenTaiKhoan: tt.tenTaiKhoan, hoTen: tt.hoTen, loaiTaiKhoan: tt.loaiTaiKhoan }))
+      .then((tt) => setNguoiDung({
+        tenTaiKhoan: tt.tenTaiKhoan, hoTen: tt.hoTen, loaiTaiKhoan: tt.loaiTaiKhoan, tenGiaoXu: tt.tenGiaoXu,
+      }))
       .catch(() => { authStore.xoaToken() })
       .finally(() => setDangKiemTraPhien(false))
   }, [])
@@ -66,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       tenTaiKhoan: ketQua.nguoiDung.tenTaiKhoan,
       hoTen: ketQua.nguoiDung.hoTen,
       loaiTaiKhoan: ketQua.nguoiDung.loaiTaiKhoan,
+      tenGiaoXu: ketQua.nguoiDung.tenGiaoXu,
     })
   }, [])
 

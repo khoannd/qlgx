@@ -21,7 +21,9 @@ type Props = {
  * xem GiaoDanService.TimKiem) thay vì chỉ hiển thị tĩnh như trước (xem
  * docs/superpowers/specs/man-hinh/can-review-sau.md mục 19). Nút "Thêm mới" (mở `frmGiaoDan`
  * đầy đủ ở bản desktop) chưa nối — việc đó là màn hình chi tiết giáo dân đầy đủ, ngoài phạm vi
- * hạ tầng picker này; giữ callback rỗng để nơi gọi tự nối sau nếu cần.
+ * hạ tầng picker này. Trước đây `onThemMoi` để trống nên bấm vào im lặng không phản hồi gì
+ * (kiểm thử khám phá 2026-09-07 mục 5) — người dùng không biết là hỏng hay chưa hỗ trợ. Vô
+ * hiệu hoá hẳn nút kèm tooltip rõ ràng cho tới khi có nơi gọi thật nối `onThemMoi`.
  */
 export function GxPicker({ value, id, onChon, onThemMoi, onBoChon }: Props) {
   const [dangMo, setDangMo] = useState(false)
@@ -77,7 +79,8 @@ export function GxPicker({ value, id, onChon, onThemMoi, onBoChon }: Props) {
         onClick={() => setDangMo((m) => !m)}>
         &#9678;
       </button>
-      <button type="button" className="mini" title="Thêm giáo dân mới" onClick={onThemMoi}>
+      <button type="button" className="mini" title="Thêm giáo dân mới — chưa hỗ trợ"
+        disabled={!onThemMoi} onClick={onThemMoi}>
         +
       </button>
       <button type="button" className="mini" title="Bỏ chọn" onClick={onBoChon}>

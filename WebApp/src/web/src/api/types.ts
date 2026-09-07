@@ -273,6 +273,14 @@ export type ThongTinNguoiDung = {
   hoTen: string | null
   loaiTaiKhoan: number
   giaoXuId: string
+  tenGiaoXu: string
+}
+
+/** Ánh xạ 1-1 với thân trả về của GET /api/suc-khoe — dùng để hiện đúng phiên bản bản web
+ * thật ở chân thanh bên (SideNav), thay cho số hiệu bản desktop viết cứng cũ. */
+export type SucKhoe = {
+  trangThai: string
+  phienBan: string
 }
 
 /** Ánh xạ 1-1 với thân trả về của POST /api/auth/dang-nhap. */

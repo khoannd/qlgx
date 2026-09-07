@@ -1,7 +1,7 @@
 import type {
   GiaDinhDetail, GiaDinhListItem, GiaoDanDetail, GiaoDanListItem, GiaoDanTimKiem, GiaoHo,
   HoiDoanCuaGiaoDan, HoiDoanDanhMuc, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
-  TaiKhoanItem, DangNhapKetQua,
+  TaiKhoanItem, DangNhapKetQua, SucKhoe,
 } from './types'
 import { authStore } from './authStore'
 
@@ -187,7 +187,15 @@ export const api = {
       }
       return (await res.json()) as DangNhapKetQua
     },
-    toi: () => goi<{ tenTaiKhoan: string; hoTen: string | null; loaiTaiKhoan: number | null; giaoXuId: string | null }>('/api/auth/toi'),
+    toi: () => goi<{
+      tenTaiKhoan: string; hoTen: string | null; loaiTaiKhoan: number | null
+      giaoXuId: string | null; tenGiaoXu: string | null
+    }>('/api/auth/toi'),
+  },
+  /** Anonymous — chỉ dùng để hiện phiên bản bản web thật ở chân SideNav (xem
+   * can-review-sau.md mục 32), không mang dữ liệu giáo xứ nào nên không cần token. */
+  he: {
+    sucKhoe: () => goi<SucKhoe>('/api/suc-khoe'),
   },
   taiKhoan: {
     danhSach: () => goi<TaiKhoanItem[]>('/api/tai-khoan'),
