@@ -1461,3 +1461,119 @@ lúc sửa cũng phát hiện `AuthService` giờ có HAI `QlgxDbContext` khác 
 tenant cho `DoiMatKhauCuaToi`) — đặt tên rõ ràng để không nhầm lẫn, nhưng đáng cân nhắc tách
 `AuthService` thành hai lớp riêng (xác thực đăng nhập vs. quản lý tài khoản của chính mình) nếu
 sau này còn thêm nghiệp vụ tự-phục-vụ khác — chưa làm vì phạm vi nhỏ, chỉ một phương thức.
+
+### 36. Task "ảnh đại diện giáo dân/gia đình" (2026-09-07) — các quyết định tự đưa ra
+
+`WebApp/VIEC-TIEP-THEO.md` mục 1.2, mục chặn cuối cùng của Mức 1. Người dùng đang bận, không
+hỏi được — ghi lại các quyết định tự đưa ra.
+
+**a) Bằng chứng khảo sát mã desktop — cột `AnhDaiDien` (Access) lưu ĐƯỜNG DẪN TỆP CỤC BỘ, không
+phải base64 hay tên tệp đơn thuần.** `Source/GXControl/frmGiaoDan.cs` (UTF-16LE, đọc qua
+`iconv -f UTF-16LE -t UTF-8`), dòng ~995 lúc lưu — `if (gxPictureField1.FileName != null)
+row[GiaoDanConst.AnhDaiDien] = gxPictureField1.FileName;` — và dòng ~1119 lúc nạp lại lên form —
+`if (File.Exists(string.Concat(Memory.AppPath, row[GiaoDanConst.AnhDaiDien].ToString())))
+gxPictureField1.ImagePicture = Image.FromFile(string.Concat(Memory.AppPath,
+row[GiaoDanConst.AnhDaiDien].ToString()));`. `Memory.AppPath` là thư mục cài đặt CỤC BỘ của máy
+đang chạy bản desktop — giá trị lưu trong CSDL chỉ là một đường dẫn TƯƠNG ĐỐI ghép với thư mục
+đó, vô nghĩa trên bất kỳ máy nào khác (kể cả một máy chủ web tập trung). Xác nhận thêm bằng khảo
+sát dữ liệu thật: 2050/2050 dòng của `qlgx_thu.giao_dan.anh_dai_dien` đều RỖNG — không có dữ
+liệu cũ nào cần giữ tương thích khi đổi thiết kế lưu trữ. `GiaDinh.AnhDaiDien` cùng bản chất
+(cùng tên cột, cùng kiểu dữ liệu văn bản).
+
+**b) Lưu trữ: cột `bytea` (nhị phân) trực tiếp trong PostgreSQL, KHÔNG dùng object storage.**
+Hai cột mới trên cả `GiaoDan` và `GiaDinh`: `AnhDaiDienDuLieu` (`byte[]?`, cột `bytea`) +
+`AnhDaiDienLoaiNoiDung` (`string?`, luôn `"image/jpeg"` sau chuẩn hoá — xem mục d). Cột
+`AnhDaiDien` (text) cũ bị XOÁ hẳn khỏi cả hai thực thể (migration `ThemAnhDaiDienNhiPhan` đổi
+tên cột đó thành `anh_dai_dien_loai_noi_dung` rồi không đọc lại giá trị cũ — an toàn vì mục a đã
+xác nhận rỗng toàn bộ). Lý do chọn cột nhị phân thay vì object storage (S3/MinIO):
+- Quy mô thật nhỏ: 2050 giáo dân + 40 gia đình, ảnh 3x4 sau khi thu nhỏ+nén JPEG (mục d) chỉ còn
+  vài chục KB/ảnh — kể cả phủ kín 100% cũng chưa tới ~150MB, không đáng kể so với CSDL đã có.
+- Không thêm một thành phần hạ tầng mới cho pilot: không cần triển khai/vận hành/sao lưu riêng
+  một object store, không cần thêm biến môi trường/khoá truy cập mới, không cần endpoint proxy
+  ảnh nào phức tạp hơn (route đọc ảnh y hệt các route JSON khác — cùng `RequireAuthorization()`,
+  cùng bộ lọc `GiaoXuId`, cùng cách viết test).
+- Sao lưu/khôi phục ĐI CHUNG với dữ liệu — một bản `pg_dump` là đủ cho cả nghiệp vụ lẫn ảnh,
+  không có nguy cơ CSDL và object store lệch nhau sau khôi phục từ hai điểm backup khác thời
+  điểm (rủi ro thật với hướng tách riêng).
+- Vẫn tôn trọng ĐÚNG ràng buộc HA đã chốt (không ghi đĩa cục bộ máy chủ) — bytea nằm trong
+  CSDL dùng chung giữa mọi bản API, không có gì đặc thù cho từng container.
+
+Đường nâng cấp nếu sau này đổi hướng (ghi lại để không phải suy nghĩ lại từ đầu): nếu số giáo xứ
+tăng mạnh và ảnh gốc lớn hơn đáng kể (ví dụ đổi yêu cầu — lưu cả ảnh gốc chưa thu nhỏ để in chất
+lượng cao), tách phần đọc/ghi nhị phân ra khỏi `AnhDaiDienService` thành một interface riêng rồi
+đổi cài đặt sang S3-compatible mà KHÔNG đụng tới endpoint/DTO — cột `AnhDaiDienDuLieu` hiện tại
+có thể giữ làm cache/thumbnail trong khi bản gốc chuyển sang object storage.
+
+**c) Kiểm tra file tải lên — GIẢI MÃ THẬT bằng SkiaSharp, không tin phần mở rộng/Content-Type.**
+`Qlgx.Api/Anh/XuLyAnh.cs`: (1) chặn dung lượng gốc > 8MB TRƯỚC khi giải mã; (2)
+`SKCodec.Create(stream)` — trả `null` cho bất kỳ tệp nào không phải ảnh hợp lệ (một `.exe`/văn
+bản đổi tên thành `.jpg` sẽ bị từ chối ở đây, không phải vì đọc tên tệp mà vì giải mã thất bại
+thật); (3) `codec.EncodedFormat` phải là Jpeg/Png/Webp — chặn định dạng giải mã ĐƯỢC nhưng
+không nằm trong danh sách cho phép (Gif/Bmp/Ico…); (4) `SKBitmap.Decode` phải thành công. Kiểm
+thử bằng test gửi một tệp văn bản thuần đặt tên `.jpg` VÀ khai Content-Type `image/jpeg` — vẫn
+bị từ chối (xem `AnhDaiDienTests.Tep_khong_phai_anh_dat_ten_jpg_bi_tu_choi_du_khai_dung_content_type`).
+
+**d) Chuẩn hoá MỌI ảnh về JPEG, khung tối đa 640px cạnh dài, chất lượng 85.** Ảnh 3x4 in ở
+300dpi chỉ cần ~354×472px thật; 640px cạnh dài dư nét cho cả in lẫn xem trên màn hình trong khi
+giữ dung lượng nhỏ (vài chục KB/ảnh dù ảnh gốc điện thoại vài MB–vài chục MB). Ảnh có nền trong
+suốt (PNG/WebP) được vẽ đè lên nền TRẮNG trước khi ép JPEG (JPEG không có kênh alpha) để không
+biến thành khối đen. Phát hiện trong lúc viết: một `SKBitmap` dựng với `SKColorType.Rgb888x` rồi
+gọi `.Encode(Jpeg, ...)` trực tiếp trả về `null` trên bản SkiaSharp 3.119 dùng ở đây (đã kiểm
+chứng bằng một chương trình Console riêng, ngoài bộ test) — phải dùng `SKColorType.Bgra8888` cho
+bitmap nền trắng rồi bọc qua `SKImage.FromBitmap(...).Encode(...)` mới ra dữ liệu hợp lệ; ghi
+chú thẳng trong code để không ai vấp lại lỗi này.
+
+**e) Gói xử lý ảnh: SkiaSharp (MIT) + `SkiaSharp.NativeAssets.Linux`, KHÔNG dùng
+`System.Drawing.Common`/ImageSharp.** `System.Drawing.Common` không chạy trên Linux từ .NET 7 —
+loại ngay vì Dockerfile chạy trên `mcr.microsoft.com/dotnet/aspnet:10.0` (Debian). ImageSharp bị
+cân nhắc nhưng loại vì giấy phép Six Labors Split License đòi mua thương mại ngoài ngưỡng miễn
+phí cho dự án không phải mã nguồn mở/phi lợi nhuận thuần — SkiaSharp giấy phép MIT, tự do hoàn
+toàn, không ràng buộc gì thêm. Native binary cho Linux thêm qua `SkiaSharp.NativeAssets.Linux`
+(ảnh nền `aspnet:10.0` là Debian glibc, không phải Alpine — không cần biến thể `musl`).
+
+**f) Ảnh vào được cả hai mẫu in đã có (`LyLichCaNhan`, `PhieuGiaDinh`) — nhúng base64 trực tiếp
+trong thẻ `<img>`, không phải endpoint ảnh riêng.** PDF xuất bằng Playwright headless từ một
+chuỗi HTML tĩnh (xem `BoTrinhDuyet`/`BoDoMauIn`) — trang HTML đó không có phiên đăng nhập nào để
+gọi ngược lại `GET .../anh-dai-dien`, nên `InAnService.KhoiAnhDaiDien` tự dựng chuỗi
+`data:image/jpeg;base64,...` ngay trong service (dữ liệu đã qua `XuLyAnh` lúc lưu, không phải
+chuỗi tự do người dùng gõ, nên chèn NGUYÊN VĂN vào khối HTML thô `khoiHtmlAnToan` của
+`BoDoMauIn.Dung` là an toàn — xem ghi chú sẵn có ở đó). Khi giáo dân/gia đình CHƯA có ảnh, biến
+`KhoiAnh` là chuỗi rỗng — mẫu KHÔNG hiện khung ảnh trống vô nghĩa trên giấy in, đúng hành vi mô
+tả trong `BoDoMauIn.Dung` cho "khối không áp dụng được". Vị trí: góc trên-phải khu tiêu đề mỗi
+mẫu (`.tieu-de-wrap` + `position: absolute` cho `.anh-dai-dien`), 30×40mm (LyLichCaNhan) /
+26×34mm (PhieuGiaDinh).
+
+**g) `<img>` không tự đính header `Authorization` được — phía web PHẢI fetch() ảnh rồi dựng lại
+thành object URL, không gán thẳng URL API vào `src`.** `api/client.ts` thêm `layAnhBlobUrl`
+(cùng khuôn `taiTepIn` đã có cho tải PDF) và `taiAnhLen` (multipart, KHÔNG qua `goi()` vốn chỉ
+gửi JSON). Component dùng chung `components/AnhDaiDien.tsx` cho cả hai màn hình chi tiết (giáo
+dân/gia đình) — tự quản lý vòng đời object URL blob (tạo/`URL.revokeObjectURL` khi ảnh đổi hoặc
+component gỡ), nhận vào chỉ `id` + ba hàm gọi API đã tiêm sẵn đường dẫn đúng loại thực thể. Ô
+ảnh tự vô hiệu (không cho chọn tệp) khi bản ghi CHƯA lưu lần đầu (`id === null`) — cùng quy ước
+với các tab phụ khác (Hôn phối/Tận hiến/Hội đoàn) chỉ dùng được sau khi đã có id thật.
+
+**h) ASP.NET Core TỰ ĐỘNG gắn yêu cầu antiforgery cho endpoint có tham số `IFormFile` (từ .NET
+8) — API xác thực bằng Bearer JWT nên phải `.DisableAntiforgery()` rõ ràng, nếu không mọi
+request rơi vào 500** (`InvalidOperationException: ... contains anti-forgery metadata, but a
+middleware was not found`). Không cấu hình `app.UseAntiforgery()` — không cần, vì không có
+cookie phiên trình duyệt nào ở đây để CSRF nhắm tới; antiforgery chỉ có ý nghĩa cho flow
+cookie-based, không áp dụng cho Bearer token tự chứa.
+
+**i) Test bắt buộc theo yêu cầu — đủ cả ba tình huống chặn:** `AnhDaiDienTests.cs` (8 test mới):
+từ chối tệp không phải ảnh dù đặt tên `.jpg` kèm khai `Content-Type: image/jpeg`; từ chối tệp
+9MB (> giới hạn 8MB); ảnh giáo xứ A không đọc/ghi/xoá được bằng phiên giáo xứ B (cả giáo dân lẫn
+gia đình); tải lên/xem lại/xoá thành công cho trường hợp hợp lệ. Thêm 1 test ở
+`GiaoDanInAnTests.cs` xác nhận ảnh THẬT SỰ được nhúng vào PDF (so kích thước PDF có-ảnh/không-ảnh
+với ảnh nhiễu ngẫu nhiên 120×160 — ảnh một màu đặc nén JPEG chỉ còn vài trăm byte, không đủ tạo
+chênh lệch rõ so với biến động font/metadata bình thường giữa hai PDF). Tổng test cuối: backend
+**222/222** (213 cũ + 8 ảnh + 1 in-ấn-có-ảnh), frontend **229/229** (không đổi số lượng —
+component `AnhDaiDien` chỉ thay thế `<div className="photo-slot">` tĩnh trong hai màn hình đã có
+test sẵn, không thêm test riêng ở lượt này vì hành vi tải/xoá ảnh đã được phủ đầy đủ ở tầng API).
+
+**j) Việc CHƯA làm trong phạm vi nhiệm vụ này:** không có nút "xem ảnh cỡ lớn" (chỉ xem đúng
+kích thước đã thu nhỏ trong khung 3x4); không giữ lại ảnh gốc trước khi thu nhỏ (một khi đã nén,
+không phục hồi được — chấp nhận được vì mục đích chỉ là ảnh 3x4 nhận diện, không phải lưu trữ
+ảnh gốc); chưa có giới hạn tốc độ (rate limit) riêng cho endpoint tải ảnh lên (dùng chung mức
+bảo vệ của toàn API, chưa có mức nào ở lượt này); gia đình dùng CHUNG một component
+`AnhDaiDien` với giáo dân nhưng KHÔNG có "ảnh đại diện" cho `ThanhVienGiaDinh`/vai trò khác —
+chỉ đúng hai thực thể `GiaoDan`/`GiaDinh` theo đúng phạm vi mục 1.2.

@@ -34,6 +34,43 @@ public static class GiaoDanEndpoints
                 ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
                 : Results.NotFound());
 
+        // Ảnh đại diện (VIEC-TIEP-THEO.md mục 1.2, xem can-review-sau.md mục 36) — lưu nhị phân
+        // trong CSDL, KHÔNG ghi đĩa cục bộ máy chủ. Ba route nằm trong `nhom` nên đã kế thừa
+        // RequireAuthorization() + lọc GiaoXuId qua claim (AnhDaiDienService không nhận
+        // GiaoXuId nào từ tham số) — ảnh của giáo xứ khác không đọc/ghi/xoá được dù đoán đúng
+        // Id bản ghi.
+        // .DisableAntiforgery(): API này xác thực bằng Bearer JWT (không phải cookie phiên
+        // trình duyệt) nên không có rủi ro CSRF antiforgery nhắm tới — ASP.NET Core minimal API
+        // TỰ ĐỘNG gắn yêu cầu antiforgery cho MỌI endpoint có tham số IFormFile kể từ .NET 8,
+        // và ứng dụng này không cấu hình app.UseAntiforgery() (không cần, vì không có cookie
+        // phiên nào) nên phải tắt rõ ràng, nếu không mọi request sẽ rơi vào 500.
+        nhom.MapPost("/{id:guid}/anh-dai-dien", async (AnhDaiDienService dv, Guid id,
+            IFormFile? tep, CancellationToken ct) =>
+        {
+            if (tep is null || tep.Length == 0)
+                return Results.BadRequest(new { thongBao = "Chưa chọn tệp ảnh để tải lên." });
+            await using var luong = tep.OpenReadStream();
+            var (ketQua, loi) = await dv.LuuAnhGiaoDan(id, luong, tep.Length, ct);
+            return ketQua switch
+            {
+                KetQuaLuuAnh.KhongTimThay => Results.NotFound(),
+                KetQuaLuuAnh.Loi => Results.BadRequest(new { thongBao = loi }),
+                _ => Results.Ok(),
+            };
+        }).DisableAntiforgery();
+
+        // Không có [Authorize] nào khác ngoài RequireAuthorization() kế thừa từ `nhom` —
+        // <img src> không tự đính header Authorization được nên phía web PHẢI tải ảnh bằng
+        // fetch() kèm Bearer token rồi dựng lại thành object URL (giống taiTepIn ở client.ts),
+        // không gán thẳng URL này vào src.
+        nhom.MapGet("/{id:guid}/anh-dai-dien", async (AnhDaiDienService dv, Guid id, CancellationToken ct) =>
+            await dv.LayAnhGiaoDan(id, ct) is { } anh
+                ? Results.File(anh.DuLieu, anh.LoaiNoiDung)
+                : Results.NotFound());
+
+        nhom.MapDelete("/{id:guid}/anh-dai-dien", async (AnhDaiDienService dv, Guid id, CancellationToken ct) =>
+            await dv.XoaAnhGiaoDan(id, ct) ? Results.Ok() : Results.NotFound());
+
         // Tìm giáo dân theo tên/mã cũ — hạ tầng cho GxPicker thật (gõ để tìm, chọn từ danh
         // sách), dùng ở Tên Cha/Mẹ (màn hình giáo dân) và Người nam/nữ (màn hình gia đình, lượt
         // sau). Route CỐ Ý đặt trước "/{id:guid}" phía trên không đụng nhau nhờ tiền tố "/tim"

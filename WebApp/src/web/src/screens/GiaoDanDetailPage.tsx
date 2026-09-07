@@ -320,6 +320,9 @@ export function GiaoDanDetailPage({ id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan,
           banNhap={banNhapApDung}
           onIn={inLyLichCaNhan}
           dangIn={dangIn}
+          onLayAnh={api.giaoDan.layAnh}
+          onTaiAnhLen={api.giaoDan.taiAnhLen}
+          onXoaAnh={api.giaoDan.xoaAnh}
         />
       )}
     </TrangThaiTai>

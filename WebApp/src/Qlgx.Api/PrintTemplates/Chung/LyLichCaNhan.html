@@ -21,9 +21,15 @@
   .giao-xu-info { text-align: center; margin-bottom: 6mm; line-height: 1.5; }
   .giao-xu-info .ten-giao-xu { font-weight: bold; font-size: 14pt; text-transform: uppercase; }
 
-  .tieu-de { text-align: center; margin: 8mm 0; }
+  .tieu-de-wrap { position: relative; margin: 8mm 0; }
+  .tieu-de { text-align: center; }
   .tieu-de h1 { font-size: 18pt; margin: 0; letter-spacing: 1px; }
   .tieu-de .phu-de { font-style: italic; font-size: 11pt; }
+  /* Ảnh đại diện (Task 1.2 VIEC-TIEP-THEO.md) — góc trên bên phải, đúng vị trí ảnh 3x4 trên
+     mẫu lý lịch cá nhân giấy. Vắng mặt hoàn toàn (không có khung rỗng) khi giáo dân chưa có
+     ảnh — xem InAnService.XuatLyLichCaNhan (biến KhoiAnh). */
+  .anh-dai-dien { position: absolute; top: 0; right: 8mm; text-align: center; }
+  .anh-dai-dien img { width: 30mm; height: 40mm; object-fit: cover; border: 1px solid #000; }
 
   table.thong-tin { width: 100%; border-collapse: collapse; margin-bottom: 4mm; }
   table.thong-tin td { padding: 1.4mm 2mm; vertical-align: top; }
@@ -55,9 +61,12 @@
     <div>{{DiaChiGiaoXu}}{{DienThoaiGiaoXu}}{{EmailGiaoXu}}</div>
   </div>
 
-  <div class="tieu-de">
-    <h1>LÝ LỊCH CÁ NHÂN</h1>
-    <div class="phu-de">Giáo họ: {{TenGiaoHo}}</div>
+  <div class="tieu-de-wrap">
+    <div class="tieu-de">
+      <h1>LÝ LỊCH CÁ NHÂN</h1>
+      <div class="phu-de">Giáo họ: {{TenGiaoHo}}</div>
+    </div>
+    {{KhoiAnh}}
   </div>
 
   <table class="thong-tin">

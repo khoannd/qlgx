@@ -132,6 +132,55 @@ async function taiTepIn(duong: string, tenTepMacDinh: string): Promise<void> {
   }
 }
 
+/** Tải ảnh đại diện (Task 1.2 VIEC-TIEP-THEO.md) về DẠNG BLOB rồi dựng object URL — KHÔNG
+ * gán thẳng `duong` vào `<img src>` vì endpoint đòi RequireAuthorization()
+ * (`Authorization: Bearer …`) mà thẻ `<img>` không tự đính header được, giống lý do
+ * `taiTepIn` phải tự fetch() thay vì để trình duyệt tải trực tiếp. Trả `null` khi CHƯA có ảnh
+ * (404 — không phải lỗi, đúng trạng thái "Chưa có hình") hoặc khi có lỗi mạng/xác thực; nơi gọi
+ * coi cả hai như nhau (không hiện khung lỗi cho một chỗ chỉ là chưa có ảnh). */
+async function layAnhBlobUrl(duong: string): Promise<string | null> {
+  const token = authStore.layToken()
+  let res: Response
+  try {
+    res = await fetch(duong, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+  } catch (loiMang) {
+    console.error(`Lỗi mạng khi tải ảnh ${duong}`, loiMang)
+    return null
+  }
+  if (!res.ok) return null
+  const blob = await res.blob()
+  return URL.createObjectURL(blob)
+}
+
+/** Tải một ảnh lên qua `multipart/form-data` (trường "tep", đúng tên tham số IFormFile phía
+ * `GiaoDanEndpoints.cs`/`GiaDinhEndpoints.cs`). KHÔNG dùng `goi()` — đó chỉ gửi JSON. Việc
+ * kiểm định dạng/kích thước THẬT nằm ở máy chủ (`XuLyAnh.cs`); ở đây chỉ đọc thông báo lỗi
+ * tiếng Việt máy chủ trả về (400) để hiện lại cho người dùng, không tự đoán trước lỗi gì. */
+async function taiAnhLen(duong: string, tep: File): Promise<void> {
+  const token = authStore.layToken()
+  const than = new FormData()
+  than.append('tep', tep)
+  let res: Response
+  try {
+    res = await fetch(duong, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: than,
+    })
+  } catch (loiMang) {
+    console.error(`Lỗi mạng khi tải ảnh lên ${duong}`, loiMang)
+    throw new Error('Không kết nối được máy chủ để tải ảnh lên. Kiểm tra Qlgx.Api đã chạy chưa.')
+  }
+  if (res.status === 401) {
+    authStore.baoHet401()
+    throw new ChuaDangNhap('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+  }
+  if (!res.ok) {
+    const thongBao = await docThongBaoLoi(res)
+    throw new Error(thongBao ?? `Máy chủ trả lỗi ${res.status} khi tải ảnh lên.`)
+  }
+}
+
 const thamSo = (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: boolean) => {
   const p = new URLSearchParams()
   if (giaoHoId) p.set('giaoHoId', giaoHoId)
@@ -185,6 +234,10 @@ export const api = {
     /** In "Chứng nhận hôn phối" — 404 khi gia đình chưa có hôn phối nào để chứng nhận. */
     inChungNhanHonPhoi: (id: string) =>
       taiTepIn(`/api/gia-dinh/${id}/in/chung-nhan-hon-phoi`, 'ChungNhanHonPhoi.pdf'),
+    /** Ảnh đại diện gia đình (Task 1.2) — cùng ba thao tác với giaoDan bên dưới. */
+    layAnh: (id: string) => layAnhBlobUrl(`/api/gia-dinh/${id}/anh-dai-dien`),
+    taiAnhLen: (id: string, tep: File) => taiAnhLen(`/api/gia-dinh/${id}/anh-dai-dien`, tep),
+    xoaAnh: (id: string) => goi<void>(`/api/gia-dinh/${id}/anh-dai-dien`, { method: 'DELETE' }),
   },
   giaoDan: {
     danhSach: (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: boolean) =>
@@ -220,6 +273,12 @@ export const api = {
      * (liệt kê cả ba); "RuaToi"/"RuocLe"/"ThemSuc" = mục riêng từng bí tích. */
     inChungNhanBiTich: (id: string, loai?: 'RuaToi' | 'RuocLe' | 'ThemSuc') =>
       taiTepIn(`/api/giao-dan/${id}/in/chung-nhan-bi-tich${loai ? `?loai=${loai}` : ''}`, 'ChungNhanBiTich.pdf'),
+    /** Ảnh đại diện (Task 1.2 VIEC-TIEP-THEO.md, xem can-review-sau.md mục 36) — `layAnh` trả
+     * object URL (hoặc `null` nếu chưa có ảnh/lỗi mạng, xem `layAnhBlobUrl`), `taiAnhLen` gửi
+     * multipart, `xoaAnh` xoá hẳn. */
+    layAnh: (id: string) => layAnhBlobUrl(`/api/giao-dan/${id}/anh-dai-dien`),
+    taiAnhLen: (id: string, tep: File) => taiAnhLen(`/api/giao-dan/${id}/anh-dai-dien`, tep),
+    xoaAnh: (id: string) => goi<void>(`/api/giao-dan/${id}/anh-dai-dien`, { method: 'DELETE' }),
   },
   hoiDoan: {
     danhMuc: () => goi<HoiDoanDanhMuc[]>('/api/hoi-doan'),

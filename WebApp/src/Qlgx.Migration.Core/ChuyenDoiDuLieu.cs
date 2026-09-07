@@ -265,7 +265,9 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             e.DienThoai = d.DienThoai;
             e.SoHoKhau = d.SoHoKhau;
             e.DienGiaDinh = d.DienGiaDinh;
-            e.AnhDaiDien = d.AnhDaiDien;
+            // AnhDaiDien (Access) lưu ĐƯỜNG DẪN tệp cục bộ trên máy desktop, không dùng được
+            // trên máy chủ tập trung — KHÔNG chuyển sang cột nhị phân mới (AnhDaiDienDuLieu),
+            // dữ liệu qlgx_thu cột này rỗng toàn bộ nên không mất gì. Xem GiaoDan bên dưới.
             e.DaXoa = d.DaXoa;
             e.DaChuyenXu = d.DaChuyenXu;
             e.NgayChuyen = DocNgay(d.NgayChuyen, nameof(d.NgayChuyen), loi);
@@ -307,7 +309,12 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             e.DiaChi = d.DiaChi;
             e.DienThoai = d.DienThoai;
             e.Email = d.Email;
-            e.AnhDaiDien = d.AnhDaiDien;
+            // AnhDaiDien (Access) lưu ĐƯỜNG DẪN tệp cục bộ (khảo sát trong GxGiaoDan.cs/
+            // frmGiaoDan.cs: gxPictureField1.FileName, Image.FromFile(AppPath + AnhDaiDien)) —
+            // không có ý nghĩa trên máy chủ web (không có đĩa cục bộ dùng chung). Ảnh đại diện
+            // web dùng cột nhị phân mới (AnhDaiDienDuLieu), nạp qua màn hình chi tiết chứ
+            // không migrate từ Access (dữ liệu qlgx_thu cột này rỗng toàn bộ — xem
+            // can-review-sau.md mục 36).
             e.HoTenCha = d.HoTenCha;
             e.HoTenMe = d.HoTenMe;
 

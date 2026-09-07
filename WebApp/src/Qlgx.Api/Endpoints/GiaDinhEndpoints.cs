@@ -35,6 +35,34 @@ public static class GiaDinhEndpoints
                 ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
                 : Results.NotFound());
 
+        // Ảnh đại diện gia đình — cùng thiết kế/ràng buộc với ảnh giáo dân (xem
+        // GiaoDanEndpoints.cs và AnhDaiDienService.cs).
+        // Xem ghi chú DisableAntiforgery() ở GiaoDanEndpoints.cs — API xác thực bằng Bearer
+        // JWT, không dùng cookie phiên nên không cần app.UseAntiforgery(); ASP.NET Core tự gắn
+        // yêu cầu antiforgery cho endpoint có tham số IFormFile nên phải tắt rõ ràng.
+        nhom.MapPost("/{id:guid}/anh-dai-dien", async (AnhDaiDienService dv, Guid id,
+            IFormFile? tep, CancellationToken ct) =>
+        {
+            if (tep is null || tep.Length == 0)
+                return Results.BadRequest(new { thongBao = "Chưa chọn tệp ảnh để tải lên." });
+            await using var luong = tep.OpenReadStream();
+            var (ketQua, loi) = await dv.LuuAnhGiaDinh(id, luong, tep.Length, ct);
+            return ketQua switch
+            {
+                KetQuaLuuAnh.KhongTimThay => Results.NotFound(),
+                KetQuaLuuAnh.Loi => Results.BadRequest(new { thongBao = loi }),
+                _ => Results.Ok(),
+            };
+        }).DisableAntiforgery();
+
+        nhom.MapGet("/{id:guid}/anh-dai-dien", async (AnhDaiDienService dv, Guid id, CancellationToken ct) =>
+            await dv.LayAnhGiaDinh(id, ct) is { } anh
+                ? Results.File(anh.DuLieu, anh.LoaiNoiDung)
+                : Results.NotFound());
+
+        nhom.MapDelete("/{id:guid}/anh-dai-dien", async (AnhDaiDienService dv, Guid id, CancellationToken ct) =>
+            await dv.XoaAnhGiaDinh(id, ct) ? Results.Ok() : Results.NotFound());
+
         // Tạo mới một gia đình (Task "ghi cho gia đình") — xem GiaDinhService.Tao. Chỉ tạo bản
         // ghi trống (Tên gia đình + Giáo họ); Người nam/nữ và thành viên gán bằng các endpoint
         // riêng dưới đây SAU KHI đã có Id.

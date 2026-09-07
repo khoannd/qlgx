@@ -21,8 +21,13 @@
   .giao-xu-info { text-align: center; margin-bottom: 4mm; line-height: 1.4; }
   .giao-xu-info .ten-giao-xu { font-weight: bold; font-size: 12pt; text-transform: uppercase; }
 
-  .tieu-de { text-align: center; margin: 4mm 0; }
+  .tieu-de-wrap { position: relative; margin: 4mm 0; }
+  .tieu-de { text-align: center; }
   .tieu-de h1 { font-size: 15pt; margin: 0; letter-spacing: 1px; }
+  /* Ảnh đại diện gia đình (Task 1.2 VIEC-TIEP-THEO.md) — vắng mặt hoàn toàn khi chưa có ảnh,
+     xem InAnService.XuatPhieuGiaDinh (biến KhoiAnh) và ghi chú cùng tên ở LyLichCaNhan.html. */
+  .anh-dai-dien { position: absolute; top: 0; right: 8mm; text-align: center; }
+  .anh-dai-dien img { width: 26mm; height: 34mm; object-fit: cover; border: 1px solid #000; }
 
   table.thong-tin-gd { width: 100%; border-collapse: collapse; margin-bottom: 3mm; font-size: 10pt; }
   table.thong-tin-gd td { padding: 1mm 2mm; vertical-align: top; }
@@ -58,8 +63,11 @@
     <div class="ten-giao-xu">GIÁO XỨ {{TenGiaoXu}}</div>
   </div>
 
-  <div class="tieu-de">
-    <h1>PHIẾU GIA ĐÌNH</h1>
+  <div class="tieu-de-wrap">
+    <div class="tieu-de">
+      <h1>PHIẾU GIA ĐÌNH</h1>
+    </div>
+    {{KhoiAnh}}
   </div>
 
   <table class="thong-tin-gd">

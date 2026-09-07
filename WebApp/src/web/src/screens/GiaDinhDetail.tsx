@@ -4,6 +4,7 @@ import type {
   GiaDinhDetail as GiaDinhDetailDuLieu, GiaoDanListItem, GiaoDanTimKiem, GiaoHo, ThanhVien,
 } from '../api/types'
 import { DANH_SACH_VAI_TRO_THANH_VIEN, tenVaiTro } from '../lib/vaiTroGiaDinh'
+import { AnhDaiDien } from '../components/AnhDaiDien'
 import { GxDate } from '../components/GxDate'
 import { GxField, GxInline } from '../components/GxField'
 import { GxGiaoDanList, menuGiaoDanMacDinh } from '../components/GxGiaoDanList'
@@ -341,7 +342,13 @@ export function GiaDinhDetail({
         <div className="col-stack">
           <div className="card glass">
             <div className="card-head"><h2>Hình gia đình</h2></div>
-            <div className="photo-slot">Chưa có hình<br />Nhấp để tải ảnh lên</div>
+            <AnhDaiDien
+              id={moi ? null : f.id}
+              onLayAnh={api.giaDinh.layAnh}
+              onTaiLen={api.giaDinh.taiAnhLen}
+              onXoa={api.giaDinh.xoaAnh}
+              nhan="ảnh"
+            />
           </div>
         </div>
       </div>

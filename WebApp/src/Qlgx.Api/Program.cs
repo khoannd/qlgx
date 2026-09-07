@@ -52,6 +52,8 @@ builder.Services.AddDbContext<QlgxDbContext>((sp, opt) =>
 builder.Services.AddScoped<SinhMaService>();
 builder.Services.AddScoped<GiaDinhService>();
 builder.Services.AddScoped<GiaoDanService>();
+// Anh dai dien (Task 1.2 VIEC-TIEP-THEO.md) — xem AnhDaiDienService.cs.
+builder.Services.AddScoped<AnhDaiDienService>();
 
 // Ha tang in an (VIEC-TIEP-THEO.md muc 1.1) — xem docs/superpowers/specs/man-hinh/in-an.md.
 // BoTrinhDuyet la Singleton CO CHU DICH: giu dung MOT trinh duyet Chromium headless (Playwright)

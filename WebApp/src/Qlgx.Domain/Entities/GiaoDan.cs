@@ -22,7 +22,19 @@ public class GiaoDan : ThucTheCoSo
     public string? DiaChi { get; set; }
     public string? DienThoai { get; set; }
     public string? Email { get; set; }
-    public string? AnhDaiDien { get; set; }
+    /// <summary>Ảnh đại diện (3x4) đã thu nhỏ + nén JPEG, lưu TRỰC TIẾP trong CSDL dưới dạng
+    /// nhị phân — quyết định lưu trữ ghi ở docs/superpowers/specs/man-hinh/can-review-sau.md
+    /// mục 36 (máy chủ chạy nhiều bản song song sau bộ cân bằng tải nên KHÔNG được ghi file lên
+    /// đĩa cục bộ; ở quy mô pilot vài nghìn giáo dân/ảnh 3x4 nhỏ, cột bytea đơn giản hơn hẳn
+    /// việc thêm object storage). Thay cho cột AnhDaiDien kiểu văn bản của bản Access gốc (lưu
+    /// ĐƯỜNG DẪN tệp cục bộ, xem GxGiaoDan.cs/frmGiaoDan.cs — không dùng được trên máy chủ tập
+    /// trung); dữ liệu Access cột này rỗng toàn bộ ở qlgx_thu nên không cần chuyển đổi tương
+    /// thích. Null = chưa có ảnh.</summary>
+    public byte[]? AnhDaiDienDuLieu { get; set; }
+    /// <summary>Luôn "image/jpeg" — mọi ảnh tải lên (JPEG/PNG/WebP) đều được chuẩn hoá về JPEG
+    /// khi lưu (xem AnhDaiDienService), lưu thành cột riêng thay vì hard-code ở nơi dùng để dễ
+    /// đổi định dạng chuẩn hoá về sau.</summary>
+    public string? AnhDaiDienLoaiNoiDung { get; set; }
     public string? HoTenCha { get; set; }
     public string? HoTenMe { get; set; }
     /// <summary>Liên kết tới MỘT giáo dân có sẵn khi Tên Cha/Mẹ được chọn qua picker thật (hạ

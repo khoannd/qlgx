@@ -49,6 +49,46 @@ public class GiaoDanInAnTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory
         res.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    /// <summary>Ảnh đại diện (Task 1.2 VIEC-TIEP-THEO.md) phải vào PDF khi giáo dân có ảnh —
+    /// so PDF có ảnh với PDF không ảnh, PDF có ảnh phải NẶNG HƠN đáng kể (ảnh nhúng base64
+    /// trong <c>&lt;img&gt;</c> — xem InAnService.KhoiAnhDaiDien) vì không thực tế để so khớp
+    /// nội dung PDF nhị phân theo pixel trong bài test.</summary>
+    [Fact]
+    public async Task Anh_dai_dien_duoc_nhung_vao_pdf_ly_lich_ca_nhan()
+    {
+        var idKhongAnh = await TaoGiaoDan(app.GiaoXuId, 9110, "Nguoi Khong Co Anh In");
+        var idCoAnh = await TaoGiaoDan(app.GiaoXuId, 9111, "Nguoi Co Anh In");
+        await using (var db = app.TaoContextThuan())
+        {
+            var g = db.GiaoDan.Single(x => x.Id == idCoAnh);
+            // Ảnh JPEG thật (không phải chuỗi giả) với nhiễu ngẫu nhiên từng điểm ảnh — cố ý
+            // KHÔNG dùng một màu đặc (nén JPEG một màu đặc chỉ còn vài trăm byte, không đủ tạo
+            // khác biệt kích thước PDF rõ ràng so với biến động font/metadata bình thường giữa
+            // hai tệp PDF). 120×160 đã đủ để chênh lệch vượt xa nhiễu đó.
+            using var bmp = new SkiaSharp.SKBitmap(120, 160);
+            var ngauNhien = new Random(42);
+            for (var x = 0; x < bmp.Width; x++)
+                for (var y = 0; y < bmp.Height; y++)
+                    bmp.SetPixel(x, y, new SkiaSharp.SKColor(
+                        (byte)ngauNhien.Next(256), (byte)ngauNhien.Next(256), (byte)ngauNhien.Next(256)));
+            using var anh = SkiaSharp.SKImage.FromBitmap(bmp);
+            using var duLieu = anh.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 90);
+            g.AnhDaiDienDuLieu = duLieu.ToArray();
+            g.AnhDaiDienLoaiNoiDung = "image/jpeg";
+            await db.SaveChangesAsync();
+        }
+
+        var client = app.CreateAuthClient();
+        var resKhongAnh = await client.GetAsync($"/api/giao-dan/{idKhongAnh}/in/ly-lich-ca-nhan");
+        var resCoAnh = await client.GetAsync($"/api/giao-dan/{idCoAnh}/in/ly-lich-ca-nhan");
+
+        resKhongAnh.StatusCode.Should().Be(HttpStatusCode.OK);
+        resCoAnh.StatusCode.Should().Be(HttpStatusCode.OK);
+        var bytesKhongAnh = await resKhongAnh.Content.ReadAsByteArrayAsync();
+        var bytesCoAnh = await resCoAnh.Content.ReadAsByteArrayAsync();
+        bytesCoAnh.Length.Should().BeGreaterThan(bytesKhongAnh.Length + 500);
+    }
+
     [Fact]
     public async Task Khong_in_duoc_giao_dan_cua_giao_xu_khac()
     {

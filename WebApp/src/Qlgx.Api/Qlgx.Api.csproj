@@ -9,6 +9,12 @@
          san qua Microsoft.NET.Sdk.Web nen khong can khai bao rieng. -->
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
     <PackageReference Include="Microsoft.Playwright" Version="1.55.0" />
+    <!-- Xử lý ảnh đại diện (Task 1.2 VIEC-TIEP-THEO.md): giải mã + kiểm chữ ký thật + thu nhỏ
+         ảnh tải lên trước khi lưu vào CSDL. SkiaSharp — giấy phép MIT (tự do), có gói native
+         cho Linux (image nền chạy Docker/Linux của Dockerfile là Debian glibc, không phải
+         Alpine). KHÔNG dùng System.Drawing.Common — gói đó không chạy trên Linux từ .NET 7. -->
+    <PackageReference Include="SkiaSharp" Version="3.119.0" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.0" />
   </ItemGroup>
 
   <PropertyGroup>

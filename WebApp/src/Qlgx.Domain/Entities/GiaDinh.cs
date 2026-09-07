@@ -16,7 +16,10 @@ public class GiaDinh : ThucTheCoSo
     public string? DiaChi { get; set; }
     public string? SoHoKhau { get; set; }
     public string? DienGiaDinh { get; set; }
-    public string? AnhDaiDien { get; set; }
+    /// <summary>Ảnh đại diện gia đình — cùng thiết kế lưu nhị phân trong CSDL với
+    /// GiaoDan.AnhDaiDienDuLieu (xem ghi chú ở đó và can-review-sau.md mục 36).</summary>
+    public byte[]? AnhDaiDienDuLieu { get; set; }
+    public string? AnhDaiDienLoaiNoiDung { get; set; }
     public bool DaXoa { get; set; }
     public bool DaChuyenXu { get; set; }
     public DateOnly? NgayChuyen { get; set; }

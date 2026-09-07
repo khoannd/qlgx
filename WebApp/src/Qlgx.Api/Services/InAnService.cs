@@ -27,6 +27,18 @@ public class InAnService(
 
     private static string Dau(bool coDau) => coDau ? "[x]" : "[  ]";
 
+    /// <summary>Khối HTML thô (KHÔNG qua HtmlEncoder — xem BoDoMauIn.Dung) cho ô ảnh đại diện
+    /// trên mẫu in (Task 1.2 VIEC-TIEP-THEO.md) — an toàn để chèn nguyên văn vì tự dựng hoàn
+    /// toàn ở đây bằng dữ liệu nhị phân + MIME đã được XuLyAnh kiểm/chuẩn hoá lúc lưu (không
+    /// đi qua chuỗi tự do người dùng nhập). Trả chuỗi RỖNG khi chưa có ảnh — mẫu KHÔNG hiện
+    /// khung ảnh trống, không phải ô vuông trống vô nghĩa trên giấy in.</summary>
+    private static string KhoiAnhDaiDien(byte[]? duLieu, string? loaiNoiDung)
+    {
+        if (duLieu is null || duLieu.Length == 0 || string.IsNullOrEmpty(loaiNoiDung)) return "";
+        var b64 = Convert.ToBase64String(duLieu);
+        return $"<div class=\"anh-dai-dien\"><img src=\"data:{loaiNoiDung};base64,{b64}\" alt=\"Ảnh đại diện\" /></div>";
+    }
+
     /// <summary>Nạp Giáo xứ hiện tại (theo claim đăng nhập — KHÔNG bao giờ nhận id giáo xứ nào
     /// khác) cùng Giáo hạt/Giáo phận của nó, dùng chung cho mọi mẫu in (header quốc hiệu/giáo
     /// xứ giống nhau ở mọi mẫu).</summary>
@@ -151,8 +163,12 @@ public class InAnService(
             ["NgayThangNamIn"] = DateTime.Now.ToString("dd/MM/yyyy"),
         };
 
+        var khoiHtml = new Dictionary<string, string?>
+        {
+            ["KhoiAnh"] = KhoiAnhDaiDien(g.AnhDaiDienDuLieu, g.AnhDaiDienLoaiNoiDung),
+        };
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
-        var html = mau.Dung(slug, "LyLichCaNhan", duLieu);
+        var html = mau.Dung(slug, "LyLichCaNhan", duLieu, khoiHtml);
         var pdf = await trinhDuyet.XuatPdfAsync(html, ct);
 
         return new KetQuaInAn(pdf, $"LyLichCaNhan_{g.MaGiaoDanCu}.pdf");
@@ -293,7 +309,11 @@ public class InAnService(
             ["GhiChuGiaDinh"] = giaDinh.GhiChu,
             ["NgayThangNamIn"] = DateTime.Now.ToString("dd/MM/yyyy"),
         };
-        var khoiHtml = new Dictionary<string, string?> { ["HangThanhVien"] = hangHtml.ToString() };
+        var khoiHtml = new Dictionary<string, string?>
+        {
+            ["HangThanhVien"] = hangHtml.ToString(),
+            ["KhoiAnh"] = KhoiAnhDaiDien(giaDinh.AnhDaiDienDuLieu, giaDinh.AnhDaiDienLoaiNoiDung),
+        };
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
         var html = mau.Dung(slug, "PhieuGiaDinh", duLieu, khoiHtml);

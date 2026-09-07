@@ -169,11 +169,13 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         var giaoXu = await ctx.GiaoXu.SingleAsync(x => x.Id == db.GiaoXuId);
         giaoXu.DiaChi.Should().Be("1 Cong Truong Cong Xa Paris");
 
-        // Cột mở rộng của GiaDinh (GhiChu, MaGiaDinhRieng, AnhDaiDien) phải có giá trị thật,
-        // không phải null hàng loạt — đây là bằng chứng công cụ chuyển đủ 17 cột.
+        // Cột mở rộng của GiaDinh (GhiChu, MaGiaDinhRieng) phải có giá trị thật, không phải
+        // null hàng loạt — đây là bằng chứng công cụ chuyển đủ 17 cột. AnhDaiDien (Access) CỐ
+        // Ý KHÔNG được chuyển sang cột nhị phân mới (cột cũ lưu đường dẫn tệp cục bộ, vô nghĩa
+        // trên máy chủ web — xem ChuyenDoiDuLieu.GhiGiaDinh và can-review-sau.md mục 36).
         gd.GhiChu.Should().Be("Gia dinh mau");
         gd.MaGiaDinhRieng.Should().Be("29000007");
-        gd.AnhDaiDien.Should().Be("anh-gd.jpg");
+        gd.AnhDaiDienDuLieu.Should().BeNull();
         gd.UpdatedAt.Should().Be(new DateTimeOffset(new DateTime(2026, 9, 4, 21, 10, 17), TimeSpan.Zero));
 
         // Cột mở rộng của GiaoDan phải có giá trị thật cho một giáo dân được điền đầy đủ.
@@ -188,7 +190,8 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         giaoDan.TrinhDoChuyenMon.Should().Be("Ky su");
         giaoDan.BietNgoaiNgu.Should().Be("Anh van");
         giaoDan.DaCoGiaDinh.Should().BeTrue();
-        giaoDan.AnhDaiDien.Should().Be("anh-gd-2.jpg");
+        // AnhDaiDien (Access) cùng lý do không chuyển như GiaDinh ở trên.
+        giaoDan.AnhDaiDienDuLieu.Should().BeNull();
         giaoDan.UpdatedAt.Should().Be(new DateTimeOffset(new DateTime(2026, 9, 4, 21, 10, 17), TimeSpan.Zero));
     }
 

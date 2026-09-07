@@ -3,6 +3,7 @@ import type {
   GiaoDanDetail as GiaoDanDetailDuLieu, GiaoDanTimKiem, GiaoHo, HoiDoanCuaGiaoDan,
   HoiDoanDanhMuc, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
 } from '../api/types'
+import { AnhDaiDien } from '../components/AnhDaiDien'
 import { GxDate } from '../components/GxDate'
 import { GxField, GxInline } from '../components/GxField'
 import { GxFormTabs } from '../components/GxFormTabs'
@@ -599,6 +600,12 @@ type Props = {
    * tự vô hiệu vì chưa có id để in. */
   onIn?: () => void
   dangIn?: boolean
+  /** Ảnh đại diện (VIEC-TIEP-THEO.md mục 1.2) — container truyền `api.giaoDan.layAnh`/
+   * `taiAnhLen`/`xoaAnh`. Không bắt buộc để các bài test dựng component này không cần mock
+   * fetch riêng cho ảnh (mặc định là no-op, ô ảnh tự vô hiệu khi `moi`/thiếu id). */
+  onLayAnh?: (id: string) => Promise<string | null>
+  onTaiAnhLen?: (id: string, tep: File) => Promise<void>
+  onXoaAnh?: (id: string) => Promise<void>
 }
 
 const rong = (): GiaoDanDetailDuLieu => ({
@@ -643,6 +650,7 @@ export function GiaoDanDetail({
   danhSachHoiDoan = [], dangTaiHoiDoan = false, onLuuHoiDoan, onThemHoiDoan,
   danhMucHoiDoan = [], danhMucGiaoHo = [], khoaBanNhap = null, tenTaiKhoan = null, banNhap = null,
   onIn, dangIn = false,
+  onLayAnh, onTaiAnhLen, onXoaAnh,
 }: Props) {
   // banNhap (nếu người dùng vừa bấm "Khôi phục" ở BanNhapBanner) đè lên dữ liệu gốc — xem chú
   // thích ở Props.banNhap. Container LUÔN đổi `key` khi truyền banNhap mới nên các state dưới
@@ -694,7 +702,13 @@ export function GiaoDanDetail({
         <div className="canhan-cols">
           <div>
             <div className="canhan-top">
-              <div className="photo-slot">Chưa có hình<br />Nhấp để tải ảnh lên</div>
+              <AnhDaiDien
+                id={moi ? null : p.id}
+                onLayAnh={onLayAnh ?? (async () => null)}
+                onTaiLen={onTaiAnhLen ?? (async () => {})}
+                onXoa={onXoaAnh ?? (async () => {})}
+                nhan="ảnh 3x4"
+              />
               <div className="canhan-top-fields">
                 <GxField label="Mã giáo dân" id="gd-ma">
                   <input id="gd-ma" type="text" value={moi ? '(tự sinh khi lưu)' : String(p.maGiaoDanCu)} disabled />
