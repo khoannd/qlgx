@@ -2,8 +2,13 @@
 
 Chốt ngày 2026-09-07, sau khi hoàn tất phần cài đặt giai đoạn 1 và ba đợt review độc lập.
 
-> **Cập nhật 2026-09-07 (chiều)**: đã làm xong **toàn bộ mức 1** và **mục 2.1**. Xem dấu
-> ✅ dưới đây. Test hiện tại: **222 backend + 229 front-end**, `npm run build` chạy được.
+> **Cập nhật 2026-09-07 (tối)**: đã làm xong **toàn bộ mức 1 và toàn bộ mức 2**. Xem dấu
+> ✅ dưới đây. Test hiện tại: **244 backend + 239 front-end**, `npm run build` chạy được.
+>
+> Cột mốc quan trọng nhất: **đã thử thật với giáo xứ thứ hai** — tạo giáo xứ mới, nhập dữ
+> liệu Access vào đó, đăng nhập bằng tài khoản của giáo xứ đó, xác nhận **không thấy dữ liệu
+> giáo xứ Vô Nhiễm**. Đây là lần đầu mô hình nhiều giáo xứ dùng chung máy chủ được kiểm chứng
+> bằng dữ liệu thật, không phải bằng test giả lập.
 >
 > **Cập nhật 2026-09-07 (tối)**: đã làm xong **mục 2.2** và **mục 2.3**. Test hiện tại:
 > **235 backend + 235 front-end**. Chứng minh bằng chạy thật với một giáo xứ thứ hai THẬT
@@ -82,7 +87,7 @@ duy nhất `(GiaoXuId, TenTaiKhoan)`, sau khi lọc luôn còn 0-1 tài khoản 
 cấu trúc dữ liệu chứ không bằng luật nghiệp vụ. Có test dựng hai giáo xứ trùng tên tài khoản,
 đã chứng minh đỏ trước khi sửa.
 
-### 2.2 Vai trò CSDL riêng cho RLS  ← ✅ ĐÃ XONG (2026-09-07)
+### 2.2 Vai trò CSDL riêng cho RLS  ← ✅ ĐÃ XONG  ← ✅ ĐÃ XONG (2026-09-07)
 
 `.env.example` đã tách `QLGX_APP_DB_USER` (bị RLS hạn chế) và `QLGX_ADMIN_DB_USER`
 (có `BYPASSRLS`), nhưng khi pilot một giáo xứ thì API đang dùng chung một vai trò.
@@ -93,7 +98,7 @@ hai vai trò tách biệt, xác nhận đăng nhập vẫn hoạt động (qua `
 ngày bị RLS đúng thiết kế (qua `qlgx_app`) — xem `TRIEN-KHAI.md` mục 5 (đã cập nhật) và
 `docs/superpowers/specs/man-hinh/can-review-sau.md` mục 37c.
 
-### 2.3 Quản lý giáo xứ theo giáo phận  ← ✅ ĐÃ XONG (2026-09-07)
+### 2.3 Quản lý giáo xứ theo giáo phận  ← ✅ ĐÃ XONG  ← ✅ ĐÃ XONG (2026-09-07)
 
 Phân cấp Giáo phận → Giáo hạt → Giáo xứ **đã có trong CSDL** và nối đúng dữ liệu thật
 (Phan Thiết → Đức Tánh → Vô Nhiễm), nhưng **chưa có màn hình quản lý**. Hiện phải thêm
@@ -107,10 +112,26 @@ và xác nhận KHÔNG thấy 2050 giáo dân của Vô Nhiễm — xem
 `docs/superpowers/specs/man-hinh/can-review-sau.md` mục 37d, ảnh ở
 `WebApp/anh-chup-kiem-thu/65`-`67`.
 
-### 2.4 Chức năng nhập dữ liệu cho quản trị viên  ← ✅ ĐÃ XONG (2026-09-07)
+### 2.4 Chức năng nhập dữ liệu cho quản trị viên  ← ✅ ĐÃ XONG  ← ✅ ĐÃ XONG (2026-09-07)
 
 Công cụ chuyển dữ liệu Access hiện chạy bằng dòng lệnh, cần người kỹ thuật. Quản trị viên
 cần tự nhập được file `.mdb` của giáo xứ mới qua giao diện.
+
+**✅ Đã làm (commit `8ebd4b2`)** — quy trình **hai bước**, vì máy chủ chạy Linux mà đọc `.mdb`
+cần driver ACE OLEDB chỉ có trên Windows (đã kiểm chứng: `Qlgx.Migration.csproj` là
+`net10.0-windows`, `Dockerfile` là image Linux):
+1. Quản trị viên chạy `Qlgx.Migration <file.mdb> --xuat-goi=goi.json.gz` trên **máy Windows**
+   của mình — rút dữ liệu ra gói JSON nén, dùng lại `DocAccess` đã có.
+2. Tải gói đó lên qua màn hình **"Nhập dữ liệu Access"** (`/api/quan-tri/nhap-du-lieu/*`,
+   chỉ Quản trị hệ thống). Máy chủ đọc thẳng từ luồng tải lên, **không ghi đĩa** (ràng buộc HA).
+   Có chạy thử đối chiếu trước, chặn khi giáo xứ đích đã có dữ liệu, chạy nền theo dõi tiến độ
+   qua bảng `NhapDuLieuJob` (không giữ trạng thái trong tiến trình).
+
+**Một lỗi rất nghiêm trọng đã được phát hiện và sửa trong lúc kiểm thử thật**: khoá ánh xạ ID
+cũ→mới (`BangAnhXaId`) **không phân theo giáo xứ**. Vô hại với công cụ dòng lệnh một giáo xứ,
+nhưng khi nhập giáo xứ thứ hai thì nó **âm thầm gán lại toàn bộ 2050 giáo dân / 40 gia đình /
+522 hôn phối / 6150 bí tích chi tiết của giáo xứ Vô Nhiễm sang giáo xứ mới**. Phát hiện bằng
+`psql`, đã sửa (thêm `giaoXuId` vào khoá), khôi phục dữ liệu và chạy lại kiểm chứng.
 
 **Đã xong theo kiến trúc hai bước** (máy chủ Linux không đọc được `.mdb`): quản trị viên chạy
 `Qlgx.Migration <file.mdb> --xuat-goi=goi.json.gz` tại máy Windows của mình để rút gói dữ liệu
