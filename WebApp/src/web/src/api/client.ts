@@ -2,6 +2,7 @@ import type {
   GiaDinhDetail, GiaDinhListItem, GiaoDanDetail, GiaoDanListItem, GiaoDanTimKiem, GiaoHo,
   HoiDoanCuaGiaoDan, HoiDoanDanhMuc, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
   TaiKhoanItem, DangNhapKetQua, GiaoXuLuaChon, SucKhoe,
+  GiaoPhan, GiaoHatQuanLy, GiaoXuQuanLy,
 } from './types'
 import { authStore } from './authStore'
 
@@ -287,6 +288,12 @@ export const api = {
     // Danh mục thật (Id + tên) — thay data/giaoHoTam.ts hard-code theo tên, xem
     // docs/superpowers/specs/man-hinh/can-review-sau.md mục 19.
     danhMuc: () => goi<GiaoHo[]>('/api/giao-ho'),
+    // Thêm/sửa — luôn trong phạm vi giáo xứ của người gọi (giaoXuId từ claim, không nhận từ
+    // đây), khác nhóm "quanTri" bên dưới vốn cố ý xuyên giáo xứ.
+    them: (than: { tenGiaoHo: string; giaoHoChaId?: string | null }) =>
+      goi<void>('/api/giao-ho', { method: 'POST', body: JSON.stringify(than) }),
+    sua: (id: string, than: { tenGiaoHo: string; giaoHoChaId?: string | null }) =>
+      goi<void>(`/api/giao-ho/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
   },
   timKiem: {
     // Dùng cho GxPicker thật (gõ để tìm Tên Cha/Mẹ, Người nam/nữ…) — giới hạn kết quả, KHÔNG
@@ -343,5 +350,42 @@ export const api = {
     capNhat: (id: string, than: unknown) =>
       goi<void>(`/api/tai-khoan/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
     xoa: (id: string) => goi<void>(`/api/tai-khoan/${id}`, { method: 'DELETE' }),
+  },
+  /** Màn hình "Quản lý giáo phận/giáo hạt/giáo xứ" (policy "QuanTriHeThong", LoaiTaiKhoan=9 —
+   * xem docs/superpowers/specs/man-hinh/quan-ly-giao-xu.md). CỐ Ý xuyên giáo xứ: chỉ tài
+   * khoản "Quản trị hệ thống" gọi được, quản trị viên thường của một giáo xứ nhận 403. */
+  quanTri: {
+    giaoPhan: {
+      danhSach: () => goi<GiaoPhan[]>('/api/quan-tri/giao-phan'),
+      tao: (than: { tenGiaoPhan: string; ghiChu: string | null }) =>
+        goi<void>('/api/quan-tri/giao-phan', { method: 'POST', body: JSON.stringify(than) }),
+      sua: (id: string, than: { tenGiaoPhan: string; ghiChu: string | null }) =>
+        goi<void>(`/api/quan-tri/giao-phan/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    },
+    giaoHat: {
+      danhSach: () => goi<GiaoHatQuanLy[]>('/api/quan-tri/giao-hat'),
+      tao: (than: { giaoPhanId: string; tenGiaoHat: string; ghiChu: string | null }) =>
+        goi<void>('/api/quan-tri/giao-hat', { method: 'POST', body: JSON.stringify(than) }),
+      sua: (id: string, than: { giaoPhanId: string; tenGiaoHat: string; ghiChu: string | null }) =>
+        goi<void>(`/api/quan-tri/giao-hat/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    },
+    giaoXu: {
+      danhSach: () => goi<GiaoXuQuanLy[]>('/api/quan-tri/giao-xu'),
+      tao: (than: {
+        giaoHatId: string; tenGiaoXu: string; diaChi: string | null
+        dienThoai: string | null; email: string | null; website: string | null; ghiChu: string | null
+      }) => goi<void>('/api/quan-tri/giao-xu', { method: 'POST', body: JSON.stringify(than) }),
+      sua: (id: string, than: {
+        giaoHatId: string; tenGiaoXu: string; diaChi: string | null
+        dienThoai: string | null; email: string | null; website: string | null; ghiChu: string | null
+      }) => goi<void>(`/api/quan-tri/giao-xu/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+      /** Tạo tài khoản quản trị ĐẦU TIÊN cho một giáo xứ khác — luôn LoaiTaiKhoan=0, giaoXuId
+       * lấy từ đường dẫn {id} (đường dẫn thứ tư được phép xuyên giáo xứ, xem spec mục 4). */
+      taoTaiKhoan: (giaoXuId: string, than: {
+        tenTaiKhoan: string; matKhau: string; hoTenNguoiDung: string
+        email: string | null; soDienThoai: string | null
+      }) => goi<{ id: string }>(`/api/quan-tri/giao-xu/${giaoXuId}/tai-khoan`,
+        { method: 'POST', body: JSON.stringify(than) }),
+    },
   },
 }

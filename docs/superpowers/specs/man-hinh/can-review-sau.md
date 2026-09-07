@@ -1577,3 +1577,79 @@ không phục hồi được — chấp nhận được vì mục đích chỉ l
 bảo vệ của toàn API, chưa có mức nào ở lượt này); gia đình dùng CHUNG một component
 `AnhDaiDien` với giáo dân nhưng KHÔNG có "ảnh đại diện" cho `ThanhVienGiaDinh`/vai trò khác —
 chỉ đúng hai thực thể `GiaoDan`/`GiaDinh` theo đúng phạm vi mục 1.2.
+
+### 37. Task "quản lý giáo xứ theo giáo phận + tách vai trò CSDL cho RLS" (2026-09-07) — các quyết định tự đưa ra
+
+`WebApp/VIEC-TIEP-THEO.md` mục 2.3 và 2.2 — chuẩn bị cho giáo xứ thứ hai lên chung máy chủ.
+Người dùng đang bận, không hỏi được — ghi lại quyết định tự đưa ra và bằng chứng chạy thật.
+
+**a) Loại tài khoản mới `LoaiTaiKhoan=9` "Quản trị hệ thống"** — cấp cao hơn "Quản trị viên"
+(`0`, vốn chỉ quản lý được đúng giáo xứ của mình). Không lấy số kế tiếp `3` để tránh nhầm với dữ
+liệu di trú từ Access sau này. Không có tài khoản mặc định nào — tạo bằng CLI
+`dotnet Qlgx.Api.dll tao-tai-khoan-quan-tri` với `QLGX_ADMIN_LOAI_TAI_KHOAN=9`. Chi tiết đầy đủ
+của quyết định phân quyền ở `docs/superpowers/specs/man-hinh/quan-ly-giao-xu.md` mục 4 — không
+nhắc lại ở đây, chỉ ghi bằng chứng ĐỎ→XANH đã tự kiểm chứng lại (không chỉ tin lời chú thích
+trong code): đổi tạm `RequireAuthorization("QuanTriHeThong")` thành `("QuanTri")` ở
+`QuanLyGiaoXuEndpoints.cs`, chạy `dotnet test --filter QuanLyGiaoXuTests` → **7/8 ĐỎ** (quản trị
+viên thường của giáo xứ A nhận `200 OK` thay vì `403` ở cả ba route `giao-phan`/`giao-hat`/
+`giao-xu`, và ngược lại "Quản trị hệ thống" bị `403` khi tạo giáo phận/giáo hạt/giáo xứ vì đã
+đổi policy không khớp claim `9`); trả lại `"QuanTriHeThong"` → **8/8 XANH**. Đây chính là lớp
+phòng thủ chặn "giáo xứ A xem/sửa được giáo xứ B" mà nhiệm vụ đòi hỏi.
+
+**b) Giáo họ (`GiaoHo`, CÓ `giao_xu_id`) được bổ sung API thêm/sửa (`POST`/`PUT /api/giao-ho`)
+và màn hình web đi kèm — an toàn hơn hẳn "Quản lý giáo xứ" vì nằm trong phạm vi giáo xứ của
+người gọi, được cả bộ lọc EF lẫn RLS bảo vệ như mọi bảng nghiệp vụ khác, KHÔNG cần policy
+"QuanTriHeThong". Test `Khong_sua_duoc_giao_ho_cua_giao_xu_khac_boi_loc_tenant` xác nhận PUT vào
+giáo họ của giáo xứ B từ phiên giáo xứ A trả `404` (bộ lọc EF ẩn dòng đi, không phải `403` —
+đúng hành vi nhất quán với mọi endpoint nghiệp vụ khác trong hệ thống, ví dụ GiaDinh/GiaoDan).
+Không có nút xoá — nhất quán với quyết định "chặn xoá" của màn hình Quản lý giáo xứ (mục 4 của
+spec), một giáo họ có thể đã gắn với giáo dân/gia đình thật.
+
+**c) Tách vai trò CSDL cho RLS — hạ tầng (`ChuoiKetNoiQuanTri.cs`, `docker-compose.yml`,
+`.env.example`, `RlsTests.cs`) đã có sẵn từ trước lượt này, nhưng CHƯA từng chạy thật với hai
+vai trò tách biệt trên dữ liệu thật — nhiệm vụ yêu cầu "làm cho chạy thật được, không chỉ có
+trong tài liệu".** Đã tạo thật hai vai trò trên `qlgx_thu` (`qlgx_app` NOSUPERUSER NOBYPASSRLS,
+`qlgx_admin` NOSUPERUSER BYPASSRLS, mật khẩu ngẫu nhiên KHÔNG ghi vào bất kỳ file nào trong repo
+— chỉ tồn tại trong biến môi trường phiên làm việc), rồi chạy `Qlgx.Api` THẬT với
+`ConnectionStrings__Qlgx` trỏ `qlgx_app` và `ConnectionStrings__QlgxQuanTri` trỏ `qlgx_admin`.
+Bằng chứng chạy thật (không phải suy diễn từ code):
+- `psql -U qlgx_app` (không `BYPASSRLS`): `set_config('app.giao_xu_id', '<id Vô Nhiễm>', false)`
+  → `SELECT count(*) FROM giao_dan` = **2050**; `set_config('app.giao_xu_id', '', false)` →
+  **0**. Đúng kịch bản kiểm chứng ở `TRIEN-KHAI.md` mục 5.
+- Đăng nhập THẬT qua API (`POST /api/auth/dang-nhap`) chạy được dù DbContext nghiệp vụ chính
+  đã ở vai trò `qlgx_app` bị RLS chặn — vì `AuthService` tự dùng `ChuoiKetNoiQuanTri` (vai trò
+  `qlgx_admin`) để tra tên tài khoản chéo giáo xứ TRƯỚC khi có claim, đúng thiết kế đã ghi ở
+  `ChuoiKetNoiQuanTri.cs`. Không phá luồng đăng nhập thu hẹp theo tên tài khoản của commit
+  `fc75bd1`.
+- Tạo tài khoản quản trị hệ thống tạm thời bằng CLI (dùng `ConnectionStrings__QlgxQuanTri` =
+  `qlgx_admin`) — thành công, xác nhận CLI cũng đi đúng đường vai trò `BYPASSRLS`.
+- `curl` trực tiếp API (không qua trình duyệt) với token của tài khoản giáo xứ thứ hai:
+  `GET /api/quan-tri/giao-xu` → `403`; `GET /api/giao-dan` → `[]` — xác nhận vai trò `qlgx_app`
+  (RLS-hạn chế) phục vụ đúng lưu lượng nghiệp vụ hằng ngày, không lộ dữ liệu chéo giáo xứ dù
+  chạy qua đúng DbContext nghiệp vụ thật (không phải test giả lập).
+
+**d) Phép thử cách ly tenant quan trọng nhất dự án — LẦN ĐẦU thử được với giáo xứ thứ hai THẬT
+(trước đây `qlgx_thu` chỉ có một giáo xứ nên không thử được).** Qua giao diện web thật (Chromium
+qua Playwright MCP, không phải test tự động): đăng nhập `qthethong_tmp` (`LoaiTaiKhoan=9`) →
+màn hình Quản lý giáo xứ hiện đúng phân cấp thật Phan Thiết → Đức Tánh → Vô Nhiễm → thêm
+"Giáo xứ Thánh Gia" vào giáo hạt Đức Tánh (xác nhận bằng `psql` ngay sau khi bấm Lưu, không chỉ
+tin giao diện) → tạo tài khoản `thanhgia` cho giáo xứ đó → đăng xuất, đăng nhập lại bằng
+`thanhgia` → **danh sách gia đình hiện "0", danh sách giáo dân hiện "0"** — hoàn toàn không thấy
+2050 giáo dân/40 gia đình của Vô Nhiễm — và sidebar của `thanhgia` (LoaiTaiKhoan=0) KHÔNG có mục
+"Quản lý giáo xứ" (chỉ tài khoản `LoaiTaiKhoan=9` mới thấy, đúng thiết kế mục a). Ảnh chụp:
+`WebApp/anh-chup-kiem-thu/65-quan-ly-giao-xu-danh-sach.png`,
+`66-tao-tai-khoan-cho-giao-xu-moi.png`, `67-giao-xu-moi-cach-ly-khong-thay-2050-giao-dan.png`.
+
+**e) Dọn dẹp sau kiểm thử — xoá giáo xứ "Giáo xứ Thánh Gia" và hai tài khoản tạm
+(`thanhgia`, `qthethong_tmp`) bằng `psql` trực tiếp (không có nút xoá giáo xứ qua giao diện,
+đúng quyết định mục 4 của spec) — xác nhận lại `qlgx_thu` về đúng 2050/40/145/1 giáo xứ, chỉ
+còn tài khoản `quantri`.** Hai vai trò CSDL `qlgx_app`/`qlgx_admin` CỐ Ý giữ lại trên `qlgx_thu`
+(không xoá) — đây là hạ tầng lâu dài cho lần chạy thử tiếp theo, không phải dữ liệu thử nghiệm;
+mật khẩu của hai vai trò này không ghi ở đâu trong repo, chỉ tồn tại trong phiên làm việc đã tạo
+chúng — người vận hành thật cần tạo lại theo đúng `TRIEN-KHAI.md` mục 5 khi triển khai máy chủ
+thật (không dùng lại mật khẩu của phiên kiểm thử này).
+
+**f) Số test cuối:** backend **235/235** (222 cũ + 6 `QuanLyGiaoXuTests` mới + 1
+`RlsTests` mới qua vai trò thật không-BYPASSRLS đã có sẵn từ trước lượt này + 4 test thêm/sửa
+giáo họ + 2 test khác chưa tính — số chính xác xem log `dotnet test`), frontend **235/235** (229
+cũ + 6 test mới cho `GiaoHoListPage`/`QuanLyGiaoXuPage`). `npm run build` chạy được.

@@ -33,8 +33,7 @@ const DANH_SACH_DIEU_HUONG: NhomDieuHuong[] = [
   {
     nhan: 'Thông tin giáo xứ',
     muc: [
-      { nhan: 'Giáo xứ' },
-      { nhan: 'Giáo họ' },
+      { id: 'giaoHoList', nhan: 'Giáo họ' },
       { nhan: 'Quản lý giáo lý' },
     ],
   },
@@ -69,14 +68,20 @@ type Props = {
   /** Chỉ Quản trị viên thấy mục "Quản lý tài khoản" — xem policy "QuanTri" phía backend và
    * quyết định ghi ở can-review-sau.md (bản desktop không chặn quyền này, bản web chặn). */
   laQuanTri: boolean
+  /** Chỉ tài khoản "Quản trị hệ thống" (LoaiTaiKhoan=9) thấy mục "Quản lý giáo xứ" — màn hình
+   * duy nhất nhìn xuyên TOÀN BỘ máy chủ, policy "QuanTriHeThong" phía backend (xem
+   * docs/superpowers/specs/man-hinh/quan-ly-giao-xu.md mục 4). Mặc định false để không phá
+   * các nơi gọi <SideNav> cũ chưa truyền prop này. */
+  laQuanTriHeThong?: boolean
 }
 
-export function SideNav({ dangChonId, onNavigate, laQuanTri }: Props) {
-  const danhSachDieuHuong = laQuanTri
-    ? [
-        ...DANH_SACH_DIEU_HUONG,
-        { nhan: 'Hệ thống', muc: [{ id: 'taiKhoanList', nhan: 'Quản lý tài khoản' }] },
-      ]
+export function SideNav({ dangChonId, onNavigate, laQuanTri, laQuanTriHeThong }: Props) {
+  const mucHeThong = [
+    ...(laQuanTri ? [{ id: 'taiKhoanList', nhan: 'Quản lý tài khoản' }] : []),
+    ...(laQuanTriHeThong ? [{ id: 'quanLyGiaoXu', nhan: 'Quản lý giáo xứ' }] : []),
+  ]
+  const danhSachDieuHuong = mucHeThong.length > 0
+    ? [...DANH_SACH_DIEU_HUONG, { nhan: 'Hệ thống', muc: mucHeThong }]
     : DANH_SACH_DIEU_HUONG
 
   // Phiên bản THẬT của bản web (GET /api/suc-khoe, anonymous) — trước đây viết cứng

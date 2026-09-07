@@ -124,7 +124,18 @@ SELECT count(*) FROM giao_dan;   -- phải ra 0 — KHÔNG đặt tham số = kh
 
 Nếu dòng thứ hai KHÔNG ra 0, dừng lại và kiểm tra lại vai trò/chính sách — đừng đưa giáo xứ
 thứ hai lên khi RLS chưa đúng. Bộ test `Qlgx.Data.Tests/RlsTests.cs` (chạy bằng
-`dotnet test`) tự động hoá đúng phép thử này bằng kết nối Npgsql thô, không qua EF Core.
+`dotnet test`) tự động hoá đúng phép thử này bằng kết nối Npgsql thô, không qua EF Core, VÀ qua
+đúng `QlgxDbContext` nghiệp vụ thật (test
+`QlgxDbContext_that_qua_vai_tro_khong_bypassrls_van_cach_ly_dung_giao_xu`).
+
+**Đã chạy thật một lần** (2026-09-07, database `qlgx_thu`, xem
+`docs/superpowers/specs/man-hinh/can-review-sau.md` mục 37c): tạo hai vai trò `qlgx_app`/
+`qlgx_admin` thật, chạy `Qlgx.Api` với `ConnectionStrings__Qlgx` trỏ `qlgx_app` và
+`ConnectionStrings__QlgxQuanTri` trỏ `qlgx_admin`, xác nhận đăng nhập vẫn hoạt động (đi qua
+`qlgx_admin`), nghiệp vụ hằng ngày (giáo dân/gia đình) đi qua `qlgx_app` bị RLS đúng như thiết
+kế, và một giáo xứ thứ hai tạo qua màn hình "Quản lý giáo xứ" (mục 9) hoàn toàn không thấy dữ
+liệu của giáo xứ thứ nhất. Mật khẩu hai vai trò dùng cho lần chạy thử này KHÔNG được giữ lại —
+người triển khai thật tạo mật khẩu MỚI theo đúng các bước ở mục này.
 
 ## 6. Các bước triển khai lần đầu
 
@@ -171,6 +182,9 @@ QLGX_ADMIN_TEN_TAI_KHOAN=<ten dang nhap>
 QLGX_ADMIN_MAT_KHAU=<mat khau, it nhat 8 ky tu>
 QLGX_ADMIN_HO_TEN=<ho ten hien thi>
 QLGX_ADMIN_GIAO_XU_TEN=<ten giao xu — phai da co san trong CSDL, xem muc 9>
+QLGX_ADMIN_LOAI_TAI_KHOAN=<tuy chon, mac dinh "0". Dat "9" de tao tai khoan "Quan tri he thong"
+                            — chi tai khoan nay moi vao duoc man hinh "Quan ly giao xu" xuyen
+                            toan may chu (xem muc 9). Chi cap cho 1-2 nguoi van hanh trung tam.>
 ```
 
 Ví dụ đầy đủ:
@@ -186,8 +200,16 @@ docker compose exec \
 
 ## 9. Thêm một giáo xứ mới
 
-Giai đoạn 1 **chưa có** màn hình quản trị giáo xứ trên web — thêm giáo xứ bằng cách chèn thẳng
-một dòng vào bảng `giao_xu`:
+**Cách khuyến nghị — màn hình web "Quản lý giáo xứ"** (từ 2026-09-07, xem
+`docs/superpowers/specs/man-hinh/quan-ly-giao-xu.md`): đăng nhập bằng một tài khoản
+`LoaiTaiKhoan=9` ("Quản trị hệ thống" — mục 8 dưới đây, thêm `QLGX_ADMIN_LOAI_TAI_KHOAN=9`), mở
+mục "Quản lý giáo xứ" ở thanh bên, thêm Giáo phận/Giáo hạt (nếu chưa có) rồi thêm Giáo xứ, sau
+đó bấm "Tạo tài khoản quản trị" ngay trên dòng giáo xứ vừa thêm — không cần chạm `psql`/CLI
+nào cho bước này nữa. Màn hình này CỐ Ý xuyên giáo xứ (policy "QuanTriHeThong") — chỉ cấp
+`LoaiTaiKhoan=9` cho 1-2 người vận hành trung tâm, KHÔNG cấp cho quản trị viên của từng giáo xứ.
+
+**Cách dự phòng — chèn thẳng CSDL** (khi chưa có tài khoản `LoaiTaiKhoan=9` nào, ví dụ lần
+triển khai đầu tiên):
 
 ```bash
 docker compose exec postgres psql -U qlgx_admin -d ${POSTGRES_DB:-qlgx} -c \

@@ -21,6 +21,9 @@ const TEN_LOAI_TAI_KHOAN: Record<number, string> = {
   0: 'Quản trị viên',
   1: 'Người nhập 1',
   2: 'Người nhập 2',
+  // Xem docs/superpowers/specs/man-hinh/quan-ly-giao-xu.md muc 4 — cap cao hon "Quan tri vien",
+  // khong lay so ke tiep 3 de tranh nham voi du lieu di tru tu Access sau nay.
+  9: 'Quản trị hệ thống',
 }
 
 /** Hai chữ cái đầu để hiện trong avatar tròn — giống "VP" cũ nhưng suy từ tên thật thay vì
@@ -42,6 +45,7 @@ export function AppShell({ dangChonNav, onNavigate, children, nguoiDung }: Props
   const { dangXuat } = useAuth()
   const tenLoai = nguoiDung.loaiTaiKhoan !== null ? TEN_LOAI_TAI_KHOAN[nguoiDung.loaiTaiKhoan] : undefined
   const laQuanTri = nguoiDung.loaiTaiKhoan === 0
+  const laQuanTriHeThong = nguoiDung.loaiTaiKhoan === 9
 
   // Ba menu "Hệ thống"/"Công cụ"/"Trợ giúp" chép từ bản mẫu tĩnh (qlgx-prototype.html) —
   // phần lớn mục bên trong vẫn là chỗ giữ chỗ (task sau), NHƯNG "Đăng xuất" trong menu "Hệ
@@ -136,7 +140,7 @@ export function AppShell({ dangChonNav, onNavigate, children, nguoiDung }: Props
       </header>
 
       <div className="body">
-        <SideNav dangChonId={dangChonNav} onNavigate={onNavigate} laQuanTri={laQuanTri} />
+        <SideNav dangChonId={dangChonNav} onNavigate={onNavigate} laQuanTri={laQuanTri} laQuanTriHeThong={laQuanTriHeThong} />
 
         <main className="work glass">
           {children}

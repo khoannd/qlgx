@@ -18,6 +18,11 @@ namespace Qlgx.Api;
 ///   QLGX_ADMIN_HO_TEN          — họ tên hiển thị (bắt buộc)
 ///   QLGX_ADMIN_GIAO_XU_ID      — GUID giáo xứ (một trong hai, ưu tiên nếu có cả hai)
 ///   QLGX_ADMIN_GIAO_XU_TEN     — tên giáo xứ, dùng để tra Id nếu không có GIAO_XU_ID
+///   QLGX_ADMIN_LOAI_TAI_KHOAN  — tuỳ chọn, mặc định "0" (Quản trị viên giáo xứ). Đặt "9" để
+///                                 tạo tài khoản "Quản trị hệ thống" (policy "QuanTriHeThong",
+///                                 xem docs/superpowers/specs/man-hinh/quan-ly-giao-xu.md mục
+///                                 4) — CHỈ dùng cho 1-2 người vận hành trung tâm, KHÔNG cấp
+///                                 cho quản trị viên của từng giáo xứ.
 /// </summary>
 public static class TaoTaiKhoanQuanTri
 {
@@ -32,6 +37,7 @@ public static class TaoTaiKhoanQuanTri
         var hoTen = DocBienBatBuoc("QLGX_ADMIN_HO_TEN");
         if (matKhau.Length < 8)
             throw new InvalidOperationException("QLGX_ADMIN_MAT_KHAU phai co it nhat 8 ky tu.");
+        var loaiTaiKhoan = int.Parse(Environment.GetEnvironmentVariable("QLGX_ADMIN_LOAI_TAI_KHOAN") ?? "0");
 
         var giaoXuIdChuoi = Environment.GetEnvironmentVariable("QLGX_ADMIN_GIAO_XU_ID");
         var giaoXuTen = Environment.GetEnvironmentVariable("QLGX_ADMIN_GIAO_XU_TEN");
@@ -70,12 +76,12 @@ public static class TaoTaiKhoanQuanTri
             GiaoXuId = giaoXuId,
             TenTaiKhoan = tenTaiKhoan,
             HoTenNguoiDung = hoTen,
-            LoaiTaiKhoan = 0, // Quan tri vien
+            LoaiTaiKhoan = loaiTaiKhoan,
         };
         taiKhoan.MatKhauBam = new PasswordHasher<TaiKhoan>().HashPassword(taiKhoan, matKhau);
         db.TaiKhoan.Add(taiKhoan);
         await db.SaveChangesAsync();
 
-        Console.WriteLine($"Da tao tai khoan quan tri '{tenTaiKhoan}' cho giao xu {giaoXuId}.");
+        Console.WriteLine($"Da tao tai khoan (LoaiTaiKhoan={loaiTaiKhoan}) '{tenTaiKhoan}' cho giao xu {giaoXuId}.");
     }
 }

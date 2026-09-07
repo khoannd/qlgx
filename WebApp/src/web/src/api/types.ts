@@ -305,3 +305,36 @@ export type TaiKhoanItem = {
   tenLoai: string | null
   rowVersion: number
 }
+
+// --- Màn hình "Quản lý giáo phận/giáo hạt/giáo xứ" (policy "QuanTriHeThong", xem
+// docs/superpowers/specs/man-hinh/quan-ly-giao-xu.md) — CỐ Ý xuyên giáo xứ, khác mọi type
+// khác ở trên vốn luôn nằm trong phạm vi giáo xứ của người gọi. ---
+
+/** Ánh xạ 1-1 với GiaoPhanDto. */
+export type GiaoPhan = { id: string; tenGiaoPhan: string; ghiChu: string | null }
+
+/** Ánh xạ 1-1 với GiaoHatDto. */
+export type GiaoHatQuanLy = {
+  id: string
+  giaoPhanId: string
+  tenGiaoPhan: string
+  tenGiaoHat: string
+  ghiChu: string | null
+}
+
+/** Ánh xạ 1-1 với GiaoXuDto. `coTrungTen` chỉ là cảnh báo (không chặn) khi trùng tên với giáo
+ * xứ khác đã có — xem spec mục 4. `soTaiKhoan` cho biết giáo xứ đã có quản trị viên hay chưa. */
+export type GiaoXuQuanLy = {
+  id: string
+  giaoHatId: string | null
+  tenGiaoHat: string | null
+  tenGiaoPhan: string | null
+  tenGiaoXu: string
+  diaChi: string | null
+  dienThoai: string | null
+  email: string | null
+  website: string | null
+  ghiChu: string | null
+  coTrungTen: boolean
+  soTaiKhoan: number
+}

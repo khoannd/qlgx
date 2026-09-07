@@ -4,6 +4,11 @@ Chốt ngày 2026-09-07, sau khi hoàn tất phần cài đặt giai đoạn 1 v
 
 > **Cập nhật 2026-09-07 (chiều)**: đã làm xong **toàn bộ mức 1** và **mục 2.1**. Xem dấu
 > ✅ dưới đây. Test hiện tại: **222 backend + 229 front-end**, `npm run build` chạy được.
+>
+> **Cập nhật 2026-09-07 (tối)**: đã làm xong **mục 2.2** và **mục 2.3**. Test hiện tại:
+> **235 backend + 235 front-end**. Chứng minh bằng chạy thật với một giáo xứ thứ hai THẬT
+> (`Giáo xứ Thánh Gia`) — xem `docs/superpowers/specs/man-hinh/can-review-sau.md` mục 37 và
+> `.superpowers/sdd/2026-09-06-qlgx-web-phase-1/task-quan-ly-giao-xu-report.md`.
 
 Xếp theo thứ tự nên làm. Lý do xếp hạng ghi ngay dưới mỗi mục — đừng đảo thứ tự nếu chưa
 đọc lý do.
@@ -77,17 +82,30 @@ duy nhất `(GiaoXuId, TenTaiKhoan)`, sau khi lọc luôn còn 0-1 tài khoản 
 cấu trúc dữ liệu chứ không bằng luật nghiệp vụ. Có test dựng hai giáo xứ trùng tên tài khoản,
 đã chứng minh đỏ trước khi sửa.
 
-### 2.2 Vai trò CSDL riêng cho RLS
+### 2.2 Vai trò CSDL riêng cho RLS  ← ✅ ĐÃ XONG (2026-09-07)
 
 `.env.example` đã tách `QLGX_APP_DB_USER` (bị RLS hạn chế) và `QLGX_ADMIN_DB_USER`
 (có `BYPASSRLS`), nhưng khi pilot một giáo xứ thì API đang dùng chung một vai trò.
 **Phải tách thật** trước khi có giáo xứ thứ hai — xem `WebApp/TRIEN-KHAI.md`.
 
-### 2.3 Quản lý giáo xứ theo giáo phận
+**Đã chạy thật**: tạo hai vai trò `qlgx_app`/`qlgx_admin` trên `qlgx_thu`, chạy `Qlgx.Api` với
+hai vai trò tách biệt, xác nhận đăng nhập vẫn hoạt động (qua `qlgx_admin`) và nghiệp vụ hằng
+ngày bị RLS đúng thiết kế (qua `qlgx_app`) — xem `TRIEN-KHAI.md` mục 5 (đã cập nhật) và
+`docs/superpowers/specs/man-hinh/can-review-sau.md` mục 37c.
+
+### 2.3 Quản lý giáo xứ theo giáo phận  ← ✅ ĐÃ XONG (2026-09-07)
 
 Phân cấp Giáo phận → Giáo hạt → Giáo xứ **đã có trong CSDL** và nối đúng dữ liệu thật
 (Phan Thiết → Đức Tánh → Vô Nhiễm), nhưng **chưa có màn hình quản lý**. Hiện phải thêm
 giáo xứ bằng cách chèn thẳng vào CSDL.
+
+**Đã có màn hình** (`docs/superpowers/specs/man-hinh/quan-ly-giao-xu.md`) — chỉ tài khoản
+`LoaiTaiKhoan=9` "Quản trị hệ thống" mới vào được (policy "QuanTriHeThong", lớp phòng thủ DUY
+NHẤT vì `GiaoPhan`/`GiaoHat`/`GiaoXu` không có `giao_xu_id` nên không có RLS). Đã tạo thật một
+giáo xứ thứ hai ("Giáo xứ Thánh Gia") qua giao diện, tạo tài khoản cho giáo xứ đó, đăng nhập lại
+và xác nhận KHÔNG thấy 2050 giáo dân của Vô Nhiễm — xem
+`docs/superpowers/specs/man-hinh/can-review-sau.md` mục 37d, ảnh ở
+`WebApp/anh-chup-kiem-thu/65`-`67`.
 
 ### 2.4 Chức năng nhập dữ liệu cho quản trị viên
 

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
+using Qlgx.Api.Services;
 using Qlgx.Data;
 
 namespace Qlgx.Api.Endpoints;
@@ -19,5 +20,13 @@ public static class GiaoHoEndpoints
                 .OrderBy(h => h.MaGiaoHoCu)
                 .Select(h => new GiaoHoDto(h.Id, h.MaGiaoHoCu, h.TenGiaoHo, h.GiaoHoChaId))
                 .ToListAsync(ct))).RequireAuthorization();
+
+        app.MapPost("/api/giao-ho", async (GiaoHoService dv, TaoGiaoHoRequest yc, CancellationToken ct) =>
+            Results.Created($"/api/giao-ho/{await dv.Them(yc, ct)}", (object?)null)).RequireAuthorization();
+
+        app.MapPut("/api/giao-ho/{id:guid}", async (GiaoHoService dv, Guid id,
+            CapNhatGiaoHoRequest yc, CancellationToken ct) =>
+            await dv.Sua(id, yc, ct) == KetQuaGiaoHo.KhongTimThay
+                ? Results.NotFound() : Results.Ok()).RequireAuthorization();
     }
 }

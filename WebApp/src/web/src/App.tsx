@@ -7,6 +7,8 @@ import { GiaDinhDetailPage } from './screens/GiaDinhDetailPage'
 import { GiaoDanListPage } from './screens/GiaoDanListPage'
 import { GiaoDanDetailPage } from './screens/GiaoDanDetailPage'
 import { TaiKhoanListPage } from './screens/TaiKhoanListPage'
+import { GiaoHoListPage } from './screens/GiaoHoListPage'
+import { QuanLyGiaoXuPage } from './screens/QuanLyGiaoXuPage'
 import { LoginPage } from './screens/LoginPage'
 import { useAuth } from './api/AuthContext'
 import { TrangThaiMangBanner } from './components/TrangThaiMangBanner'
@@ -93,6 +95,14 @@ function App() {
     mo({ id: 'taiKhoanList', tieuDe: 'Quản lý tài khoản', noiDung: <TaiKhoanListPage /> })
   }
 
+  function moGiaoHoList() {
+    mo({ id: 'giaoHoList', tieuDe: 'Giáo họ', noiDung: <GiaoHoListPage /> })
+  }
+
+  function moQuanLyGiaoXu() {
+    mo({ id: 'quanLyGiaoXu', tieuDe: 'Quản lý giáo xứ', noiDung: <QuanLyGiaoXuPage /> })
+  }
+
   // Khởi động giống frmMain: mở "Tổng quan" (không đóng được), rồi mở và chọn
   // "Danh sách gia đình" — xem cuối script của bản mẫu. CHỈ chạy sau khi đã đăng nhập —
   // gọi API trước khi có token chỉ để bị 401 rồi tự đăng xuất lại, vô ích.
@@ -109,6 +119,8 @@ function App() {
     if (id === 'giaDinhList') moDanhSachGiaDinh()
     else if (id === 'giaoDanList') moDanhSachGiaoDan()
     else if (id === 'taiKhoanList') moQuanLyTaiKhoan()
+    else if (id === 'giaoHoList') moGiaoHoList()
+    else if (id === 'quanLyGiaoXu') moQuanLyGiaoXu()
   }
 
   // Đang kiểm tra token cũ (tải lại trang) — không hiện gì để tránh giật từ màn hình đăng

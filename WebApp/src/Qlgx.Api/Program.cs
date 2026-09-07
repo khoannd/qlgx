@@ -25,6 +25,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<TaiKhoanService>();
+builder.Services.AddScoped<QuanLyGiaoXuService>();
+builder.Services.AddScoped<GiaoHoService>();
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opt =>
@@ -33,6 +35,11 @@ builder.Services.AddAuthorization(opt =>
 {
     // Chi Quan tri vien (LoaiTaiKhoan=0) duoc quan ly tai khoan — xem TaiKhoanEndpoints.cs.
     opt.AddPolicy("QuanTri", p => p.RequireClaim(ClaimsQlgx.LoaiTaiKhoan, "0"));
+    // Cap cao hon "QuanTri" — xem docs/superpowers/specs/man-hinh/quan-ly-giao-xu.md muc 4.
+    // GiaoPhan/GiaoHat/GiaoXu khong co giao_xu_id nen KHONG co RLS bao ve; policy nay la lop
+    // phong thu DUY NHAT chan Quan tri vien mot giao xu xem/sua giao xu khac. LoaiTaiKhoan=9
+    // (khong lay so ke tiep 3) de tranh nham voi du lieu di tru tu Access sau nay.
+    opt.AddPolicy("QuanTriHeThong", p => p.RequireClaim(ClaimsQlgx.LoaiTaiKhoan, "9"));
 });
 
 // Claims-based: GiaoXuId cua phien LUON lay tu claim cua nguoi dang nhap, khong bao gio tu
@@ -138,6 +145,7 @@ app.MapGiaDinh();
 app.MapGiaoDan();
 app.MapGiaoHo();
 app.MapTaiKhoan();
+app.MapQuanLyGiaoXu();
 
 // Fallback SPA: moi GET khong khop route API/tep tinh nao o tren tra ve index.html de React
 // Router tu xu ly duong dan phia trinh duyet. Loai tru "/api" bang rang buoc regex phu dinh de

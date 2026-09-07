@@ -285,6 +285,36 @@ Database `qlgx_thu` (dùng để kiểm thử thật Task 14) hiện có sẵn m
 không ghi ở đây; ai cần biết thì hỏi trực tiếp, hoặc dùng lệnh trên để tạo một tài khoản quản
 trị khác.
 
+## Task 18 — Quản lý giáo xứ theo giáo phận + tách vai trò CSDL cho RLS (2026-09-07)
+
+`WebApp/VIEC-TIEP-THEO.md` mục 2.3 và 2.2 — chuẩn bị cho giáo xứ thứ hai lên chung máy chủ.
+
+- **Màn hình "Quản lý giáo phận/giáo hạt/giáo xứ"** (`/api/quan-tri/*`,
+  `docs/superpowers/specs/man-hinh/quan-ly-giao-xu.md`) — danh sách + thêm + sửa ba cấp, xuyên
+  TOÀN BỘ máy chủ, chỉ tài khoản mới `LoaiTaiKhoan=9` "Quản trị hệ thống" (policy
+  "QuanTriHeThong") mới vào được — lớp phòng thủ DUY NHẤT vì `GiaoPhan`/`GiaoHat`/`GiaoXu`
+  KHÔNG có `giao_xu_id` nên không có RLS bảo vệ. Không có nút xoá ở cả ba cấp. Kèm nút "Tạo tài
+  khoản quản trị" ngay trên dòng giáo xứ (đường dẫn thứ tư được phép đọc/ghi chéo giáo xứ, cùng
+  nhóm với đăng nhập/CLI tạo tài khoản/công cụ chuyển dữ liệu).
+- **Giáo họ** (có `giao_xu_id`, an toàn hơn) được thêm API + màn hình thêm/sửa, nối vào mục
+  "Giáo họ" sẵn có ở thanh bên.
+- **Row-Level Security chạy thật với hai vai trò CSDL tách biệt** (`qlgx_app` không
+  `BYPASSRLS`, `qlgx_admin` có `BYPASSRLS`) — hạ tầng đã có từ trước (docker-compose.yml,
+  `.env.example`, `ChuoiKetNoiQuanTri.cs`) nhưng CHƯA từng chạy thật; đã tạo hai vai trò thật
+  trên `qlgx_thu`, chạy `Qlgx.Api` với hai vai trò tách biệt, xác nhận đăng nhập/nghiệp vụ đều
+  đúng thiết kế (xem `WebApp/TRIEN-KHAI.md` mục 5).
+- **Phép thử cách ly tenant với giáo xứ thứ hai THẬT** — lần đầu thử được (trước đây `qlgx_thu`
+  chỉ có một giáo xứ): tạo "Giáo xứ Thánh Gia" và tài khoản `thanhgia` qua giao diện, đăng nhập
+  lại bằng tài khoản đó, xác nhận KHÔNG thấy 2050 giáo dân/40 gia đình của Vô Nhiễm. Ảnh ở
+  `WebApp/anh-chup-kiem-thu/65`-`67`. Sau đó dọn sạch, `qlgx_thu` về lại đúng 2050/40/145/1
+  giáo xứ, chỉ còn tài khoản `quantri`.
+- Quyết định chi tiết và bằng chứng ĐỎ→XANH của test bảo mật:
+  `docs/superpowers/specs/man-hinh/can-review-sau.md` mục 37. Test: **235 backend + 235
+  front-end**, `npm run build` chạy được.
+- **Còn nợ**: chưa có màn hình "nhập dữ liệu Access qua giao diện" (mục 2.4
+  `VIEC-TIEP-THEO.md`, khác nhiệm vụ này) — vẫn phải dùng `Qlgx.Migration` bằng dòng lệnh sau
+  khi tạo giáo xứ mới.
+
 ## Bốn thay đổi lớn đã chốt ngày 2026-09-06
 
 Ghi lại vì chúng đảo ngược quyết định ban đầu và ràng buộc mọi việc còn lại.
@@ -338,7 +368,7 @@ Ngoài ra còn các việc nợ đã ghi nhận, không chặn:
 
 ## Sổ quyết định cần người dùng review
 
-`docs/superpowers/specs/man-hinh/can-review-sau.md` — **31 mục**. Đây là nơi ghi mọi chỗ:
+`docs/superpowers/specs/man-hinh/can-review-sau.md` — **37 mục**. Đây là nơi ghi mọi chỗ:
 - bản desktop làm sai mà ta **cố ý tái hiện y hệt** (theo chỉ đạo "migrate y hệt rồi note lại"),
 - bản web **cố ý làm khác** desktop, kèm lý do,
 - quyết định tự đưa ra khi người dùng không có mặt.

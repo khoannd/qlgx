@@ -83,6 +83,71 @@ public class GiaoDanPickerVaGiaoHoTests(QlgxApiFactory app) : IClassFixture<Qlgx
         ket.Should().NotContain(x => x.TenGiaoHo == "Giáo họ Đã Xoá");
     }
 
+    // --- POST/PUT /api/giao-ho (thêm/sửa, luôn trong phạm vi giáo xứ của người gọi) ---------
+
+    [Fact]
+    public async Task Them_giao_ho_moi_thanh_cong_va_hien_trong_danh_sach()
+    {
+        var client = app.CreateAuthClient();
+
+        var res = await client.PostAsJsonAsync("/api/giao-ho", new { TenGiaoHo = "Giáo họ Vừa Thêm" });
+
+        res.StatusCode.Should().Be(HttpStatusCode.Created);
+        var ds = await client.GetFromJsonAsync<List<GiaoHoItem>>("/api/giao-ho");
+        ds.Should().Contain(x => x.TenGiaoHo == "Giáo họ Vừa Thêm");
+    }
+
+    [Fact]
+    public async Task Sua_ten_giao_ho_thanh_cong()
+    {
+        Guid id;
+        await using (var db = app.TaoContextThuan())
+        {
+            var gh = new GiaoHo { GiaoXuId = app.GiaoXuId, MaGiaoHoCu = 88903, TenGiaoHo = "Ten Cu" };
+            db.GiaoHo.Add(gh);
+            await db.SaveChangesAsync();
+            id = gh.Id;
+        }
+        var client = app.CreateAuthClient();
+
+        var res = await client.PutAsJsonAsync($"/api/giao-ho/{id}", new { TenGiaoHo = "Ten Moi" });
+
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var ds = await client.GetFromJsonAsync<List<GiaoHoItem>>("/api/giao-ho");
+        ds.Should().Contain(x => x.Id == id && x.TenGiaoHo == "Ten Moi");
+    }
+
+    [Fact]
+    public async Task Sua_giao_ho_khong_ton_tai_tra_ve_404()
+    {
+        var client = app.CreateAuthClient();
+
+        var res = await client.PutAsJsonAsync($"/api/giao-ho/{Guid.NewGuid()}", new { TenGiaoHo = "X" });
+
+        res.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Khong_sua_duoc_giao_ho_cua_giao_xu_khac_boi_loc_tenant()
+    {
+        var giaoXuKhac = Guid.NewGuid();
+        Guid idGiaoHoXuKhac;
+        await using (var db = app.TaoContextThuan())
+        {
+            db.GiaoXu.Add(new GiaoXu { Id = giaoXuKhac, TenGiaoXu = "Giao xu B giao ho test", MaGiaoXuCu = 88901 });
+            var gh = new GiaoHo { GiaoXuId = giaoXuKhac, MaGiaoHoCu = 1, TenGiaoHo = "Giao ho cua Xu B" };
+            db.GiaoHo.Add(gh);
+            await db.SaveChangesAsync();
+            idGiaoHoXuKhac = gh.Id;
+        }
+        // Dang nhap voi tu cach giao xu cua chinh app.GiaoXuId (KHONG phai giaoXuKhac).
+        var client = app.CreateAuthClient();
+
+        var res = await client.PutAsJsonAsync($"/api/giao-ho/{idGiaoHoXuKhac}", new { TenGiaoHo = "Bi sua trai phep" });
+
+        res.StatusCode.Should().Be(HttpStatusCode.NotFound); // bo loc EF an di, khong phai 403
+    }
+
     // --- Rule 15 (CheckTuoiChaMe) qua ChaId/MeId thật ---------------------------------------
 
     private static object YeuCauToiThieu(string hoTen, DateOnly ngaySinh, Guid? chaId = null, Guid? meId = null) => new

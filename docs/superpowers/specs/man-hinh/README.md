@@ -87,7 +87,8 @@ Cập nhật bảng này mỗi khi thêm spec.
 | Rao hôn phối | `GXControl/frmRaoHonPhoi.cs` | 637 | chưa | chưa |
 | Ơn gọi tận hiến | `GXControl/GxTanHien.cs` | 291 | xong (`tan-hien.md`) | một phần (xem mục 10) |
 | Hội đoàn | `GXControl/frmHoiDoan.cs` + `GXControl/GxHistoryHoiDoan.cs` | 663 + 311 | xong (`hoi-doan.md`) | một phần (xem mục 10) |
-| Giáo họ | `ChuongTrinh/frmGiaoHo.cs` | 598 | chưa | chưa |
+| Quản lý giáo phận/giáo hạt/giáo xứ | `ChuongTrinh/frmGiaoXu.cs` | 280 | xong (`quan-ly-giao-xu.md`) | xong |
+| Giáo họ | `ChuongTrinh/frmGiaoHo.cs` | 598 | một phần (`quan-ly-giao-xu.md` mục 9, chỉ phần thêm/sửa) | xong (danh sách + thêm/sửa; không có nút xoá, xem `can-review-sau.md` mục 37) |
 | Bí tích chi tiết | `ChuongTrinh/frmBiTichChiTiet.cs` | 574 | chưa | chưa |
 | Lớp giáo lý | `Giaoly/frmLopGiaoLy.cs` | 724 | chưa | chưa |
 | Quản lý tài khoản | `ChuongTrinh/frmAccoutList.cs` | 440 | xong (`quan-ly-tai-khoan.md`) | xong |
