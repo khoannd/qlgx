@@ -1,0 +1,530 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   HỆ THỐNG THIẾT KẾ — KÍNH MỜ (glassmorphism)
+
+   Bốn nguyên tắc:
+
+   1. KHÔNG CÓ VIỀN ĐẬM. Mọi mặt phẳng nổi lên nhờ đổ bóng nhiều lớp và một
+      viền sáng mảnh (trắng bán trong), không phải nhờ nét kẻ đen.
+
+   2. Nền phải CÓ MÀU thì kính mới ra kính. Một tấm kính mờ đặt trên nền trắng
+      trơn thì không nhìn ra là kính. Vì vậy trang có một lớp nền chuyển sắc
+      (xanh dương – tím – ngọc) cố định phía sau, và các tấm kính làm nhoè nó.
+
+   3. Phản quang là thứ tạo cảm giác "gương": vệt sáng mảnh ở mép trên mỗi tấm,
+      cộng một vệt sáng chéo quét ngang khi rê chuột.
+
+   4. Xanh dương là màu chủ đạo, lấy theo giao diện của chính phần mềm.
+      Mọi cặp màu chữ/nền đều đã đo đạt tối thiểu 4.5:1 (WCAG AA).
+   ============================================================================ */
+
+@theme {
+  /* --- Xanh thương hiệu --- */
+  --color-brand: #1d5ddb; /* 6.0:1 với chữ trắng */
+  --color-brand-deep: #143f98; /* 9.6:1 với chữ trắng */
+  --color-brand-ink: #0f2f6e; /* dùng cho chữ trên nền sáng */
+  --color-brand-soft: #dce8fd;
+  --color-brand-mist: #eff5ff;
+
+  /* --- Màu phụ ---
+     Mỗi màu có HAI biến thể, và phải dùng đúng biến thể:
+       • bản thường  → tô mảng, vẽ chấm, đổ nền nhạt. KHÔNG dùng làm màu chữ.
+       • bản *-ink   → làm màu chữ trên nền sáng, đã đo đạt tối thiểu 4.5:1.
+     Đây là lỗi hay gặp nhất khi làm giao diện kính: màu tươi nhìn rất hợp mắt
+     trên mảng nền, nhưng đặt làm chữ 12–16px thì tụt xuống 2–3:1. */
+  --color-sky: #38bdf8;
+  --color-sky-soft: #7dd3fc; /* 6.2:1 trên nền xanh đậm */
+  --color-violet: #7c6bf0;
+  --color-violet-ink: #5b4bc4; /* 5.5:1 trên nền kính */
+  --color-mint: #14b8a6;
+  --color-mint-ink: #0f766e; /* 5.1:1 trên nền kính */
+  --color-amber: #d97706;
+  --color-amber-ink: #8a4b00; /* 5.5:1 trên nền kính */
+
+  /* --- Mực và nền --- */
+  /* Ba mức chữ. Tỉ lệ đo trên nền kính thật (#E8EDF8) — tức là nền trắng 70%
+     chồng lên lớp chuyển sắc của trang, KHÔNG phải trên nền trắng tinh.
+     Đây là chỗ dễ sai nhất của giao diện kính: đo trên nền trắng thì tưởng đạt,
+     nhưng nền thật luôn tối hơn một chút. */
+  --color-ink: #0e1729; /* 15.2:1 */
+  --color-ink-soft: #4a5773; /* 6.2:1 */
+  --color-ink-faint: #5a6785; /* 4.8:1 — chỉ cho chữ phụ ngắn */
+  --color-canvas: #f2f6fd;
+
+  /* --- Chữ --- */
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-inter), -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --radius-glass: 18px;
+  --breakpoint-xs: 480px;
+}
+
+/* ============================================================================
+   NỀN TẢNG
+   ============================================================================ */
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    position: relative;
+    margin: 0;
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Lớp nền chuyển sắc cố định. Đây là thứ mà các tấm kính làm nhoè —
+     bỏ lớp này đi thì toàn bộ hiệu ứng kính biến mất. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(1100px 720px at 8% -8%, rgba(29, 93, 219, 0.28), transparent 62%),
+      radial-gradient(900px 640px at 92% 4%, rgba(124, 107, 240, 0.22), transparent 60%),
+      radial-gradient(900px 700px at 74% 88%, rgba(20, 184, 166, 0.16), transparent 62%),
+      radial-gradient(760px 620px at 16% 82%, rgba(56, 189, 248, 0.18), transparent 60%);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    /* Fraunces mặc định dùng chữ số kiểu cổ; số phiên bản "4.0.0" cần chữ số
+       đứng đều dòng mới đọc rõ. */
+    font-variant-numeric: lining-nums;
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-brand);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+  .on-dark :focus-visible {
+    outline-color: var(--color-sky);
+  }
+
+  section {
+    scroll-margin-top: 92px;
+  }
+
+  /* Ô lưới mặc định là min-width:auto, nên một phần tử con không xuống dòng có
+     thể nong cả cột ra và gây cuộn ngang trên điện thoại. */
+  .grid > * {
+    min-width: 0;
+  }
+}
+
+/* ============================================================================
+   KÍNH
+   ============================================================================ */
+
+@layer components {
+  .wrap {
+    width: 100%;
+    max-width: 1220px;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 768px) {
+    .wrap {
+      padding-inline: 2rem;
+    }
+  }
+
+  /* --- Tấm kính cơ bản ---
+     Viền là một nét trắng bán trong, không phải nét đen. Chiều sâu do ba lớp
+     bóng chồng nhau tạo ra: một lớp sát để tách khỏi nền, một lớp giữa, một lớp
+     xa và rộng. Hai bóng trong (inset) ở mép trên và mép dưới chính là ánh
+     phản quang trên mặt kính. */
+  .glass {
+    position: relative;
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.82),
+      rgba(255, 255, 255, 0.58)
+    );
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    border-radius: var(--radius-glass);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.4),
+      0 1px 2px rgba(14, 32, 76, 0.04),
+      0 10px 24px -10px rgba(14, 32, 76, 0.16),
+      0 28px 56px -28px rgba(14, 32, 76, 0.26);
+  }
+
+  /* Bản đặc hơn, dùng cho thanh điều hướng khi đã cuộn và cho thân bài viết.
+     Phải đủ đục: ở mức 0.82 thì chữ của phần nội dung phía sau vẫn xuyên qua
+     thanh điều hướng và đọc thành hai lớp chồng nhau. */
+  .glass-solid {
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.985),
+      rgba(255, 255, 255, 0.94)
+    );
+  }
+
+  /* Bản tối, dùng cho các mảng nhấn */
+  .glass-dark {
+    position: relative;
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.16),
+      rgba(255, 255, 255, 0.06)
+    );
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: var(--radius-glass);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      0 20px 44px -22px rgba(0, 0, 0, 0.5);
+  }
+
+  /* --- Ánh phản quang quét ngang khi rê chuột ---
+     Đặt trên phần tử cha có class `group` và `relative overflow-hidden`. */
+  .sheen {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(
+      105deg,
+      transparent 32%,
+      rgba(255, 255, 255, 0.55) 44%,
+      rgba(255, 255, 255, 0.18) 54%,
+      transparent 68%
+    );
+    transform: translateX(-130%);
+    transition: transform 900ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .group:hover .sheen,
+  .group:focus-within .sheen {
+    transform: translateX(130%);
+  }
+
+  /* --- Nút --- */
+  .btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    min-height: 54px;
+    padding-inline: 1.85rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-weight: 600;
+    font-size: 1rem;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    overflow: hidden;
+    transition:
+      transform 200ms cubic-bezier(0.22, 0.61, 0.36, 1),
+      box-shadow 200ms cubic-bezier(0.22, 0.61, 0.36, 1),
+      background-color 200ms ease,
+      color 200ms ease;
+  }
+  .btn svg {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex: none;
+  }
+  .btn:active {
+    transform: translateY(1px);
+  }
+
+  .btn-primary {
+    background: linear-gradient(145deg, var(--color-brand), var(--color-brand-deep));
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      0 8px 20px -8px rgba(20, 63, 152, 0.65),
+      0 20px 40px -22px rgba(20, 63, 152, 0.7);
+  }
+  .btn-primary:hover {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      0 12px 26px -8px rgba(20, 63, 152, 0.72),
+      0 26px 52px -24px rgba(20, 63, 152, 0.8);
+    transform: translateY(-2px);
+  }
+
+  .btn-glass {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.6));
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    color: var(--color-brand-ink);
+    border-color: rgba(255, 255, 255, 0.9);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      0 6px 18px -8px rgba(14, 32, 76, 0.2);
+  }
+  .btn-glass:hover {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.78));
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 1),
+      0 12px 26px -10px rgba(14, 32, 76, 0.26);
+  }
+
+  .btn-on-dark {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08));
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.42);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  .btn-on-dark:hover {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.14));
+    border-color: rgba(255, 255, 255, 0.7);
+    transform: translateY(-2px);
+  }
+
+  /* --- Nhãn nhỏ in hoa đứng trước tiêu đề --- */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 1.75rem;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    opacity: 0.55;
+    flex: none;
+  }
+  .eyebrow-center::before {
+    display: none;
+  }
+
+  /**
+   * Khoác kiểu hiện đại lên HTML cũ nhập từ BIN/help/*.htm (xem
+   * scripts/import-huong-dan.mjs) mà không sửa nội dung: chỉ định lại
+   * font/khoảng cách/màu cho các thẻ ngữ nghĩa gốc (h1..h4, p, ul, blockquote,
+   * img, table). Đây là lý do dùng bộ chọn thẻ thô thay vì lớp Tailwind —
+   * nội dung được sinh một lần lúc build, không thể gắn className thủ công.
+   */
+  .prose-legacy {
+    color: var(--color-ink);
+    font-size: 1.02rem;
+    line-height: 1.75;
+  }
+  .prose-legacy > :first-child {
+    margin-top: 0;
+  }
+  .prose-legacy h1 {
+    display: none; /* Trang đã có <h1> riêng ở đầu, tránh lặp tiêu đề */
+  }
+  .prose-legacy h2 {
+    margin-top: 2.25rem;
+    margin-bottom: 0.75rem;
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--color-ink);
+  }
+  .prose-legacy h3,
+  .prose-legacy h4 {
+    margin-top: 1.75rem;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    color: var(--color-ink);
+  }
+  .prose-legacy p {
+    margin-block: 0.9rem;
+  }
+  .prose-legacy strong,
+  .prose-legacy b {
+    color: var(--color-ink);
+    font-weight: 700;
+  }
+  .prose-legacy a {
+    color: var(--color-brand-ink);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--color-brand) 40%, transparent);
+    text-underline-offset: 3px;
+  }
+  .prose-legacy a:hover {
+    text-decoration-color: currentColor;
+  }
+  .prose-legacy ul,
+  .prose-legacy ol {
+    margin-block: 0.9rem;
+    padding-left: 1.4rem;
+  }
+  .prose-legacy li {
+    margin-block: 0.35rem;
+  }
+  .prose-legacy ul > li {
+    list-style: disc;
+  }
+  .prose-legacy ol > li {
+    list-style: decimal;
+  }
+  .prose-legacy blockquote {
+    margin-block: 1.25rem;
+    padding: 1rem 1.25rem;
+    border-left: 3px solid var(--color-brand);
+    background: color-mix(in srgb, var(--color-brand) 6%, transparent);
+    border-radius: 0 12px 12px 0;
+    font-style: italic;
+    color: var(--color-ink-soft);
+  }
+  .prose-legacy blockquote p {
+    margin-block: 0.4rem;
+  }
+  .prose-legacy img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin-block: 1.25rem;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow: 0 12px 28px -14px rgba(14, 32, 76, 0.28);
+  }
+  .prose-legacy table {
+    width: 100%;
+    margin-block: 1.25rem;
+    border-collapse: collapse;
+    font-size: 0.94rem;
+    overflow: hidden;
+    border-radius: 12px;
+  }
+  .prose-legacy th,
+  .prose-legacy td {
+    padding: 0.6rem 0.9rem;
+    border: 1px solid color-mix(in srgb, var(--color-brand) 18%, transparent);
+    text-align: left;
+  }
+  .prose-legacy th {
+    background: var(--color-brand-mist);
+    font-weight: 700;
+  }
+
+  .link-underline {
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 4px;
+    text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+    transition: text-decoration-color 180ms ease;
+  }
+  .link-underline:hover {
+    text-decoration-color: currentColor;
+  }
+}
+
+/* ============================================================================
+   HIỆU ỨNG HIỆN DẦN KHI CUỘN
+   Nội dung luôn được server render đầy đủ. CSS chỉ ẩn khi <html> có class `js`
+   (do script nội tuyến gắn trước lượt vẽ đầu), nên JS lỗi thì trang vẫn hiện.
+   ============================================================================ */
+
+.js .reveal {
+  opacity: 0;
+  transform: translateY(18px);
+}
+.js .reveal-in {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 620ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 620ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+/* ============================================================================
+   TÔN TRỌNG TUỲ CHỌN CỦA NGƯỜI DÙNG
+   ============================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+  .js .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .sheen {
+    display: none;
+  }
+}
+
+/* Một số người bật "giảm độ trong suốt" vì kính mờ gây khó đọc hoặc chóng mặt.
+   Khi đó bỏ hẳn hiệu ứng nhoè và dùng nền đặc. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-solid,
+  .btn-glass {
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .glass-dark {
+    background: rgba(14, 23, 41, 0.92) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  body::before {
+    opacity: 0.35;
+  }
+  .sheen {
+    display: none;
+  }
+}
+
+/* Trên màn hình hẹp, thu ảnh chụp màn hình desktop về 375px thì không đọc nổi
+   chữ trong ảnh — mà đọc được chính là lý do có phần Hình ảnh. Cho ảnh giữ bề
+   rộng tối thiểu và trượt ngang bên trong khung của nó; trang vẫn không cuộn ngang. */
+@media (max-width: 760px) {
+  .shot-scroll {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .shot-scroll img {
+    width: auto;
+    min-width: 640px;
+    max-width: none;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body::before {
+    display: none;
+  }
+}

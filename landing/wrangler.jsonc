@@ -1,0 +1,41 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "quanlygiaoxu-landing",
+
+  // Điểm vào do OpenNext sinh ra sau khi chạy `npm run cf:build`
+  "main": ".open-next/worker.js",
+
+  // nodejs_compat là bắt buộc với OpenNext, và ngày tương thích phải từ
+  // 2024-09-23 trở đi thì cờ này mới có hiệu lực.
+  "compatibility_date": "2025-06-05",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Tệp tĩnh (ảnh chụp màn hình, font tự host, JS/CSS đã build)
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  "observability": {
+    "enabled": true
+  },
+
+  // Cơ sở dữ liệu D1 chứa bản phát hành và bài viết, cho phép sửa từ /admin.
+  // database_id thật, tạo ngày 2026-09-07 bằng `npx wrangler d1 create qlgx-content`.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "qlgx-content",
+      "database_id": "86e71e5f-e16c-4609-b36b-8f6a307de9b9"
+    }
+  ],
+
+  // Biến công khai. Những thứ bí mật (GITHUB_TOKEN, ADMIN_PASSWORD) KHÔNG đặt
+  // ở đây — dùng `npx wrangler secret put TÊN_BIẾN` để không lọt vào kho mã.
+  "vars": {
+    "NEXT_PUBLIC_SITE_URL": "https://quanlygiaoxu.net",
+    "QLGX_GITHUB_REPO": "khoannd/qlgx",
+    "QLGX_GITHUB_BRANCH": "master",
+    "QLGX_TAG_PREFIX": "v"
+  }
+}

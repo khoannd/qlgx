@@ -1,0 +1,16 @@
+# Cloudflare Workers / Pages đọc tệp này để đặt header cho các tệp tĩnh.
+#
+# Cần thiết vì phần `headers()` trong next.config.ts chỉ áp dụng cho những phản
+# hồi do Next.js sinh ra; ảnh và font nằm trong /public lại do hạ tầng tệp tĩnh
+# của Cloudflare phục vụ, không đi qua Next.js.
+
+/images/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN

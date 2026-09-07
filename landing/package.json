@@ -1,0 +1,41 @@
+{
+  "name": "quanlygiaoxu-landing",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Landing page giới thiệu phần mềm Quản Lý Giáo Xứ",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "cf:build": "cross-env DEPLOY_TARGET=cloudflare opennextjs-cloudflare build",
+    "cf:preview": "npm run cf:build && wrangler dev",
+    "cf:deploy": "npm run cf:build && wrangler deploy",
+    "d1:migrate:local": "wrangler d1 migrations apply qlgx-content --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply qlgx-content --remote",
+    "d1:seed:local": "wrangler d1 execute qlgx-content --local --file=./migrations/0004_seed.sql",
+    "d1:seed:remote": "wrangler d1 execute qlgx-content --remote --file=./migrations/0004_seed.sql",
+    "d1:seed:generate": "node --experimental-strip-types scripts/generate-d1-seed.mjs",
+    "huong-dan:import": "node --experimental-strip-types scripts/import-huong-dan.mjs"
+  },
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "next": "^16.3.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tailwindcss": "^4.3.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260905.1",
+    "@opennextjs/cloudflare": "^1.20.6",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "cheerio": "^1.2.0",
+    "cross-env": "^10.1.0",
+    "sanitize-html": "^2.17.7",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.129.0"
+  }
+}
