@@ -1997,3 +1997,78 @@ frontend, không chạm C#). Frontend **254/254** (không thêm test mới — 4
 xác nhận đúng luồng gửi dữ liệu). `npm run build` chạy được. Dữ liệu giáo xứ Vô Nhiễm không đổi:
 2050 giáo dân / 40 gia đình / 145 thành viên (`psql` xác nhận sau khi hoàn tất, đã trả radio
 "Chủ hộ" về đúng nguyên trạng). Ảnh chụp/kiểm thử: `82`–`84` trong `WebApp/anh-chup-kiem-thu/`.
+
+### 42. Task "sửa 4 chi tiết giao diện theo phản hồi trực tiếp — nhãn xuống dòng, header lưới,
+tiêu đề hình gia đình, khối hôn phối" (2026-09-07) — các quyết định tự đưa ra
+
+Người dùng thật ngồi kiểm tra trực tiếp báo tiếp 4 việc mới (khác 4 việc mục 41): (1) hai ô đánh
+dấu "Đã chuyển đi xứ khác"/"Không tính vào thống kê" bị ngắt dòng giữa chữ khi cửa sổ hẹp, (2)
+hàng tiêu đề lưới AG Grid nhìn cũ, cần hiện đại hơn và thấp hơn — áp dụng MỌI lưới, (3) bỏ tiêu
+đề "Hình gia đình" để ảnh dùng trọn chiều cao, (4) kiểm tra lại khối Hôn phối có đúng kiểu
+nhãn-trái/ô-phải chưa (nghi ngờ người dùng đang xem trang cũ vì mục 41 phần d đã sửa xong).
+
+**a) Vấn đề #1 (nhãn ô đánh dấu ngắt dòng giữa chữ):** thêm `.toggle { white-space: nowrap }`
+(mỗi ô không BAO GIỜ tự ngắt chữ của chính nó) và bọc hai `<label className="toggle">` trong
+`GiaDinhDetail.tsx` bằng `<div className="toggle-group">` (`display:flex; flex-wrap:wrap;
+gap:8px`) — khi không đủ chỗ ngang, CẢ ô thứ hai rơi xuống dòng dưới NGUYÊN VẸN thay vì bị bẻ
+chữ giữa dòng. Đo bằng `getBoundingClientRect()` qua Playwright MCP thật (gia đình mã 9, thu hẹp
+dần cửa sổ tới khi thấy xếp chồng): ở 1500px/1100px cả hai ô vẫn nằm một hàng (đủ chỗ — `.cols`
+đã chuyển 1 cột dưới 1120px nên cột trái rộng gần hết cửa sổ); phải hẹp xuống ~1180px (đúng biên
+hai cột, cột trái hẹp nhất `minmax(420px,…)`) mới thấy `.toggle-group` chỉ rộng 259.6px và hai
+ô XẾP CHỒNG dọc, mỗi ô cao đúng 34.6px (một dòng, không bị bẻ chữ) — ảnh
+`85`–`87-giadinh-9-toggle-*.png`.
+
+**b) Vấn đề #2 (header AG Grid hiện đại + thấp hơn) — phát hiện lỗi TIỀN ĐỀ trước khi sửa được:
+biến `--ag-*` khai trong `.ag-theme-quartz` ở `qlgx.css` (kể cả các biến ĐÃ CÓ TỪ TRƯỚC như
+`--ag-row-height: 30px`) hoàn toàn KHÔNG có hiệu lực trên trình duyệt thật.** Đo bằng
+`getComputedStyle` qua Playwright MCP: `--ag-row-height` đọc lại đúng `calc(14px + 8px * 3.5)`
+(giá trị MẶC ĐỊNH của AG Grid, KHÔNG PHẢI `30px` đã khai), dòng dữ liệu thật cao 42px (không
+phải 30px). Nguyên nhân: CSS gốc `ag-theme-quartz.css` trước đây được `import` ở
+`GxGrid.tsx` (một component, nạp SAU `main.tsx` trong đồ thị module) trong khi `qlgx.css` nạp
+NGAY ĐẦU `main.tsx` — Vite gộp CSS theo thứ tự GẶP LẦN ĐẦU khi duyệt cây import, nên CSS gốc AG
+Grid rơi vào SAU `qlgx.css` trong bundle cuối, cùng đè lại mọi biến `--ag-*` tuỳ biến (cùng độ
+đặc hiệu, ai nạp sau thắng). Bài test jsdom không dựng CSS thật nên không bao giờ bắt được — chỉ
+lộ ra khi đo `getBoundingClientRect()`/`getComputedStyle` trên trình duyệt thật, đúng cảnh báo
+ở đầu nhiệm vụ. Sửa tận gốc: chuyển hai `import 'ag-grid-community/styles/...'` từ `GxGrid.tsx`
+lên ĐẦU `main.tsx`, TRƯỚC `import './styles/qlgx.css'` — giờ CSS gốc AG Grid luôn nạp trước,
+`qlgx.css` luôn thắng thế đúng ý đồ ban đầu của file. Sau khi sửa thứ tự import mới thật sự chỉnh
+được style: `--ag-header-height: 32px → 28px` (thấp hơn rõ rệt), thêm
+`--ag-header-background-color: var(--hair-soft)` (xám rất nhạt, không còn nền trắng phẳng),
+`--ag-header-foreground-color`/`.ag-header-cell-text { color: var(--ink-soft) }` (xám đậm, không
+còn đen), `letter-spacing: .02em` (giãn chữ nhẹ), `--ag-header-column-separator-display: none`
+(bỏ hẳn vạch ngăn dọc giữa các cột), giữ lại `.ag-header-row { border-bottom: 1px solid
+var(--hair) }` (một đường kẻ dưới mảnh). Áp dụng cho MỌI lưới vì tất cả cùng dùng chung
+`.ag-theme-quartz` qua `GxGrid.tsx` — xác nhận trên cả "Danh sách gia đình" (40 dòng) và "Danh
+sách giáo dân" (2039/2050 dòng, ảnh `88-danhsach-giaodan-header-sau.png`). Đo thật sau sửa: hàng
+tiêu đề cột (`.ag-header-row-column`) cao **28px** (từ 42-48px hiệu lực thật trước đó, tuỳ có
+hàng lọc hay không), hàng dữ liệu (`.ag-row`) cao **30px** đúng khai báo — không còn lệch giữa
+CSS khai và DOM thật.
+
+**c) Vấn đề #3 (bỏ tiêu đề "Hình gia đình"):** xoá hẳn `<div className="card-head"><h2>Hình gia
+đình</h2></div>` khỏi `GiaDinhDetail.tsx`, để `<AnhDaiDien>` là con trực tiếp DUY NHẤT của
+`.card` cuối `.col-stack` — khớp đúng luật `.col-stack > .card > .photo-slot { flex: 1 }` sẵn có
+trong `qlgx.css` (component `AnhDaiDien` tự render `className="photo-slot"` làm gốc) nên KHÔNG
+cần đổi CSS, ảnh vẫn tự nở lấp hết phần chiều cao thẻ. Không đụng ảnh 3×4 ở `GiaoDanDetail.tsx`
+— khối đó chưa từng có tiêu đề card-head riêng (ảnh nằm lồng trong `.canhan-top` cạnh hai ô đầu
+Mã giáo dân/Tên thánh, không có `<h2>` nào phía trên) nên không có gì thừa để bỏ. Đo thật sau
+sửa (gia đình mã 9, viewport 1180px): cột trái (`.giadinh-left-col`) cao 498.25px; cột phải
+(`.col-stack`) cũng cao 498.25px (thẻ Hôn phối 327.85px + gap 12px + thẻ Hình gia đình
+158.4px) — HAI CỘT VẪN BẰNG NHAU TUYỆT ĐỐI sau khi bỏ tiêu đề, không có khoảng trống mới sinh ra
+(khớp yêu cầu "vẫn giữ hai cột cao bằng nhau" trong nhiệm vụ). Ảnh xác nhận khung ảnh không còn
+tiêu đề, hiện đúng gợi ý "Chưa có hình / Nhấp để tải ảnh lên": `85`-`87-giadinh-9-*.png`.
+
+**d) Vấn đề #4 (khối Hôn phối) — XÁC NHẬN LẠI trên trình duyệt thật, KHÔNG SỬA GÌ.** Người dùng
+nghi vấn trang cũ chưa tải lại; kiểm tra trực tiếp (gia đình mã 9, cả hai viewport 1500px và
+1180px) xác nhận cả 8 trường Hôn phối (Số hôn phối, Ngày hôn phối, Nơi hôn phối, Linh mục chứng,
+Người chứng 1, Người chứng 2, Tình trạng hôn phối, Ghi chú hôn phối) đều dùng `GxField` với
+`label` bên trái, ô nhập bên phải — giống hệt cách trình bày "Thông tin gia đình", đúng như mục
+41 phần d đã sửa. Không có trường nào còn kiểu nhãn-trên. Đúng như phỏng đoán trong nhiệm vụ —
+KHÔNG cần sửa gì thêm cho việc này.
+
+**e) Số test cuối:** backend **244/244** (25 + 195 + 24, không đổi — cả 4 việc đều là
+CSS/JSX/thứ tự import thuần phía frontend, không chạm C#; đã dừng hẳn `Qlgx.Api` để chạy
+`dotnet test` tránh khoá file DLL rồi khởi động lại đúng nguyên cấu hình). Frontend **254/254**
+(không thêm test mới — cả 4 việc đều là bố cục/CSS thuần, không đổi hành vi component nào bài
+test jsdom quan sát được). `npm run build` chạy được cả hai phía. Dữ liệu giáo xứ Vô Nhiễm không
+đổi: 2050 giáo dân / 40 gia đình / 145 thành viên. Ảnh chụp/kiểm thử:
+`85`–`88` trong `WebApp/anh-chup-kiem-thu/`.

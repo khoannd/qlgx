@@ -1,8 +1,9 @@
 import { AgGridReact } from 'ag-grid-react'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import type { ColDef, GetRowIdParams, GridApi, RowClassParams } from 'ag-grid-community'
-import 'ag-grid-community/styles/ag-grid.css'
-import 'ag-grid-community/styles/ag-theme-quartz.css'
+// CSS gốc của AG Grid nạp ở main.tsx (KHÔNG phải ở đây) — TRƯỚC `qlgx.css`, để các biến
+// `--ag-*` tuỳ biến trong qlgx.css thắng thế theo thứ tự cascade thay vì bị đè lại. Xem chú
+// thích dài ở main.tsx.
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import type { Ref } from 'react'
 

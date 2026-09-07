@@ -368,14 +368,19 @@ export function GiaDinhDetail({
               <textarea id="gdinh-ghichu" name="ghiChu" defaultValue={f.ghiChu ?? ''} placeholder="Ghi chú nội bộ về gia đình…" />
             </GxField>
             <GxField label="">
-              <label className="toggle">
-                <input type="checkbox" checked={daChuyenXu} onChange={(e) => setDaChuyenXu(e.target.checked)} />
-                Đã chuyển đi xứ khác
-              </label>
-              <label className="toggle">
-                <input type="checkbox" name="khongThongKe" defaultChecked={f.khongThongKe} />
-                Không tính vào thống kê
-              </label>
+              {/* `.toggle-group` (qlgx.css): hai ô đánh dấu KHÔNG BAO GIỜ ngắt chữ giữa dòng
+                  (góp ý người dùng 2026-09-07, "khôg được xuống dòng thế này") — khi hết chỗ
+                  ngang, ô thứ hai rơi xuống dòng dưới NGUYÊN VẸN thay vì bị bẻ chữ. */}
+              <div className="toggle-group">
+                <label className="toggle">
+                  <input type="checkbox" checked={daChuyenXu} onChange={(e) => setDaChuyenXu(e.target.checked)} />
+                  Đã chuyển đi xứ khác
+                </label>
+                <label className="toggle">
+                  <input type="checkbox" name="khongThongKe" defaultChecked={f.khongThongKe} />
+                  Không tính vào thống kê
+                </label>
+              </div>
             </GxField>
             {daChuyenXu && (
               <>
@@ -453,8 +458,12 @@ export function GiaDinhDetail({
             </GxField>
           </div>
 
+          {/* Bỏ tiêu đề "Hình gia đình" (góp ý người dùng 2026-09-07: "không cần title để dành
+              space để display hình, vì nhìn vào text chọn hình là người ta biết đó là hình
+              gia đình rồi") — khung ảnh dùng trọn chiều cao thẻ. `AnhDaiDien` vẫn là con trực
+              tiếp DUY NHẤT của `.card` này nên `.col-stack > .card > .photo-slot { flex: 1 }`
+              (qlgx.css) vẫn khớp, ảnh vẫn nở lấp hết phần chiều cao dôi ra. */}
           <div className="card glass">
-            <div className="card-head"><h2>Hình gia đình</h2></div>
             <AnhDaiDien
               id={moi ? null : f.id}
               onLayAnh={api.giaDinh.layAnh}

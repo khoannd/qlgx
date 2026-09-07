@@ -592,6 +592,13 @@ input:disabled, textarea:disabled {
 }
 .toggle:hover { border-color: rgba(29,93,219,.35); }
 .toggle input { accent-color: var(--brand); width: 15px; height: 15px; }
+/* Nhãn ô đánh dấu KHÔNG BAO GIỜ được ngắt dòng giữa chừng (góp ý người dùng: "khôg được
+   xuống dòng thế này" — ảnh chụp hai ô "Đã chuyển đi xứ khác"/"Không tính vào thống kê" ở
+   cuối khối "Thông tin gia đình" bị ngắt thành hai dòng khi cửa sổ hẹp). `.toggle-group`
+   (bọc ngoài hai ô, xem GiaDinhDetail.tsx) cho phép CẢ HÀNG xuống dòng khi hết chỗ — ô nào
+   không vừa thì rơi xuống dòng dưới NGUYÊN VẸN, không cắt chữ giữa ô. */
+.toggle { white-space: nowrap; }
+.toggle-group { display: flex; flex-wrap: wrap; gap: 8px; }
 .toggle:has(input:checked) {
   background: var(--brand-soft);
   border-color: rgba(29,93,219,.3);
@@ -638,10 +645,25 @@ input:disabled, textarea:disabled {
 .ag-theme-quartz {
   --ag-font-size: 12px;
   --ag-row-height: 30px;
-  --ag-header-height: 32px;
+  --ag-header-height: 28px;
   --ag-list-item-height: 26px;
+  /* Header hiện đại hơn (góp ý người dùng, ảnh chụp lưới thành viên): nền phẳng trắng + chữ
+     đen thường + vạch ngăn dọc mảnh giữa MỌI cột nhìn cũ/rời rạc. Đổi sang nền xám rất nhạt,
+     chữ xám đậm (không đen), bỏ hẳn vạch dọc, chỉ còn một đường kẻ dưới mảnh — áp dụng cho
+     MỌI lưới AG Grid trong ứng dụng vì tất cả đều dùng chung `.ag-theme-quartz` qua `GxGrid`
+     (danh sách giáo dân, danh sách gia đình, lưới thành viên). Bám hệ màu sẵn có: nền từ
+     `--hair-soft` (xám rất nhạt cùng tông với đường kẻ), chữ `--ink-soft`. */
+  --ag-header-background-color: var(--hair-soft);
+  --ag-header-foreground-color: var(--ink-soft);
+  --ag-header-column-separator-display: none;
 }
-.ag-theme-quartz .ag-header-cell-text { font-size: 12px; font-weight: 600; }
+.ag-theme-quartz .ag-header-cell-text {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--ink-soft);
+}
+.ag-theme-quartz .ag-header-row { border-bottom: 1px solid var(--hair); }
 .ag-theme-quartz .ag-floating-filter-input input { font-size: 12px; min-height: 22px; }
 .grid-wrap { min-height: 0; overflow: auto; }
 .grid-wrap::-webkit-scrollbar { width: 10px; height: 10px; }
