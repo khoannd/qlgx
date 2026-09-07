@@ -10,15 +10,8 @@
  chỗ "MsiLabel". Script này ghi nội dung thật vào.
 
  CHỈ GHI PHẦN NỘI DUNG ĐIỀU KHOẢN:
- Toàn bộ chữ còn lại của bộ cài (nút Next/Back/Cancel, tiêu đề các bước...) giữ
- nguyên tiếng Anh như Visual Studio sinh ra.
-
- VÌ SAO KHÔNG DỊCH CẢ GIAO DIỆN SANG TIẾNG VIỆT:
- Đã thử ở bản 4.0.1 và hỏng: toàn bộ màn hình cài đặt hiện ra trống trơn. Nguyên
- nhân KHÔNG phải bảng mã mà là một lỗi cú pháp PowerShell - trong mảng viết dạng
- @('a', 'b', $PHONG + 'chữ') thì PowerShell tách $PHONG và 'chữ' thành HAI phần
- tử riêng, nên bảng dịch chỉ còn lại thẻ phông rỗng và bộ cài ghi chuỗi trống vào
- mọi nút. Muốn nối chuỗi trong mảng thì phải bọc ngoặc đơn: ($PHONG + 'chữ').
+ Script này chỉ lo phần nội dung điều khoản. Chữ trên các nút và nhãn của bộ cài
+ do dich_bo_cai_sang_tieng_viet.ps1 (bước 6d) đảm nhiệm - mỗi việc một script.
 
  VÌ SAO NỘI DUNG ĐIỀU KHOẢN KHÔNG BỊ LỖI BẢNG MÃ:
  Ô hiển thị điều khoản là loại ScrollableText, nội dung phải ở dạng RTF. Trong

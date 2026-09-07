@@ -115,11 +115,10 @@ thư mục). Các tham số khác: `-DryRun` (xem trước), `-SkipBuild`, `-Ski
 | 9 | Gộp `setup.exe` + `.msi` thành **một** file `.exe` | không |
 | 9b | Chép sang `D:\Working\QLGX\qlgx_bin\Release` | không |
 
-> **Bước 6d (tiếng Việt) tính đến 07-09-2026 chưa được nhìn tận mắt.** Bản dịch đã kiểm
-> chứng ở mức dữ liệu (150 ô chữ, không ô nào rỗng, 756 ký tự có dấu, phông Tahoma) nhưng
-> chưa ai xác nhận nó **hiện lên** đúng. Trước khi phát hành rộng rãi, phải nhờ người dùng
-> chạy thử file `.exe` và xem màn hình. Nếu hỏng, gỡ bước 6d khỏi `release.ps1` là quay
-> lại giao diện tiếng Anh nguyên bản.
+> **Bước 6d đã được xác nhận chạy đúng ngày 07-09-2026** — tác giả chạy thử bộ cài và
+> thấy chữ tiếng Việt hiện đủ dấu. Nếu về sau màn hình cài đặt lại trắng trơn thì đọc
+> [bẫy #2](#2-nối-chuỗi-trong-mảng-powershell-mất-chữ) trước tiên; gỡ bước 6d khỏi
+> `release.ps1` là quay lại giao diện tiếng Anh nguyên bản.
 
 Script dừng ngay khi có bước nào thất bại. **Không được "sửa cho qua"** bằng cách bỏ bước
 kiểm chứng — mỗi bước kiểm chứng đều sinh ra từ một lần hỏng thật.
@@ -403,6 +402,4 @@ Ghi lại để phiên sau không tưởng nhầm là đã xong:
 - **Nhánh dò registry của bản Inno cũ** (bước 6c) và **bước dọn dấu vết** (bước 6f) chưa
   chạy thử trên máy thật có bản Inno 3.3.7. Tạo khoá trong `HKLM` để giả lập cần quyền
   Administrator.
-- **Giao diện cài đặt tiếng Việt** (bước 6d) chưa được nhìn tận mắt — xem ghi chú ở
-  [bước 2](#2-chạy-quy-trình-phát-hành).
 - **Bộ cài chưa ký số**, nên SmartScreen của Edge và Windows vẫn cảnh báo khi tải và chạy.
