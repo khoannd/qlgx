@@ -56,6 +56,16 @@ export default async function AdminHomePage() {
             đầu trang.
           </p>
         </Link>
+
+        <Link href="/admin/thong-ke" className="glass block p-7 no-underline sm:col-span-2">
+          <h2 className="font-display text-[1.3rem] font-semibold text-ink">
+            Thống kê tải &amp; cập nhật
+          </h2>
+          <p className="mt-2 text-[0.92rem] text-ink-soft">
+            Ai đang tải bản nào, qua kênh nào (bấm tay trên web hay chương trình tự cập nhật), từ
+            đâu — ghi lại mỗi lượt tải thật, không tính lượt chỉ mở chương trình lên.
+          </p>
+        </Link>
       </div>
     </main>
   );

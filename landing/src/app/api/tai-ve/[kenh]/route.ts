@@ -1,4 +1,5 @@
 import { content } from "@/lib/content";
+import { logDownload } from "@/lib/download-log";
 import { GITHUB_RAW_BASE } from "@/lib/github";
 
 /**
@@ -95,7 +96,7 @@ async function fetchVersionFromRepo(): Promise<string | null> {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ kenh: string }> },
 ) {
   const { kenh } = await params;
@@ -114,6 +115,10 @@ export async function GET(
     (await content.getRelease()).version;
 
   const downloadUrl = `${RAW_BASE}/Release/${buildAssetName(version)}`;
+
+  // Không await: log chạy song song qua ctx.waitUntil, không làm chậm lượt tải.
+  // PHẢI await: xem chú thích trong logDownload()/src/lib/update-server.ts.
+  await logDownload({ channel: "web", kenh, version, request });
 
   // 302: người dùng luôn đi qua endpoint này nên lần sau vẫn nhận được bản mới
   // nhất. Dùng 301 thì trình duyệt nhớ vĩnh viễn và sẽ tải mãi bản cũ.

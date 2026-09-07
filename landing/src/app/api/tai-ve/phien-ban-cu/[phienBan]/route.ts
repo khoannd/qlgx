@@ -1,3 +1,4 @@
+import { logDownload } from "@/lib/download-log";
 import { GITHUB_RAW_BASE } from "@/lib/github";
 import { downloadableVersions } from "@/lib/version-history";
 
@@ -12,7 +13,7 @@ import { downloadableVersions } from "@/lib/version-history";
  * được đường dẫn tới một tệp bất kỳ trên repo.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ phienBan: string }> },
 ) {
   const { phienBan } = await params;
@@ -27,6 +28,11 @@ export async function GET(
       { status: 404 },
     );
   }
+
+  // PHẢI await: xem chú thích trong logDownload()/src/lib/update-server.ts —
+  // dùng "void" từng làm mất log vì Worker có thể dừng trước khi kịp đăng ký
+  // ctx.waitUntil(). Bản thân await ở đây rất nhanh (không đợi ghi D1 xong).
+  await logDownload({ channel: "web", kenh: `phien-ban-cu:${phienBan}`, version: phienBan, request });
 
   return Response.redirect(`${GITHUB_RAW_BASE}/Release/${entry.download.fileName}`, 301);
 }

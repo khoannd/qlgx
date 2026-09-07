@@ -1,3 +1,4 @@
+import { logDownload } from "@/lib/download-log";
 import { QLGX_BIN_RAW_BASE } from "@/lib/github";
 
 /**
@@ -194,9 +195,14 @@ export async function changelogHtmlResponse(): Promise<Response> {
  * vĩnh viễn (khác với `/api/tai-ve/phien-ban-cu` — đường dẫn đó GHIM một
  * phiên bản cụ thể nên 301 mới đúng).
  */
-export async function downloadUpdateResponse(): Promise<Response> {
+export async function downloadUpdateResponse(request: Request, kenh: string): Promise<Response> {
   try {
-    const zipUrl = await getUpdateZipUrl();
+    const [zipUrl, version] = await Promise.all([getUpdateZipUrl(), getVersionText()]);
+    // PHẢI await: logDownload() chỉ chờ tới lúc đăng ký xong ctx.waitUntil() rồi
+    // trả về ngay — việc GHI D1 thật vẫn chạy nền, không chặn response. Awaited
+    // hờ hững (`void logDownload(...)`) từng làm mất log thật: Worker trả lời
+    // xong rồi có thể bị dừng trước khi hàm kịp gọi tới ctx.waitUntil().
+    await logDownload({ channel: "app", kenh, version, request });
     return Response.redirect(zipUrl, 302);
   } catch (err) {
     return errorResponse(err);

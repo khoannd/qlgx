@@ -5,4 +5,6 @@ import { downloadUpdateResponse } from "@/lib/update-server";
  * `/capnhat/download-update`. KHÔNG được xoá — xem HOP_DONG_MAY_CHU_CAP_NHAT.md,
  * mục "Các địa chỉ cũ".
  */
-export const GET = downloadUpdateResponse;
+export function GET(request: Request) {
+  return downloadUpdateResponse(request, "4.0");
+}
