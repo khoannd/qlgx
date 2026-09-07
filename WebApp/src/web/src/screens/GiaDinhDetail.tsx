@@ -304,17 +304,16 @@ export function GiaDinhDetail({
       </div>
 
       <div className="cols">
-        {/* Cột trái chỉ còn MỘT tấm ("Thông tin gia đình") — vẫn bọc bằng flex-column thường
-            thay vì `.col-stack` (dành cho cột có tấm co giãn `1fr` như bên phải) vì tấm này cao
-            tự nhiên, không cần nở lấp chỗ trống. Trước đây cột trái gộp CẢ "Hôn phối" ở đây, còn
-            cột phải (`.col-stack`, khai `grid-template-rows: auto 1fr`) chỉ có MỘT tấm "Hình
-            gia đình" trong khi CSS chờ tới hai hàng — hàng `1fr` thứ hai bỏ trống kéo dài hết
-            chiều cao cột trái, đúng khoảng trống người dùng báo ("hôn phối phải nằm bên dưới
-            hình gia đình, không được có khoảng trống trên form"). Sửa bằng cách CHUYỂN khối
-            "Hôn phối" sang cột phải, xuống ngay dưới "Hình gia đình" (xem bên dưới) — vừa lấp
-            đúng hàng `1fr` đó, vừa cân lại chiều cao hai cột.
-            Xem docs/superpowers/specs/man-hinh/can-review-sau.md mục layout gia đình. */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+        {/* Cột trái chỉ còn MỘT tấm ("Thông tin gia đình") — bọc bằng `.giadinh-left-col` (thay
+            vì flex-column trơn) để card bên trong TỰ TRẢI cao bằng cột phải: `.cols` khai
+            `align-items: stretch` chỉ giãn khối bọc ngoài, còn card (1 con duy nhất, không tự
+            co giãn) thì không — để lại khoảng trắng vô hình phía dưới, đúng "cột trái ~416px,
+            cột phải ~507px, lệch ~91px" người dùng báo (2026-09-07). `.giadinh-left-col` (xem
+            qlgx.css) cho card `flex:1` rồi để riêng Ô GHI CHÚ hút hết phần chiều cao dư ra —
+            đúng ý bản mẫu desktop ("Ghi chú cao khoảng 5-6 dòng — chính chỗ này làm cột trái
+            cao bằng cột phải"). Xem docs/superpowers/specs/man-hinh/can-review-sau.md mục
+            layout gia đình. */}
+        <div className="giadinh-left-col">
           <div className="card glass">
             <div className="card-head"><h2>Thông tin gia đình</h2><span className="eyebrow">Sổ gia đình</span></div>
             <GxField label="Mã gia đình" id="gdinh-ma"
@@ -392,10 +391,68 @@ export function GiaDinhDetail({
         </div>
 
         {/* Cột phải: `.col-stack` khai `grid-template-rows: auto 1fr` — ĐÚNG hai hàng, ĐÚNG hai
-            phần tử con trực tiếp (Hình gia đình, Hôn phối). Hôn phối nằm ở hàng `1fr` nên nở lấp
-            hết phần chiều cao còn lại sau khi khớp chiều cao cột trái (do `.cols` khai
-            `align-items: stretch`) — không còn mảng trắng nào ở cuối cột phải. */}
+            phần tử con trực tiếp. Người dùng góp ý (2026-09-07): "Hôn phối" phải nằm TRÊN,
+            "Hình gia đình" xuống DƯỚI (đúng bản mẫu desktop: khung ảnh lớn nằm dưới cùng, chiếm
+            hết phần chiều cao còn lại) — đảo lại thứ tự hai tấm so với lượt sửa trước (khi đó
+            Hôn phối bị đẩy xuống dưới Hình gia đình để lấp khoảng trống, nhưng đảo SAI thứ tự
+            so với ý người dùng thật). Hôn phối đứng hàng `auto` (cao tự nhiên theo nội dung),
+            Hình gia đình đứng hàng `1fr` — tự nở lấp hết phần còn lại, không cần đổi CSS. */}
         <div className="col-stack">
+          {/* Khối hôn phối (`GxHonPhoiGiaDinh` bản desktop) — trước đây bản web ĐỌC được dữ liệu
+              này (`GET /api/gia-dinh/{id}` đã trả `HonPhoi`) nhưng KHÔNG hề hiện lên đâu cả, và
+              luôn gửi `honPhoi: null` khi lưu — người dùng không thấy, không sửa được, dù máy
+              chủ đã sẵn sàng (gia-dinh-chi-tiet.md mục 10, "Trung bình #5"). Chỉ hiện được khi
+              có Người nam hoặc Người nữ — hôn phối không thể "mồ côi" (KhongTheGanHonPhoiMoCoi),
+              vô hiệu hoá cả khối kèm gợi ý rõ ràng khi chưa đủ điều kiện thay vì ẩn hẳn (ẩn hẳn
+              sẽ khiến người dùng lại tưởng "màn hình thiếu mục hôn phối" như lần góp ý này).
+              Nhãn-trái/ô-phải dùng THẲNG `.frow` mặc định — giống hệt "Thông tin gia đình", theo
+              đúng góp ý người dùng (2026-09-07, "panel hôn phối cần phải có cách display
+              DataField như bên thông tin gia đình"). Cột phải đã nới rộng gần bằng cột trái
+              (`.cols`, xem qlgx.css) nên không còn cắt chữ như lượt trước ("04/", "Chính Tâ"). */}
+          <div className="card glass">
+            <div className="card-head"><h2>Hôn phối</h2></div>
+            {!nguoiNam && !nguoiNu && (
+              <p className="hint" style={{ margin: '0 0 8px' }}>
+                Chọn Người nam hoặc Người nữ ở trên trước khi nhập hôn phối.
+              </p>
+            )}
+            <GxField label="Số hôn phối" id="gdinh-hp-so"
+              extra={<>
+                <GxInline>Ngày hôn phối</GxInline>
+                <GxDate id="gdinh-hp-ngay" name="honPhoiNgay" defaultValue={f.honPhoi?.ngayHonPhoi ?? null}
+                  style={{ maxWidth: 150 }} disabled={!nguoiNam && !nguoiNu} />
+              </>}>
+              <input id="gdinh-hp-so" name="honPhoiSoHonPhoi" type="text"
+                defaultValue={f.honPhoi?.soHonPhoi ?? ''} disabled={!nguoiNam && !nguoiNu} style={{ maxWidth: 100 }} />
+            </GxField>
+            <GxField label="Nơi hôn phối" id="gdinh-hp-noi">
+              <input id="gdinh-hp-noi" name="honPhoiNoi" type="text"
+                defaultValue={f.honPhoi?.noiHonPhoi ?? ''} disabled={!nguoiNam && !nguoiNu} />
+            </GxField>
+            <GxField label="Linh mục chứng" id="gdinh-hp-lm">
+              <input id="gdinh-hp-lm" name="honPhoiLinhMuc" type="text"
+                defaultValue={f.honPhoi?.linhMucChung ?? ''} disabled={!nguoiNam && !nguoiNu} />
+            </GxField>
+            <GxField label="Người chứng 1" id="gdinh-hp-c1">
+              <input id="gdinh-hp-c1" name="honPhoiChung1" type="text"
+                defaultValue={f.honPhoi?.nguoiChung1 ?? ''} disabled={!nguoiNam && !nguoiNu} />
+            </GxField>
+            <GxField label="Người chứng 2" id="gdinh-hp-c2">
+              <input id="gdinh-hp-c2" name="honPhoiChung2" type="text"
+                defaultValue={f.honPhoi?.nguoiChung2 ?? ''} disabled={!nguoiNam && !nguoiNu} />
+            </GxField>
+            <GxField label="Tình trạng hôn phối" id="gdinh-hp-ct">
+              <select id="gdinh-hp-ct" name="honPhoiCachThuc" defaultValue={f.honPhoi?.cachThucHonPhoi ?? ''}
+                disabled={!nguoiNam && !nguoiNu}>
+                {CACH_THUC_HON_PHOI.map((c) => <option key={c} value={c}>{c || '(chưa xác định)'}</option>)}
+              </select>
+            </GxField>
+            <GxField label="Ghi chú hôn phối" id="gdinh-hp-ghichu">
+              <textarea id="gdinh-hp-ghichu" name="honPhoiGhiChu"
+                defaultValue={f.honPhoi?.ghiChu ?? ''} disabled={!nguoiNam && !nguoiNu} />
+            </GxField>
+          </div>
+
           <div className="card glass">
             <div className="card-head"><h2>Hình gia đình</h2></div>
             <AnhDaiDien
@@ -405,68 +462,6 @@ export function GiaDinhDetail({
               onXoa={api.giaDinh.xoaAnh}
               nhan="ảnh"
             />
-          </div>
-
-          {/* Khối hôn phối (`GxHonPhoiGiaDinh` bản desktop) — trước đây bản web ĐỌC được dữ liệu
-              này (`GET /api/gia-dinh/{id}` đã trả `HonPhoi`) nhưng KHÔNG hề hiện lên đâu cả, và
-              luôn gửi `honPhoi: null` khi lưu — người dùng không thấy, không sửa được, dù máy
-              chủ đã sẵn sàng (gia-dinh-chi-tiet.md mục 10, "Trung bình #5"). Chỉ hiện được khi
-              có Người nam hoặc Người nữ — hôn phối không thể "mồ côi" (KhongTheGanHonPhoiMoCoi),
-              vô hiệu hoá cả khối kèm gợi ý rõ ràng khi chưa đủ điều kiện thay vì ẩn hẳn (ẩn hẳn
-              sẽ khiến người dùng lại tưởng "màn hình thiếu mục hôn phối" như lần góp ý này).
-              Người dùng góp ý (2026-09-07): khối này phải nằm DƯỚI "Hình gia đình" — chuyển
-              từ cột trái sang đây, thay vì đứng riêng cạnh "Thông tin gia đình". */}
-          <div className="card glass">
-            <div className="card-head"><h2>Hôn phối</h2></div>
-            {!nguoiNam && !nguoiNu && (
-              <p className="hint" style={{ margin: '0 0 8px' }}>
-                Chọn Người nam hoặc Người nữ ở trên trước khi nhập hôn phối.
-              </p>
-            )}
-            {/* Cột phải hẹp (tối thiểu 360px, trừ padding thẻ 2*16px chỉ còn ~328px) — bố cục
-                CŨ dùng `.card-row` chia đôi thành hai cột con rồi mỗi cột con lại dùng `.frow`
-                nhãn-trái/ô-phải (nhãn cố định 132px): mỗi cột con chỉ còn ~158px, trừ nhãn 132px
-                và gap 10px thì Ô NHẬP CÒN ĐÚNG ~16PX — đúng lỗi người dùng chụp được ("04/",
-                "Chính Tâ", "Hợp p"). Sửa bằng lớp `.honphoi-fields` (xem qlgx.css): xếp MỘT cột
-                dọc (bỏ hẳn `.card-row`) và đổi từng `.frow` bên trong sang nhãn-trên/ô-dưới —
-                ô nhập khi đó rộng gần hết bề ngang thẻ (~328px) thay vì bị bóp hai lần. Xem
-                docs/superpowers/specs/man-hinh/can-review-sau.md mục 40. */}
-            <div className="honphoi-fields">
-              <GxField label="Số hôn phối" id="gdinh-hp-so">
-                <input id="gdinh-hp-so" name="honPhoiSoHonPhoi" type="text"
-                  defaultValue={f.honPhoi?.soHonPhoi ?? ''} disabled={!nguoiNam && !nguoiNu} />
-              </GxField>
-              <GxField label="Ngày hôn phối" id="gdinh-hp-ngay">
-                <GxDate id="gdinh-hp-ngay" name="honPhoiNgay" defaultValue={f.honPhoi?.ngayHonPhoi ?? null}
-                  style={{ maxWidth: 180 }} disabled={!nguoiNam && !nguoiNu} />
-              </GxField>
-              <GxField label="Nơi hôn phối" id="gdinh-hp-noi">
-                <input id="gdinh-hp-noi" name="honPhoiNoi" type="text"
-                  defaultValue={f.honPhoi?.noiHonPhoi ?? ''} disabled={!nguoiNam && !nguoiNu} />
-              </GxField>
-              <GxField label="Linh mục chứng" id="gdinh-hp-lm">
-                <input id="gdinh-hp-lm" name="honPhoiLinhMuc" type="text"
-                  defaultValue={f.honPhoi?.linhMucChung ?? ''} disabled={!nguoiNam && !nguoiNu} />
-              </GxField>
-              <GxField label="Người chứng 1" id="gdinh-hp-c1">
-                <input id="gdinh-hp-c1" name="honPhoiChung1" type="text"
-                  defaultValue={f.honPhoi?.nguoiChung1 ?? ''} disabled={!nguoiNam && !nguoiNu} />
-              </GxField>
-              <GxField label="Người chứng 2" id="gdinh-hp-c2">
-                <input id="gdinh-hp-c2" name="honPhoiChung2" type="text"
-                  defaultValue={f.honPhoi?.nguoiChung2 ?? ''} disabled={!nguoiNam && !nguoiNu} />
-              </GxField>
-              <GxField label="Tình trạng hôn phối" id="gdinh-hp-ct">
-                <select id="gdinh-hp-ct" name="honPhoiCachThuc" defaultValue={f.honPhoi?.cachThucHonPhoi ?? ''}
-                  disabled={!nguoiNam && !nguoiNu}>
-                  {CACH_THUC_HON_PHOI.map((c) => <option key={c} value={c}>{c || '(chưa xác định)'}</option>)}
-                </select>
-              </GxField>
-              <GxField label="Ghi chú hôn phối" id="gdinh-hp-ghichu">
-                <textarea id="gdinh-hp-ghichu" name="honPhoiGhiChu"
-                  defaultValue={f.honPhoi?.ghiChu ?? ''} disabled={!nguoiNam && !nguoiNu} />
-              </GxField>
-            </div>
           </div>
         </div>
       </div>

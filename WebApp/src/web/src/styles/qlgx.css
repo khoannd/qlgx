@@ -878,7 +878,11 @@ tbody tr[aria-selected="true"] .rowhead {
    để tấm cuối nở ra lấp phần thừa, nếu không cả cột giãn mà tấm thì không. */
 .cols {
   display: grid;
-  grid-template-columns: minmax(430px, 1.15fr) minmax(360px, .85fr);
+  /* Cột phải rộng gần bằng cột trái (đúng bản mẫu desktop) — trước đây `.85fr` làm ô nhập
+     hôn phối chỉ còn ~328px sau khi trừ padding thẻ, cắt cụt chữ ("04/", "Chính Tâ"). Nới lên
+     gần 1:1 để đủ chỗ khi khối Hôn phối quay lại nhãn-trái/ô-phải chuẩn `.frow` (xem
+     `.honphoi-fields` bên dưới, can-review-sau.md mục layout gia đình 2026-09-07). */
+  grid-template-columns: minmax(420px, 1.05fr) minmax(400px, .95fr);
   gap: 12px;
   align-items: stretch;
   /* Khối thông tin nhường chỗ cho lưới thành viên: khi màn hình thấp, chính
@@ -903,6 +907,21 @@ tbody tr[aria-selected="true"] .rowhead {
   .cols { grid-template-columns: 1fr; }
   .col-stack { grid-template-rows: auto auto; }
 }
+
+/* Cột trái ("Thông tin gia đình", GiaDinhDetail.tsx) chỉ có MỘT tấm, không co giãn theo nội
+   dung — `.cols` khai `align-items: stretch` chỉ giãn khối BỌC ngoài (div flex-column) chứ
+   tấm `.card` bên trong không có gì kéo nó cao theo, để lại khoảng trắng vô hình phía dưới
+   card, đúng khoảng trống "cột trái ~416px, cột phải ~507px, lệch ~91px" người dùng báo
+   (2026-09-07). Sửa bằng cách cho card tự trải flex-column cao 100% khung được cấp, rồi để
+   Ô GHI CHÚ hút hết phần chiều cao dư ra — đúng ý bản mẫu desktop ("Ghi chú cao khoảng 5-6
+   dòng — chính chỗ này làm cột trái cao bằng cột phải"). Chọn đúng hàng Ghi chú bằng
+   `:has(#gdinh-ghichu)` thay vì sửa `GxField`/`GxInline` chỉ để thêm className riêng cho một
+   chỗ dùng. */
+.giadinh-left-col { display: flex; flex-direction: column; min-height: 0; }
+.giadinh-left-col > .card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.giadinh-left-col .frow:has(#gdinh-ghichu) { flex: 1; min-height: 0; align-items: stretch; }
+.giadinh-left-col .frow:has(#gdinh-ghichu) .val { align-items: stretch; }
+.giadinh-left-col .frow:has(#gdinh-ghichu) textarea { flex: 1; height: 100%; min-height: 90px; }
 
 /* Khối "Thành viên khác" của `GiaDinhDetail.tsx` — PHẢI là đúng MỘT phần tử con trực tiếp của
    `.detail-page` (tiêu đề + thanh công cụ thêm + lưới gộp lại), khớp đúng 4 hàng khai ở
@@ -945,34 +964,15 @@ tbody tr[aria-selected="true"] .rowhead {
 .detail-page-giadinh .members-block { display: block; min-height: auto; }
 .detail-page-giadinh .members-block > .table-card { height: 320px; }
 
-/* Khối "Hôn phối" — nằm trong cột phải hẹp (`.cols`, minmax(360px, .85fr)), trừ padding thẻ
-   (2*16px) chỉ còn ~328px bề ngang. `.frow` mặc định (nhãn 132px cố định bên trái) đã chật, nếu
-   còn chia đôi bằng `.card-row` như các khối 2-cột khác thì mỗi ô nhập chỉ còn ~16px — đúng lỗi
-   "04/", "Chính Tâ", "Hợp p" bị cắt cụt người dùng chụp được (can-review-sau.md mục 40). Đổi
-   nhãn lên TRÊN, ô nhập xuống DƯỚI (`.honphoi-fields .frow` bên dưới) để ô không còn bị bóp bởi
-   nhãn cố định 132px nữa — nhưng nếu xếp NGUYÊN MỘT CỘT DỌC (8 hàng) thì khối cao gần gấp đôi
-   card "Thông tin gia đình" bên cột trái, kéo lại đúng "khoảng trống thừa" người dùng vừa yêu
-   cầu bỏ (do `.cols` khai `align-items: stretch`, card trái không tự nở theo — xem chú thích
-   dài ở JSX chỗ dựng `.cols`). Xếp `.honphoi-fields` thành LƯỚI HAI CỘT (như `.card-row`) để 8
-   trường co lại còn 4 hàng — chiều cao khối khi đó xấp xỉ card trái, không còn khoảng trống. */
-.honphoi-fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 12px;
-}
-.honphoi-fields .frow {
-  grid-template-columns: 1fr;
-  row-gap: 3px;
-  margin-bottom: 8px;
-}
-.honphoi-fields .frow > label { font-size: 12px; }
-.honphoi-fields .frow .val > input[type="text"],
-.honphoi-fields .frow .val > select,
-.honphoi-fields .frow .val > textarea { width: 100%; }
-/* "Ghi chú hôn phối" (textarea) là trường cuối, lẻ hàng — cho nó chiếm trọn bề ngang (2 cột)
-   thay vì kẹt một nửa, đỡ chật khi gõ nhiều chữ. */
-.honphoi-fields .frow:last-child { grid-column: 1 / -1; }
-@media (max-width: 1120px) { .honphoi-fields { grid-template-columns: 1fr; } }
+/* Khối "Hôn phối" — lượt sửa trước đổi nhãn lên TRÊN/ô xuống DƯỚI (`.honphoi-fields`) vì cột
+   phải khi đó hẹp (~328px sau padding thẻ) làm ô nhập bị cắt cụt ("04/", "Chính Tâ", "Hợp p",
+   can-review-sau.md mục 40). Người dùng góp ý (2026-09-07): KHÔNG muốn kiểu nhãn-trên — phải
+   giống hệt khối "Thông tin gia đình" (nhãn trái cố định, dùng thẳng `.frow` mặc định, không
+   cần lớp `.honphoi-fields` nữa). Cách chống cắt chữ bây giờ là NỚI RỘNG cột phải (`.cols`,
+   xem phía trên: minmax(400px, .95fr), gần bằng cột trái, đúng bản mẫu desktop) thay vì đổi
+   kiểu nhãn. Chỉ còn lại MỘT chỉnh sửa nhỏ: "Số hôn phối" đứng cùng dòng với "Ngày hôn phối"
+   qua `extra`/`GxInline` — đúng cách khối trái ghép "Điện thoại" với "Diện" — khớp bản mẫu
+   desktop ("Số hôn phối | Ngày hôn phối" cùng dòng), xem GiaDinhDetail.tsx. */
 
 /* Khối "Thông tin cá nhân" của frmGiaoDan (bản desktop): bản desktop chia BA cột
    (`grbCaNhan`), nhưng người dùng góp ý lệch trực quan so với hai tấm 50/50 ngay bên dưới
@@ -1067,28 +1067,35 @@ tbody tr[aria-selected="true"] .rowhead {
 }
 .gx-date-loi { font-size: 11.5px; color: var(--rose-ink); }
 
+/* `.seg` được đặt THẲNG lên chính thẻ <label> bọc input (radio "Chủ hộ" cạnh Người
+   nam/nữ ở GiaDinhDetail.tsx) — KHÔNG phải một khối cha bọc nhiều <label> con như tên gợi ý
+   ban đầu. Trước đây CSS viết theo kiểu "cha .seg { pill } .seg label { padding, màu } .seg
+   label:has(input:checked) { nổi bật }" — cả BA quy tắc `.seg label...` đều không bao giờ
+   khớp vì không có <label> nào là con của `.seg` (chính .seg đã LÀ label). Hậu quả: pill
+   "Chủ hộ" luôn hiện xám, bấm vào input vẫn đổi (radio state đổi đúng, có test xác nhận) —
+   nhưng KHÔNG BAO GIỜ đổi giao diện, người dùng tưởng bấm không ăn thua ("mục chủ hộ hiện
+   tại không click được", phản hồi 2026-09-07). Sửa: gộp style của "label con" cũ thẳng vào
+   `.seg`, và đổi `:has()` thành `.seg:has(input:checked)` cho khớp đúng cấu trúc thật. */
 .seg {
   display: inline-flex;
-  padding: 2px;
-  border-radius: 999px;
-  background: rgba(14,32,76,.06);
-  flex: none;
-}
-.seg label {
+  align-items: center;
   padding: 4px 11px;
   border-radius: 999px;
+  background: rgba(14,32,76,.06);
   font-size: 12.5px;
   color: var(--ink-soft);
   cursor: pointer;
   white-space: nowrap;
+  flex: none;
 }
 .seg input { position: absolute; opacity: 0; pointer-events: none; }
-.seg label:has(input:checked) {
+.seg:has(input:checked) {
   background: #fff;
   color: var(--brand-ink);
   font-weight: 600;
   box-shadow: 0 2px 6px -2px rgba(14,32,76,.28);
 }
+.seg:has(input:disabled) { cursor: default; opacity: .5; }
 
 .photo-slot {
   border-radius: var(--r-card);

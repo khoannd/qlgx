@@ -1918,3 +1918,82 @@ LỚN như trước khi sửa phần (b). Ảnh chụp: `80-gia-dinh-hon-phoi-va
 đọc được trọn `04/01/1996`/`Chính Tâm`/`Hợp pháp`), `81-gia-dinh-cuon-het-trang.png` (cuộn hết
 trang, lưới thành viên hiện đúng Mã GD 1068/1069/1070/1071, không còn khoảng trống thừa trước
 `.cmdbar`).
+
+### 41. Task "sửa 4 vấn đề màn hình chi tiết gia đình theo phản hồi trực tiếp" (2026-09-07) —
+các quyết định tự đưa ra
+
+Người dùng thật ngồi kiểm tra trực tiếp báo 4 việc: (1) radio "Chủ hộ" bấm không ăn thua, (2)
+đổi thứ tự cột phải — Hôn phối lên trên, Hình gia đình xuống dưới, (3) cột trái ("Thông tin gia
+đình") phải cao bằng tổng cột phải, không còn khoảng trống, (4) khối Hôn phối phải quay lại
+kiểu nhãn-trái/ô-phải giống "Thông tin gia đình" (mục 40 vừa đổi sang nhãn-trên để chống cắt
+chữ — người dùng không muốn kiểu đó).
+
+**a) Nguyên nhân gốc lỗi #1 (radio "Chủ hộ" như không bấm được) — KHÔNG phải lỗi click, mà lỗi
+CSS không có phản hồi thị giác.** Đo bằng Chrome DevTools MCP: bấm radio (qua `click` — dispatch
+chuột thật qua CDP, đúng tọa độ `elementFromPoint` trả về `<label class="seg">`) THAY ĐỔI ĐÚNG
+`input.checked` (xác nhận bằng `evaluate_script`), và khi bấm "Cập nhật" giá trị `chu_ho` trong
+Postgres CŨNG đổi đúng (xem phần d) — vậy input và luồng lưu vẫn hoạt động. Vấn đề thật: class
+`.seg` trong `qlgx.css` được viết cho một khối CHA bọc nhiều `<label>` con (`.seg { pill } .seg
+label { padding, màu } .seg label:has(input:checked) { nổi bật trắng }"), nhưng JSX
+(`GiaDinhDetail.tsx`) đặt `className="seg"` THẲNG lên chính `<label>` bọc input (chỉ MỘT label,
+không có label con nào bên trong `.seg` cả). Cả ba luật `.seg label...` không bao giờ khớp —
+hậu quả: pill "Chủ hộ" LUÔN hiện xám mờ dù đã chọn hay chưa, người dùng bấm xong không thấy gì
+đổi nên tưởng nút không hoạt động. Chụp màn hình xác nhận: trước khi sửa, cả hai pill "Chủ hộ"
+(Người nam đang là chủ hộ thật trong CSDL, Người nữ không phải) trông GIỐNG HỆT nhau. Sửa: gộp
+style của "label con" cũ thẳng vào `.seg`, đổi `:has()` từ `.seg label:has(input:checked)` thành
+`.seg:has(input:checked)` cho khớp đúng cấu trúc thật (`qlgx.css`); thêm
+`.seg:has(input:disabled)` làm mờ khi chưa chọn Người nam/nữ (trước đây không có style disabled
+nào). Không đổi JSX của khối này — chỉ CSS.
+
+**b) Vấn đề #2 (đổi thứ tự cột phải):** chỉ đảo lại thứ tự hai `<div className="card glass">`
+trong `.col-stack` (Hôn phối trước, Hình gia đình sau) — không đổi CSS `.col-stack` (vẫn
+`grid-template-rows: auto 1fr`, giờ hàng `auto` là Hôn phối cao tự nhiên, hàng `1fr` là Hình gia
+đình nở lấp phần còn lại, đúng ý bản mẫu desktop "khung ảnh lớn nằm dưới cùng, chiếm phần chiều
+cao còn lại"). Đây là đảo NGƯỢC lại thứ tự mục 39 phần d từng chọn (khi đó dời Hôn phối xuống
+DƯỚI Hình gia đình để lấp khoảng trống) — mục 39 đoán sai ý người dùng, lần này người dùng nói
+rõ "move hình gia đình xuống dưới hôn phối".
+
+**c) Vấn đề #3 (cột trái phải cao bằng cột phải, hết khoảng trống) — nguyên nhân giống hệt mục
+40 phần b đã ghi (`.cols` khai `align-items: stretch` chỉ giãn khối BỌC ngoài, không giãn
+`.card` bên trong nếu card không có gì co giãn theo)."** Lần trước (mục 40) chấp nhận khoảng
+trống ~91px vì thời gian có hạn; lần này người dùng yêu cầu dứt điểm "không có khoảng trống
+nào". Sửa triệt để: bọc cột trái bằng class mới `.giadinh-left-col` (thay flex-column trơn) —
+`.giadinh-left-col > .card { flex: 1 }` cho card tự trải cao 100% khung được cấp, rồi CHỌN
+RIÊNG hàng "Ghi chú" (`.frow:has(#gdinh-ghichu)`, dùng `:has()` với id đã có sẵn thay vì phải
+thêm prop `className` mới cho `GxField`) đặt `flex: 1` + textarea `flex:1; height:100%` để nó
+hút hết phần chiều cao dư ra — đúng ý bản mẫu desktop ("Ghi chú cao khoảng 5-6 dòng — chính chỗ
+này làm cột trái cao bằng cột phải", xem mô tả màn hình desktop trong nhiệm vụ). Đo bằng
+`getBoundingClientRect()` qua Chrome DevTools MCP sau khi sửa: cột trái (`.giadinh-left-col`)
+cao **473.65px**, card "Thông tin gia đình" bên trong cũng cao **473.65px** (khớp tuyệt đối,
+không còn khoảng trống), cột phải (`.col-stack`) cao **473.65px** (Hôn phối 327.85px + gap 12px
++ Hình gia đình 133.8px = 473.65px) — HAI CỘT BẰNG NHAU TUYỆT ĐỐI, sai số 0px.
+
+**d) Vấn đề #4 (Hôn phối quay lại nhãn-trái/ô-phải) — giải quyết mâu thuẫn nêu trong nhiệm vụ
+bằng cách NỚI RỘNG CỘT PHẢI thay vì đổi kiểu nhãn.** Bỏ hẳn class `.honphoi-fields` (nhãn-trên,
+2 cột) từ mục 40 — mọi trường Hôn phối giờ dùng THẲNG `.frow` mặc định (nhãn trái cố định 132px,
+đúng class khối "Thông tin gia đình" đang dùng). Để không cắt chữ trở lại (nguyên nhân gốc mục
+40 phần a: cột phải cũ chỉ `minmax(360px, .85fr)`, trừ padding thẻ còn ~328px), đổi tỉ lệ `.cols`
+từ `minmax(430px, 1.15fr) minmax(360px, .85fr)` thành `minmax(420px, 1.05fr) minmax(400px,
+.95fr)` — gần 1:1, đúng ý "cột phải rộng gần bằng cột trái" trong mô tả bản mẫu desktop. Riêng
+"Số hôn phối"/"Ngày hôn phối" ghép chung một dòng qua `extra`/`GxInline` (đúng cách khối trái
+ghép "Điện thoại"/"Diện") — khớp đúng bản mẫu desktop ("Số hôn phối | Ngày hôn phối" cùng dòng).
+Kiểm chứng trên trình duyệt thật (gia đình "Paul Trần Văn Thái", mã 9): đọc trọn `04/01/1996`,
+`Chính Tâm`, `Hợp pháp`, không còn bị cắt — ảnh `82-gia-dinh-honphoi-tren-hinh-duoi-nhan-trai.png`.
+
+**e) Bằng chứng chạy thật (bấm radio "Chủ hộ" thật, không phải chỉnh `defaultChecked` qua
+code):** mở gia đình mã 9 trên trình duyệt thật (Chrome DevTools MCP) — trạng thái gốc `psql`:
+`chu_ho=t` ở dòng vai_tro=0 (Trần Văn Thái), `chu_ho=f` ở dòng vai_tro=1 (Nguyễn Thị Thu). Bấm
+radio "Chủ hộ" cạnh Người nữ → pill đổi màu trắng/đậm ngay (xác nhận CSS đã sửa hoạt động, ảnh
+`84-chuho-pill-sang-khi-chon.png`) → bấm "Cập nhật" → thông báo "Đã lưu thành công." → `psql`
+xác nhận đổi đúng: `chu_ho=f` (vai_tro=0), `chu_ho=t` (vai_tro=1). Bấm lại radio "Chủ hộ" cạnh
+Người nam → "Cập nhật" → `psql` xác nhận đã TRẢ VỀ ĐÚNG nguyên trạng ban đầu (`chu_ho=t` ở
+vai_tro=0). Lưới thành viên vẫn đúng 4 dòng Mã GD 1068/1069/1070/1071 (ảnh
+`83-gia-dinh-luoi-4-thanh-vien-1068-1071.png`) — không bị ảnh hưởng bởi các thay đổi CSS/JSX
+trên.
+
+**f) Số test cuối:** backend **244/244** (không đổi — cả 4 vấn đề đều là CSS/JSX thuần phía
+frontend, không chạm C#). Frontend **254/254** (không thêm test mới — 4 vấn đề đều là bố cục/CSS
+đã có test hành vi phủ sẵn ở `GiaDinhDetail.test.tsx`, gồm cả test "chuHoVaiTro" đã có từ trước
+xác nhận đúng luồng gửi dữ liệu). `npm run build` chạy được. Dữ liệu giáo xứ Vô Nhiễm không đổi:
+2050 giáo dân / 40 gia đình / 145 thành viên (`psql` xác nhận sau khi hoàn tất, đã trả radio
+"Chủ hộ" về đúng nguyên trạng). Ảnh chụp/kiểm thử: `82`–`84` trong `WebApp/anh-chup-kiem-thu/`.
