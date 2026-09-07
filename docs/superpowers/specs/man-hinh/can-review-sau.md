@@ -2804,3 +2804,69 @@ API nào đã có, chỉ THÊM một endpoint đọc mới (`GET /api/danh-muc/t
 `components/GxGoiY.test.tsx`), `npm run build` chạy được. Backend: `Qlgx.Data.Tests` 38/38,
 `Qlgx.Api.Tests` 204/204 (thêm 3 cho `DanhMucTests.cs`), `Qlgx.Migration.Tests` 24/24 — không xoá
 test nào. Ảnh chụp: `111`–`114` trong `WebApp/anh-chup-kiem-thu/`.
+
+### 51. Task "khung ảnh 3×4 đúng tỉ lệ" (2026-09-07) — cột trái ngắn lại, ảnh rộng ra đúng 3:4
+
+Người dùng thật đang ngồi kiểm tra, viết nguyên văn: "trong tin cá nhân giáo dân, hãy làm cho
+các mục bên trái ngắn lại tí nữa để hình được theo tỉ lệ 3x4, hiện tại hình hơi cao quá, cần cho
+rộng thêm tí". Sau các lượt sửa liên tiếp ở mục 47/48, khung ảnh `.canhan-top .photo-slot` đã cao
+lên theo `.canhan-top-fields` (178,6px, do `align-items: stretch`) nhưng WIDTH vẫn đứng yên 92px
+cố định từ hồi ảnh còn thấp — tỉ lệ rộng/cao chỉ còn 92/178,6 ≈ **0,515** (lẽ ra ảnh thẻ 3×4 phải
+là rộng:cao = 3:4 = 0,75).
+
+**Thử CSS thuần trước, đo thực tế mới bỏ:** thử `aspect-ratio: 3 / 4` thay `width: 92px` cứng.
+Đo bằng `getBoundingClientRect()` trên trình duyệt thật (Chromium): ra 128,6 × 178,6 = tỉ lệ
+**0,72** — GẦN nhưng KHÔNG đúng 0,75. Lý do (suy từ số đo, không đoán): trong flex row với
+`align-items: stretch`, bề RỘNG (trục chính) được trình duyệt tính TRƯỚC khi bề CAO (trục ngang,
+giãn theo sibling `.canhan-top-fields`) chốt xong — thứ tự ngược với điều `aspect-ratio` cần (nó
+cần biết bề cao CUỐI CÙNG để suy ra bề rộng), nên Chromium chỉ xấp xỉ qua một bề cao "giả định"
+ở bước tính flex-basis, sai khoảng 4% so với tỉ lệ mong muốn — không đạt yêu cầu "≈ 0,75" của
+nhiệm vụ.
+
+**Quyết định:** bỏ hẳn `aspect-ratio` CSS, chuyển sang đo bằng JS. Thêm prop `tiLe34?: boolean`
+cho `AnhDaiDien.tsx` (component dùng chung cho khung ảnh giáo dân VÀ gia đình) — khi bật, một
+`useLayoutEffect` + `ResizeObserver` đo `getBoundingClientRect().height` của CHÍNH khung ảnh
+(bề cao này đã được `align-items: stretch` của `.canhan-top` chốt xong, không phụ thuộc bề rộng
+của chính nó — không có vòng lặp phụ thuộc) rồi đặt `width` = cao × 0,75 qua inline style. CSS
+`.canhan-top .photo-slot` chỉ còn giữ `width: 92px` tĩnh làm SÀN cho khung hình vẽ đầu tiên
+(trước khi effect kịp đo), y hệt vai trò `min-height: 92px` đã có sẵn. Chỉ bật `tiLe34` ở
+`GiaoDanDetail.tsx` (`<AnhDaiDien ... tiLe34 />`) — mặc định `false`, KHÔNG đổi hành vi khung ảnh
+vuông ở `GiaDinhDetail.tsx` (`.col-stack > .card > .photo-slot { flex: 1 }`, ngữ cảnh khác hẳn).
+`.canhan-top-fields` vẫn giữ nguyên `flex: 1` — cơ chế flex có sẵn tự nhường bớt bề ngang cho
+khung ảnh khi nó rộng ra (đúng ý "ngắn lại tí nữa" của người dùng), không cần tính tay số px nào.
+
+`ResizeObserver` trong jsdom (test-setup.ts) là lớp giả rỗng (`observe()` không làm gì, không gọi
+lại callback) — an toàn cho test: `useLayoutEffect` vẫn gọi `doVaDat()` một lần đồng bộ lúc mount
+nên `rongTiLe` vẫn có giá trị, chỉ không "sống" theo resize cửa sổ trong môi trường test (chấp
+nhận được, đúng ghi chú đã có ở đầu `test-setup.ts` về giới hạn của bộ giả lập này).
+
+**Đo `getBoundingClientRect()` trên trình duyệt thật** (giáo dân "Giuse Nguyễn Đức Mạnh", mã 1;
+lấy số "trước" bằng kỹ thuật `git stash push`/`pop` tạm ba file đã sửa, đo lại bản HMR reload,
+giống mục 47/48 đã làm):
+
+| Đại lượng | Trước | Sau |
+|---|---|---|
+| Khung ảnh `.photo-slot` | 92 × 178,6 (tỉ lệ **0,515**) | **134 × 178,6** (tỉ lệ **0,7503**) |
+| `.canhan-top-fields` | 458,8 × 178,6 | 416,8 × 178,6 (ngắn lại đúng phần ảnh rộng thêm) |
+| `.canhan-top` (tổng) | 562,8 × 178,6 | 562,8 × 178,6 (không đổi — hai cột vẫn cao bằng nhau,
+  không khoảng trống thừa nào phát sinh) |
+
+Tỉ lệ rộng/cao sau: 134 / 178,6 = **0,7503** ≈ 0,75 đúng yêu cầu. Ảnh chụp:
+`115-canhan-anh-3x4-truoc.png` / `116-canhan-anh-3x4-sau.png`.
+
+**Kiểm không cắt chữ ô bên trái đã hẹp lại:** mở giáo dân "Anna Nguyễn Thị Hồng Duyên" (mã 1095,
+lọc từ ô lọc "Họ tên" trong "Danh sách giáo dân") — ô "Họ tên" hiện đúng, đầy đủ
+`Nguyễn Thị Hồng Duyên`, không cắt. Xác nhận bằng `input.scrollWidth === input.clientWidth`
+(309 === 309, không có phần bị tràn/ẩn) qua `evaluate`, không chỉ nhìn mắt thường. Ảnh chụp:
+`117-canhan-hoten-dai-khong-cat.png`.
+
+**Không đụng gì khác:** không sửa `GiaDinhDetail.tsx` (khung ảnh gia đình không dùng `tiLe34`,
+giữ nguyên hành vi vuông cũ); không sửa bố cục 4 khối bên dưới ("Rửa tội"/"Rước lễ lần đầu"/
+"Thêm sức"/"Xức dầu"); không đụng backend.
+
+**Số test cuối:** frontend **316/316** (không thêm test mới — đổi bố cục/kích thước thuần CSS+JS
+đo layout, khó kiểm bằng jsdom hơn trình duyệt thật theo đúng yêu cầu nhiệm vụ; `ResizeObserver`
+giả trong jsdom không đo được layout thật nên một test riêng cho tỉ lệ 3:4 sẽ chỉ kiểm tra hằng
+số 0,75 trong code, không kiểm tra được layout thật — không thêm giá trị). `npm run build` chạy
+được. Không chạm backend, không chạy `dotnet test`. Ảnh chụp: `115`–`117` trong
+`WebApp/anh-chup-kiem-thu/`.

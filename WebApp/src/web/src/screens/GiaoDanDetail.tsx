@@ -773,6 +773,7 @@ export function GiaoDanDetail({
                 onTaiLen={onTaiAnhLen ?? (async () => {})}
                 onXoa={onXoaAnh ?? (async () => {})}
                 nhan="ảnh 3x4"
+                tiLe34
               />
             </div>
             {ngoaiXu && (

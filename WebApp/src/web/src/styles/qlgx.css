@@ -1182,7 +1182,24 @@ tbody tr[aria-selected="true"] .rowhead {
    `align-items: stretch` đã tự lo chiều cao theo `.canhan-top-fields`) — giữ 92px làm SÀN tối
    thiểu qua `min-height` thay vì `height` để khung ảnh không co lại nhỏ hơn 92px trong trường
    hợp `.canhan-top-fields` vì lý do nào đó thấp hơn (ví dụ màn hình rất hẹp, các `.frow` xuống
-   dòng). `width` giữ nguyên 92px — chỉ CAO thêm theo yêu cầu, không rộng thêm. */
+   dòng).
+   Góp ý tiếp theo (2026-09-07, người dùng): "làm cho các mục bên trái ngắn lại tí nữa để hình
+   được theo tỉ lệ 3x4, hiện tại hình hơi cao quá, cần cho rộng thêm tí" — 5 dòng của
+   `.canhan-top-fields` (Mã giáo dân/Tên thánh/Họ tên/Giáo họ/CMND) đã kéo khung ảnh cao tới
+   178.6px (đo mục 48) trong khi WIDTH vẫn đứng yên 92px cố định từ hồi ảnh còn thấp — lệch hẳn
+   khỏi tỉ lệ thẻ 3:4 (rộng:cao = 3:4, tức ~0,75; 92/178,6 ≈ 0,515, quá cao/hẹp).
+   Sửa: THỬ CSS thuần `aspect-ratio: 3 / 4` trước — đo trên trình duyệt thật (Chromium) cho tỉ
+   lệ ~0,72 (128,6 / 178,6) chứ KHÔNG đúng 0,75: trong flex row với `align-items: stretch`, bề
+   rộng (trục chính) được tính TRƯỚC khi bề cao (trục ngang, stretch theo sibling) chốt xong —
+   ngược thứ tự `aspect-ratio` cần (nó cần bề cao chốt trước để suy ra bề rộng), Chromium chỉ
+   xấp xỉ được qua bề cao "giả định" ở bước tính flex-basis, không phải bề cao cuối cùng. Vì
+   vậy KHÔNG dùng `aspect-ratio` ở đây — chuyển sang đo bằng JS (`AnhDaiDien.tsx`, prop
+   `tiLe34`): `ResizeObserver`/`getBoundingClientRect()` đo bề cao SAU khi stretch đã chốt (bảo
+   đảm đúng thứ tự), rồi đặt `width` = cao × 0,75 qua inline style — width dưới đây chỉ còn là
+   SÀN 92px cho lần vẽ đầu tiên (trước khi effect JS kịp đo/áp), tương tự vai trò `min-height`
+   bên dưới. `flex: none` giữ nguyên (khung ảnh không co giãn theo flex-grow/shrink);
+   `.canhan-top-fields` vẫn `flex: 1` nên TỰ nhường bớt bề ngang cho khung ảnh rộng ra (đúng ý
+   "ngắn lại tí nữa") mà không cần tính tay — chỉ bề RỘNG chính xác (0,75) là việc của JS. */
 .canhan-top .photo-slot { width: 92px; min-height: 92px; flex: none; font-size: 10.5px; padding: 4px; line-height: 1.4; }
 .canhan-top-fields { flex: 1; min-width: 160px; }
 @media (max-width: 980px) {

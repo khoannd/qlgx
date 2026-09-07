@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 type Props = {
   /** `null` = bản ghi chưa lưu (chưa có id) — tắt hẳn khả năng tải/xoá ảnh, cùng cách các tab
@@ -10,6 +10,15 @@ type Props = {
   /** Nhãn dòng hai khi chưa có ảnh — "ảnh 3x4" cho giáo dân, để trống dùng chung một câu cho
    * gia đình. */
   nhan?: string
+  /** true: tự đo chiều cao khung ảnh SAU KHI `align-items: stretch` của `.canhan-top`
+   * (GiaoDanDetail) đã giãn xong, rồi đặt bề rộng = cao × 0,75 qua `ResizeObserver` — ép đúng
+   * tỉ lệ thẻ 3×4 (rộng:cao = 3:4). KHÔNG dùng CSS `aspect-ratio` thuần cho việc này: đã thử
+   * trên trình duyệt thật (Chromium), flex row với `align-items: stretch` cho ra tỉ lệ ~0,72
+   * thay vì đúng 0,75 (bề rộng được tính TRƯỚC khi bề cao chốt xong theo sibling, không phải
+   * SAU — thứ tự ngược với điều `aspect-ratio` cần). Đo bằng JS sau khi bề cao đã chốt tránh
+   * hẳn vòng lặp phụ thuộc đó. CHỈ bật ở đây (GiaoDanDetail) qua prop này — mặc định `false` để
+   * không đổi hành vi khung ảnh vuông ở GiaDinhDetail (`.col-stack > .card > .photo-slot`). */
+  tiLe34?: boolean
 }
 
 /** Ô "Ảnh đại diện" dùng chung cho màn hình chi tiết giáo dân VÀ gia đình (Task 1.2
@@ -29,12 +38,32 @@ const KHONG_LAM_GI = async () => {}
 
 export function AnhDaiDien({
   id, onLayAnh = KHONG_CO_ANH, onTaiLen = KHONG_LAM_GI, onXoa = KHONG_LAM_GI, nhan = 'ảnh',
+  tiLe34 = false,
 }: Props) {
   const [anhUrl, setAnhUrl] = useState<string | null>(null)
   const [dangTai, setDangTai] = useState(false)
   const [dangXuLy, setDangXuLy] = useState(false)
   const [loi, setLoi] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const khungRef = useRef<HTMLDivElement>(null)
+  // Bề rộng tính từ bề cao đã giãn (chỉ khi `tiLe34`) — `null` = chưa đo xong, dùng CSS
+  // `width: 92px` tĩnh làm chỗ dựa tạm cho tới lần đo đầu tiên (tránh nhấp nháy về 0).
+  const [rongTiLe, setRongTiLe] = useState<number | null>(null)
+
+  // `useLayoutEffect` (không phải `useEffect`) để đo VÀ áp bề rộng mới trước khi trình duyệt vẽ
+  // khung hình kế tiếp — giảm nhấp nháy giữa bề rộng CSS tĩnh (92px) và bề rộng tính từ JS.
+  useLayoutEffect(() => {
+    if (!tiLe34 || !khungRef.current) return
+    const el = khungRef.current
+    const doVaDat = () => setRongTiLe(Math.round(el.getBoundingClientRect().height * 0.75))
+    doVaDat()
+    // jsdom (test-setup.ts) giả `ResizeObserver` bằng lớp rỗng (observe() không làm gì, không
+    // bao giờ gọi callback) — an toàn: `rongTiLe` giữ nguyên giá trị đo được từ `doVaDat()` ở
+    // trên, ảnh vẫn hiện đúng, chỉ không "sống" theo kích thước cửa sổ trong môi trường test.
+    const quanSat = new ResizeObserver(doVaDat)
+    quanSat.observe(el)
+    return () => quanSat.disconnect()
+  }, [tiLe34])
   // Object URL hiện tại — giữ trong ref để revoke đúng cái CŨ khi effect chạy lại/unmount, độc
   // lập với state (state có thể chưa kịp cập nhật khi cleanup chạy).
   const anhUrlHienTai = useRef<string | null>(null)
@@ -105,8 +134,12 @@ export function AnhDaiDien({
 
   return (
     <div
+      ref={khungRef}
       className="photo-slot"
-      style={anhUrl ? { padding: 0, overflow: 'hidden', position: 'relative', color: undefined } : undefined}
+      style={{
+        ...(anhUrl ? { padding: 0, overflow: 'hidden', position: 'relative', color: undefined } : undefined),
+        ...(rongTiLe ? { width: rongTiLe } : undefined),
+      }}
       onClick={() => { if (!vohieuHoa && !dangXuLy) inputRef.current?.click() }}
       role="button"
       aria-label={anhUrl ? `Đổi ${nhan}` : `Tải ${nhan} lên`}
