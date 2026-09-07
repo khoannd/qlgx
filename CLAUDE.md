@@ -14,10 +14,14 @@ Trả lời người dùng bằng **tiếng Việt**.
 | `BIN\` | thư mục build ra, cũng là bộ file chạy được |
 | `Source\GXInstaller\` | dự án bộ cài (`.vdproj`, Visual Studio Installer Projects) |
 | `Release\` | file phát hành đã ký nhận vào kho |
-| `WebApp\` | bản web đang làm dở, nhánh riêng — **không đụng tới khi phát hành bản desktop** |
+| `WebApp\` | bản viết lại phần mềm desktop thành web app, nhánh riêng — **không đụng tới khi phát hành bản desktop** |
+| `landing\` | trang **quanlygiaoxu.net** thật (Next.js, chạy trên Cloudflare Workers) — gồm cả trang giới thiệu VÀ API máy chủ cập nhật mà chính phần mềm desktop tự gọi (`/capnhat/*`) |
 | `*.ps1` ở thư mục gốc | các script của quy trình phát hành |
 
 Kho nhị phân cho người dùng tải nằm ở `D:\Working\QLGX\qlgx_bin` (repo `qlgx_bin`).
+
+`quanlygiaoxu.net` không còn là hosting cũ — từ 07-09-2026 là Worker Cloudflare
+(`landing/`, xem `landing/README.md`). Đừng nói tới việc "tải file lên FTP/hosting" nữa.
 
 ## Phát hành phiên bản mới
 
@@ -26,9 +30,12 @@ Tài liệu đó có đủ các bước, các lệnh kiểm chứng, và phụ l
 hỏng bản phát hành thật.
 
 Tóm tắt: sửa số phiên bản trong ba file → chạy `release.ps1` → kiểm chứng độc lập →
-commit và đẩy cả hai kho → đưa lên máy chủ theo đúng thứ tự.
+commit và đẩy cả hai kho (`qlgx` và `qlgx_bin`). Máy chủ cập nhật (`quanlygiaoxu.net/capnhat/*`)
+đọc thẳng từ GitHub, **tự lên trong vài phút sau khi push — không cần thao tác gì thêm**.
+Riêng nội dung marketing trên trang chủ (`landing/`) vẫn phải sửa tay và deploy riêng —
+xem `QUY_TRINH_PHAT_HANH.md` mục 5.2.
 
-Bốn điều tuyệt đối không được quên:
+Năm điều tuyệt đối không được quên:
 
 1. **Số phiên bản phải tăng mỗi lần phát hành.** Windows Installer chỉ chép đè file khi
    file mới có số phiên bản lớn hơn. Không tăng thì máy người dùng cài xong vẫn chạy bản
@@ -38,6 +45,12 @@ Bốn điều tuyệt đối không được quên:
 3. **Không cài thử bộ cài lên máy người dùng khi chưa được cho phép.**
 4. **Bước kiểm chứng phải biết báo lỗi.** Chạy thử nó với một file cũ để chắc chắn nó
    không phải lúc nào cũng báo "đạt".
+5. **Không bao giờ xoá hay đổi các đường dẫn cũ của máy chủ cập nhật** (`/version.txt`,
+   `/VersionConfig.xml`, `/download.asp`, `/help/thong_tin_cap_nhat.htm`, và bản sao dưới
+   `/4.0/`), và các đường dẫn đó **phải luôn trả lời được qua `http://` thuần**, không
+   được ép sang `https`. Máy chạy bản 3.3.7 trở về trước (phần lớn người dùng) và bản
+   4.0.0–4.0.1 nằm cứng các địa chỉ này — hỏng chỗ nào là máy đó vĩnh viễn không tự cập
+   nhật được nữa. Xem `HOP_DONG_MAY_CHU_CAP_NHAT.md`.
 
 ## Vài điều hay vấp khi sửa mã
 

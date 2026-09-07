@@ -235,21 +235,68 @@ Làm y hệt cho kho `qlgx_bin` (chỉ có `master` và thẻ).
 
 ---
 
-## 5. Đưa lên máy chủ
+## 5. Đưa lên máy chủ (quanlygiaoxu.net)
 
-Máy chủ phải phục vụ đúng bốn đường dẫn mà phần mềm gọi tới, cùng các đường dẫn cũ của
-những đời phần mềm trước. Xem `HOP_DONG_MAY_CHU_CAP_NHAT.md` — tài liệu đó mô tả đầy đủ
-hợp đồng giữa phần mềm và backend, kể cả cái bẫy so sánh số phiên bản bằng chuỗi.
+> **Đã đổi từ 07-09-2026.** Trước đây mục này mô tả bốn bước tải file lên máy chủ bằng
+> tay. Từ khi trang `quanlygiaoxu.net` chuyển sang chạy trên Cloudflare Workers
+> (thư mục `landing/` trong chính kho `qlgx`), việc đó **không còn cần làm tay nữa** —
+> xem mục 5.1. Việc còn phải làm tay là nội dung marketing trên trang chủ — mục 5.2,
+> **hoàn toàn khác** và **dễ quên** vì trước đây không tồn tại bước này.
 
-`release.ps1` **không** tự tải lên. Bước 10 của script in ra thứ tự bắt buộc:
+### 5.1. Máy chủ cập nhật (API mà chính phần mềm tự gọi) — tự động, không cần làm gì
 
-1. `qlgx_<x_y_z>_update.zip` → thư mục ghi trong `downloadpath`
-2. `thong_tin_cap_nhat.htm` → `/help/`
-3. `qlgx_<x_y_z>.exe` → `/download/`
-4. `VersionConfig.xml` → thư mục gốc — **làm cuối cùng**
+`quanlygiaoxu.net/capnhat/*` (và các đường dẫn cũ `/version.txt`, `/VersionConfig.xml`,
+`/download.asp`, `/help/thong_tin_cap_nhat.htm`, cùng bản sao dưới `/4.0/`) đọc thẳng nội
+dung mới nhất từ GitHub mỗi khi có người gọi, có nhớ tạm 5 phút. Nghĩa là:
 
-Bước 4 phải cuối vì chương trình của người dùng đọc file này để biết có bản mới. Đưa nó
-lên trước khi gói zip sẵn sàng thì người dùng nhận thông báo có bản mới rồi tải thất bại.
+**Ngay khi bước 4 (commit và đẩy lên GitHub) xong, mọi thứ đã tự lên** — chậm nhất 5 phút
+sau `git push` là API trả đúng bản mới, không cần đụng gì tới `landing/`.
+
+Cách hoạt động và toàn bộ hợp đồng với phần mềm desktop (kể cả cái bẫy so sánh số phiên
+bản bằng chuỗi) nằm ở `HOP_DONG_MAY_CHU_CAP_NHAT.md`. Mã nguồn API nằm ở
+`landing/src/lib/update-server.ts` và các route dưới `landing/src/app/`.
+
+Kiểm chứng nhanh sau khi push:
+
+```bash
+curl -s https://quanlygiaoxu.net/capnhat/version.txt          # phải ra đúng value mới, không BOM
+curl -s https://quanlygiaoxu.net/capnhat/VersionConfig.xml | head -c 200
+curl -sI https://quanlygiaoxu.net/capnhat/download-update      # 302, Location trỏ đúng bản mới
+curl -sI http://quanlygiaoxu.net/version.txt                   # đường dẫn cũ, PHẢI qua http:// thuần
+```
+
+Nếu `version.txt` chưa đổi sau vài phút: có thể còn dính bộ nhớ đệm 5 phút, đợi thêm; nếu
+vẫn sai sau đó, kiểm tra `BIN/VersionConfig.xml` đã thật sự lên `master` trên GitHub chưa
+(`curl https://raw.githubusercontent.com/khoannd/qlgx/master/BIN/VersionConfig.xml`).
+
+### 5.2. Nội dung marketing trên trang chủ — VẪN PHẢI LÀM TAY
+
+Trang chủ `quanlygiaoxu.net` (banner "Phiên bản mới nhất", nút tải, trang `/phien-ban`,
+bài viết `/tin-tuc`) lấy nội dung từ `landing/src/lib/content/static-provider.ts` và
+`landing/src/lib/version-history.ts` — **không tự đổi theo VersionConfig.xml**, vì nội
+dung hiển thị cho người dùng cuối thường được viết lại cho dễ hiểu hơn bản ghi chú kỹ
+thuật, không phải chép nguyên văn.
+
+Các bước, làm trong thư mục `landing/`:
+
+1. Sửa `release` trong `static-provider.ts`: `version`, `publishedAt`, `headline`,
+   `summary`, `groups` (thường chỉ nên giữ nội dung có ý nghĩa với người dùng cuối — các
+   bản vá kỹ thuật nối tiếp nhau như 4.0.1 → 4.0.2 có thể gộp lại dùng chung ghi chú của
+   bản trước, không nhất thiết viết riêng cho từng bản vá nhỏ), `downloads[0].fileName`
+   và `.size`.
+2. Thêm một entry mới vào đầu mảng `versionHistory` trong `version-history.ts` (trang
+   `/phien-ban` — trang này liệt kê ĐẦY ĐỦ, kể cả các bản vá nhỏ không lên trang chủ).
+3. Nếu có bài viết `/tin-tuc` riêng cho bản này: thêm vào mảng `articles` trong
+   `static-provider.ts`, và đặt `release.articleSlug` đúng bằng slug bài đó (để trống nếu
+   không viết bài riêng — nút "Đọc bài viết đầy đủ" sẽ tự ẩn).
+4. `npm run d1:seed:generate` rồi `npm run d1:seed:remote` — **bắt buộc**, nếu không nội
+   dung mới chỉ có ở bản build tĩnh, D1 thật (nguồn chính khi đã deploy) vẫn giữ bản cũ.
+5. `npm run cf:build && npx wrangler deploy`.
+6. Kiểm chứng: mở `https://quanlygiaoxu.net/`, xem đúng số phiên bản và nội dung mới; xem
+   `/phien-ban` có bản vừa thêm.
+
+Chi tiết kiến trúc (vì sao tách D1/tĩnh, các bẫy đã gặp khi làm phần này) nằm ở
+`landing/README.md`.
 
 ---
 
