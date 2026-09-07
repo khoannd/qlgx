@@ -40,7 +40,11 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
     /// vẫn dịch bình thường. Đã đo thấy lỗi "could not be translated" khi thử để nguyên ở
     /// DungDanhSach.
     /// </summary>
-    private record NguonDong(GiaoDan Gd, string? QuanHe, Guid? GiaDinhId, bool DaChuyenDi);
+    // internal (không private) — ThongKeService (Task "Thống kê chung & Biểu đồ") dùng lại
+    // ĐÚNG khuôn dựng GiaoDanListItemDto này cho các điều kiện thống kê dựa trên GiaoDan
+    // (Sinh ra/Rửa tội/XTRL/Thêm sức/Qua đời/Tổng số giáo dân/Tân tòng/Chủ hộ/Gia trưởng/Hiền
+    // mẫu/Cao niên/Giới trẻ/Thiếu nhi) — tránh chép lại 15 dòng ánh xạ DTO ở nơi thứ hai.
+    internal record NguonDong(GiaoDan Gd, string? QuanHe, Guid? GiaDinhId, bool DaChuyenDi);
 
     /// <summary>
     /// `hienCaDaMat=false` (mặc định) tái hiện đúng nền lọc mặc định của
@@ -129,7 +133,7 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
                 giaDinhId,
                 tv.GiaoDan!.GiaDinhThamGia.Any(x => x.GiaDinh!.DaChuyenXu)))).ToListAsync(ct);
 
-    private static IQueryable<GiaoDanListItemDto> DungDanhSach(IQueryable<NguonDong> nguon) =>
+    internal static IQueryable<GiaoDanListItemDto> DungDanhSach(IQueryable<NguonDong> nguon) =>
         nguon.Select(n => new GiaoDanListItemDto(
             n.Gd.Id, n.Gd.MaGiaoDanCu, n.Gd.TenThanh, n.Gd.HoTen, n.Gd.Phai,
             n.Gd.NgaySinh,

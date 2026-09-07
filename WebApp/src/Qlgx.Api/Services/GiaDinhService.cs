@@ -91,6 +91,39 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         Guid? giaoHoId, bool chiKhongThongKe, CancellationToken ct) =>
         DungDanhSachGiaDinh(XayDungTruyVan(db, giaoHoId, chiKhongThongKe, luuTru: true), ct);
 
+    /// <summary>
+    /// Điều kiện "Tổng số gia đình (không phụ thuộc năm thống kê)" của tab "Thống kê chung"
+    /// (`GxThongKeChung.cs:369-388`) — KHÔNG dùng lại <see cref="XayDungTruyVan"/> vì where khác
+    /// hai chỗ: (1) giáo họ gồm CẢ giáo xóm con (`MaGiaoHo=X OR MaGiaoHoCha=X`), (2) loại "gia
+    /// đình ảo" (`GiaDinhAo=0` ↔ <see cref="Entities.GiaDinh.KhongThongKe"/>) CHỈ áp dụng khi đã
+    /// chọn một giáo họ cụ thể (`cbGiaoHo.MaGiaoHo > 0`) — xem
+    /// docs/superpowers/specs/man-hinh/thong-ke-bieu-do.md mục 4.2. `luuTru` bật thì bỏ điều
+    /// kiện `DaChuyenXu=0` (gia đình đã chuyển xứ vẫn được đếm), giữ nguyên `DaXoa=0` luôn áp
+    /// dụng (khớp `where = " AND DaXoa=0 "` cố định ở đầu, không có công tắc nào tắt được).
+    /// </summary>
+    public Task<List<GiaDinhListItemDto>> LayThongKeTongSoGiaDinh(
+        Guid? giaoHoId, bool luuTru, CancellationToken ct)
+    {
+        var truyVan = db.GiaDinh.Where(g => !g.DaXoa);
+        if (!luuTru) truyVan = truyVan.Where(g => !g.DaChuyenXu);
+        if (giaoHoId is { } id)
+        {
+            truyVan = truyVan.Where(g => g.GiaoHoId == id || (g.GiaoHo != null && g.GiaoHo.GiaoHoChaId == id));
+            truyVan = truyVan.Where(g => !g.KhongThongKe);
+        }
+        return DungDanhSachGiaDinh(truyVan.OrderBy(g => g.MaGiaDinhCu).Select(g => new HangTho(
+            g.Id, g.MaGiaDinhCu, g.MaGiaDinhRieng, g.TenGiaDinh,
+            g.ThanhVien.Where(tv => tv.VaiTro == VaiTroGiaDinh.Chong)
+                .Select(tv => new NguoiVoChong(tv.GiaoDanId, tv.GiaoDan!.TenThanh, tv.GiaoDan.HoTen, tv.GiaoDan.DienThoai, tv.GiaoDan.QuaDoi))
+                .FirstOrDefault(),
+            g.ThanhVien.Where(tv => tv.VaiTro == VaiTroGiaDinh.Vo)
+                .Select(tv => new NguoiVoChong(tv.GiaoDanId, tv.GiaoDan!.TenThanh, tv.GiaoDan.HoTen, tv.GiaoDan.DienThoai, tv.GiaoDan.QuaDoi))
+                .FirstOrDefault(),
+            g.ThanhVien.Count, g.DienThoai, g.DiaChi,
+            g.GiaoHo == null ? "Ngoài xứ" : g.GiaoHo.TenGiaoHo, g.DienGiaDinh, g.GhiChu, g.KhongThongKe)),
+            ct);
+    }
+
     private async Task<List<GiaDinhListItemDto>> DungDanhSachGiaDinh(IQueryable<HangTho> nguon, CancellationToken ct)
     {
         var tho = await nguon.ToListAsync(ct);

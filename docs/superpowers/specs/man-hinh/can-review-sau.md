@@ -3501,3 +3501,96 @@ tiết**, cộng 2 hội đoàn/2 chi tiết hội đoàn/1 tận hiến giữ n
 **Số test cuối:** backend **315/315** (293 cũ + 7 test mới `BaoMatTests.cs` (IDOR hội đoàn) + 15
 test mới `GiaoLyTests.cs`), frontend **362/362** (359 cũ + 3 test mới `KhoiGiaoLyListPage.
 test.tsx`). `dotnet build`/`npm run build` đều chạy được.
+
+---
+
+### 59. Task "migrate Thống kê chung + Biểu đồ" (2026-09-08) — hai bug thật của bản desktop phát hiện và migrate y hệt, cùng các quyết định tự đưa ra
+
+Spec mới: `thong-ke-bieu-do.md`. Gộp `frmThongKeChung.cs` (2 tab: `GxThongKeChung` 16 điều kiện
+trích xuất + `GxThongKeOnGoi` ơn gọi tận hiến) và `frmBieuDo.cs` (5 loại biểu đồ) vào một spec vì
+dùng chung phần lớn công thức lọc ngày/tuổi.
+
+**Hai bug thật của bản desktop, đã kiểm chứng bằng dữ liệu `qlgx_thu` qua `psql`, migrate Y HỆT
+(không tự sửa):**
+
+1. **Cận tuổi đảo ngược ở `Extract.cs` (`GxThongKeChung.cs`)** — `FromYear`/`ToYear` gán từ "Từ
+   tuổi"/"Đến tuổi" theo công thức `nay - tuổi`; vì năm sinh và tuổi tỉ lệ nghịch, `fromYear`
+   (từ tuổi nhỏ) LỚN HƠN `toYear` (từ tuổi lớn), nên `BETWEEN fromYear AND toYear` luôn cho danh
+   sách RỖNG với mọi khoảng tuổi thật (Từ tuổi < Đến tuổi). Ảnh hưởng: **Chủ hộ, Gia trưởng,
+   Hiền mẫu** (khoảng tuổi bất kỳ), **Giới trẻ** (18-30, đã kiểm chứng: 0 dòng dù có giáo dân
+   trong độ tuổi này), **Thiếu nhi** (5-17, cũng 0 dòng). Riêng **Cao niên** KHÔNG bị bug vì
+   dùng cận cứng `(1, nay-tuổi)` thay vì cặp fromYear/toYear thường. Quý cha bấm "Giới trẻ"/
+   "Thiếu nhi" trên bản desktop từ trước tới nay luôn nhận danh sách trống — bug đã tồn tại
+   nhiều năm, không phải lỗi mới sinh ra khi migrate.
+2. **Cận tuổi cố định `1990` ở bucket "Trên 50 tuổi" của biểu đồ Độ tuổi** (`exportDoTuoi`,
+   `frmBieuDo.cs`) — `fromYear=1990` (hardcode, không suy từ tuổi), `toYear = nay-51`. Với năm
+   hiện tại < 2041, `toYear < 1990` nên `BETWEEN 1990 AND toYear` luôn rỗng. Đã kiểm chứng: 6
+   bucket đầu ra đúng 230/114/148/321/104/169 (giáo dân thật), bucket cuối ra đúng **0** dù giáo
+   xứ có nhiều người trên 50 tuổi thật. Bug tự hết khi năm hệ thống ≥ 2041.
+
+Cả hai đã viết test khoá lại hành vi (`ThongKeTests.cs`: `Gia_truong_voi_khoang_tuoi_that_luon_
+ra_danh_sach_rong_bug_can_dao_nguoc`, `Gioi_tre_18_30_tuoi_luon_ra_danh_sach_rong_bug_can_dao_
+nguoc`, `Bieu_do_do_tuoi_nhom_tren_50_luon_bang_0_bug_can_co_dinh_1990`) — nếu một lượt sau
+được người dùng đồng ý sửa, các test này PHẢI đổi theo, không được xoá âm thầm.
+
+**Quyết định tự đưa ra khác:**
+
+- **Vẽ biểu đồ bằng Chart.js (MIT)** thay Excel + Office Interop (ràng buộc máy chủ Linux đã
+  chốt) — đã kiểm giấy phép (`node_modules/chart.js/package.json`: `"license": "MIT"`) trước khi
+  thêm vào `package.json`, theo đúng tiền lệ FluentAssertions 7.0.0 của dự án.
+- **"Từ ngày/Đến ngày" của `frmBieuDo` chỉ dùng phần NĂM** (`iDateFrom/10000`, `frmBieuDo.cs:
+  88-89) — bản web dùng thẳng hai ô số "Từ năm/Đến năm" (giống mẫu đã có ở `DotBiTichList`) thay
+  vì hai ô ngày đầy đủ rồi cắt lấy năm — đơn giản hơn, không mất thông tin, không phải "sửa"
+  logic thống kê nào.
+- **Danh sách hôn phối dùng DTO mới `HonPhoiThongKeDto`** — bản web chưa có endpoint "danh sách
+  hôn phối" tổng quát nào để dùng lại (khác giáo dân/gia đình đã có sẵn `GiaoDanListItemDto`/
+  `GiaDinhListItemDto`). View Access gốc `SELECT_HONPHOI_LIST` được tạo bằng code ĐÃ BỊ COMMENT
+  HẾT trong `CMemory.cs` (không đọc lại được cột chính xác), nên cột chọn cho DTO mới là quyết
+  định MỚI, không phải suy trực tiếp từ mã nguồn — đủ để đối chiếu số liệu (tên hai người, ngày,
+  nơi, cách thức, giáo họ). Lọc theo giáo họ (điều kiện Hôn phối/Kỷ niệm hôn phối) chọn khớp nếu
+  MỘT TRONG HAI người (chồng hoặc vợ) thuộc giáo họ đó — bản gốc lọc trên cột `MaGiaoHo` của view
+  pivot mà không rõ suy từ vế nào, nên đây cũng là lựa chọn MỚI cần xác nhận nếu giáo xứ có nhiều
+  giáo họ và vợ/chồng khác giáo họ nhau (không xảy ra ở `qlgx_thu`, chỉ có 1 giáo họ).
+- **`GxThongKeOnGoi.cbGiaoHo` cố ý bỏ qua** — đã đối chiếu `GxThongKeOnGoi.Designer.cs`, control
+  có khai báo nhưng KHÔNG được nối bất kỳ sự kiện nào, và `btnSearch_Click` (`GxThongKeOnGoi.cs:
+  59-133`) không tham chiếu tới nó — xác nhận đây là control chết trên bản gốc, bản web không
+  cần tái hiện.
+- **Không migrate autocomplete Nơi tu/Dòng tu/Nơi phục vụ** (gợi ý từ giá trị `DISTINCT` có sẵn
+  trong `TanHien`, `GxThongKeOnGoi.cs:145-171`) — khác cơ chế `GxGoiY` của bản web (gợi ý theo
+  tần suất CHÍNH người dùng đã gõ, `lib/goiYNhapLieu.ts`). Để task sau nếu người dùng cần.
+  Tương tự: **không nối nút "In"/"Lọc" (`frmFilter`)** của hai tab Thống kê chung — phạm vi task
+  này chỉ tập trung đúng số liệu và biểu đồ; xuất Excel/lọc-thêm-trên-lưới-đã-tải để lượt sau.
+- **Biểu đồ chỉ hiện trên màn hình, chưa xuất PDF/in** — hạ tầng in ấn (`Printing/`, HTML +
+  Chromium headless) dùng lại được cho biểu đồ (Chromium vẽ `<canvas>` bình thường) nhưng chưa
+  nối trong lượt này; để task sau nếu quý cha cần gửi biểu đồ cho giáo phận dạng file.
+- **Hiệu năng**: hai truy vấn dạng "N năm × M loại" (Tổng giáo dân, Bí tích) đều gộp bằng
+  `GROUP BY` một lần rồi cộng dồn/tra cứu trong bộ nhớ trên vài chục số nguyên (số năm), KHÔNG
+  lặp N truy vấn riêng như bản desktop — đo nhanh trên `qlgx_thu` (2050 giáo dân, 6150 bí tích
+  chi tiết) không thấy độ trễ đáng chú ý qua trình duyệt thật.
+
+**Chứng minh bằng chạy thật (2026-09-08, giáo xứ Vô Nhiễm, tài khoản `giaoxu`), đối chiếu `psql`:**
+
+| Điều kiện/biểu đồ | Web | `psql` |
+|---|---|---|
+| Sinh ra, 01/01/2015-31/12/2020 | 115 người | 115 |
+| Qua đời, 01/01/1990-31/12/2026, tính cả không ngày | 11 người | 11 |
+| Tổng số gia đình | 40 gia đình | 40 |
+| Giới trẻ 18-30 tuổi | 0 (bug đảo cận) | 0 |
+| Cao niên (≥60 tuổi) | 90 cao niên | 90 |
+| Hôn phối, 01/01/1990-31/12/2026, Không phân loại | 491 đôi | 491 |
+| Ơn gọi tận hiến, 01/01/2000-31/12/2026 | 1 người | 1 |
+| Biểu đồ Độ tuổi, 6 bucket đầu | 230/114/148/321/104/169 | khớp |
+| Biểu đồ Độ tuổi, bucket "Trên 50" | 0 (bug cận 1990) | 0 |
+| Biểu đồ Bí tích, Rửa tội năm 2000 | ~64 (đọc trên cột biểu đồ) | 64 |
+| Biểu đồ Giáo họ | 1 lát tròn 100% (1185 giáo dân) | 1185 |
+
+Ảnh `160`-`171` ở `WebApp/anh-chup-kiem-thu/`. Phát hiện và sửa ngay một lỗi bố cục trong lúc
+kiểm chứng: biểu đồ tròn (Giáo họ) và biểu đồ vùng (Độ tuổi) ban đầu KHÔNG bị giới hạn chiều cao
+(`<canvas>` không có container cố định kích thước, Chart.js `responsive:true` mặc định giữ tỉ lệ
+vuông cho biểu đồ tròn) nên tràn to gần hết màn hình — sửa bằng cách bọc `<canvas>` trong khung
+cố định `height: 460` kèm `maintainAspectRatio: false` cho mọi loại biểu đồ (ảnh trước/sau đã so
+sánh trực tiếp bằng trình duyệt thật, không chỉ đọc code).
+
+**Số test cuối:** backend **329/329** (315 cũ + 14 test mới `ThongKeTests.cs`), frontend
+**366/366** (362 cũ + 4 test mới `ThongKeChungPage.test.tsx`). `dotnet build`/`npm run build`
+đều chạy được. Không có dữ liệu thử nào được tạo trong `qlgx_thu` (mọi bước kiểm chứng chỉ ĐỌC).

@@ -548,3 +548,87 @@ export type GiaoLyVienLop = {
   tenThanh: string | null
   rowVersion: number
 }
+
+// ============ Thống kê chung & Biểu đồ (xem docs/superpowers/specs/man-hinh/thong-ke-bieu-do.md) ============
+
+/** 16 điều kiện trích xuất của tab "Thống kê chung" — ĐÚNG tên enum `DieuKienThongKe` phía
+ * backend (thứ tự không quan trọng ở phía TypeScript, backend so theo tên chuỗi). */
+export type DieuKienThongKe =
+  | 'SinhRa' | 'RuaToi' | 'RuocLeLanDau' | 'ThemSuc' | 'HonPhoi' | 'QuaDoi'
+  | 'TongSoGiaoDan' | 'TongSoGiaDinh' | 'TanTong' | 'ChuHo' | 'GiaTruong' | 'HienMau'
+  | 'CaoNien' | 'GioiTre' | 'ThieuNhi' | 'KyNiemHonPhoi'
+
+export type TrangThaiHonPhoiThongKe =
+  'KhongPhanLoai' | 'Chuan' | 'HopThucHoa' | 'HopPhap' | 'LyDi' | 'LyThan'
+
+/** Ánh xạ 1-1 với HonPhoiThongKeDto phía backend. */
+export type HonPhoiThongKeItem = {
+  id: string
+  maHonPhoiCu: number
+  tenHonPhoi: string | null
+  soHonPhoi: string | null
+  noiHonPhoi: string | null
+  ngayHonPhoi: string | null
+  linhMucChung: string | null
+  cachThucHonPhoi: string | null
+  ghiChu: string | null
+  tenChong: string | null
+  tenVo: string | null
+  tenGiaoHo: string | null
+}
+
+/** Ánh xạ 1-1 với ThongKeChungKetQua — CHỈ MỘT trong ba mảng khác null, tương ứng đúng MỘT
+ * trong ba lưới chồng nhau của bản desktop. */
+export type ThongKeChungKetQua = {
+  tongCong: number
+  nhan: string
+  giaoDan: GiaoDanListItem[] | null
+  giaDinh: GiaDinhListItem[] | null
+  honPhoi: HonPhoiThongKeItem[] | null
+}
+
+/** Ánh xạ 1-1 với OnGoiListItemDto — một dòng của tab "Thống kê ơn gọi tận hiến". */
+export type OnGoiListItem = {
+  id: string
+  maGiaoDanCu: number
+  tenThanh: string | null
+  hoTen: string
+  phai: string | null
+  ngaySinh: string | null
+  dienThoai: string | null
+  diaChi: string | null
+  tenGiaoHo: string | null
+  ngayBatDau: string | null
+  chucVu: string | null
+  noiTu: string | null
+  dongTu: string | null
+  noiPhucVu: string | null
+}
+
+export type ThongKeOnGoiKetQua = { tongCong: number; rows: OnGoiListItem[] }
+
+/** Một năm của biểu đồ "Tổng giáo dân" (luỹ kế) hoặc "Tổng hôn phối" (theo từng năm). */
+export type BieuDoNam = { nam: number; soLuong: number }
+
+/** Một năm của biểu đồ "Tình hình bí tích" — 4 chuỗi. */
+export type BieuDoBiTichNam = {
+  nam: number
+  sinhRa: number
+  ruaToi: number
+  xtrlLanDau: number
+  themSuc: number
+}
+
+/** 7 nhóm tuổi cố định của biểu đồ "So sánh độ tuổi" — `tren50` LUÔN bằng 0 cho tới năm 2041
+ * (bug cận đảo ngược của bản gốc, migrate y hệt — xem thong-ke-bieu-do.md mục 4.6). */
+export type BieuDoDoTuoi = {
+  duoi7: number
+  tu7Den12: number
+  tu13Den16: number
+  tu17Den25: number
+  tu26Den30: number
+  tu31Den50: number
+  tren50: number
+}
+
+export type BieuDoGiaoHo = { tenGiaoHo: string; soLuong: number }

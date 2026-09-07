@@ -98,4 +98,6 @@ Cập nhật bảng này mỗi khi thêm spec.
 | Hỗ trợ nhập liệu (control ngày tháng, tự nhảy ô, gợi ý theo tần suất — xuyên màn hình) | `GXControl/GxDateInput.cs` + `GxTextField.cs` + `DBAccess/CMemory.cs` | 633 + nhiều | xong (`ho-tro-nhap-lieu.md`) | chưa |
 | Hồ sơ lưu trữ giáo dân / gia đình | `ChuongTrinh/frmGiaoDanLuuTruList.cs` + `ChuongTrinh/frmGiaDinhLuuTruList.cs` | 263 + 261 | xong (`ho-so-luu-tru.md`) | xong (danh sách + lọc + sửa + xóa vĩnh viễn + xuất Excel; không có "khôi phục" — bản gốc cũng không có, xem mục 4) |
 
+| Thống kê chung & Biểu đồ | `ChuongTrinh/frmThongKeChung.cs`+`GXControl/GxThongKeChung.cs`+`GxThongKeOnGoi.cs`+`GXControl/Extract.cs` / `ChuongTrinh/frmBieuDo.cs`+5 mô-đun `ExcelReport/Chart*.cs` | 28+848+195+168 / 400+5×~100 | xong (`thong-ke-bieu-do.md`) | một phần (xem mục 10) |
+
 Còn khoảng 60 màn hình nhỏ hơn — bổ sung dần theo thứ tự migrate.

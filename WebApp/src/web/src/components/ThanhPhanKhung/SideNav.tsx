@@ -40,8 +40,8 @@ const DANH_SACH_DIEU_HUONG: NhomDieuHuong[] = [
   {
     nhan: 'Thống kê',
     muc: [
-      { nhan: 'Thống kê chung' },
-      { nhan: 'Biểu đồ' },
+      { id: 'thongKeChung', nhan: 'Thống kê chung' },
+      { id: 'bieuDo', nhan: 'Biểu đồ' },
     ],
   },
   {

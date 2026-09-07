@@ -21,6 +21,8 @@ import { RaoHonPhoiListPage } from './screens/RaoHonPhoiListPage'
 import { RaoHonPhoiDetail } from './screens/RaoHonPhoiDetail'
 import type { LoaiBiTich } from './api/types'
 import { QuanLyGiaoXuPage } from './screens/QuanLyGiaoXuPage'
+import { ThongKeChungPage } from './screens/ThongKeChungPage'
+import { BieuDoPage } from './screens/BieuDoPage'
 import { NhapDuLieuPage } from './screens/NhapDuLieuPage'
 import { LoginPage } from './screens/LoginPage'
 import { useAuth } from './api/AuthContext'
@@ -255,6 +257,14 @@ function App() {
     mo({ id: 'nhapDuLieu', tieuDe: 'Nhập dữ liệu Access', noiDung: <NhapDuLieuPage /> })
   }
 
+  function moThongKeChung() {
+    mo({ id: 'thongKeChung', tieuDe: 'Thống kê chung', noiDung: <ThongKeChungPage /> })
+  }
+
+  function moBieuDo() {
+    mo({ id: 'bieuDo', tieuDe: 'Biểu đồ', noiDung: <BieuDoPage /> })
+  }
+
   // Khởi động giống frmMain: mở "Tổng quan" (không đóng được), rồi mở và chọn
   // "Danh sách gia đình" — xem cuối script của bản mẫu. CHỈ chạy sau khi đã đăng nhập —
   // gọi API trước khi có token chỉ để bị 401 rồi tự đăng xuất lại, vô ích.
@@ -280,6 +290,8 @@ function App() {
     else if (id === 'raoHonPhoiList') moDanhSachRaoHonPhoi()
     else if (id === 'quanLyGiaoXu') moQuanLyGiaoXu()
     else if (id === 'nhapDuLieu') moNhapDuLieu()
+    else if (id === 'thongKeChung') moThongKeChung()
+    else if (id === 'bieuDo') moBieuDo()
   }
 
   // Đang kiểm tra token cũ (tải lại trang) — không hiện gì để tránh giật từ màn hình đăng

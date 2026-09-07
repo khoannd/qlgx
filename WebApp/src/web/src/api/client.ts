@@ -5,6 +5,8 @@ import type {
   GiaoPhan, GiaoHatQuanLy, GiaoXuQuanLy, BaoCaoXemTruoc, TrangThaiNhapDuLieu,
   DotBiTichListItem, DotBiTichDetail, LoaiBiTich, RaoHonPhoiListItem, RaoHonPhoiDetail,
   KhoiGiaoLy, LopGiaoLy, HocVienLopGiaoLy, GiaoLyVienLop,
+  DieuKienThongKe, TrangThaiHonPhoiThongKe, ThongKeChungKetQua, ThongKeOnGoiKetQua,
+  BieuDoNam, BieuDoBiTichNam, BieuDoDoTuoi, BieuDoGiaoHo,
 } from './types'
 import { authStore } from './authStore'
 
@@ -539,6 +541,52 @@ export const api = {
           `/api/quan-tri/nhap-du-lieu/${giaoXuDichId}/bat-dau?xacNhanGhiDe=${xacNhanGhiDe}`, tep),
       trangThai: (jobId: string) =>
         goi<TrangThaiNhapDuLieu>(`/api/quan-tri/nhap-du-lieu/trang-thai/${jobId}`),
+    },
+  },
+  /** Màn hình "Thống kê chung" + "Biểu đồ" — xem
+   * docs/superpowers/specs/man-hinh/thong-ke-bieu-do.md. */
+  thongKe: {
+    chung: (tham: {
+      dieuKien: DieuKienThongKe; giaoHoId?: string; tuNgay?: string; denNgay?: string
+      tuTuoi?: number; denTuoi?: number; luuTru?: boolean; khongCoNgay?: boolean
+      trangThaiHonPhoi?: TrangThaiHonPhoiThongKe
+    }) => {
+      const q = new URLSearchParams()
+      q.set('dieuKien', tham.dieuKien)
+      if (tham.giaoHoId) q.set('giaoHoId', tham.giaoHoId)
+      if (tham.tuNgay) q.set('tuNgay', tham.tuNgay)
+      if (tham.denNgay) q.set('denNgay', tham.denNgay)
+      if (tham.tuTuoi != null) q.set('tuTuoi', String(tham.tuTuoi))
+      if (tham.denTuoi != null) q.set('denTuoi', String(tham.denTuoi))
+      if (tham.luuTru) q.set('luuTru', 'true')
+      if (tham.khongCoNgay) q.set('khongCoNgay', 'true')
+      if (tham.trangThaiHonPhoi) q.set('trangThaiHonPhoi', tham.trangThaiHonPhoi)
+      return goi<ThongKeChungKetQua>(`/api/thong-ke/chung?${q.toString()}`)
+    },
+    onGoi: (tham: {
+      tuNgay: string; denNgay?: string; chucVu?: string; noiTu?: string; dongTu?: string
+      noiPhucVu?: string; luuTru?: boolean; khongCoNgay?: boolean
+    }) => {
+      const q = new URLSearchParams()
+      q.set('tuNgay', tham.tuNgay)
+      if (tham.denNgay) q.set('denNgay', tham.denNgay)
+      if (tham.chucVu) q.set('chucVu', tham.chucVu)
+      if (tham.noiTu) q.set('noiTu', tham.noiTu)
+      if (tham.dongTu) q.set('dongTu', tham.dongTu)
+      if (tham.noiPhucVu) q.set('noiPhucVu', tham.noiPhucVu)
+      if (tham.luuTru) q.set('luuTru', 'true')
+      if (tham.khongCoNgay) q.set('khongCoNgay', 'true')
+      return goi<ThongKeOnGoiKetQua>(`/api/thong-ke/on-goi?${q.toString()}`)
+    },
+    bieuDo: {
+      tongGiaoDan: (tuNam: number, denNam: number, luuTru: boolean) =>
+        goi<BieuDoNam[]>(`/api/thong-ke/bieu-do/tong-giao-dan?tuNam=${tuNam}&denNam=${denNam}&luuTru=${luuTru}`),
+      tongHonPhoi: (tuNam: number, denNam: number) =>
+        goi<BieuDoNam[]>(`/api/thong-ke/bieu-do/tong-hon-phoi?tuNam=${tuNam}&denNam=${denNam}`),
+      biTich: (tuNam: number, denNam: number) =>
+        goi<BieuDoBiTichNam[]>(`/api/thong-ke/bieu-do/bi-tich?tuNam=${tuNam}&denNam=${denNam}`),
+      doTuoi: () => goi<BieuDoDoTuoi>('/api/thong-ke/bieu-do/do-tuoi'),
+      giaoHo: () => goi<BieuDoGiaoHo[]>('/api/thong-ke/bieu-do/giao-ho'),
     },
   },
 }
