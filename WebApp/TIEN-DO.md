@@ -14,8 +14,8 @@ Nhánh làm việc: **`webapp-phase-1`** (tách từ `master`).
    (biến đặt bằng `setx` chỉ có hiệu lực ở cửa sổ dòng lệnh **mới mở**)
 3. Kiểm tra dịch vụ `postgresql-x64-17` đã chạy chưa: `sc query postgresql-x64-17`
 4. Chạy toàn bộ test để xác nhận môi trường lành lặn:
-   - Backend: `dotnet test WebApp/Qlgx.sln` → phải ra **133/133 xanh**
-   - Front-end: `cd WebApp/src/web && npm test -- --run` → phải ra **87/87 xanh**
+   - Backend: `dotnet test WebApp/Qlgx.sln` → phải ra **188/188 xanh**
+   - Front-end: `cd WebApp/src/web && npm test -- --run` → phải ra **205/205 xanh**
 5. Sổ theo dõi chi tiết từng task, từng quyết định:
    `.superpowers/sdd/2026-09-06-qlgx-web-phase-1/progress.md`
    (thư mục này nằm ngoài git, nhưng vẫn còn trên đĩa sau khi khởi động lại)
@@ -43,6 +43,15 @@ dotnet WebApp/src/Qlgx.Migration/bin/Debug/net10.0-windows/Qlgx.Migration.dll   
 
 Bỏ `--chay-that` để chạy thử: chỉ đọc và in báo cáo đối chiếu, không ghi gì.
 Công cụ chạy lại được nhiều lần mà không tạo bản ghi trùng.
+
+## Trạng thái: GIAI ĐOẠN 1 ĐÃ XONG PHẦN CÀI ĐẶT
+
+Toàn bộ 17 task của giai đoạn 1 đã cài đặt xong, kể cả xác thực, PWA, RLS, Docker và
+kiểm thử đầu-cuối. Hai đợt review độc lập (backend + front-end) đã chạy và các phát hiện
+đã được sửa.
+
+**Nhưng bản web CHƯA thay thế được hoàn toàn bản desktop** — xem mục "Còn thiếu để bỏ hẳn
+bản desktop" ở cuối tài liệu này.
 
 ## Tài liệu chi phối
 
@@ -84,7 +93,8 @@ Công cụ chạy lại được nhiều lần mà không tạo bản ghi trùng
 | — | Hôn phối, tận hiến, hội đoàn: 3 tab đọc/ghi thật | 32 |
 | — | Thao tác ghi giáo dân: tạo mới, xoá, kiểm tra nghiệp vụ máy chủ | 34 |
 
-Tổng: **133 test backend + 87 test front-end**, tất cả xanh.
+Tổng: **188 test backend + 205 test front-end + 7 test đầu-cuối**, tất cả xanh.
+`npm run build` chạy được.
 
 ### Quy tắc nghiệp vụ giáo dân CHƯA tái hiện (mục 19 `can-review-sau.md`)
 
@@ -305,3 +315,38 @@ Ghi lại vì chúng đảo ngược quyết định ban đầu và ràng buộc
 - Màn hình chi tiết giáo dân: thông tin liên hệ (điện thoại, email, địa chỉ) hiện nằm chìm
   dưới dạng nhãn phụ trong khối "Thông tin khác" — cần tách thành nhóm riêng cho dễ thấy.
 - Danh sách các việc nhỏ khác nằm ở các dòng `minor (deferred)` trong sổ theo dõi.
+
+## Còn thiếu để bỏ hẳn bản desktop (chốt sau 2 đợt review độc lập, 2026-09-07)
+
+Bản web hiện đã **tác nghiệp được**: tạo/sửa/xoá giáo dân và gia đình, quản lý thành viên,
+vợ chồng, hôn phối, tận hiến, hội đoàn, giáo lý, chuyển xứ, chủ hộ — tất cả trên dữ liệu thật.
+Nhưng còn hai khoảng trống thật sự chặn:
+
+1. **In ấn và chứng nhận** — thuộc giai đoạn 3 theo kế hoạch, nhưng đây là nghiệp vụ **hằng
+   ngày** của giáo xứ: giấy chứng nhận rửa tội, rước lễ, thêm sức, hôn phối, giấy giới thiệu
+   chuyển xứ, sổ gia đình. 10/12 mục menu chuột phải của màn hình giáo dân hiện chỉ có nhãn.
+   Chừng nào chưa có, giáo xứ vẫn phải mở bản desktop để in.
+
+2. **Một số hồ sơ chi tiết chưa quản lý được qua web** — ảnh đại diện (chưa tải lên được),
+   người ban bí tích ở vài chỗ, màn hình tự đổi mật khẩu.
+
+Ngoài ra còn các việc nợ đã ghi nhận, không chặn:
+- Thu hồi token chủ động (hiện giảm nhẹ bằng thời hạn 8 tiếng).
+- Quy tắc 11 (trùng ngày chuyển xứ).
+- Hơn 60 màn hình phụ của bản desktop chưa migrate (kiểm tra dữ liệu, chuẩn hoá dữ liệu,
+  chuyển họ hàng loạt, thống kê, biểu đồ, hồ sơ lưu trữ, giáo lý...).
+
+## Sổ quyết định cần người dùng review
+
+`docs/superpowers/specs/man-hinh/can-review-sau.md` — **31 mục**. Đây là nơi ghi mọi chỗ:
+- bản desktop làm sai mà ta **cố ý tái hiện y hệt** (theo chỉ đạo "migrate y hệt rồi note lại"),
+- bản web **cố ý làm khác** desktop, kèm lý do,
+- quyết định tự đưa ra khi người dùng không có mặt.
+
+Mỗi mục có trích dẫn dòng mã desktop và câu hỏi chờ quyết. **Đừng xoá mục nào khi chưa quyết.**
+
+## Spec từng màn hình
+
+`docs/superpowers/specs/man-hinh/` — 8 spec đã viết từ mã nguồn desktop, mỗi quy tắc có trích
+dẫn dòng. Quy trình bắt buộc: **nghiên cứu màn hình → viết spec → rồi mới migrate**.
+Còn khoảng 60 màn hình nhỏ hơn chưa có spec.
