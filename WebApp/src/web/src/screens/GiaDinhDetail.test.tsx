@@ -8,7 +8,10 @@ import type { GiaDinhDetail as ChiTiet, GiaoDanTimKiem } from '../api/types'
 vi.mock('../api/client', () => ({
   api: {
     timKiem: { giaoDan: vi.fn() },
-    giaDinh: { inPhieuGiaDinh: vi.fn(() => Promise.resolve()) },
+    giaDinh: {
+      inPhieuGiaDinh: vi.fn(() => Promise.resolve()),
+      inLyLichCaNhanGiaDinh: vi.fn(() => Promise.resolve()),
+    },
     // Giấy giới thiệu (3 mẫu theo giáo dân) — menuThanhVien của GiaDinhDetail nhúng
     // menuGiaoDanMacDinh nên cần các hàm này tồn tại dù không dùng trong các test hiện có
     // (xem lib/useGioiThieuGiaoDan.ts, tra cứu ngay lúc import module).
@@ -126,6 +129,28 @@ describe('GiaDinhDetail', () => {
     await nguoiDung.click(await screen.findByText(/Lê Văn Mới/))
 
     expect(onGanVoChong).toHaveBeenCalledWith(0, nguoiTim())
+  })
+
+  // Nút "+" của GxPicker (Người nam) — trước đây vô hiệu hoá hẳn, nay mở một thẻ "Giáo dân
+  // mới" tách biệt qua `moGiaoDanMoiChoPicker` rồi điền ngược kết quả vào `onGanVoChong(0, …)`
+  // — xem GxPicker.tsx, App.moChiTietGiaDinh, can-review-sau.md.
+  it('bam nut + o Nguoi nam thi goi moGiaoDanMoiChoPicker, tao xong dien nguoc qua onGanVoChong(0, ...)', async () => {
+    const onGanVoChong = vi.fn()
+    const moGiaoDanMoiChoPicker = vi.fn((onTaoXong: (gd: GiaoDanTimKiem) => void) => onTaoXong(nguoiTim()))
+    const nguoiDung = userEvent.setup()
+    render(<GiaDinhDetail duLieu={chiTiet()} onGanVoChong={onGanVoChong}
+      moGiaoDanMoiChoPicker={moGiaoDanMoiChoPicker} />)
+
+    await nguoiDung.click(screen.getAllByTitle('Thêm giáo dân mới')[0])
+
+    expect(moGiaoDanMoiChoPicker).toHaveBeenCalledOnce()
+    expect(onGanVoChong).toHaveBeenCalledWith(0, nguoiTim())
+  })
+
+  it('khong truyen moGiaoDanMoiChoPicker thi nut + van vo hieu hoa nhu cu', () => {
+    render(<GiaDinhDetail duLieu={chiTiet()} />)
+
+    expect(screen.getAllByTitle(/Thêm giáo dân mới/)[0]).toHaveProperty('disabled', true)
   })
 
   it('bam Bo chon o Nguoi nu (dang co nguoi) thi goi onBoChonVoChong(1)', async () => {
@@ -271,6 +296,23 @@ describe('GiaDinhDetail', () => {
     render(<GiaDinhDetail onTaoMoi={vi.fn()} />)
 
     expect(screen.getByRole('button', { name: 'In phiếu gia đình' })).toHaveProperty('disabled', true)
+  })
+
+  // "In lý lịch cá nhân" — hết mơ hồ (in CẢ gia đình đang mở, một trang/thành viên — đúng hành
+  // vi item4_Click của bản desktop, xem in-an.md mục 5f), nối thẳng vào
+  // api.giaDinh.inLyLichCaNhanGiaDinh thay vì báo "chưa hỗ trợ".
+  it('bam In ly lich ca nhan thi goi dung api voi id gia dinh dang mo', async () => {
+    render(<GiaDinhDetail duLieu={chiTiet({ id: 'g9' })} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'In lý lịch cá nhân' }))
+
+    expect(api.giaDinh.inLyLichCaNhanGiaDinh).toHaveBeenCalledWith('g9')
+  })
+
+  it('gia dinh moi (chua luu): nut In ly lich ca nhan bi vo hieu hoa', () => {
+    render(<GiaDinhDetail onTaoMoi={vi.fn()} />)
+
+    expect(screen.getByRole('button', { name: 'In lý lịch cá nhân' })).toHaveProperty('disabled', true)
   })
 
   // --- Loi so 1 (kiem thu nguoi dung 2026-09-07): man hinh gia dinh vo bo cuc — khong thay khoi

@@ -10,6 +10,7 @@ vi.mock('../api/client', () => ({
     giaDinh: {
       inChungNhanHonPhoi: vi.fn(() => Promise.resolve()),
       inPhieuGiaDinh: vi.fn(() => Promise.resolve()),
+      inLyLichCaNhanGiaDinh: vi.fn(() => Promise.resolve()),
     },
   },
 }))
@@ -120,16 +121,45 @@ describe('GxGiaDinhList', () => {
     expect(moGioiThieuChuyenXu).toHaveBeenCalledWith(d)
   })
 
-  it('cac muc con lai van bao "chua ho tro" (In ly lich ca nhan, xem vi tri)', () => {
-    const alertGia = vi.spyOn(window, 'alert').mockImplementation(() => {})
+  // "In lý lịch cá nhân" ở lưới GIA ĐÌNH nay in CẢ gia đình (một trang PDF/thành viên, đúng
+  // hành vi item4_Click của bản desktop — xem in-an.md mục 5f), không còn "chưa hỗ trợ".
+  it('menu In ly lich ca nhan goi dung api voi id gia dinh (in ca gia dinh)', () => {
     const menu = menuGiaDinhMacDinh(vi.fn(), vi.fn())
+    const muc = menu.find((m) => m.nhan === 'In lý lịch cá nhân')
 
-    for (const nhan of ['In lý lịch cá nhân', 'Xem vị trí']) {
-      const muc = menu.find((m) => m.nhan === nhan)
-      muc?.chay?.(giaDinh())
-    }
+    muc?.chay?.(giaDinh({ id: 'gd-4' }))
 
-    expect(alertGia).toHaveBeenCalledTimes(2)
+    expect(api.giaDinh.inLyLichCaNhanGiaDinh).toHaveBeenCalledWith('gd-4')
+  })
+
+  // "Xem vị trí" mở Google Maps với địa chỉ gia đình (xem lib/xemViTri.ts) — báo lỗi bằng
+  // alert() CHỈ khi gia đình không có địa chỉ (đúng hộp thoại của bản desktop), không phải vì
+  // "chưa hỗ trợ" nữa.
+  it('menu Xem vi tri bao loi khi gia dinh khong co dia chi', () => {
+    const alertGia = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    const openGia = vi.spyOn(window, 'open').mockImplementation(() => null)
+    const menu = menuGiaDinhMacDinh(vi.fn(), vi.fn())
+    const muc = menu.find((m) => m.nhan === 'Xem vị trí')
+
+    muc?.chay?.(giaDinh({ diaChi: null }))
+
+    expect(alertGia).toHaveBeenCalledWith('Gia đình này không có địa chỉ để xem bản đồ.')
+    expect(openGia).not.toHaveBeenCalled()
     alertGia.mockRestore()
+    openGia.mockRestore()
+  })
+
+  it('menu Xem vi tri mo Google Maps voi dung dia chi khi co dia chi', () => {
+    const openGia = vi.spyOn(window, 'open').mockImplementation(() => null)
+    const menu = menuGiaDinhMacDinh(vi.fn(), vi.fn())
+    const muc = menu.find((m) => m.nhan === 'Xem vị trí')
+
+    muc?.chay?.(giaDinh({ diaChi: '123 Đường ABC, Phan Thiết' }))
+
+    expect(openGia).toHaveBeenCalledWith(
+      'https://www.google.com/maps/search/' + encodeURIComponent('123 Đường ABC, Phan Thiết'),
+      '_blank', 'noopener,noreferrer',
+    )
+    openGia.mockRestore()
   })
 })

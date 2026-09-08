@@ -4,7 +4,6 @@ import type { GiaDinhListItem, GiaoHo } from '../api/types'
 import { GioiThieuModal } from '../components/GioiThieuModal'
 import { GxGiaDinhList, menuGiaDinhMacDinh } from '../components/GxGiaDinhList'
 import { GxToolbar } from '../components/GxToolbar'
-import { chuaHoTro } from '../lib/thongBao'
 import { useGioiThieuChuyenXu } from '../lib/useGioiThieuChuyenXu'
 
 /** Sentinel hiển thị cho "Ngoài xứ" — cùng quy ước của GiaDinhList.tsx. */
@@ -118,7 +117,17 @@ export function GiaDinhLuuTruList({ rows, moGiaDinh, danhMucGiaoHo = [], onXoa, 
             onClick: () => dongChon && api.giaDinh.inChungNhanHonPhoi(dongChon.id)
               .catch((e: unknown) => window.alert(e instanceof Error ? e.message : 'In thất bại, thử lại sau.')),
             title: 'In chứng nhận hôn phối cho gia đình đang chọn' },
-          { label: 'In sổ gia đình', needSel: true, onClick: chuaHoTro },
+          // "In sổ gia đình" (nút riêng của màn hình lưu trữ, `frmGiaDinhLuuTruList.cs` dòng
+          // 33-35/68-70) gọi `XuatSoGiaDinh()` — CÙNG một hàm/mẫu Word "PhieuGiaDinh" mà "In
+          // phiếu gia đình" của màn hình danh sách thường dùng (nghiên cứu mã nguồn xác nhận:
+          // hai nhãn khác nhau, cùng một report — xem in-an.md mục 5f, can-review-sau.md).
+          // Nhánh Excel riêng (SoGiaDinh.xls, khi cấu hình CF_MAU_SOGIADINH khác Word) và nhánh
+          // gộp nhiều gia đình một tệp (chọn nhiều dòng) KHÔNG migrate — toolbar này chỉ chọn
+          // được một dòng (`needSel`), không có lựa chọn nhiều dòng ở bản web.
+          { label: 'In sổ gia đình', needSel: true,
+            onClick: () => dongChon && api.giaDinh.inPhieuGiaDinh(dongChon.id)
+              .catch((e: unknown) => window.alert(e instanceof Error ? e.message : 'In thất bại, thử lại sau.')),
+            title: 'In sổ gia đình cho gia đình đang chọn' },
         ]}
       />
 

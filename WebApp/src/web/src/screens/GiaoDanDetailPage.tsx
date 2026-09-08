@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, LoiXungDot } from '../api/client'
 import type {
-  GiaoDanDetail as GiaoDanDetailDuLieu, GiaoHo, HoiDoanCuaGiaoDan, HoiDoanDanhMuc,
+  GiaoDanDetail as GiaoDanDetailDuLieu, GiaoDanTimKiem, GiaoHo, HoiDoanCuaGiaoDan, HoiDoanDanhMuc,
   HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
 } from '../api/types'
 import { BanNhapBanner } from '../components/BanNhapBanner'
@@ -40,13 +40,20 @@ type Props = {
    * gọi `useAuth()` ở đây như `tenTaiKhoan`). Dùng để tách gợi ý nhập liệu theo tần suất lưu ở
    * `localStorage` (Task "gợi ý nhập liệu", xem `lib/goiYNhapLieu.ts`). */
   giaoXuId?: string | null
+  /** CHỈ có khi thẻ này được mở từ nút "+" của một `GxPicker` (xem `App.moChiTietGiaoDan`,
+   * `GiaDinhDetail` — Người nam/Người nữ/"Thêm thành viên") — tạo mới thành công thì gọi hàm
+   * này với bản ghi vừa tạo (đủ hình dạng `GiaoDanTimKiem` để điền ngược lại đúng ô picker
+   * đang mở) THAY VÌ mở tab chi tiết giáo dân như hành vi mặc định (`moGiaoDan`). Đóng thẻ
+   * "Giáo dân mới" này sau đó là việc của nơi gọi (`App.tsx`), không phải của trang này — xem
+   * docs/superpowers/specs/man-hinh/can-review-sau.md. */
+  onTaoXongChoPicker?: (gd: GiaoDanTimKiem) => void
 }
 
 /** Container nối `GiaoDanDetail` với `GET`/`PUT /api/giao-dan/{id}` — cùng khuôn tải lại sau
  * khi lưu và xử lý xung đột RowVersion như `GiaDinhDetailPage`. */
 export function GiaoDanDetailPage({
   id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan, onQuayVe, tenTaiKhoan = null, onTieuDe,
-  giaoXuId = null,
+  giaoXuId = null, onTaoXongChoPicker,
 }: Props) {
   // "Quay về"/"← Danh sách" của GiaoDanDetail gọi đúng MỘT prop `moDanhSachGiaoDan` — ghi đè
   // tại đây bằng `onQuayVe` khi có (mở từ ngữ cảnh gia đình) để không phải sửa GiaoDanDetail.
@@ -217,7 +224,26 @@ export function GiaoDanDetailPage({
         if (ket.id) {
           setThongBaoLuu('Đã tạo giáo dân mới.')
           setLoaiThongBao('thanhcong')
-          moGiaoDan?.(ket.id)
+          if (onTaoXongChoPicker) {
+            // Tải lại chi tiết vừa tạo (thay vì tự ghép từ `payload` gõ tay) để lấy đúng
+            // `maGiaoDanCu` do máy chủ tự sinh — GxPicker hiển thị mã này trong danh sách tìm
+            // kiếm, không có sẵn trước khi lưu.
+            try {
+              const ct = await api.giaoDan.chiTiet(ket.id)
+              onTaoXongChoPicker({
+                id: ct.id, maGiaoDanCu: ct.maGiaoDanCu, tenThanh: ct.tenThanh,
+                hoTen: ct.hoTen, phai: ct.phai, ngaySinh: ct.ngaySinh,
+              })
+            } catch (e) {
+              // Tải chi tiết lỗi (mất mạng ngay sau khi lưu) — vẫn đã tạo thành công, rơi về
+              // hành vi mặc định (mở tab chi tiết) thay vì im lặng bỏ qua, người dùng còn thấy
+              // được bản ghi vừa tạo.
+              console.error('Không tải lại được chi tiết giáo dân vừa tạo cho picker', e)
+              moGiaoDan?.(ket.id)
+            }
+          } else {
+            moGiaoDan?.(ket.id)
+          }
         }
       } catch (e) {
         console.error('Không tạo được giáo dân mới', e)

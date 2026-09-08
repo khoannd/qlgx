@@ -5,7 +5,7 @@
 | Tệp nguồn tham khảo | `Source/DBAccess/WordEngine.cs` (~140 dòng, UTF-8 BOM), `Source/ExcelReport/Report*.cs` (14 mô-đun) |
 | Mẫu in gốc | `BIN/Template/Chung/*.doc`/`.xls` (14 mẫu dùng chung), `BIN/Template/BMT/` (mẫu riêng giáo phận Ban Mê Thuột, ghi đè `Chung`) |
 | Bảng dữ liệu đụng tới | `GiaoDan`, `GiaoXu`, `GiaoHat`, `GiaoPhan`, `GiaoHo`, `HonPhoi`, `GiaoDanHonPhoi` (tuỳ mẫu) |
-| Trạng thái migrate | **XONG** — hạ tầng dùng chung + 8 mẫu (Lý lịch cá nhân, Chứng nhận bí tích, Phiếu gia đình, Chứng nhận hôn phối, 4 mẫu Giấy giới thiệu). Còn lại các hạng mục khác (Rao hôn phối, Excel thật, biểu đồ…) — xem mục 8 |
+| Trạng thái migrate | **XONG** — hạ tầng dùng chung + 8 mẫu (Lý lịch cá nhân, Chứng nhận bí tích, Phiếu gia đình, Chứng nhận hôn phối, 4 mẫu Giấy giới thiệu) + "In danh sách"/"In lý lịch cá nhân (gia đình)"/"In sổ gia đình" (xem mục 5f). Còn lại Rao hôn phối/Excel thật/biểu đồ — xem mục 8 |
 
 ## 1. Vì sao cần (bối cảnh)
 
@@ -253,6 +253,40 @@ qua hai hook `lib/useGioiThieuGiaoDan.ts`/`lib/useGioiThieuChuyenXu.ts` để tr
 hình nhúng. Mục "In giới thiệu hôn phối" (`GxGiaoDanList.tsx`, toolbar Hồ sơ lưu trữ giáo dân)
 **KHÔNG thuộc 4 mẫu này** — đó là giấy RAO hôn phối (`ReportRaoHP.cs`), một hạng mục khác vẫn
 CHƯA làm (xem mục 8), giữ nguyên `chuaHoTro`.
+
+## 5f. "In danh sách", "In lý lịch cá nhân (gia đình)", "In sổ gia đình" (lượt "hoàn tất mọi thao
+tác còn báo chưa hỗ trợ") — xem can-review-sau.md mục 66 để biết đầy đủ lý do nghiên cứu mã
+desktop và các quyết định phạm vi.
+
+**"In danh sách"** (`GiaoDanList.tsx`/`GiaDinhList.tsx`, toolbar) — `GET /api/giao-dan/in/danh-
+sach`/`GET /api/gia-dinh/in/danh-sach` (`InAnService.XuatDanhSachGiaoDan`/`XuatDanhSachGiaDinh`),
+CÙNG bộ tham số lọc (`giaoHoId`/`chiKhongThongKe`/`hienCaDaMat`) với GET danh sách thường và
+"Xuất Excel" — gọi lại đúng `GiaoDanService.LayDanhSach`/`GiaDinhService.LayDanhSach`, KHÔNG viết
+lại điều kiện lọc. Mẫu `PrintTemplates/Chung/DanhSachGiaoDan.html`/`DanhSachGiaDinh.html`, khổ
+NGANG (`BoTrinhDuyet.XuatPdfAsync` nhận thêm tham số `landscape`, mặc định `false` — không đổi
+hành vi các mẫu dọc cũ), 29/12 cột đúng thứ tự `cotGiaoDan.ts`/`cotGiaDinh.ts` (khớp
+`XuatExcelService`), dựng bằng cơ chế `khoiHtmlAnToan` (số dòng không cố định, như "Phiếu gia
+đình"). Chân trang có tổng số dòng và giờ in. Bản gốc thật ra xuất Janus GridEX control ra
+`.xls` tạm (`btnInDanhSach_Click`), không phải in giấy trực tiếp — bản web chọn PDF để nhất quán
+với các mẫu in khác của hạ tầng này (Excel đã có nút riêng "Xuất Excel").
+
+**"In lý lịch cá nhân" từ lưới GIA ĐÌNH** (`GxGiaDinhList.tsx`, nút ở `GiaDinhDetail.tsx`) —
+`GET /api/gia-dinh/{id}/in/ly-lich-ca-nhan` (`InAnService.XuatLyLichCaNhanGiaDinh`) — in lý lịch
+cá nhân của TẤT CẢ thành viên gia đình (không riêng chủ hộ), mỗi người một trang PDF, gộp một
+tệp, thứ tự `VaiTro` tăng dần — đúng `item4_Click`/`GxGiaoDanList.XuatLyLichCaNhan(Dictionary)`
+của bản desktop. Cài đặt: `InAnService.DungHtmlLyLichCaNhan` (dựng HTML một người, tách khỏi
+`XuatLyLichCaNhan` cũ để tái dùng — PDF một người KHÔNG đổi so với trước) gọi lặp lại cho từng
+thành viên, `TachKieuVaThan` tách `<style>`/`<body>` của mỗi trang đã dựng rồi nối bằng
+`page-break-after: always`. 404 khi gia đình không tồn tại hoặc không còn thành viên nào.
+
+**"In sổ gia đình"** (`GiaDinhLuuTruList.tsx`) — reuse THẲNG `GET /api/gia-dinh/{id}/in/phieu-
+gia-dinh` (không có endpoint/mẫu riêng) — nghiên cứu mã nguồn xác nhận hai nhãn gọi cùng report
+khi chỉ chọn một gia đình (trường hợp duy nhất màn hình lưu trữ hỗ trợ).
+
+Test: `InAnMauMoiTests.cs` (8 test mới — PDF thành công/404/cách ly giáo xứ cho cả ba nhóm),
+`GxGiaDinhList.test.tsx`/`GxGiaoDanList.test.tsx`/`GiaoDanList.test.tsx`/`GiaDinhList.test.tsx`/
+`GiaDinhLuuTruList.test.tsx`/`GiaDinhDetail.test.tsx`. Chạy thật trên `qlgx_thu`, PDF kiểm bằng
+PyMuPDF — ảnh/PDF `185`-`191` ở `WebApp/anh-chup-kiem-thu/`.
 
 ## 6. Chọn mẫu theo giáo phận
 

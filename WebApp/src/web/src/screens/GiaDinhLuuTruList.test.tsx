@@ -10,6 +10,7 @@ vi.mock('../api/client', () => ({
     giaDinh: {
       xuatExcelLuuTru: vi.fn(() => Promise.resolve()),
       inChungNhanHonPhoi: vi.fn(() => Promise.resolve()),
+      inPhieuGiaDinh: vi.fn(() => Promise.resolve()),
     },
   },
 }))
@@ -78,6 +79,19 @@ describe('GiaDinhLuuTruList', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Xuất Excel' }))
 
     expect(api.giaDinh.xuatExcelLuuTru).toHaveBeenCalledWith(undefined, false)
+  })
+
+  // "In sổ gia đình" (nút riêng của màn hình lưu trữ) reuse đúng endpoint/mẫu "Phiếu gia đình"
+  // — xem in-an.md mục 5f, can-review-sau.md (nghiên cứu mã desktop xác nhận cùng report).
+  it('nut In so gia dinh goi api.giaDinh.inPhieuGiaDinh voi dung id dang chon', async () => {
+    render(<GiaDinhLuuTruList rows={rows} moGiaDinh={vi.fn()} />)
+    const ten = await screen.findByText('Bình - Hoa')
+    await userEvent.click(ten)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'In sổ gia đình' })).toHaveProperty('disabled', false))
+
+    await userEvent.click(screen.getByRole('button', { name: 'In sổ gia đình' }))
+
+    expect(api.giaDinh.inPhieuGiaDinh).toHaveBeenCalledWith('g1')
   })
 
   it('nut Tai lai goi onTaiLai', async () => {

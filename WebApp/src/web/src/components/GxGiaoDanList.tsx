@@ -4,6 +4,7 @@ import { api } from '../api/client'
 import type { GiaoDanListItem } from '../api/types'
 import { cotGiaoDan, cotQuanHeGiaDinh } from '../cot/cotGiaoDan'
 import { chuaHoTro } from '../lib/thongBao'
+import { moBanDo } from '../lib/xemViTri'
 import { GxGrid, type GxGridHandle, type MucMenu } from './GxGrid'
 
 /** "In lý lịch cá nhân" / "In chứng nhận bí tích..." từ menu chuột phải — cùng lệnh gọi với
@@ -72,7 +73,9 @@ export const menuGiaoDanMacDinh = (
   { nhan: 'In giấy giới thiệu chứng nhận rửa tội', chay: (d) => moGioiThieu('RuaToi', d) },
   { nhan: 'In giấy giới thiệu giáo lý hôn phối', chay: (d) => moGioiThieu('GiaoLyHonPhoi', d) },
   { nhan: 'In giấy giới thiệu chứng nhận thêm sức', chay: (d) => moGioiThieu('ThemSuc', d) },
-  { nhan: 'Xem vị trí', chay: chuaHoTro },
+  // "Xem vị trí" — mở Google Maps với đúng địa chỉ giáo dân, xem lib/xemViTri.ts (tương đương
+  // Memory.ViewMap của bản desktop — gửi địa chỉ ra Google, xem can-review-sau.md).
+  { nhan: 'Xem vị trí', chay: (d) => moBanDo(d.diaChi, 'Giáo dân này không có địa chỉ để xem bản đồ.') },
 ]
 
 /**

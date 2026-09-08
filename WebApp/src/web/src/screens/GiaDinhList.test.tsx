@@ -9,6 +9,7 @@ vi.mock('../api/client', () => ({
   api: {
     giaDinh: {
       xuatExcel: vi.fn(() => Promise.resolve()),
+      inDanhSach: vi.fn(() => Promise.resolve()),
     },
   },
 }))
@@ -128,13 +129,12 @@ describe('GiaDinhList', () => {
     expect(onXoa).toHaveBeenCalledWith('g1', true)
   })
 
-  it('nut In danh sach hien thong bao chua ho tro', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+  it('nut In danh sach goi api.giaDinh.inDanhSach voi dung bo loc dang ap dung', async () => {
     render(<GiaDinhList rows={rows} moGiaDinh={vi.fn()} />)
     await screen.findByText('Bình - Lan')
 
     await userEvent.click(screen.getByRole('button', { name: 'In danh sách' }))
 
-    expect(alertSpy).toHaveBeenCalledOnce()
+    expect(api.giaDinh.inDanhSach).toHaveBeenCalledWith(undefined, false)
   })
 })

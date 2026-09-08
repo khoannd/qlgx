@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import type { GiaoDanTimKiem } from './api/types'
 import { AppShell } from './components/ThanhPhanKhung/AppShell'
 import { TabDocs } from './components/ThanhPhanKhung/TabDocs'
 import { useTabDocs } from './tabs/useTabDocs'
@@ -87,6 +88,10 @@ function App() {
           tenTaiKhoan={tenTaiKhoan}
           giaoXuId={giaoXuId}
           onTieuDe={(ten) => suaTieuDe(idThe, ten)}
+          // Nút "+" của GxPicker (Người nam/Người nữ/"Thêm thành viên") — mở một thẻ "Giáo dân
+          // mới" TÁCH BIỆT (không phải thẻ gia đình này), tạo xong tự đóng lại và điền ngược
+          // vào đúng ô đang chọn — xem GxPicker.tsx, moChiTietGiaoDan, can-review-sau.md.
+          moGiaoDanMoiChoPicker={(onTaoXong) => moChiTietGiaoDan(null, undefined, onTaoXong)}
         />
       ),
     })
@@ -96,7 +101,14 @@ function App() {
   // khi mở từ một ngữ cảnh "thuộc về" tab khác (hiện chỉ có gia đình, xem moChiTietGiaDinh ở
   // trên). Không truyền (mở trực tiếp từ "Danh sách giáo dân", hoặc giáo dân mới tạo xong ở
   // GiaoDanDetailPage.tao) thì giữ nguyên hành vi cũ: "Quay về" mở/focus "Danh sách giáo dân".
-  function moChiTietGiaoDan(id: string | null, nguonTabId?: string) {
+  // `onTaoXongChoPicker`: CHỈ truyền khi mở thẻ "Giáo dân mới" từ nút "+" của một `GxPicker`
+  // (xem `moGiaoDanMoiChoPicker` ở `moChiTietGiaDinh` bên dưới) — tạo xong thì điền ngược vào
+  // đúng ô picker đang mở RỒI ĐÓNG thẻ "Giáo dân mới" này (không để lại thẻ tạm trên thanh tab
+  // — người dùng bấm "+" chỉ để lấy một bản ghi cho picker, không phải để tiếp tục xem/sửa
+  // giáo dân đó), khác hẳn hành vi mặc định (mở tab chi tiết, xem GiaoDanDetailPage.tao).
+  function moChiTietGiaoDan(
+    id: string | null, nguonTabId?: string, onTaoXongChoPicker?: (gd: GiaoDanTimKiem) => void,
+  ) {
     const idThe = id ? `giaoDan:${id}` : `giaoDanMoi:${++moiDem.current}`
     // Đơn giản nhất mà vẫn đúng ý người dùng: "Quay về" ĐÓNG thẻ giáo dân hiện tại thay vì mở
     // thẻ khác — đóng thẻ tự nhiên lộ ra thẻ gia đình bên dưới nếu đó đúng là cách nó được mở
@@ -118,6 +130,9 @@ function App() {
           tenTaiKhoan={tenTaiKhoan}
           giaoXuId={giaoXuId}
           onTieuDe={(ten) => suaTieuDe(idThe, ten)}
+          onTaoXongChoPicker={onTaoXongChoPicker
+            ? (gd) => { onTaoXongChoPicker(gd); dong(idThe) }
+            : undefined}
         />
       ),
     })

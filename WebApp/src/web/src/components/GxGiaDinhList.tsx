@@ -3,7 +3,7 @@ import type { Ref } from 'react'
 import { api } from '../api/client'
 import type { GiaDinhListItem } from '../api/types'
 import { cotGiaDinh } from '../cot/cotGiaDinh'
-import { chuaHoTro } from '../lib/thongBao'
+import { moBanDo } from '../lib/xemViTri'
 import { GxGrid, type GxGridHandle, type MucMenu } from './GxGrid'
 
 type Props = {
@@ -32,20 +32,27 @@ function inPhieuGiaDinh(d: GiaDinhListItem): void {
   api.giaDinh.inPhieuGiaDinh(d.id).catch(baoLoiIn('in được phiếu gia đình', d.id))
 }
 
-/** Đúng 5 mục và đúng thứ tự trong constructor của GxGiaDinhList bản desktop. "In lý lịch cá
- * nhân" ở lưới GIA ĐÌNH vẫn báo "chưa hỗ trợ" — không rõ in cho thành viên nào (dùng menu
- * chuột phải trên lưới THÀNH VIÊN — GxGiaoDanList.inLyLichCaNhan — thay vì mục này); "Xem vị
- * trí" cũng chưa làm ở lượt này. "In giới thiệu chuyển xứ" mở GioiThieuModal để nhập bên nhận
- * trước khi in (mẫu thứ tư của "Giấy giới thiệu" — theo GIA ĐÌNH, xem in-an.md mục 5e). */
+/** "In lý lịch cá nhân" bấm từ lưới GIA ĐÌNH — in CẢ gia đình (một trang PDF/thành viên, đúng
+ * hành vi `item4_Click` của bản desktop — xem in-an.md mục 5f), KHÔNG phải hỏi chọn một người
+ * như bản nháp trước đây từng lo ngại. */
+function inLyLichCaNhan(d: GiaDinhListItem): void {
+  api.giaDinh.inLyLichCaNhanGiaDinh(d.id).catch(baoLoiIn('in được lý lịch cá nhân', d.id))
+}
+
+/** Đúng 5 mục và đúng thứ tự trong constructor của GxGiaDinhList bản desktop. "In giới thiệu
+ * chuyển xứ" mở GioiThieuModal để nhập bên nhận trước khi in (mẫu thứ tư của "Giấy giới
+ * thiệu" — theo GIA ĐÌNH, xem in-an.md mục 5e). "Xem vị trí" mở Google Maps với đúng địa chỉ
+ * gia đình — xem `lib/xemViTri.ts` (cùng cơ chế `Memory.ViewMap` của bản desktop, gửi địa chỉ
+ * ra Google — xem can-review-sau.md). */
 export const menuGiaDinhMacDinh = (
   _moChiTiet: (d: GiaDinhListItem) => void,
   moGioiThieuChuyenXu: (d: GiaDinhListItem) => void,
 ): MucMenu<GiaDinhListItem>[] => [
   { nhan: 'In chứng nhận hôn phối', chay: inChungNhanHonPhoi },
   { nhan: 'In phiếu gia đình', chay: inPhieuGiaDinh },
-  { nhan: 'In lý lịch cá nhân', chay: chuaHoTro },
+  { nhan: 'In lý lịch cá nhân', chay: inLyLichCaNhan },
   { nhan: 'In giới thiệu chuyển xứ', chay: moGioiThieuChuyenXu },
-  { nhan: 'Xem vị trí', chay: chuaHoTro },
+  { nhan: 'Xem vị trí', chay: (d) => moBanDo(d.diaChi, 'Gia đình này không có địa chỉ để xem bản đồ.') },
 ]
 
 /**

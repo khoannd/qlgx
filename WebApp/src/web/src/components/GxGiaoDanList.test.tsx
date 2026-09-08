@@ -209,5 +209,31 @@ describe('GxGiaoDanList', () => {
 
       expect(moGioiThieu).toHaveBeenCalledWith(loai, d)
     })
+
+    // "Xem vị trí" mở Google Maps với địa chỉ giáo dân — xem lib/xemViTri.ts.
+    it('bam "Xem vi tri" bao loi khi giao dan khong co dia chi', () => {
+      const alertGia = vi.spyOn(window, 'alert').mockImplementation(() => {})
+      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn(), vi.fn())
+      const muc = menu.find((m) => m.nhan === 'Xem vị trí')!
+
+      muc.chay!(nguoi({ diaChi: null }))
+
+      expect(alertGia).toHaveBeenCalledWith('Giáo dân này không có địa chỉ để xem bản đồ.')
+      alertGia.mockRestore()
+    })
+
+    it('bam "Xem vi tri" mo Google Maps voi dung dia chi khi co dia chi', () => {
+      const openGia = vi.spyOn(window, 'open').mockImplementation(() => null)
+      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn(), vi.fn())
+      const muc = menu.find((m) => m.nhan === 'Xem vị trí')!
+
+      muc.chay!(nguoi({ diaChi: '45 Trần Hưng Đạo' }))
+
+      expect(openGia).toHaveBeenCalledWith(
+        'https://www.google.com/maps/search/' + encodeURIComponent('45 Trần Hưng Đạo'),
+        '_blank', 'noopener,noreferrer',
+      )
+      openGia.mockRestore()
+    })
   })
 })

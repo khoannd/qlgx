@@ -21,7 +21,8 @@ public record KetQuaInAn(byte[] NoiDung, string TenTep);
 /// một giáo xứ.
 /// </summary>
 public class InAnService(
-    QlgxDbContext db, IBoiCanhGiaoXu boiCanh, BoDoMauIn mau, BoTrinhDuyet trinhDuyet, GiaDinhService giaDinhDv)
+    QlgxDbContext db, IBoiCanhGiaoXu boiCanh, BoDoMauIn mau, BoTrinhDuyet trinhDuyet,
+    GiaDinhService giaDinhDv, GiaoDanService giaoDanDv)
 {
     private static string Ngay(DateOnly? d) => VanBanInAn.Ngay(d);
 
@@ -64,6 +65,78 @@ public class InAnService(
     /// Word. Trả null nếu không tìm thấy giáo dân (đã bị lọc theo GiaoXuId hiện tại, đã xoá
     /// mềm, hoặc id không tồn tại) — endpoint trả 404 trong trường hợp đó.</summary>
     public async Task<KetQuaInAn?> XuatLyLichCaNhan(Guid giaoDanId, CancellationToken ct)
+    {
+        var ket = await DungHtmlLyLichCaNhan(giaoDanId, ct);
+        if (ket is null) return null;
+        var (g, html) = ket.Value;
+        var pdf = await trinhDuyet.XuatPdfAsync(html, ct);
+        return new KetQuaInAn(pdf, $"LyLichCaNhan_{g.MaGiaoDanCu}.pdf");
+    }
+
+    /// <summary>"In lý lịch cá nhân" bấm từ lưới/màn hình GIA ĐÌNH (`GxGiaDinhList.tsx`,
+    /// `GiaDinhDetail.tsx`) — tương đương `item4_Click`/`GxGiaoDanList.XuatLyLichCaNhan(Dictionary)`
+    /// của bản desktop (`Source/GXControl/GxGiaDinhList.cs` dòng 81-113,
+    /// `Source/GXControl/GxGiaoDanList.cs` dòng 227-260): KHÔNG in riêng "chủ hộ" và KHÔNG hỏi
+    /// chọn ai — in lý lịch cá nhân của TẤT CẢ thành viên đang có trong gia đình, mỗi người một
+    /// trang, gộp vào MỘT tệp PDF theo thứ tự VaiTro (Chồng/Vợ trước, Con sau — đúng
+    /// `ORDER BY VaiTro ASC` gốc), ngăn cách bằng ngắt trang. Bản gốc dùng
+    /// `word.InsertPage()` để nối nhiều "trang lý lịch cá nhân" Word vào cùng một tài liệu; bản
+    /// web ghép HTML của từng người (tái dùng NGUYÊN VẸN <see cref="DungHtmlLyLichCaNhan"/> — cùng
+    /// một hàm dựng dữ liệu/mẫu với "In lý lịch cá nhân" của MỘT giáo dân) rồi xuất PDF một
+    /// lần duy nhất, xem can-review-sau.md.
+    ///
+    /// Trả null nếu gia đình không tồn tại (đã xoá mềm/id sai/thuộc giáo xứ khác) HOẶC không
+    /// còn thành viên nào (không có gì để in).</summary>
+    public async Task<KetQuaInAn?> XuatLyLichCaNhanGiaDinh(Guid giaDinhId, CancellationToken ct)
+    {
+        var giaDinh = await db.GiaDinh
+            .Include(x => x.ThanhVien)
+            .FirstOrDefaultAsync(x => x.Id == giaDinhId && !x.DaXoa, ct);
+        if (giaDinh is null || giaDinh.ThanhVien.Count == 0) return null;
+
+        var thanhVienThuTu = giaDinh.ThanhVien.OrderBy(tv => tv.VaiTro).ToList();
+
+        string? kieuChung = null;
+        var thanTrang = new List<string>();
+        foreach (var tv in thanhVienThuTu)
+        {
+            var ket = await DungHtmlLyLichCaNhan(tv.GiaoDanId, ct);
+            if (ket is null) continue; // giáo dân bị xoá mềm sau khi gắn vào ThanhVienGiaDinh — bỏ qua, không chặn cả gia đình
+            var (_, html) = ket.Value;
+            var (kieu, than) = TachKieuVaThan(html);
+            kieuChung ??= kieu;
+            thanTrang.Add(than);
+        }
+        if (thanTrang.Count == 0) return null;
+
+        var noiDungGop = string.Join(
+            "<div style=\"page-break-after: always;\"></div>", thanTrang);
+        var htmlGop = $"<!doctype html><html lang=\"vi\"><head><meta charset=\"utf-8\" />" +
+            $"<style>{kieuChung}</style></head><body>{noiDungGop}</body></html>";
+        var pdf = await trinhDuyet.XuatPdfAsync(htmlGop, ct);
+
+        return new KetQuaInAn(pdf, $"LyLichCaNhan_GiaDinh_{giaDinh.MaGiaDinhCu}.pdf");
+    }
+
+    /// <summary>Tách khối <c>&lt;style&gt;</c> và nội dung bên trong <c>&lt;body&gt;</c> khỏi
+    /// một trang HTML đã dựng xong (mẫu LyLichCaNhan.html không có thuộc tính nào trên hai thẻ
+    /// này) — dùng để ghép nhiều trang "lý lịch cá nhân" độc lập thành MỘT tài liệu nhiều trang
+    /// khi in cho cả gia đình (xem <see cref="XuatLyLichCaNhanGiaDinh"/>), không cần thêm một
+    /// mẫu HTML thứ hai chỉ để lặp lại toàn bộ CSS/bố cục đã có.</summary>
+    private static (string Kieu, string Than) TachKieuVaThan(string htmlDayDu)
+    {
+        var kieu = System.Text.RegularExpressions.Regex.Match(
+            htmlDayDu, "<style>(.*?)</style>", System.Text.RegularExpressions.RegexOptions.Singleline).Groups[1].Value;
+        var than = System.Text.RegularExpressions.Regex.Match(
+            htmlDayDu, "<body>(.*?)</body>", System.Text.RegularExpressions.RegexOptions.Singleline).Groups[1].Value;
+        return (kieu, than);
+    }
+
+    /// <summary>Dựng HTML "Lý lịch cá nhân" đầy đủ cho MỘT giáo dân (chưa xuất PDF) — tách khỏi
+    /// <see cref="XuatLyLichCaNhan"/> để dùng lại được ở <see cref="XuatLyLichCaNhanGiaDinh"/>
+    /// (in cho cả gia đình, nhiều người/nhiều trang) mà không lặp lại toàn bộ logic dựng dữ
+    /// liệu. Trả null nếu không tìm thấy giáo dân hoặc giáo xứ (giữ nguyên điều kiện gốc).</summary>
+    private async Task<(GiaoDan G, string Html)?> DungHtmlLyLichCaNhan(Guid giaoDanId, CancellationToken ct)
     {
         // FirstOrDefaultAsync với điều kiện tường minh — KHÔNG dùng Find()/FindAsync() (bị cấm
         // trong mã nghiệp vụ vì bỏ qua bộ lọc giáo xứ toàn cục, xem CLAUDE.md).
@@ -169,9 +242,7 @@ public class InAnService(
         };
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
         var html = mau.Dung(slug, "LyLichCaNhan", duLieu, khoiHtml);
-        var pdf = await trinhDuyet.XuatPdfAsync(html, ct);
-
-        return new KetQuaInAn(pdf, $"LyLichCaNhan_{g.MaGiaoDanCu}.pdf");
+        return (g, html);
     }
 
     /// <summary>Bốn mục menu chuột phải "In chứng nhận bí tích / rửa tội / xưng tội-rước lễ /
@@ -584,5 +655,129 @@ public class InAnService(
         var html = mau.Dung(slug, "GioiThieuChuyenXu", duLieu, khoiHtml);
         var pdf = await trinhDuyet.XuatPdfAsync(html, ct);
         return new KetQuaInAn(pdf, $"GioiThieuChuyenXu_{giaDinh.MaGiaDinhCu}.pdf");
+    }
+
+    private static string ChuoiDs(string? v) => string.IsNullOrEmpty(v) ? "—" : v;
+    private static string NgayDs(DateOnly? v) => v is null ? "—" : Ngay(v);
+    private static string BoolDs(bool v) => v ? "✓" : "—";
+
+    /// <summary>"In danh sách" (nút thanh công cụ, icon in, `GiaoDanList.tsx`) — bấm nào cũng
+    /// XUẤT PDF cả danh sách hiện đang lọc, không phải một bản ghi. Bản desktop
+    /// (`btnInDanhSach_Click`, `Source/ChuongTrinh/frmGiaoDanList.cs` dòng 329-341) xuất control
+    /// GridEX ĐANG HIỂN THỊ (Janus `GridEXExporter`) ra một tệp .xls tạm rồi `Process.Start` mở
+    /// nó — nghĩa là in đúng những gì SẮP XẾP/LỌC hiện có trên lưới tại thời điểm bấm. Bản web
+    /// KHÔNG đọc lại trạng thái AG Grid phía máy khách (sắp xếp cột, ô lọc từng cột) — CỐ Ý
+    /// dùng lại đúng ba tham số lọc (giaoHoId/chiKhongThongKe/hienCaDaMat) và gọi thẳng
+    /// <see cref="GiaoDanService.LayDanhSach"/>, giống hệt cách "Xuất Excel" đã làm ở
+    /// <see cref="XuatExcelService"/> (đã quyết định trước đó, xem ghi chú ở lớp đó) — để danh
+    /// sách in ra LUÔN khớp với chính GET danh sách đã dựng nên lưới, không có nguy cơ máy
+    /// khách/máy chủ lọc lệch nhau. Khác biệt so với thao tác gốc (không phải "sửa cho đúng"
+    /// ngầm) ghi ở can-review-sau.md. 29 cột đúng thứ tự `cotGiaoDan.ts`/`XuatExcelService`,
+    /// khổ NGANG (nhiều cột hơn khổ dọc chứa được).</summary>
+    public async Task<KetQuaInAn> XuatDanhSachGiaoDan(
+        Guid? giaoHoId, bool chiKhongThongKe, bool hienCaDaMat, CancellationToken ct)
+    {
+        var giaoXu = await LayGiaoXuHienTai(ct);
+        var rows = await giaoDanDv.LayDanhSach(giaoHoId, chiKhongThongKe, hienCaDaMat, ct);
+
+        var hangHtml = new System.Text.StringBuilder();
+        foreach (var g in rows)
+        {
+            string E(string? s) => System.Text.Encodings.Web.HtmlEncoder.Default.Encode(s ?? "—");
+            string EDs(string s) => System.Text.Encodings.Web.HtmlEncoder.Default.Encode(s);
+            hangHtml.Append("<tr>")
+                .Append("<td>").Append(g.MaGiaoDanCu).Append("</td>")
+                .Append("<td>").Append(E(g.TenThanh)).Append("</td>")
+                .Append("<td>").Append(E(g.HoTen)).Append("</td>")
+                .Append("<td>").Append(E(g.Phai)).Append("</td>")
+                .Append("<td>").Append(EDs(NgayDs(g.NgaySinh))).Append("</td>")
+                .Append("<td>").Append(EDs(NgayDs(g.NgayRuaToi))).Append("</td>")
+                .Append("<td>").Append(EDs(NgayDs(g.NgayRuocLe))).Append("</td>")
+                .Append("<td>").Append(EDs(NgayDs(g.NgayThemSuc))).Append("</td>")
+                .Append("<td>").Append(EDs(BoolDs(g.LapGd))).Append("</td>")
+                .Append("<td>").Append(E(g.HoTenCha)).Append("</td>")
+                .Append("<td>").Append(E(g.HoTenMe)).Append("</td>")
+                .Append("<td>").Append(EDs(BoolDs(g.TanTong))).Append("</td>")
+                .Append("<td>").Append(EDs(BoolDs(g.ConHoc))).Append("</td>")
+                .Append("<td>").Append(E(g.NgheNghiep)).Append("</td>")
+                .Append("<td>").Append(E(g.GhiChu)).Append("</td>")
+                .Append("<td>").Append(E(g.DienThoai)).Append("</td>")
+                .Append("<td>").Append(E(g.DiaChi)).Append("</td>")
+                .Append("<td>").Append(E(g.TenGiaoHo)).Append("</td>")
+                .Append("<td>").Append(EDs(BoolDs(g.DaChuyenDi))).Append("</td>")
+                .Append("<td>").Append(E(g.TrinhDoVanHoa)).Append("</td>")
+                .Append("<td>").Append(E(g.TrinhDoChuyenMon)).Append("</td>")
+                .Append("<td>").Append(E(g.BietNgoaiNgu)).Append("</td>")
+                .Append("<td>").Append(EDs(BoolDs(g.QuaDoi))).Append("</td>")
+                .Append("<td>").Append(EDs(NgayDs(g.NgayQuaDoi))).Append("</td>")
+                .Append("<td>").Append(E(g.NoiAnTang)).Append("</td>")
+                .Append("<td>").Append(E(g.NoiSinh)).Append("</td>")
+                .Append("<td>").Append(E(g.NoiRuaToi)).Append("</td>")
+                .Append("<td>").Append(E(g.NoiRuocLe)).Append("</td>")
+                .Append("<td>").Append(E(g.NoiThemSuc)).Append("</td>")
+                .Append("</tr>");
+        }
+
+        var duLieu = new Dictionary<string, string?>
+        {
+            ["TenGiaoXu"] = giaoXu?.TenGiaoXu ?? "",
+            ["SoLuong"] = rows.Count.ToString(),
+            ["NgayThangNamIn"] = DateTime.Now.ToString("dd/MM/yyyy HH:mm"),
+            ["DieuKienLoc"] = hienCaDaMat ? "(hiện cả giáo dân đã mất/chuyển xứ)" : "",
+        };
+        var khoiHtml = new Dictionary<string, string?> { ["HangDanhSach"] = hangHtml.ToString() };
+        var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu?.GiaoHat?.GiaoPhan?.TenGiaoPhan);
+        var html = mau.Dung(slug, "DanhSachGiaoDan", duLieu, khoiHtml);
+        var pdf = await trinhDuyet.XuatPdfAsync(html, ct, landscape: true);
+
+        return new KetQuaInAn(pdf, $"DanhSachGiaoDan_{DateTime.Now:yyyy-MM-dd}.pdf");
+    }
+
+    /// <summary>"In danh sách" của màn hình "Danh sách gia đình" (`GiaDinhList.tsx`) — cùng lý
+    /// do/thiết kế với <see cref="XuatDanhSachGiaoDan"/> ở trên (gọi thẳng
+    /// <see cref="GiaDinhService.LayDanhSach"/>, KHÔNG viết lại điều kiện lọc). 12 cột đúng thứ
+    /// tự `cotGiaDinh.ts`/`XuatExcelService`, gạch ngang riêng từng ô Người nam/Người nữ đúng
+    /// quy tắc `Gach` gốc (không gạch cả dòng).</summary>
+    public async Task<KetQuaInAn> XuatDanhSachGiaDinh(
+        Guid? giaoHoId, bool chiKhongThongKe, CancellationToken ct)
+    {
+        var giaoXu = await LayGiaoXuHienTai(ct);
+        var rows = await giaDinhDv.LayDanhSach(giaoHoId, chiKhongThongKe, ct);
+
+        var hangHtml = new System.Text.StringBuilder();
+        foreach (var g in rows)
+        {
+            string E(string? s) => System.Text.Encodings.Web.HtmlEncoder.Default.Encode(ChuoiDs(s));
+            var kieuChong = g.Gach == 0 || g.Gach == 2 ? " class=\"struck\"" : "";
+            var kieuVo = g.Gach == 1 || g.Gach == 2 ? " class=\"struck\"" : "";
+            hangHtml.Append("<tr>")
+                .Append("<td>").Append(g.MaGiaDinhCu).Append("</td>")
+                .Append("<td>").Append(E(g.TenGiaDinh)).Append("</td>")
+                .Append("<td").Append(kieuChong).Append(">").Append(E(g.TenChong)).Append("</td>")
+                .Append("<td").Append(kieuVo).Append(">").Append(E(g.TenVo)).Append("</td>")
+                .Append("<td>").Append(g.SoLuong).Append("</td>")
+                .Append("<td>").Append(E(g.DienThoai)).Append("</td>")
+                .Append("<td>").Append(E(g.DTChong)).Append("</td>")
+                .Append("<td>").Append(E(g.DTVo)).Append("</td>")
+                .Append("<td>").Append(E(g.DiaChi)).Append("</td>")
+                .Append("<td>").Append(E(g.TenGiaoHo)).Append("</td>")
+                .Append("<td>").Append(E(g.DienGiaDinh)).Append("</td>")
+                .Append("<td>").Append(E(g.GhiChu)).Append("</td>")
+                .Append("</tr>");
+        }
+
+        var duLieu = new Dictionary<string, string?>
+        {
+            ["TenGiaoXu"] = giaoXu?.TenGiaoXu ?? "",
+            ["SoLuong"] = rows.Count.ToString(),
+            ["NgayThangNamIn"] = DateTime.Now.ToString("dd/MM/yyyy HH:mm"),
+            ["DieuKienLoc"] = chiKhongThongKe ? "(chỉ gia đình không được thống kê)" : "",
+        };
+        var khoiHtml = new Dictionary<string, string?> { ["HangDanhSach"] = hangHtml.ToString() };
+        var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu?.GiaoHat?.GiaoPhan?.TenGiaoPhan);
+        var html = mau.Dung(slug, "DanhSachGiaDinh", duLieu, khoiHtml);
+        var pdf = await trinhDuyet.XuatPdfAsync(html, ct, landscape: true);
+
+        return new KetQuaInAn(pdf, $"DanhSachGiaDinh_{DateTime.Now:yyyy-MM-dd}.pdf");
     }
 }

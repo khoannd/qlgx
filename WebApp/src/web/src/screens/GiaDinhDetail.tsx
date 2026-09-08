@@ -12,7 +12,6 @@ import { GxGiaoDanList, menuGiaoDanMacDinh } from '../components/GxGiaoDanList'
 import { GxGoiY } from '../components/GxGoiY'
 import { GxPicker } from '../components/GxPicker'
 import { useTuDongLuuBanNhap, xoaBanNhap } from '../lib/banNhap'
-import { chuaHoTro } from '../lib/thongBao'
 import { useGioiThieuGiaoDan } from '../lib/useGioiThieuGiaoDan'
 
 /** Sentinel hiển thị cho "Ngoài xứ" — ứng với `giaoHoId === null` (xem NGOAI_XU ở
@@ -105,6 +104,10 @@ type Props = {
   /** Khoá giáo xứ đang đăng nhập — dùng để tách gợi ý nhập liệu theo tần suất lưu ở
    * `localStorage` (xem `lib/goiYNhapLieu.ts` và cùng prop ở `GiaoDanDetail.Props`). */
   giaoXuId?: string | null
+  /** Nút "+" của GxPicker (Người nam/Người nữ/"Thêm thành viên") — mở thẻ "Giáo dân mới" tách
+   * biệt, tạo xong tự điền ngược vào đúng ô đang chọn. Không truyền = giữ nút "+" vô hiệu hoá
+   * (xem `GxPicker.tsx`, `App.moChiTietGiaDinh`). */
+  moGiaoDanMoiChoPicker?: (onTaoXong: (gd: GiaoDanTimKiem) => void) => void
 }
 
 const rong = (): GiaDinhDetailDuLieu => ({
@@ -152,6 +155,7 @@ export function GiaDinhDetail({
   duLieu, moGiaoDan, moDanhSachGiaDinh, onLuu, dangLuu, thongBaoLuu, danhMucGiaoHo = [],
   onGanVoChong, onBoChonVoChong, onThemThanhVien, onXoaThanhVien, onTaoMoi,
   khoaBanNhap = null, tenTaiKhoan = null, banNhap = null, luuThanhCongDem, giaoXuId = null,
+  moGiaoDanMoiChoPicker,
 }: Props) {
   // banNhap đè lên dữ liệu gốc khi người dùng bấm "Khôi phục" ở BanNhapBanner — xem chú thích ở
   // GiaoDanDetail.tsx (cùng cơ chế, container luôn đổi `key` kèm theo).
@@ -166,6 +170,18 @@ export function GiaDinhDetail({
     if (!duLieu?.id) return
     api.giaDinh.inPhieuGiaDinh(duLieu.id).catch((e: unknown) => {
       console.error(`Không in được phiếu gia đình ${duLieu.id}`, e)
+      window.alert(e instanceof Error ? e.message : 'In thất bại, thử lại sau.')
+    })
+  }
+
+  // "In lý lịch cá nhân" — hết mơ hồ (xem ghi chú cũ ở nút bên dưới): tương đương
+  // `item4_Click` của bản desktop (`Source/GXControl/GxGiaDinhList.cs` dòng 81-113), in lý
+  // lịch cá nhân của TẤT CẢ thành viên đang có trong gia đình đang mở, mỗi người một trang,
+  // gộp một tệp PDF — xem InAnService.XuatLyLichCaNhanGiaDinh, in-an.md mục 5f.
+  function inLyLichCaNhan(): void {
+    if (!duLieu?.id) return
+    api.giaDinh.inLyLichCaNhanGiaDinh(duLieu.id).catch((e: unknown) => {
+      console.error(`Không in được lý lịch cá nhân của gia đình ${duLieu.id}`, e)
       window.alert(e instanceof Error ? e.message : 'In thất bại, thử lại sau.')
     })
   }
@@ -334,6 +350,8 @@ export function GiaDinhDetail({
               </label>}>
               <GxPicker id="gdinh-nguoinam" value={nguoiNam ? `${nguoiNam.tenThanh ?? ''} ${nguoiNam.hoTen}`.trim() : null}
                 onChon={moi ? undefined : (gd) => onGanVoChong?.(0, gd)}
+                onThemMoi={moi || !moGiaoDanMoiChoPicker ? undefined
+                  : () => moGiaoDanMoiChoPicker((gd) => onGanVoChong?.(0, gd))}
                 onBoChon={moi || !nguoiNam ? undefined : () => onBoChonVoChong?.(0)}
                 onXem={nguoiNam ? () => moGiaoDan?.(nguoiNam.giaoDanId) : undefined} />
             </GxField>
@@ -344,6 +362,8 @@ export function GiaDinhDetail({
               </label>}>
               <GxPicker id="gdinh-nguoinu" value={nguoiNu ? `${nguoiNu.tenThanh ?? ''} ${nguoiNu.hoTen}`.trim() : null}
                 onChon={moi ? undefined : (gd) => onGanVoChong?.(1, gd)}
+                onThemMoi={moi || !moGiaoDanMoiChoPicker ? undefined
+                  : () => moGiaoDanMoiChoPicker((gd) => onGanVoChong?.(1, gd))}
                 onBoChon={moi || !nguoiNu ? undefined : () => onBoChonVoChong?.(1)}
                 onXem={nguoiNu ? () => moGiaoDan?.(nguoiNu.giaoDanId) : undefined} />
             </GxField>
@@ -496,7 +516,8 @@ export function GiaDinhDetail({
         {!moi && (
           <div className="thanhvien-them" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 2px 10px' }}>
             <GxPicker id="gdinh-them-thanhvien" value={dangThem ? `${dangThem.tenThanh ?? ''} ${dangThem.hoTen}`.trim() : null}
-              onChon={setDangThem} onBoChon={() => setDangThem(null)} />
+              onChon={setDangThem} onBoChon={() => setDangThem(null)}
+              onThemMoi={moGiaoDanMoiChoPicker ? () => moGiaoDanMoiChoPicker(setDangThem) : undefined} />
             <select aria-label="Vai trò thành viên mới" value={vaiTroMoi} onChange={(e) => setVaiTroMoi(Number(e.target.value))}>
               {DANH_SACH_VAI_TRO_THANH_VIEN.map((v) => <option key={v.giaTri} value={v.giaTri}>{v.nhan}</option>)}
             </select>
@@ -523,12 +544,10 @@ export function GiaDinhDetail({
           {thongBaoLuu ?? (moi ? 'Nhập Tên gia đình rồi bấm "Tạo gia đình" — chọn Người nam/nữ và thành viên sau khi đã tạo' : 'Chưa có thay đổi')}
         </span>
         <div className="spacer" />
-        {/* "In lý lịch cá nhân" ở đây không rõ in cho thành viên nào — dùng menu chuột phải
-            trên từng dòng thành viên (đã in được thật, xem GxGiaoDanList.inLyLichCaNhan) thay
-            vì nút chung này, nên vẫn báo "chưa hỗ trợ". "In phiếu gia đình" thì KHÔNG mơ hồ
-            (luôn là cả gia đình đang mở) — đã nối thẳng vào endpoint thật, disable khi gia đình
-            còn là bản nháp chưa lưu (chưa có id để in). */}
-        <button type="button" className="btn" onClick={chuaHoTro}>In lý lịch cá nhân</button>
+        {/* Cả hai nút in cho CẢ gia đình đang mở, không mơ hồ (khác GxGiaoDanList.inLyLichCaNhan
+            — MỘT giáo dân, dùng ở menu chuột phải lưới giáo dân) — disable khi gia đình còn là
+            bản nháp chưa lưu (chưa có id để in). Xem in-an.md mục 5f. */}
+        <button type="button" className="btn" onClick={inLyLichCaNhan} disabled={moi}>In lý lịch cá nhân</button>
         <button type="button" className="btn" onClick={inPhieuGiaDinh} disabled={moi}>In phiếu gia đình</button>
         <button type="button" className="btn btn-quiet" onClick={() => moDanhSachGiaDinh?.()}>Quay về</button>
         <button type="submit" className="btn btn-primary" disabled={moi ? (!onTaoMoi || dangLuu) : (!onLuu || dangLuu)}>

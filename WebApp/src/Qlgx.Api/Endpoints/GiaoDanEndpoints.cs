@@ -47,6 +47,17 @@ public static class GiaoDanEndpoints
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", tenTep);
         });
 
+        // "In danh sách" (thanh công cụ "Danh sách giáo dân", xem in-an.md mục 5f và
+        // InAnService.XuatDanhSachGiaoDan) — CÙNG BA tham số lọc với GET "" phía trên, giống hệt
+        // "/xuat-excel" đã có. "/in/danh-sach" không khớp mẫu "/{id:guid}/..." bên dưới (không
+        // phải GUID) nên không giẫm route.
+        nhom.MapGet("/in/danh-sach", async (InAnService dv, Guid? giaoHoId, bool? chiKhongThongKe,
+            bool? hienCaDaMat, CancellationToken ct) =>
+        {
+            var ketQua = await dv.XuatDanhSachGiaoDan(giaoHoId, chiKhongThongKe ?? false, hienCaDaMat ?? false, ct);
+            return Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep);
+        });
+
         nhom.MapGet("/{id:guid}", async (GiaoDanService dv, Guid id, CancellationToken ct) =>
             await dv.LayChiTiet(id, ct) is { } chiTiet ? Results.Ok(chiTiet) : Results.NotFound());
 

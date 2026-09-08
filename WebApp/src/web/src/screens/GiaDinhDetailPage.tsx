@@ -23,6 +23,11 @@ type Props = {
   onTieuDe?: (tieuDe: string) => void
   /** Khoá giáo xứ đang đăng nhập — xem chú thích cùng tên ở `GiaoDanDetailPage.Props`. */
   giaoXuId?: string | null
+  /** Mở thẻ "Giáo dân mới" TÁCH BIỆT cho nút "+" của `GxPicker` (Người nam/Người nữ/"Thêm
+   * thành viên") — tham số là hàm nhận bản ghi vừa tạo (điền ngược vào đúng ô picker đang mở).
+   * Không truyền = giữ nút "+" vô hiệu hoá như cũ (xem `GxPicker.tsx`). Xem
+   * `App.moChiTietGiaDinh`. */
+  moGiaoDanMoiChoPicker?: (onTaoXong: (gd: GiaoDanTimKiem) => void) => void
 }
 
 const tenHienThi = (nguoi: { tenThanh: string | null; hoTen: string }) =>
@@ -37,6 +42,7 @@ const tenHienThi = (nguoi: { tenThanh: string | null; hoTen: string }) =>
  */
 export function GiaDinhDetailPage({
   id, moGiaoDan, moDanhSachGiaDinh, tenTaiKhoan = null, onTieuDe, giaoXuId = null,
+  moGiaoDanMoiChoPicker,
 }: Props) {
   const [idThat, setIdThat] = useState(id)
   const [duLieu, setDuLieu] = useState<GiaDinhDetailDuLieu | null>(null)
@@ -124,6 +130,7 @@ export function GiaDinhDetailPage({
       <>
         <GiaDinhDetail
           moGiaoDan={moGiaoDan}
+          moGiaoDanMoiChoPicker={moGiaoDanMoiChoPicker}
           moDanhSachGiaDinh={moDanhSachGiaDinh}
           danhMucGiaoHo={danhMucGiaoHo}
           onTaoMoi={taoMoi}
@@ -323,6 +330,7 @@ export function GiaDinhDetailPage({
           key={remountKey}
           duLieu={duLieu}
           moGiaoDan={moGiaoDan}
+          moGiaoDanMoiChoPicker={moGiaoDanMoiChoPicker}
           moDanhSachGiaDinh={moDanhSachGiaDinh}
           onLuu={luu}
           dangLuu={dangLuu}

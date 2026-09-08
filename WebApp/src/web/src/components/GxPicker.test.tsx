@@ -56,7 +56,9 @@ describe('GxPicker', () => {
     const nguoiDung = userEvent.setup()
 
     render(<GxPicker value={null} onThemMoi={onThemMoi} />)
-    const nutThemMoi = screen.getByTitle('Thêm giáo dân mới — chưa hỗ trợ') as HTMLButtonElement
+    // Tooltip đổi sang KHÔNG còn hậu tố "— chưa hỗ trợ" khi nơi gọi đã nối `onThemMoi` thật —
+    // giữ hậu tố đó thì tooltip nói dối lúc chức năng đã chạy được (xem GxPicker.tsx).
+    const nutThemMoi = screen.getByTitle('Thêm giáo dân mới') as HTMLButtonElement
     expect(nutThemMoi.disabled).toBe(false)
     await nguoiDung.click(nutThemMoi)
 

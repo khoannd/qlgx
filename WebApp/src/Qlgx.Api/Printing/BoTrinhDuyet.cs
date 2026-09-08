@@ -46,8 +46,13 @@ public sealed class BoTrinhDuyet : IAsyncDisposable
 
     /// <summary>Sinh PDF khổ A4 từ một chuỗi HTML đã dựng sẵn (đã điền dữ liệu, đã thoát ký tự
     /// đúng cách ở tầng gọi). Trả về mảng byte trong bộ nhớ — KHÔNG ghi file tạm xuống đĩa, vì
-    /// máy chủ chạy nhiều bản song song (ràng buộc HA) không được để lại trạng thái cục bộ.</summary>
-    public async Task<byte[]> XuatPdfAsync(string html, CancellationToken ct)
+    /// máy chủ chạy nhiều bản song song (ràng buộc HA) không được để lại trạng thái cục bộ.
+    ///
+    /// <paramref name="landscape"/> mặc định `false` (khổ dọc) — GIỮ NGUYÊN hành vi cũ cho mọi
+    /// nơi gọi đã có (Lý lịch cá nhân, Chứng nhận…). Thêm tham số này (thay vì hard-code) cho
+    /// mẫu "In danh sách" (nhiều cột, cần khổ ngang mới đọc được) — xem
+    /// InAnService.XuatDanhSachGiaoDan/XuatDanhSachGiaDinh và in-an.md mục 5f.</summary>
+    public async Task<byte[]> XuatPdfAsync(string html, CancellationToken ct, bool landscape = false)
     {
         var trinhDuyet = await LayTrinhDuyet(ct);
         var trang = await trinhDuyet.NewPageAsync();
@@ -57,11 +62,12 @@ public sealed class BoTrinhDuyet : IAsyncDisposable
             return await trang.PdfAsync(new PagePdfOptions
             {
                 Format = "A4",
-                // Khổ dọc — nêu RÕ (không dựa vào mặc định của Playwright) vì "Phiếu gia đình"
-                // từng bị người dùng thật báo "chưa đúng khổ" khi kiểm thử (2026-09-07); đặt
-                // tường minh ở đây để không phụ thuộc hành vi mặc định có thể đổi giữa các bản
-                // Playwright, và khớp đúng `@page { size: A4 portrait; }` của mẫu HTML.
-                Landscape = false,
+                // Khổ dọc mặc định — nêu RÕ (không dựa vào mặc định của Playwright) vì "Phiếu
+                // gia đình" từng bị người dùng thật báo "chưa đúng khổ" khi kiểm thử
+                // (2026-09-07); đặt tường minh ở đây để không phụ thuộc hành vi mặc định có thể
+                // đổi giữa các bản Playwright, và khớp đúng `@page { size: A4 portrait; }` của
+                // mẫu HTML tương ứng (mẫu khổ ngang tự khai `@page { size: A4 landscape; }`).
+                Landscape = landscape,
                 PrintBackground = true,
                 Margin = new Margin { Top = "12mm", Bottom = "12mm", Left = "15mm", Right = "15mm" },
             });

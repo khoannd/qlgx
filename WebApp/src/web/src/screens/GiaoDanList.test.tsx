@@ -9,6 +9,7 @@ vi.mock('../api/client', () => ({
   api: {
     giaoDan: {
       xuatExcel: vi.fn(() => Promise.resolve()),
+      inDanhSach: vi.fn(() => Promise.resolve()),
     },
   },
 }))
@@ -211,14 +212,16 @@ describe('GiaoDanList', () => {
     expect(api.giaoDan.xuatExcel).toHaveBeenCalledWith('gh-1', false, false)
   })
 
-  it('nut In danh sach hien thong bao chua ho tro', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
-    render(<GiaoDanList rows={rows} moGiaoDan={vi.fn()} />)
+  // "In danh sách" nay in PDF thật, cùng bộ lọc với "Xuất Excel" — xem
+  // docs/superpowers/specs/man-hinh/in-an.md mục 5f.
+  it('nut In danh sach goi api.giaoDan.inDanhSach voi dung bo loc dang ap dung', async () => {
+    render(<GiaoDanList rows={rows} moGiaoDan={vi.fn()} hienCaDaMat={false}
+      danhMucGiaoHo={[{ id: 'gh-1', tenGiaoHo: 'Giáo họ Thánh Tâm', maGiaoHoCu: 1, giaoHoChaId: null }]} />)
     await screen.findByText('Trần Văn Bình')
 
     await userEvent.click(screen.getByRole('button', { name: 'In danh sách' }))
 
-    expect(alertSpy).toHaveBeenCalledOnce()
+    expect(api.giaoDan.inDanhSach).toHaveBeenCalledWith(undefined, false, false)
   })
 
   it('o tick Hien ca da mat goi onDoiHienCaDaMat', async () => {

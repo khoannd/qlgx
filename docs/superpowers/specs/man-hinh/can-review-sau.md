@@ -3957,3 +3957,105 @@ mục mở `GioiThieuModal` với đúng `loai`/gia đình). Tổng test: backen
 tội/Thêm sức/cha mẹ) và gia đình "Paul Phạm Văn Bằng" (mã 32 — 7 thành viên), PDF mở kiểm tra
 bằng PyMuPDF, tiếng Việt có dấu đúng, không còn nhãn rỗng lửng. Ảnh
 `181-gioi-thieu-rua-toi.pdf`…`184-gioi-thieu-chuyen-xu.pdf` ở `WebApp/anh-chup-kiem-thu/`.
+
+### 66. Task "hoàn tất mọi thao tác còn báo chưa hỗ trợ" (2026-09-08) — 6/9 mục xong, ghi lại các quyết định
+
+Rà `chuaHoTro` còn lại trên toàn bộ giao diện (9 mục), ưu tiên đã chốt: In danh sách → In lý
+lịch cá nhân (gia đình) → In sổ gia đình → In giới thiệu hôn phối → nút "+" GxPicker → Xem vị
+trí. Nghiên cứu mã desktop trước khi migrate cho cả 4 chủ đề (xem agent nghiên cứu, trích dẫn
+dòng mã bên dưới) — không tự suy đoán hành vi gốc.
+
+**1. "In danh sách" (`GiaDinhList.tsx`/`GiaoDanList.tsx`) — XONG.** Bản desktop
+(`btnInDanhSach_Click`, `Source/ChuongTrinh/frmGiaoDanList.cs` dòng 329-341/
+`frmGiaDinhList.cs` dòng 363-375) dùng Janus `GridEXExporter` xuất CONTROL GridEX đang hiển thị
+(đã sắp/lọc trên màn hình) ra một tệp `.xls` tạm rồi `Process.Start` mở nó —
+`Source/ExcelReport/ExportGrid.cs` là mã CHẾT (`Export()` chỉ `return true;`), không phải cơ chế
+thật. Quyết định KHÔNG đọc lại trạng thái AG Grid phía máy khách (sắp xếp/lọc từng cột) mà tái
+dùng ĐÚNG cơ chế đã chọn cho "Xuất Excel" trước đó (gọi thẳng `GiaoDanService.LayDanhSach`/
+`GiaDinhService.LayDanhSach` với ba/hai tham số lọc màn hình đang áp dụng, xem
+`XuatExcelService.cs`) — để danh sách in ra LUÔN khớp với chính GET danh sách đã dựng nên lưới,
+không có nguy cơ lệch dữ liệu máy khách/máy chủ theo thời gian, nhất quán với quyết định đã ghi
+nhận trước đó cho Excel. Khác biệt so với thao tác gốc (không phải "sửa cho đúng" ngầm): thao
+tác gốc là export lưới → mở Excel; bản web ra PDF khổ NGANG (giống các mẫu in khác của lượt
+này) qua `InAnService.XuatDanhSachGiaoDan`/`XuatDanhSachGiaDinh` (endpoint mới
+`GET /api/giao-dan/in/danh-sach`, `GET /api/gia-dinh/in/danh-sach`), 29/12 cột đúng thứ tự
+`cotGiaoDan.ts`/`cotGiaDinh.ts` (khớp `XuatExcelService`). Thêm tham số `landscape` cho
+`BoTrinhDuyet.XuatPdfAsync` (mặc định `false`, không đổi hành vi 8 mẫu cũ).
+
+**2. "In lý lịch cá nhân" từ lưới GIA ĐÌNH (`GxGiaDinhList.tsx`, `GiaDinhDetail.tsx`) — XONG,
+hết mơ hồ.** Nghiên cứu `Source/GXControl/GxGiaDinhList.cs` dòng 81-113 (`item4_Click`) xác nhận:
+bản gốc in lý lịch cá nhân của **TẤT CẢ thành viên đang có trong gia đình** (không phải riêng
+chủ hộ, không hỏi chọn ai), mỗi người một trang, gộp vào MỘT tài liệu Word (`word.InsertPage()`
+nối trang), thứ tự `ORDER BY VaiTro ASC`. Bản web tái hiện: `InAnService.XuatLyLichCaNhanGiaDinh`
+lặp qua từng thành viên (thứ tự `VaiTro` tăng dần), tái dùng NGUYÊN VẸN hàm dựng dữ liệu/mẫu của
+"Lý lịch cá nhân" MỘT người (`DungHtmlLyLichCaNhan`, tách khỏi `XuatLyLichCaNhan` cũ — PDF của
+endpoint một-người KHÔNG đổi byte nào so với trước, chỉ đổi cách gọi), rồi ghép các trang bằng
+cách tách `<style>`/`<body>` của từng trang HTML đã dựng xong (`TachKieuVaThan`, regex đơn giản
+vì mẫu `LyLichCaNhan.html` không có thuộc tính trên hai thẻ này) và nối bằng
+`<div style="page-break-after: always;">` — tránh phải viết một mẫu HTML thứ hai chỉ để lặp lại
+toàn bộ CSS/bố cục đã có. Xoá bỏ hẳn sự mơ hồ ghi ở lượt trước ("không rõ in cho thành viên
+nào") — không còn "chưa hỗ trợ" ở đây.
+
+**3. "In sổ gia đình" (`GiaDinhLuuTruList.tsx`) — XONG, reuse thẳng "In phiếu gia đình".**
+Nghiên cứu `Source/GXControl/GxGiaDinhList.cs` dòng 46-52/145-260/850-961 và
+`Source/ChuongTrinh/frmGiaDinhLuuTruList.cs` dòng 33-35/68-70 xác nhận: hai nhãn "In phiếu gia
+đình" (danh sách thường) và "In sổ gia đình" (màn hình lưu trữ) gọi CÙNG một hàm
+`XuatSoGiaDinh()` cho trường hợp chọn MỘT gia đình (đúng trường hợp duy nhất bản web hỗ trợ,
+toolbar `needSel` không cho chọn nhiều dòng) — khi cấu hình `CF_MAU_SOGIADINH` là Word thì dùng
+CHÍNH mẫu "PhieuGiaDinh"; nhánh Excel riêng (`SoGiaDinh.xls`/`SoGiaDinh1.xls`) và nhánh gộp
+nhiều gia đình một tệp (chọn nhiều dòng, LUÔN dùng mẫu Word bất kể cấu hình) không migrate vì
+không có tương đương (không có màn hình chọn nhiều dòng, không có khái niệm cấu hình
+`CF_MAU_SOGIADINH` ở bản web). Quyết định: nối thẳng `api.giaDinh.inPhieuGiaDinh(id)` — ĐÚNG
+endpoint/PDF đã migrate và kiểm chứng kỹ ở lượt trước, không viết thêm mã mới.
+
+**4. Nút "+" của `GxPicker` (Người nam/Người nữ/"Thêm thành viên" ở `GiaDinhDetail.tsx`) —
+XONG cho 3 chỗ gọi này.** Cơ chế: `App.moChiTietGiaoDan` nhận thêm tham số tuỳ chọn
+`onTaoXongChoPicker` — khi có, mở một thẻ "Giáo dân mới" TÁCH BIỆT, và
+`GiaoDanDetailPage.tao()` (khi tạo thành công) gọi `onTaoXongChoPicker(gd)` (tải lại
+`GET /api/giao-dan/{id}` để có đúng `maGiaoDanCu` do máy chủ tự sinh, ánh xạ về hình dạng
+`GiaoDanTimKiem`) THAY VÌ mở tab chi tiết như hành vi mặc định, rồi App đóng luôn thẻ "Giáo dân
+mới" đó (`dong(idThe)`) — người dùng bấm "+" chỉ để lấy một bản ghi cho picker, không cần tiếp
+tục xem/sửa giáo dân vừa tạo. `GiaDinhDetail` truyền một hàm `moGiaoDanMoiChoPicker` xuống từng
+`GxPicker` làm `onThemMoi`, gọi lại đúng handler `onChon` cũ của ô đó (`onGanVoChong(0/1, gd)`
+hoặc `setDangThem`). Đã chạy thật trên `qlgx_thu`: mở gia đình "Tôma Hoàng Giáp", bấm "+" ở ô
+"Thêm thành viên" → mở thẻ "Giáo dân mới" → nhập Họ tên + Ngày sinh → bấm "Thêm giáo dân" → thẻ
+tự đóng, quay về đúng thẻ gia đình, ô picker hiện đúng tên vừa tạo (`188-gxpicker-themmoi-dien-
+nguoc.png`). Bản ghi thử nghiệm đã xoá VĨNH VIỄN ngay sau khi xác nhận (curl `DELETE
+.../vinhVien=true`) để không đổi số liệu chuẩn của `qlgx_thu`.
+
+**CHƯA làm ở lượt này** — nút "+" của `GxPicker` ở `GiaoDanDetail.tsx` (Tên cha/Tên mẹ),
+`DotBiTichDetail.tsx`, `HoiDoanDetail.tsx`, `KhoiGiaoLyDetail.tsx`, `LopGiaoLyDetail.tsx`,
+`RaoHonPhoiDetail.tsx` — các màn hình này chưa nhận được `moGiaoDanMoiChoPicker`/tương đương từ
+`App.tsx` (cần thêm một chuỗi truyền prop mới cho mỗi màn hình, tương tự đã làm cho
+`GiaDinhDetail`); cơ chế App.tsx (`moChiTietGiaoDan` nhận `onTaoXongChoPicker`) đã dựng sẵn,
+việc còn lại chỉ là lặp lại cách nối ở từng màn hình. "In giới thiệu hôn phối" (giấy RAO hôn
+phối, `ReportRaoHP.cs`) vẫn báo "chưa hỗ trợ" — cần mẫu HTML mới hoàn toàn (khác 4 mẫu "Giấy
+giới thiệu" đã làm ở mục 65), ngoài phạm vi thời gian của lượt này.
+
+**"Xem vị trí" (`GxGiaDinhList.tsx`, `GxGiaoDanList.tsx`) — XONG, CẢNH BÁO gửi dữ liệu ra bên
+thứ ba.** Nghiên cứu `Source/DBAccess/CMemory.cs` dòng 1732-1745 (`Memory.ViewMap`) xác nhận
+bản gốc mở `https://www.google.com/maps/search/<địa chỉ đã mã hoá URL>` bằng `Process.Start`
+(trình duyệt mặc định của máy) — gửi NGUYÊN VĂN địa chỉ (thông tin cá nhân giáo dân/gia đình) ra
+Google, không qua máy chủ trung gian, không có API key. **Bản web migrate Y HỆT** (`lib/
+xemViTri.ts`, `window.open('https://www.google.com/maps/search/' + encodeURIComponent(diaChi))`)
+theo đúng nguyên tắc "migrate y hệt bản desktop kể cả chỗ có thể gây tranh cãi, rồi ghi lại để
+người dùng quyết" — KHÔNG tự ý đổi sang một dịch vụ bản đồ khác hay thêm bước xác nhận nào bản
+gốc không có. **Ghi rõ để người dùng biết:** bấm "Xem vị trí" gửi địa chỉ (và chỉ địa chỉ, không
+kèm tên/thông tin khác) của giáo dân/gia đình đó tới Google Maps qua trình duyệt của người dùng
+đang đăng nhập — nếu giáo xứ coi đây là rủi ro riêng tư không chấp nhận được, cần một quyết định
+rõ ràng để đổi cơ chế (ví dụ nhúng bản đồ qua dịch vụ khác, hoặc bỏ hẳn nút này) — nhiệm vụ này
+không tự quyết thay. Trống địa chỉ thì hiện `window.alert` đúng câu bản gốc dùng
+(`GxGiaDinhList.cs:1093`/`GxGiaoDanList.cs:911`), không mở tab trống.
+
+Test: backend +8 (`InAnMauMoiTests.cs`: 4 "In lý lịch cá nhân gia đình", 4 "In danh sách",
+tổng 395 = 387 + 8), frontend +9/-1 net (`GxGiaDinhList.test.tsx`, `GxGiaoDanList.test.tsx`,
+`GiaoDanList.test.tsx`, `GiaDinhList.test.tsx`, `GiaDinhLuuTruList.test.tsx`,
+`GiaDinhDetail.test.tsx`, `GxPicker.test.tsx`, tổng 403 = 394 + 9). Chạy thật trên `qlgx_thu`
+qua trình duyệt (Playwright MCP) + `curl`/PyMuPDF cho PDF (nút tải PDF làm mất kết nối Playwright
+MCP như đã biết — xác nhận lại đúng bấm được, rồi kiểm PDF qua `curl` độc lập): "In danh sách"
+gia đình (PDF 84 trang) và giáo dân, "In lý lịch cá nhân" gia đình "Paul Phạm Văn Bằng" (7 thành
+viên, PDF 14 trang = 7×2, khớp đúng số trang của mẫu một-người vốn đã tự tràn 2 trang khi đủ dữ
+liệu — không phải lỗi mới), "Xem vị trí" mở đúng URL Google Maps với đúng địa chỉ, nút "+"
+GxPicker tạo-và-điền-ngược thành công. Ảnh/PDF mẫu `185`-`191` ở `WebApp/anh-chup-kiem-thu/`.
+Dữ liệu `qlgx_thu` xác nhận về đúng nguyên trạng sau khi chạy thử: 2050 giáo dân / 40 gia đình /
+145 thành viên / 1 giáo họ / 1108 đợt bí tích / 6150 bí tích chi tiết.

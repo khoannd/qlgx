@@ -285,6 +285,18 @@ export const api = {
     /** In "Phiếu gia đình" (xem docs/superpowers/specs/man-hinh/in-an.md) — tải PDF về máy. */
     inPhieuGiaDinh: (id: string) =>
       taiTepIn(`/api/gia-dinh/${id}/in/phieu-gia-dinh`, 'PhieuGiaDinh.pdf'),
+    /** "In lý lịch cá nhân" bấm từ lưới/màn hình GIA ĐÌNH (`GxGiaDinhList.tsx`,
+     * `GiaDinhDetail.tsx`) — in CẢ gia đình (một trang PDF/thành viên, gộp một tệp), đúng hành
+     * vi `item4_Click`/`XuatLyLichCaNhan(Dictionary)` của bản desktop, KHÔNG phải một người
+     * (xem in-an.md mục 5f, can-review-sau.md). Khác `giaoDan.inLyLichCaNhan` bên dưới (một
+     * người, dùng ở màn hình chi tiết giáo dân/menu lưới giáo dân). */
+    inLyLichCaNhanGiaDinh: (id: string) =>
+      taiTepIn(`/api/gia-dinh/${id}/in/ly-lich-ca-nhan`, 'LyLichCaNhan_GiaDinh.pdf'),
+    /** "In danh sách" (thanh công cụ "Danh sách gia đình") — PDF khổ ngang của TOÀN BỘ danh
+     * sách đang lọc trên máy chủ, CÙNG hai tham số lọc với `danhSach()`/`xuatExcel()` ở trên
+     * (xem in-an.md mục 5f). */
+    inDanhSach: (giaoHoId?: string, chiKhongThongKe?: boolean) =>
+      taiTepIn(`/api/gia-dinh/in/danh-sach${thamSo(giaoHoId, chiKhongThongKe)}`, 'DanhSachGiaDinh.pdf'),
     /** In "Chứng nhận hôn phối" — 404 khi gia đình chưa có hôn phối nào để chứng nhận. */
     inChungNhanHonPhoi: (id: string) =>
       taiTepIn(`/api/gia-dinh/${id}/in/chung-nhan-hon-phoi`, 'ChungNhanHonPhoi.pdf'),
@@ -349,6 +361,11 @@ export const api = {
      * docs/superpowers/specs/man-hinh/in-an.md) — tải PDF về máy, không mở tab mới. */
     inLyLichCaNhan: (id: string) =>
       taiTepIn(`/api/giao-dan/${id}/in/ly-lich-ca-nhan`, 'LyLichCaNhan.pdf'),
+    /** "In danh sách" (thanh công cụ "Danh sách giáo dân") — PDF khổ ngang của TOÀN BỘ danh
+     * sách đang lọc trên máy chủ, CÙNG ba tham số lọc với `danhSach()`/`xuatExcel()` ở trên
+     * (xem docs/superpowers/specs/man-hinh/in-an.md mục 5f). */
+    inDanhSach: (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: boolean) =>
+      taiTepIn(`/api/giao-dan/in/danh-sach${thamSo(giaoHoId, chiKhongThongKe, hienCaDaMat)}`, 'DanhSachGiaoDan.pdf'),
     /** In "Chứng nhận bí tích" — `loai` rỗng/undefined = mục chung "In chứng nhận bí tích"
      * (liệt kê cả ba); "RuaToi"/"RuocLe"/"ThemSuc" = mục riêng từng bí tích. */
     inChungNhanBiTich: (id: string, loai?: 'RuaToi' | 'RuocLe' | 'ThemSuc') =>

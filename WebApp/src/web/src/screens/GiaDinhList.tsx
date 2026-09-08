@@ -4,7 +4,6 @@ import type { GiaDinhListItem, GiaoHo } from '../api/types'
 import { GioiThieuModal } from '../components/GioiThieuModal'
 import { GxGiaDinhList, menuGiaDinhMacDinh } from '../components/GxGiaDinhList'
 import { GxToolbar } from '../components/GxToolbar'
-import { chuaHoTro } from '../lib/thongBao'
 import { useGioiThieuChuyenXu } from '../lib/useGioiThieuChuyenXu'
 
 /** Sentinel hiển thị cho "Ngoài xứ" — xem cùng hằng số ở GiaoDanList.tsx. */
@@ -40,6 +39,7 @@ export function GiaDinhList({ rows, moGiaDinh, danhMucGiaoHo = [], onXoa, onTaiL
   const [trangThaiXoa, setTrangThaiXoa] = useState<'hoi' | 'dang-xoa' | null>(null)
   const [loiXoa, setLoiXoa] = useState<string | null>(null)
   const [dangXuatExcel, setDangXuatExcel] = useState(false)
+  const [dangIn, setDangIn] = useState(false)
 
   async function thucHienXoa(vinhVien: boolean) {
     if (!dongChon || !onXoa) return
@@ -96,6 +96,23 @@ export function GiaDinhList({ rows, moGiaDinh, danhMucGiaoHo = [], onXoa, onTaiL
     }
   }
 
+  // "In danh sách" — CÙNG lý do/tham số với "Xuất Excel" ở trên, xem
+  // docs/superpowers/specs/man-hinh/in-an.md mục 5f.
+  async function inDanhSach() {
+    const idGiaoHo = giaoHo === '-1' || giaoHo === '0'
+      ? undefined
+      : danhMucGiaoHo.find((g) => g.tenGiaoHo === giaoHo)?.id
+    setDangIn(true)
+    try {
+      await api.giaDinh.inDanhSach(idGiaoHo, chiKhongThongKe)
+    } catch (e) {
+      console.error('Không in được danh sách gia đình', e)
+      window.alert(e instanceof Error ? e.message : 'In thất bại, thử lại sau.')
+    } finally {
+      setDangIn(false)
+    }
+  }
+
   return (
     <section className="page list-page">
       <div className="list-page-head">
@@ -118,7 +135,9 @@ export function GiaDinhList({ rows, moGiaDinh, danhMucGiaoHo = [], onXoa, onTaiL
           { label: 'Xóa gia đình', icon: 'trash', needSel: true, onClick: () => setTrangThaiXoa('hoi'),
             title: 'Loại bỏ khỏi danh sách trên lưới' },
           '>',
-          { label: 'In danh sách', icon: 'print', onClick: chuaHoTro, title: 'In danh sách trên lưới' },
+          { label: dangIn ? 'Đang in…' : 'In danh sách', icon: 'print',
+            onClick: dangIn ? undefined : () => { void inDanhSach() },
+            title: 'In danh sách đang hiện trên lưới ra PDF' },
         ]}
       />
 

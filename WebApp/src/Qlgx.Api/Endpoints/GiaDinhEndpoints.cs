@@ -44,6 +44,17 @@ public static class GiaDinhEndpoints
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", tenTep);
         });
 
+        // "In danh sách" (thanh công cụ "Danh sách gia đình", xem in-an.md mục 5f và
+        // InAnService.XuatDanhSachGiaDinh) — CÙNG HAI tham số lọc với GET "" phía trên, giống
+        // hệt "/xuat-excel" đã có. "/in/danh-sach" không khớp mẫu "/{id:guid}/..." bên dưới
+        // (không phải GUID) nên không giẫm route.
+        nhom.MapGet("/in/danh-sach", async (InAnService dv, Guid? giaoHoId, bool? chiKhongThongKe,
+            CancellationToken ct) =>
+        {
+            var ketQua = await dv.XuatDanhSachGiaDinh(giaoHoId, chiKhongThongKe ?? false, ct);
+            return Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep);
+        });
+
         nhom.MapGet("/{id:guid}", async (GiaDinhService dichVu, Guid id, CancellationToken ct) =>
             await dichVu.LayChiTiet(id, ct) is { } ct2 ? Results.Ok(ct2) : Results.NotFound());
 
@@ -54,6 +65,15 @@ public static class GiaDinhEndpoints
         // nhận, không chỉ khi không tìm thấy gia đình.
         nhom.MapGet("/{id:guid}/in/phieu-gia-dinh", async (InAnService dv, Guid id, CancellationToken ct) =>
             await dv.XuatPhieuGiaDinh(id, ct) is { } ketQua
+                ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
+                : Results.NotFound());
+
+        // "In lý lịch cá nhân" bấm từ lưới/màn hình GIA ĐÌNH (GxGiaDinhList.tsx,
+        // GiaDinhDetail.tsx) — in CẢ gia đình (mỗi thành viên một trang PDF), KHÔNG phải một
+        // người — xem InAnService.XuatLyLichCaNhanGiaDinh và can-review-sau.md. 404 khi không
+        // tìm thấy gia đình hoặc gia đình không còn thành viên nào.
+        nhom.MapGet("/{id:guid}/in/ly-lich-ca-nhan", async (InAnService dv, Guid id, CancellationToken ct) =>
+            await dv.XuatLyLichCaNhanGiaDinh(id, ct) is { } ketQua
                 ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
                 : Results.NotFound());
 
