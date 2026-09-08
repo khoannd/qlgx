@@ -475,7 +475,10 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         // desktop), nhưng form vẫn giữ giá trị đã tải qua state — nơi gọi PHẢI tiếp tục gửi
         // khối này với giá trị cũ thay vì bỏ trống, nếu không muốn bị hiểu nhầm là "không sửa".
         if (r.ChuyenXu is { } chuyenXuYc)
-            await GhiChuyenXu(g.GiaoXuId, id, chuyenXuYc, ct);
+        {
+            var loiChuyenXu = await GhiChuyenXu(g.GiaoXuId, id, chuyenXuYc, ct);
+            if (loiChuyenXu is not null) return (KetQuaLuuGiaoDan.Loi, loiChuyenXu, []);
+        }
 
         try { await db.SaveChangesAsync(ct); return (KetQuaLuuGiaoDan.ThanhCong, null, []); }
         catch (DbUpdateConcurrencyException) { return (KetQuaLuuGiaoDan.DungPhienBan, null, []); }
@@ -488,18 +491,44 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
     /// dòng đã có (desktop không tạo thêm dòng lịch sử mới mỗi lần đổi loại chuyển xứ).
     /// RowVersion (`yc.RowVersion`) chỉ có ý nghĩa khi đang sửa dòng đã có; bỏ qua khi tạo mới
     /// hoặc khi xoá.
+    ///
+    /// Rule 11 (can-review-sau.md mục 19, frmGiaoDan.cs:399-414, giao-dan-chi-tiet.md mục 4.11)
+    /// — CHẶN CỨNG: đúng điều kiện gốc `operation==EDIT && cbChuyenXu.SelectedValue>0` (loại MỚI
+    /// nhập phải khác "Ở tại xứ" — chọn về TaiXu thì bỏ qua hẳn kiểm tra này, kể cả khi đang xoá
+    /// một dòng ChuyenXu hiệu lực), CỘNG điều kiện đang có một dòng ChuyenXu hiệu lực
+    /// (LoaiChuyen&gt;0) VÀ loại mới nhập KHÁC loại đã lưu (`LoaiChuyen != cbChuyenXu.SelectedValue`
+    /// — cùng loại thì không kiểm gì cả, kể cả đổi ngày). Khi đó kiểm tra đã tồn tại bản ghi
+    /// ChuyenXu nào của CÙNG giáo dân có CÙNG NgayChuyen chưa — desktop dùng
+    /// `SELECT_CHUYENXU_LIST + " AND MaGiaoDan = ? AND NgayChuyen = ?"` mà KHÔNG loại trừ chính
+    /// dòng đang sửa, nên nếu người dùng đổi loại chuyển xứ nhưng GIỮ NGUYÊN ngày, dòng hiện có
+    /// (cùng giáo dân, cùng ngày) tự khớp điều kiện và bị báo trùng — bug-for-bug, không tự ý sửa.
+    /// `yc.NgayChuyen is not null` thêm vào vì desktop dùng `DateTimePicker` (luôn có giá trị
+    /// thật, không bao giờ so `NULL = NULL`); ở web `NgayChuyen` là `DateOnly?` nullable — nếu
+    /// bỏ điều kiện này, so `NgayChuyen == null` sẽ dịch thành `IS NULL` và tự khớp NGAY chính
+    /// dòng đang sửa mỗi khi cả hai đều chưa có ngày, chặn nhầm những thao tác hợp lệ (ví dụ về
+    /// lại "Ở tại xứ" mà không có sẵn hành vi đó ở đường này — không đổi ý nghĩa nghiệp vụ, chỉ
+    /// tránh false positive do khác biệt kiểu dữ liệu NULL).
     /// </summary>
-    private async Task GhiChuyenXu(Guid giaoXuId, Guid giaoDanId, CapNhatChuyenXuRequest yc, CancellationToken ct)
+    private async Task<string?> GhiChuyenXu(Guid giaoXuId, Guid giaoDanId, CapNhatChuyenXuRequest yc, CancellationToken ct)
     {
         var hienCo = await db.ChuyenXu
             .Where(c => c.GiaoDanId == giaoDanId)
             .OrderByDescending(c => c.CreatedAt)
             .FirstOrDefaultAsync(ct);
 
+        if (yc.LoaiChuyen > 0 && yc.NgayChuyen is not null
+            && hienCo is not null && hienCo.LoaiChuyen != LoaiChuyenXu.TaiXu
+            && (int)hienCo.LoaiChuyen != yc.LoaiChuyen
+            && await db.ChuyenXu.AnyAsync(c => c.GiaoDanId == giaoDanId && c.NgayChuyen == yc.NgayChuyen, ct))
+        {
+            return "Đã có ngày chuyển xứ của giáo dân này trùng với ngày chuyển xứ bạn nhập\r\n" +
+                   "Xin vui lòng nhập ngày khác";
+        }
+
         if (yc.LoaiChuyen == (int)LoaiChuyenXu.TaiXu)
         {
             if (hienCo is not null) db.ChuyenXu.Remove(hienCo);
-            return;
+            return null;
         }
 
         if (hienCo is null)
@@ -522,6 +551,7 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         hienCo.NgayChuyen = yc.NgayChuyen;
         hienCo.NoiChuyen = yc.NoiChuyen;
         hienCo.GhiChuChuyen = yc.GhiChuChuyen;
+        return null;
     }
 
     /// <summary>Kết quả xoá một giáo dân — xem GiaoDanEndpoints để biết ánh xạ mã HTTP.</summary>

@@ -628,6 +628,52 @@ export type GiaoLyVienLop = {
   rowVersion: number
 }
 
+// --- "Chuyển lớp" hàng loạt (frmChuyenLop.cs) — xem GiaoLyService.XemTruocChuyenLop/ChuyenLop ---
+
+/** Ánh xạ 1-1 với ChuyenLopXemTruoc. */
+export type ChuyenLopXemTruoc = {
+  soLuongDaChon: number
+  soLuongSeChuyen: number
+  soLuongDaCoODichRoi: number
+  tenLopNguon: string
+  tenLopDich: string
+  tenKhoiDich: string
+  namDich: number | null
+}
+
+/** Ánh xạ 1-1 với ChuyenLopKetQua. */
+export type ChuyenLopKetQua = { soLuongDaChuyen: number }
+
+// --- "Nhập học viên hàng loạt" từ Excel (frmImportHocVien.cs) — xem NhapHocVienGiaoLyService ---
+
+/** Ánh xạ 1-1 với DongNhapHocVien. */
+export type DongNhapHocVien = {
+  soDong: number
+  maGD: string | null
+  tenThanh: string | null
+  hoTen: string
+  phai: string | null
+  ngaySinhHienThi: string | null
+  giaoHo: string | null
+  ghiChu: string | null
+  daHocXong: boolean
+  laGiaoDanMoi: boolean
+  loi: string | null
+}
+
+/** Ánh xạ 1-1 với NhapHocVienXemTruoc. */
+export type NhapHocVienXemTruoc = {
+  tepHopLe: boolean
+  loiTep: string | null
+  tenLop: string
+  dong: DongNhapHocVien[]
+  soSeNhap: number
+  soBiBoQua: number
+}
+
+/** Ánh xạ 1-1 với NhapHocVienKetQua. */
+export type NhapHocVienKetQua = { soDaNhap: number; soBiBoQua: number }
+
 // ============ Thống kê chung & Biểu đồ (xem docs/superpowers/specs/man-hinh/thong-ke-bieu-do.md) ============
 
 /** 16 điều kiện trích xuất của tab "Thống kê chung" — ĐÚNG tên enum `DieuKienThongKe` phía

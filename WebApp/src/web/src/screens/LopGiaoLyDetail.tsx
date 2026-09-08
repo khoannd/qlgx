@@ -1,6 +1,9 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { api, LoiXungDot } from '../api/client'
-import type { GiaoDanTimKiem, GiaoLyVienLop, HocVienLopGiaoLy, LopGiaoLy } from '../api/types'
+import type {
+  ChuyenLopXemTruoc, GiaoDanTimKiem, GiaoLyVienLop, HocVienLopGiaoLy, KhoiGiaoLy, LopGiaoLy,
+  NhapHocVienXemTruoc,
+} from '../api/types'
 import { GxGrid } from '../components/GxGrid'
 import { GxField, GxInline } from '../components/GxField'
 import { GxPicker } from '../components/GxPicker'
@@ -29,8 +32,9 @@ type Props = {
  * danh mục, xem giao-ly.md) — khối "Tên lớp/Năm/Phòng học/Ghi chú" ở trên, danh sách học viên
  * và giáo lý viên bên dưới. Xem docs/superpowers/specs/man-hinh/giao-ly.md.
  *
- * KHÔNG migrate (thu hẹp phạm vi có chủ đích, xem mục 8 của spec): nút "Chuyển lớp"
- * (`frmChuyenLop.cs`), "Nhập từ Excel"/"Xem mẫu Excel" (`frmImportHocVien.cs`).
+ * "Chuyển lớp" (`frmChuyenLop.cs`) và "Nhập học viên hàng loạt" từ Excel
+ * (`frmImportHocVien.cs`) — hoãn từ commit d4c4b27, làm ở lượt "giao-ly-2-quy-tac-11" — xem
+ * can-review-sau.md và <see cref="GiaoLyService.ChuyenLop"/>/`NhapHocVienGiaoLyService`.
  */
 export function LopGiaoLyDetail({ id, khoiId, namMoi, onTieuDe, onXoaThanhCong, moGiaoDanMoiChoPicker }: Props) {
   const [lop, setLop] = useState<LopGiaoLy | null>(null)
@@ -58,6 +62,29 @@ export function LopGiaoLyDetail({ id, khoiId, namMoi, onTieuDe, onXoaThanhCong, 
   const [giaoLyVien, setGiaoLyVien] = useState<GiaoLyVienLop[] | null>(null)
   const [loiGLV, setLoiGLV] = useState<string | null>(null)
   const [dangLuuGLV, setDangLuuGLV] = useState(false)
+
+  // --- "Chuyển lớp" hàng loạt (frmChuyenLop.cs) ---
+  const [dangMoChuyenLop, setDangMoChuyenLop] = useState(false)
+  const [daChonCL, setDaChonCL] = useState<Set<string>>(new Set())
+  const [danhMucKhoi, setDanhMucKhoi] = useState<KhoiGiaoLy[] | null>(null)
+  const [khoiDichId, setKhoiDichId] = useState('')
+  const [namDich, setNamDich] = useState<number | ''>('')
+  const [lopDsDich, setLopDsDich] = useState<LopGiaoLy[]>([])
+  const [lopDichId, setLopDichId] = useState('')
+  const [xemTruocCL, setXemTruocCL] = useState<ChuyenLopXemTruoc | null>(null)
+  const [dangXemTruocCL, setDangXemTruocCL] = useState(false)
+  const [dangGhiCL, setDangGhiCL] = useState(false)
+  const [loiCL, setLoiCL] = useState<string | null>(null)
+  const [xongCL, setXongCL] = useState<string | null>(null)
+
+  // --- "Nhập học viên hàng loạt" từ Excel (frmImportHocVien.cs) ---
+  const [dangMoNhapHV, setDangMoNhapHV] = useState(false)
+  const [tepNhapHV, setTepNhapHV] = useState<File | null>(null)
+  const [xemTruocHV, setXemTruocHV] = useState<NhapHocVienXemTruoc | null>(null)
+  const [dangXemTruocHV, setDangXemTruocHV] = useState(false)
+  const [dangGhiHV, setDangGhiHV] = useState(false)
+  const [loiHV2, setLoiHV2] = useState<string | null>(null)
+  const [xongHV, setXongHV] = useState<string | null>(null)
 
   function taiHocVien(lopId: string) {
     api.giaoLy.hocVien(lopId).then(setHocVien)
@@ -219,6 +246,104 @@ export function LopGiaoLyDetail({ id, khoiId, namMoi, onTieuDe, onXoaThanhCong, 
     }
   }
 
+  // --- "Chuyển lớp" hàng loạt (frmChuyenLop.cs) ---
+
+  function moChuyenLop() {
+    setDangMoChuyenLop(true)
+    setDaChonCL(new Set())
+    setKhoiDichId(''); setNamDich(''); setLopDsDich([]); setLopDichId('')
+    setXemTruocCL(null); setLoiCL(null); setXongCL(null)
+    if (!danhMucKhoi) api.giaoLy.khoi().then(setDanhMucKhoi).catch(() => {})
+  }
+
+  function toggleChonCL(chiTietId: string) {
+    setXemTruocCL(null)
+    setDaChonCL((s) => {
+      const moi = new Set(s)
+      if (moi.has(chiTietId)) moi.delete(chiTietId); else moi.add(chiTietId)
+      return moi
+    })
+  }
+
+  // Khối/Năm đích thay đổi → tải lại danh mục Lớp đích (đúng cbKhoi_SelectedIndexChanged /
+  // cbNam_SelectedIndexChanged của frmChuyenLop.cs — Lớp đích không giới hạn trong khối/lớp
+  // đang xem, có thể chuyển sang BẤT KỲ lớp nào của giáo xứ).
+  useEffect(() => {
+    setLopDichId(''); setXemTruocCL(null)
+    if (!khoiDichId) { setLopDsDich([]); return }
+    api.giaoLy.lop(khoiDichId, namDich === '' ? null : namDich).then(setLopDsDich).catch(() => setLopDsDich([]))
+  }, [khoiDichId, namDich])
+
+  async function xemTruocChuyenLop() {
+    setLoiCL(null); setXongCL(null)
+    if (daChonCL.size === 0) { setLoiCL('Hãy chọn ít nhất 1 học viên để chuyển lớp'); return }
+    if (!lopDichId) { setLoiCL('Hãy chọn lớp giáo lý đích'); return }
+    setDangXemTruocCL(true)
+    try {
+      setXemTruocCL(await api.giaoLy.xemTruocChuyenLop([...daChonCL], lopDichId))
+    } catch (e) {
+      setLoiCL(e instanceof Error ? e.message : 'Không xem trước được, thử lại sau.')
+    } finally {
+      setDangXemTruocCL(false)
+    }
+  }
+
+  async function xacNhanChuyenLop() {
+    if (!lop || !xemTruocCL) return
+    setDangGhiCL(true); setLoiCL(null)
+    try {
+      const kq = await api.giaoLy.chuyenLop([...daChonCL], lopDichId)
+      setXongCL(`Đã chuyển ${kq.soLuongDaChuyen} học viên sang lớp "${xemTruocCL.tenLopDich}". ` +
+        'Học viên vẫn còn trong danh sách lớp này (bản gốc không xoá khỏi lớp nguồn khi "chuyển lớp").')
+      setXemTruocCL(null); setDaChonCL(new Set())
+      taiHocVien(lop.id)
+    } catch (e) {
+      setLoiCL(e instanceof Error ? e.message : 'Chuyển lớp thất bại, thử lại sau.')
+    } finally {
+      setDangGhiCL(false)
+    }
+  }
+
+  // --- "Nhập học viên hàng loạt" từ Excel (frmImportHocVien.cs) ---
+
+  function moNhapHV() {
+    setDangMoNhapHV(true)
+    setTepNhapHV(null); setXemTruocHV(null); setLoiHV2(null); setXongHV(null)
+  }
+
+  function chonTepNhapHV(f: File | null) {
+    setTepNhapHV(f); setXemTruocHV(null); setLoiHV2(null); setXongHV(null)
+  }
+
+  async function xemTruocNhapHV() {
+    if (!lop || !tepNhapHV) return
+    setDangXemTruocHV(true); setLoiHV2(null); setXongHV(null)
+    try {
+      const kq = await api.giaoLy.xemTruocNhapHocVien(lop.id, tepNhapHV)
+      setXemTruocHV(kq)
+      if (!kq.tepHopLe) setLoiHV2(kq.loiTep)
+    } catch (e) {
+      setLoiHV2(e instanceof Error ? e.message : 'Không xem trước được, thử lại sau.')
+    } finally {
+      setDangXemTruocHV(false)
+    }
+  }
+
+  async function xacNhanNhapHV() {
+    if (!lop || !tepNhapHV) return
+    setDangGhiHV(true); setLoiHV2(null)
+    try {
+      const kq = await api.giaoLy.nhapHocVien(lop.id, tepNhapHV)
+      setXongHV(`Đã nhập ${kq.soDaNhap} học viên vào lớp, bỏ qua ${kq.soBiBoQua} dòng.`)
+      setXemTruocHV(null); setTepNhapHV(null)
+      taiHocVien(lop.id)
+    } catch (e) {
+      setLoiHV2(e instanceof Error ? e.message : 'Nhập học viên thất bại, thử lại sau.')
+    } finally {
+      setDangGhiHV(false)
+    }
+  }
+
   return (
     <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={() => id && api.giaoLy.lop(khoiId, null).then((ds) => setLop(ds.find((l) => l.id === id) ?? null))}>
       <section className="page" style={{ overflowY: 'auto', display: 'block' }}>
@@ -276,6 +401,10 @@ export function LopGiaoLyDetail({ id, khoiId, namMoi, onTieuDe, onXoaThanhCong, 
               <div className="cmdbar" style={{ marginBottom: 8 }}>
                 <b>Danh sách học viên ({hocVien?.length ?? 0})</b>
                 <div className="spacer" />
+                <button type="button" className="btn" onClick={moChuyenLop} disabled={!hocVien || hocVien.length === 0}>
+                  Chuyển lớp
+                </button>
+                <button type="button" className="btn" onClick={moNhapHV}>Nhập học viên</button>
                 <GxPicker onChon={(gd) => { void themHocVien(gd) }} onBoChon={() => {}}
                   onThemMoi={moGiaoDanMoiChoPicker ? () => moGiaoDanMoiChoPicker((gd) => { void themHocVien(gd) }) : undefined} />
               </div>
@@ -292,6 +421,156 @@ export function LopGiaoLyDetail({ id, khoiId, namMoi, onTieuDe, onXoaThanhCong, 
                 />
               </div>
             </div>
+
+            {dangMoChuyenLop && (
+              <div className="card glass" style={{ marginBottom: 12 }}>
+                <div className="cmdbar" style={{ marginBottom: 8 }}>
+                  <b>Chuyển lớp hàng loạt</b>
+                  <div className="spacer" />
+                  <button type="button" className="btn" onClick={() => setDangMoChuyenLop(false)}>Đóng</button>
+                </div>
+                {xongCL && <p className="hint" style={{ color: 'var(--mint-ink)' }}>{xongCL}</p>}
+                <p className="muted" style={{ fontSize: 12.5, marginTop: 0 }}>
+                  Chọn học viên muốn chuyển, rồi chọn Khối/Năm/Lớp đích. Đúng hành vi bản gốc
+                  (frmChuyenLop.cs): học viên vẫn còn trong lớp hiện tại sau khi "chuyển lớp"
+                  (không tự xoá khỏi lớp nguồn); học viên đã có sẵn trong lớp đích bị bỏ qua.
+                </p>
+                <div className="bang-chon-cuon glass" style={{ maxHeight: 240 }}>
+                  <table className="bang-chon">
+                    <thead>
+                      <tr>
+                        <th style={{ width: 40 }} />
+                        <th>Họ tên</th>
+                        <th>Ngày sinh</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(hocVien ?? []).map((hv) => (
+                        <tr key={hv.chiTietId}>
+                          <td>
+                            <input type="checkbox" checked={daChonCL.has(hv.chiTietId)}
+                              onChange={() => toggleChonCL(hv.chiTietId)}
+                              aria-label={`Chọn ${hv.hoTen}`} />
+                          </td>
+                          <td>{[hv.tenThanh, hv.hoTen].filter(Boolean).join(' ')}</td>
+                          <td>{hv.ngaySinh ?? ''}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="filters-bar glass" style={{ marginTop: 8, flexWrap: 'wrap', gap: 12 }}>
+                  <span className="count-pill"><b>{daChonCL.size}</b> đã chọn</span>
+                  <div className="field">
+                    <label htmlFor="cl-khoi">Khối đích</label>
+                    <select id="cl-khoi" value={khoiDichId} onChange={(e) => setKhoiDichId(e.target.value)}>
+                      <option value="">— Chọn khối —</option>
+                      {(danhMucKhoi ?? []).map((k) => <option key={k.id} value={k.id}>{k.tenKhoi}</option>)}
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="cl-nam">Năm</label>
+                    <input id="cl-nam" type="number" style={{ maxWidth: 100 }} value={namDich}
+                      onChange={(e) => setNamDich(e.target.value === '' ? '' : Number(e.target.value))} />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="cl-lop">Lớp đích</label>
+                    <select id="cl-lop" value={lopDichId} onChange={(e) => { setLopDichId(e.target.value); setXemTruocCL(null) }} disabled={lopDsDich.length === 0}>
+                      <option value="">— Chọn lớp —</option>
+                      {lopDsDich.map((l) => <option key={l.id} value={l.id}>{l.tenLop}</option>)}
+                    </select>
+                  </div>
+                </div>
+                {loiCL && <p className="hint" role="alert">{loiCL}</p>}
+                <div className="cmdbar" style={{ marginTop: 8, justifyContent: 'flex-end' }}>
+                  {xemTruocCL ? (
+                    <>
+                      <span>
+                        Sẽ chuyển <b>{xemTruocCL.soLuongSeChuyen}</b> học viên từ lớp
+                        "{xemTruocCL.tenLopNguon}" sang lớp "{xemTruocCL.tenLopDich}" (khối
+                        {' '}{xemTruocCL.tenKhoiDich}{xemTruocCL.namDich ? `, năm ${xemTruocCL.namDich}` : ''}).
+                        {xemTruocCL.soLuongDaCoODichRoi > 0 &&
+                          ` Bỏ qua ${xemTruocCL.soLuongDaCoODichRoi} học viên đã có sẵn ở lớp đích.`}
+                      </span>
+                      <button type="button" className="btn" onClick={() => setXemTruocCL(null)} disabled={dangGhiCL}>Huỷ</button>
+                      <button type="button" className="btn btn-primary" onClick={() => { void xacNhanChuyenLop() }} disabled={dangGhiCL}>
+                        {dangGhiCL ? 'Đang chuyển…' : 'Xác nhận chuyển'}
+                      </button>
+                    </>
+                  ) : (
+                    <button type="button" className="btn btn-primary" onClick={() => { void xemTruocChuyenLop() }} disabled={dangXemTruocCL}>
+                      {dangXemTruocCL ? 'Đang xem trước…' : 'Xem trước & chuyển lớp'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {dangMoNhapHV && (
+              <div className="card glass" style={{ marginBottom: 12 }}>
+                <div className="cmdbar" style={{ marginBottom: 8 }}>
+                  <b>Nhập học viên hàng loạt từ Excel</b>
+                  <div className="spacer" />
+                  <button type="button" className="btn" onClick={() => setDangMoNhapHV(false)}>Đóng</button>
+                </div>
+                {xongHV && <p className="hint" style={{ color: 'var(--mint-ink)' }}>{xongHV}</p>}
+                <p className="muted" style={{ fontSize: 12.5, marginTop: 0 }}>
+                  Cột bắt buộc: Họ tên, Phái, Ngày sinh (dd/MM/yyyy). Cột tuỳ chọn: Mã GD, Tên
+                  thánh, Giáo họ, Ghi chú, Đã học xong.{' '}
+                  <button type="button" className="btn" style={{ padding: '2px 8px', fontSize: 12.5 }}
+                    onClick={() => { void api.giaoLy.mauExcelNhapHocVien() }}>
+                    Tải mẫu Excel
+                  </button>
+                </p>
+                <div className="filters-bar glass" style={{ gap: 12 }}>
+                  <input type="file" accept=".xlsx" data-testid="chon-tep-hoc-vien"
+                    onChange={(e) => chonTepNhapHV(e.target.files?.[0] ?? null)} />
+                  <button type="button" className="btn" disabled={!tepNhapHV || dangXemTruocHV}
+                    onClick={() => { void xemTruocNhapHV() }}>
+                    {dangXemTruocHV ? 'Đang xem trước…' : 'Xem trước'}
+                  </button>
+                </div>
+                {loiHV2 && <p className="hint" role="alert">{loiHV2}</p>}
+                {xemTruocHV && xemTruocHV.tepHopLe && (
+                  <>
+                    <p style={{ fontSize: 12.5 }}>
+                      Sẽ nhập <b>{xemTruocHV.soSeNhap}</b> học viên, bỏ qua{' '}
+                      <b>{xemTruocHV.soBiBoQua}</b> dòng lỗi.
+                    </p>
+                    <div className="bang-chon-cuon glass" style={{ maxHeight: 280 }}>
+                      <table className="bang-chon">
+                        <thead>
+                          <tr>
+                            <th>Dòng</th><th>Họ tên</th><th>Phái</th><th>Ngày sinh</th>
+                            <th>Giáo họ</th><th>Trạng thái</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {xemTruocHV.dong.map((d) => (
+                            <tr key={d.soDong}>
+                              <td>{d.soDong}</td>
+                              <td>{[d.tenThanh, d.hoTen].filter(Boolean).join(' ')}</td>
+                              <td>{d.phai ?? ''}</td>
+                              <td>{d.ngaySinhHienThi ?? ''}</td>
+                              <td>{d.giaoHo ?? ''}</td>
+                              <td style={d.loi ? { color: 'var(--rose-ink)' } : undefined}>
+                                {d.loi ?? (d.laGiaoDanMoi ? 'Sẽ tạo giáo dân mới' : 'Sẽ dùng giáo dân có sẵn')}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="cmdbar" style={{ marginTop: 8, justifyContent: 'flex-end' }}>
+                      <button type="button" className="btn btn-primary" disabled={dangGhiHV || xemTruocHV.soSeNhap === 0}
+                        onClick={() => { void xacNhanNhapHV() }}>
+                        {dangGhiHV ? 'Đang nhập…' : `Xác nhận nhập ${xemTruocHV.soSeNhap} học viên`}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {dongChonHV && (
               <div className="card glass" style={{ marginBottom: 12 }}>

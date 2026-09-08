@@ -187,8 +187,8 @@ lớp dữ liệu cũ đã có sẵn giá trị NULL từ trước (xem mục 8)
 | `frmLopGiaoLy`: Chọn học viên (nút "Chọn") | Luôn bật | Mở `frmChonGiaoDan` |
 | `frmLopGiaoLy`: Sửa học viên (nhãn nút "Xem chi tiết") | Chỉ bật khi có dòng chọn | `gxHocSinhList1.EditRow()` — sửa trực tiếp trên ô lưới (`AllowEdit=True`), không mở form riêng |
 | `frmLopGiaoLy`: Xoá học viên | Chỉ bật khi có dòng chọn | Xem mục 4 |
-| `frmLopGiaoLy`: "Xem mẫu Excel" / "Nhập từ Excel" | Luôn bật | Tải file `.xls` mẫu / mở `frmImportHocVien` nhập hàng loạt — xem mục 8, không migrate lượt này |
-| `frmLopGiaoLy`: nút "Chuyển lớp" (`btn1`) | Luôn bật | Mở `frmChuyenLop` — xem mục 8, không migrate lượt này |
+| `frmLopGiaoLy`: "Xem mẫu Excel" / "Nhập từ Excel" | Luôn bật | Tải file `.xls` mẫu / mở `frmImportHocVien` nhập hàng loạt — **ĐÃ MIGRATE (2026-09-08, task "giao-ly-2-quy-tac-11")**, xem mục 8 |
+| `frmLopGiaoLy`: nút "Chuyển lớp" (`btn1`) | Luôn bật | Mở `frmChuyenLop` — **ĐÃ MIGRATE (2026-09-08, task "giao-ly-2-quy-tac-11")**, xem mục 8 |
 | `frmLopGiaoLy`: Thêm/Chọn/Xoá giáo lý viên | Chọn cần dòng, Thêm/Chọn luôn bật | Xem mục 4 |
 | `frmLopGiaoLy`: In (cả hai lưới) | Luôn bật | Xuất `.xls` tạm |
 
@@ -242,8 +242,8 @@ thánh + Họ tên của giáo lý viên, chỉ đọc.
 - `frmKhoiGiaoLyList` → `frmKhoiGiaoLy` (thêm/sửa khối).
 - `frmKhoiGiaoLy` → `frmLopGiaoLyList` (thêm/sửa lớp của khối đó).
 - `frmLopGiaoLy` → `frmGiaoDan` (tạo giáo dân mới làm học viên/giáo lý viên), `frmChonGiaoDan`
-  (chọn giáo dân có sẵn), `frmChuyenLop` (chuyển học viên sang lớp khác — xem mục 8),
-  `frmImportHocVien` (nhập học viên hàng loạt từ Excel — xem mục 8).
+  (chọn giáo dân có sẵn), `frmChuyenLop` (chuyển học viên sang lớp khác — **đã migrate**, xem mục
+  8), `frmImportHocVien` (nhập học viên hàng loạt từ Excel — **đã migrate**, xem mục 8).
 - `frmHocSinh` hiện KHÔNG còn được gọi từ đâu (đường gọi duy nhất đã bị comment, thay bằng
   `EditRow()` sửa trực tiếp trên ô) — xem mục 9, không migrate màn hình này riêng (hành vi tương
   đương của nó — sửa Hoàn thành/Ghi chú — đã có sẵn qua sửa trực tiếp trên lưới học viên).
@@ -266,15 +266,46 @@ thánh + Họ tên của giáo lý viên, chỉ đọc.
   tự hiển thị trong PHẠM VI MỘT LỚP, tự do sửa lại được) — không có nguy cơ trùng khoá vì không
   phải khoá.
 
-**Không migrate** (ghi vào `can-review-sau.md` mục 58 để người dùng xác nhận):
+**ĐÃ MIGRATE (2026-09-08, task "giao-ly-2-quy-tac-11")** — hai chức năng từng hoãn ở commit
+`d4c4b27`:
 
-- **Chức năng "Chuyển lớp"** (`frmChuyenLop.cs`, 203 dòng) — chuyển một/nhiều học viên đang chọn
-  từ lớp hiện tại sang lớp khác (cùng khối hoặc khác khối, chưa đọc kỹ toàn bộ 203 dòng). Người
-  dùng đã cho phép để lại nếu quá lớn cho một lượt — đây đúng là trường hợp đó, để ưu tiên làm
-  chắc phần quản lý cơ bản (khối/lớp/học viên/giáo lý viên).
-- **Chức năng "Nhập học viên hàng loạt từ Excel"** (`frmImportHocVien.cs`, 225 dòng) và "Xem mẫu
-  Excel" đi kèm — cùng lý do trên. Hạ tầng import Excel dùng ClosedXML đã có ở nơi khác trong dự
-  án (nhập dữ liệu Access) nhưng chưa nối cho riêng học viên giáo lý.
+- **"Chuyển lớp"** (`frmChuyenLop.cs`, 203 dòng, `gxCommand1_OnOK` dòng 140-202) — chuyển một/
+  nhiều học viên (chọn qua checkbox `Chon` trên lưới `gxHocSinhList1`) từ lớp hiện tại sang MỘT
+  lớp đích (chọn qua ba combo Khối/Năm/Lớp, không giới hạn cùng khối — `loadComboLop` đọc
+  `LopGiaoLy WHERE MaKhoi=? AND Nam=?` bất kể khối đang xem). Bug-for-bug migrate y hệt: tên
+  "Chuyển lớp" nhưng thực chất chỉ THÊM một dòng `ChiTietLopGiaoLy` mới vào lớp đích cho mỗi học
+  viên — **KHÔNG xoá học viên khỏi lớp nguồn** (`gxCommand1_OnOK` không có lệnh xoá nào). Học viên
+  đã có sẵn ở lớp đích (theo `GiaoDanId`) bị BỎ QUA (đúng nhánh `MessageBox.Show("... đã tồn tại
+  trong lớp ...")`, không chặn cả thao tác). `SoThuTu` dòng mới nối tiếp từ MAX hiện có ở lớp
+  đích, đúng biến `soThuTuNext`. Bản gốc KHÔNG kiểm tra "học viên đã thuộc lớp khác cùng khối"
+  (khác `ThemHocVien`) — bản web giữ nguyên, không tự thêm kiểm tra đó vào đường ghi hàng loạt.
+  Khác bản gốc (yêu cầu an toàn bắt buộc của nhiệm vụ, không phải "sửa cho đúng"): CÓ bước xem
+  trước tách riêng (nêu số học viên sẽ chuyển/sẽ bị bỏ qua) trước khi ghi, và ghi thật trong MỘT
+  transaction (bản gốc chỉ gọi `Memory.UpdateDataSet(ds)` một lần, không transaction rõ ràng) —
+  xem `GiaoLyService.XemTruocChuyenLop`/`ChuyenLop`, endpoint
+  `POST /api/giao-ly/chuyen-lop/xem-truoc` và `POST /api/giao-ly/chuyen-lop`.
+- **"Nhập học viên hàng loạt từ Excel"** (`frmImportHocVien.cs`, 225 dòng, mở hộp thoại chọn tệp
+  rồi chạy nền) + logic thật ở `ImportData.ImportGiaoLy` (`Source/GXControl/ImportData.cs:76-
+  226`) — đọc file Excel với các cột literal "Họ tên"/"Phái"/"Ngày sinh" (bắt buộc), "Mã GD"/"Tên
+  thánh"/"Giáo họ"/"Ghi chú"/"Đã học xong" (tuỳ chọn), đối chiếu từng dòng với giáo dân có sẵn
+  (theo Mã GD hoặc theo Họ tên+Tên thánh+Phái+Ngày sinh trùng), tạo giáo dân mới nếu không khớp,
+  rồi thêm vào lớp. Bản web đọc bằng ClosedXML (hạ tầng có sẵn, KHÔNG dùng Office Interop như bản
+  gốc), xử lý HOÀN TOÀN TRONG BỘ NHỚ (không ghi file lên đĩa máy chủ — ràng buộc HA), kiểm định
+  dạng THẬT bằng cách thử mở workbook thay vì tin đuôi tệp. CÓ bước xem trước (yêu cầu an toàn bắt
+  buộc, bản gốc không có) và ghi thật trong MỘT transaction. BA CHỖ THU HẸP PHẠM VI có chủ đích so
+  với bản gốc (không phải "sửa cho đúng" — chỉ vì nền CSDL quan hệ có ràng buộc khoá ngoại thật,
+  khác Access lỏng lẻo của bản gốc): (1) "Mã GD" phải khớp một giáo dân CÓ THẬT, không tự tạo dữ
+  liệu mồ côi; (2) không tìm thấy giáo họ theo tên thì KHÔNG tự tạo giáo họ mới (bản gốc
+  `getMaGiaoHo` âm thầm tạo mới) — chỉ cảnh báo, vẫn tạo giáo dân với `GiaoHoId=null`; (3) khi có
+  nhiều giáo dân trùng, bản gốc dùng `Rows[0]` (thứ tự DataTable không xác định), bản web dùng
+  `Id` nhỏ nhất để kết quả ổn định giữa các lần chạy. Xem `NhapHocVienGiaoLyService`, endpoint
+  `GET /api/giao-ly/nhap-hoc-vien/mau-excel`, `POST /api/giao-ly/lop/{lopId}/nhap-hoc-vien/xem-
+  truoc`, `POST /api/giao-ly/lop/{lopId}/nhap-hoc-vien`. Kiểm bằng dữ liệu tự tạo, xem
+  `can-review-sau.md` mục 70 và `.superpowers/sdd/2026-09-06-qlgx-web-phase-1/task-giao-ly-2-quy-
+  tac-11.md`.
+
+**Không migrate**:
+
 - Nút "In" xuất `.xls` tạm của cả ba lưới (khối/lớp/học viên) — chưa nối hạ tầng in ấn/xuất Excel
   chung (ClosedXML) cho phân hệ này, cùng tình trạng như "Danh sách hội đoàn" (`hoi-doan-danh-
   sach.md` mục 8).
@@ -305,8 +336,10 @@ sach.md` mục 8):
 ## 9. Chỗ chưa chắc
 
 - Vị trí mở từ `frmMain.cs` — chưa đọc file này.
-- Nội dung đầy đủ `frmChuyenLop.cs` (203 dòng) và `frmImportHocVien.cs` (225 dòng) — chỉ đọc lướt
-  qua để biết phạm vi, không đọc kỹ từng dòng vì đã quyết định không migrate lượt này.
+- `ImportData.ImportGiaoLy` (`ImportData.cs:76-226`) — chưa xác nhận được liệu Access/Jet OLEDB có
+  ràng buộc khoá ngoại chặn INSERT khi "Mã GD" trong tệp Excel không khớp giáo dân nào (bản gốc
+  dùng thẳng số nhập, không kiểm tra tồn tại) hay không — nếu không có ràng buộc, bản gốc tạo ra
+  dữ liệu mồ côi thật; nếu có, bản gốc sẽ báo lỗi INSERT (không đọc được thông báo cụ thể).
 - `GxHocSinh.EditRow()` mở `frmGiaoDan` với `Operation = GxOperation.NONE` ("show for view
   only") — tức nút "Xem chi tiết" (đổi nhãn từ "Sửa") ở `frmLopGiaoLy` thực chất CHỈ XEM hồ sơ
   giáo dân, không sửa Hoàn thành/Ghi chú GLy qua đó — vậy Hoàn thành/Ghi chú GLy chỉ sửa được

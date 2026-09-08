@@ -5,6 +5,7 @@ import type {
   GiaoPhan, GiaoHatQuanLy, GiaoXuQuanLy, GiaoXuHienTai, BaoCaoXemTruoc, TrangThaiNhapDuLieu,
   DotBiTichListItem, DotBiTichDetail, LoaiBiTich, RaoHonPhoiListItem, RaoHonPhoiDetail,
   KhoiGiaoLy, LopGiaoLy, HocVienLopGiaoLy, GiaoLyVienLop,
+  ChuyenLopXemTruoc, ChuyenLopKetQua, NhapHocVienXemTruoc, NhapHocVienKetQua,
   DieuKienThongKe, TrangThaiHonPhoiThongKe, ThongKeChungKetQua, ThongKeOnGoiKetQua,
   BieuDoNam, BieuDoBiTichNam, BieuDoDoTuoi, BieuDoGiaoHo,
   KiemTraGiaoDanKetQua, KiemTraGiaoDanTuyChon, KiemTraGiaDinhKetQua, KiemTraGiaDinhTuyChon,
@@ -441,6 +442,22 @@ export const api = {
     themGiaoLyVien: (lopId: string, giaoDanId: string) =>
       goi<void>(`/api/giao-ly/lop/${lopId}/giao-ly-vien`, { method: 'POST', body: JSON.stringify({ giaoDanId }) }),
     xoaGiaoLyVien: (id: string) => goi<void>(`/api/giao-ly/giao-ly-vien/${id}`, { method: 'DELETE' }),
+    /** "Chuyển lớp" hàng loạt (frmChuyenLop.cs, hoãn từ commit d4c4b27) — `chiTietIds` là khoá
+     * của `ChiTietLopGiaoLy` (đúng những dòng đang chọn trên lưới học viên), KHÔNG phải
+     * GiaoDanId. Hai endpoint riêng: xem trước KHÔNG ghi gì, ghi thật MỘT transaction. */
+    xemTruocChuyenLop: (chiTietIds: string[], lopDichId: string) =>
+      goi<ChuyenLopXemTruoc>('/api/giao-ly/chuyen-lop/xem-truoc',
+        { method: 'POST', body: JSON.stringify({ chiTietIds, lopDichId }) }),
+    chuyenLop: (chiTietIds: string[], lopDichId: string) =>
+      goi<ChuyenLopKetQua>('/api/giao-ly/chuyen-lop',
+        { method: 'POST', body: JSON.stringify({ chiTietIds, lopDichId }) }),
+    /** "Nhập học viên hàng loạt" từ Excel (frmImportHocVien.cs, hoãn từ commit d4c4b27) — máy
+     * chủ đọc bằng ClosedXML, HOÀN TOÀN TRONG BỘ NHỚ (không ghi tệp lên đĩa). */
+    mauExcelNhapHocVien: () => taiTepIn('/api/giao-ly/nhap-hoc-vien/mau-excel', 'MauNhapHocVien.xlsx'),
+    xemTruocNhapHocVien: (lopId: string, tep: File) =>
+      taiTepLenVaDoc<NhapHocVienXemTruoc>(`/api/giao-ly/lop/${lopId}/nhap-hoc-vien/xem-truoc`, tep),
+    nhapHocVien: (lopId: string, tep: File) =>
+      taiTepLenVaDoc<NhapHocVienKetQua>(`/api/giao-ly/lop/${lopId}/nhap-hoc-vien`, tep),
   },
   /** "Danh sách sổ bí tích" (frmDotBiTichList.cs + frmBiTichChiTiet.cs) — xem
    * docs/superpowers/specs/man-hinh/so-bi-tich.md. */

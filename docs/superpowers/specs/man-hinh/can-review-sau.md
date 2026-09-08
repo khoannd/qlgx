@@ -271,10 +271,10 @@ Mọi chỗ như vậy phải:
   (`CapNhatGiaoDanRequest.NgayBD1..XepLoaiGLHN` và `.ChuyenXu`) — xem mục 30 bên dưới để biết
   chi tiết quyết định (chỉ nối ở SỬA, không ở Tạo mới; bỏ hộp thoại cảnh báo Yes/No khi đổi về
   "Ở tại xứ"; sửa tại chỗ một dòng ChuyenXu thay vì luôn tạo dòng lịch sử mới).
-- **Rule 11 (trùng ngày chuyển xứ) — VẪN CHƯA làm**: nay các trường `ChuyenXu.*` đã có trong
-  request nên về mặt kỹ thuật có thể cài đặt được, nhưng việc này nằm ngoài phạm vi nhiệm vụ
-  "sửa review-frontend" (chỉ yêu cầu nối dữ liệu, không yêu cầu thêm validate mới) — để lại cho
-  lượt sau.
+- **Rule 11 (trùng ngày chuyển xứ) — ĐÃ LÀM (2026-09-08, task "giao-ly-2-quy-tac-11")**: cài
+  đặt trong `GiaoDanService.GhiChuyenXu`, xem chú thích dài tại chỗ đó và mục 70 bên dưới —
+  migrate ĐÚNG bug-for-bug của bản gốc (`frmGiaoDan.cs:399-414`), kể cả trường hợp desktop tự
+  báo trùng với CHÍNH dòng đang sửa khi chỉ đổi loại chuyển xứ mà giữ nguyên ngày.
 - **Rule 18 (không cho bỏ tick "Có gia đình" khi còn hôn phối hiệu lực) — CHƯA làm**: cần đọc
   `HonPhoi`/`GiaoDanHonPhoi` và biết ai "còn sống" trong cặp vợ chồng — để trong phạm vi việc
   sau, không thuộc "tạo mới/xoá" trọng tâm của nhiệm vụ này.
@@ -4336,3 +4336,103 @@ phối" (`GxGiaoDanList.tsx`); (2) Xuất Excel cho "Danh sách sổ bí tích"/
    `200`-`20x` ở `WebApp/anh-chup-kiem-thu/`. Dữ liệu thật `qlgx_thu` xác nhận nguyên trạng sau
    khi kiểm: 2050 giáo dân / 40 gia đình / 145 thành viên / 1 giáo họ / 1108 đợt bí tích / 6150
    bí tích chi tiết / 2 hội đoàn / 2 chi tiết hội đoàn / 1 tận hiến.
+
+---
+
+### 70. Task "giao-ly-2-quy-tac-11" (2026-09-08) — Chuyển lớp, Nhập học viên hàng loạt, Quy tắc 11
+
+Ba việc: (1) xác nhận không còn thao tác nào báo "chưa hỗ trợ" — đã xong TRƯỚC khi phiên này bắt
+đầu (một phiên song song khác đã nối "In giới thiệu hôn phối" ở `GiaoDanLuuTruList.tsx`, commit
+`984896d`); (2) migrate "Chuyển lớp"/"Nhập học viên hàng loạt" (hoãn từ commit `d4c4b27`, xem
+`giao-ly.md` mục 8); (3) Quy tắc 11 (trùng ngày chuyển xứ, mục 19/mục 4.11 `giao-dan-chi-
+tiet.md`) — cũng đã cài đặt xong TRƯỚC khi phiên này bắt đầu viết code (một phiên song song
+khác), phiên này chỉ xác minh lại bằng test và bằng trình duyệt thật.
+
+**Phát hiện quan trọng khi bắt đầu**: backend (Dtos/Endpoints/Services cho cả ba việc, kể cả Rule
+11) đã có sẵn, CHƯA COMMIT, do một phiên Claude khác chạy song song trên cùng thư mục (đúng cảnh
+báo ở đầu `CLAUDE.md`). Phiên này không viết lại từ đầu — đọc, xác nhận đúng đắn bằng cách đối
+chiếu với mã desktop gốc (`frmChuyenLop.cs`, `ImportData.ImportGiaoLy`, `frmGiaoDan.cs:399-414`),
+sửa một bug thật phát hiện trong lúc kiểm test (xem dưới), rồi dựng phần CÒN THIẾU: giao diện web
+cho "Chuyển lớp"/"Nhập học viên hàng loạt" (backend đã có, frontend chưa nối gì) và toàn bộ
+chứng minh chạy thật + tài liệu.
+
+**Bug thật phát hiện và sửa trong bộ test `GiaoLyTests.cs` (không phải mã sản phẩm)**:
+`TaoGiaoDan` dùng một bộ đếm `Interlocked` RIÊNG của lớp test (bắt đầu từ 60001, độc lập với
+CSDL) để cấp `MaGiaoDanCu` — bộ đếm này có thể trùng với giá trị `SinhMaService.LayMaTiepTheo`
+tự tính (đọc MAX(MaGiaoDanCu) hiện có trong CSDL rồi +1, dùng khi `NhapHocVienGiaoLyService`
+tạo giáo dân mới từ Excel) vì xunit chạy các `[Fact]` trong CÙNG một class XEN KẼ nhau (đã xác
+nhận bằng log — KHÔNG tuần tự như giả định ban đầu, dù cùng một collection). Khi bộ đếm tĩnh của
+test vừa ghi xong một giá trị NGAY TRƯỚC giá trị nó SẮP dùng, và `SinhMaService` đọc MAX ngay
+đúng lúc đó, cả hai ra cùng một số → lỗi thật `23505` trên
+`ix_giao_dan_giao_xu_id_ma_giao_dan_cu`, bắt được khi chạy `dotnet test` nhiều lần. **Sửa bằng
+cách đổi `TaoGiaoDan` sang dùng CHÍNH `SinhMaService.LayMaTiepTheo`** (cùng cơ chế nguyên tử
+`bo_dem_ma` mà mã sản phẩm dùng) thay vì bộ đếm riêng — loại bỏ hẳn khe hở giữa hai nguồn cấp mã
+độc lập. Test `Chuyen_lop_xem_truoc_roi_ghi_khong_xoa_khoi_lop_nguon_va_bo_qua_trung` cũng sửa
+một lỗi dựng dữ liệu: đặt lớp đích CÙNG khối với lớp nguồn khi kiểm "học viên đã có sẵn ở lớp
+đích" — nhưng `ThemHocVien` (đường thêm-từng-người dùng để dựng sẵn dữ liệu test) CHẶN một giáo
+dân thuộc hai lớp cùng khối cùng lúc (`KetQuaThemHocVien.DaThuocLopKhac`), nên lệnh thêm học
+viên vào lớp đích (cùng khối) bị từ chối ÂM THẦM (test không kiểm `StatusCode` của lệnh dựng dữ
+liệu) — sửa bằng cách đặt lớp đích ở MỘT KHỐI KHÁC (quy tắc "cùng khối" không áp dụng cho
+`ChuyenLop`, chỉ áp dụng cho `ThemHocVien`) và thêm `.Should().Be(HttpStatusCode.OK)` vào các
+lệnh dựng dữ liệu để không tái phát kiểu lỗi im lặng này.
+
+**Frontend "Chuyển lớp" (`LopGiaoLyDetail.tsx`)**: nút "Chuyển lớp" mở một bảng chọn nhiều (kiểu
+`bang-chon`/checkbox, cùng khuôn `ChuyenHoGiaoDan.tsx` — GxGrid không hỗ trợ chọn nhiều dòng nên
+không tái dùng được lưới đang hiển thị học viên) liệt kê học viên đang có trong lớp, cộng ba ô
+chọn Khối đích/Năm/Lớp đích (Lớp đích tải lại theo Khối+Năm đã chọn, không giới hạn cùng khối —
+đúng `loadComboLop` gốc). "Xem trước & chuyển lớp" gọi `POST /api/giao-ly/chuyen-lop/xem-truoc`
+(không ghi gì) hiện đúng số liệu server trả về rồi mới cho bấm "Xác nhận chuyển" (gọi `POST
+/api/giao-ly/chuyen-lop`) — không tự tính số liệu ở client.
+
+**Frontend "Nhập học viên hàng loạt"**: nút "Nhập học viên" mở một khối riêng: nút "Tải mẫu
+Excel" (`GET /api/giao-ly/nhap-hoc-vien/mau-excel`, dùng lại `taiTepIn` đã có), input chọn tệp
+`.xlsx`, "Xem trước" (`POST .../nhap-hoc-vien/xem-truoc`, multipart, dùng lại `taiTepLenVaDoc`
+đã có ở `NhapDuLieuPage`) hiện bảng từng dòng kèm trạng thái (sẽ tạo mới/dùng giáo dân có
+sẵn/dòng lỗi kèm đúng thông báo tiếng Việt máy chủ trả về), rồi "Xác nhận nhập N học viên" (`POST
+.../nhap-hoc-vien`, ghi thật).
+
+**Quyết định UI tự đưa ra** (không có mẫu desktop tương ứng để soi vì bản gốc không có bước xem
+trước): cả hai khối đều đặt NGAY DƯỚI lưới "Danh sách học viên" chính (không phải hộp thoại
+modal) — cùng tinh thần "tab thay vì modal" đã áp dụng xuyên suốt Giáo lý/Hội đoàn; đóng được
+bằng nút "Đóng" riêng, không tự đóng sau khi xong (để người dùng còn thấy dòng thông báo kết
+quả).
+
+**Chứng minh chạy thật (2026-09-08, giáo xứ Vô Nhiễm, tài khoản `giaoxu`)**:
+
+1. **Việc 1**: tạo tạm một bản ghi `rao_hon_phoi` cho giáo dân đã lưu trữ (mã 1073, Anna Nguyễn
+   Thị Nghĩa) vì bảng `rao_hon_phoi` rỗng ở dữ liệu thật và "In giới thiệu hôn phối" cần một đôi
+   rao có sẵn — bấm nút ở `GiaoDanLuuTruList.tsx`, PDF tải về THẬT (Playwright MCP mất kết nối
+   đúng như ghi chú đã biết trong `CLAUDE.md` khi bấm nút tải file — xác nhận gián tiếp là request
+   tải file thật đã kích hoạt, không phải cảnh báo "chưa hỗ trợ"), lấy lại bằng `curl` + JWT
+   (`207-viec1-gioi-thieu-hon-phoi.pdf`, HTTP 200, 2 trang, đọc được bằng PyMuPDF) — dọn bản ghi
+   `rao_hon_phoi` tạm ngay sau đó. `grep` xác nhận KHÔNG còn `chuaHoTro` nào gắn với `onClick`
+   trong toàn bộ `WebApp/src/web/src`.
+2. **Việc 2 — Chuyển lớp**: tạo khối "Khối Rước lễ (kiểm thử)" + "Khối Thêm sức (kiểm thử)", lớp
+   "Lớp A"/"Lớp B" (khác khối), 2 học viên vào Lớp A (một học viên trong đó cũng đã có sẵn ở Lớp
+   B) — chụp ảnh bước xem trước (`207-viec2-chuyen-lop-xem-truoc.png`): "Sẽ chuyển 1 học viên từ
+   lớp Lớp A sang lớp Lớp B..., Bỏ qua 1 học viên đã có sẵn ở lớp đích" — bấm xác nhận, `psql` xác
+   nhận Lớp A vẫn 2 học viên (KHÔNG xoá khỏi lớp nguồn, đúng bug-for-bug), Lớp B tăng từ 1 lên 2.
+3. **Việc 2 — Nhập học viên hàng loạt**: tự tạo file `.xlsx` 4 dòng (một dòng khớp giáo dân có
+   sẵn qua Mã GD, một dòng tạo giáo dân mới, một dòng thiếu Họ tên, một dòng ngày sinh sai định
+   dạng) — chụp ảnh bước xem trước (`208-viec2-nhap-hoc-vien-xem-truoc.png`): "Sẽ nhập 2 học
+   viên, bỏ qua 2 dòng lỗi" kèm đúng hai thông báo lỗi tiếng Việt máy chủ trả về cho từng dòng —
+   bấm xác nhận, `psql` xác nhận Lớp A tăng từ 2 lên 4 học viên, một giáo dân mới được tạo. Dọn
+   sạch: xoá `chi_tiet_lop_giao_ly`/`lop_giao_ly`/`khoi_giao_ly` (đều về 0) và giáo dân mới tạo
+   (giáo dân về lại 2050).
+4. **Việc 3 — Quy tắc 11**: mở một giáo dân thật (Giuse Nguyễn Đức Mạnh), lưu "Chuyển từ xứ khác
+   đến" ngày 15/06/2020 (thành công) — đổi loại sang "Đã chuyển đi xứ khác", GIỮ NGUYÊN ngày, lưu
+   lại → **400 Bad Request**, thông báo đúng nguyên văn "Đã có ngày chuyển xứ của giáo dân này
+   trùng với ngày chuyển xứ bạn nhập / Xin vui lòng nhập ngày khác" (ảnh
+   `209-viec3-rule11-loi-trung-ngay-chuyen-xu.png`, xác nhận qua cả console log lẫn banner lỗi
+   trên form). Trả về "Ở tại xứ" để dọn sạch — `psql` xác nhận bảng `chuyen_xu` của giáo dân này
+   về lại rỗng như trước khi kiểm.
+
+Sau khi dọn sạch, `qlgx_thu` xác nhận đúng **2050 giáo dân / 40 gia đình / 145 thành viên / 1
+giáo họ / 1108 đợt bí tích / 6150 bí tích chi tiết / 2 hội đoàn / 2 chi tiết hội đoàn / 1 tận
+hiến**, và cả bốn bảng giáo lý + `rao_hon_phoi` + `chuyen_xu` (của giáo dân kiểm Rule 11) đều về
+0 dòng.
+
+**Số test cuối**: backend **417/417** (`dotnet test WebApp/Qlgx.sln` — 38 `Qlgx.Data.Tests` + 355
+`Qlgx.Api.Tests` + 24 `Qlgx.Migration.Tests`), frontend **412/412** (`npm test -- --run`, thêm
+mới `LopGiaoLyDetail.test.tsx` — 4 test cho Chuyển lớp/Nhập học viên). `npm run build` chạy
+được.

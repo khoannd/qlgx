@@ -264,4 +264,81 @@ public class GiaoLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoX
         await db.SaveChangesAsync(ct);
         return true;
     }
+
+    // --- "Chuyển lớp" hàng loạt (frmChuyenLop.cs:140-202, hoãn từ commit d4c4b27) --------------
+
+    /// <summary>Bước xem trước bắt buộc — bản gốc KHÔNG có bước này (lưới đã chọn sẵn rồi ghi
+    /// thẳng khi bấm "&amp;Chuyển"), đây là yêu cầu an toàn của nhiệm vụ, cùng khuôn với
+    /// ChuyenHoService. Không ghi gì, chỉ đếm số liệu THẬT tại thời điểm gọi. `chiTietIds` phải
+    /// cùng thuộc một lớp nguồn (suy từ chính các dòng được chọn) — khác lớp nguồn thì coi như
+    /// không hợp lệ (null, ánh xạ 404 ở endpoint).</summary>
+    public async Task<ChuyenLopXemTruoc?> XemTruocChuyenLop(List<Guid> chiTietIds, Guid lopDichId, CancellationToken ct)
+    {
+        var lopDich = await db.LopGiaoLy.Include(l => l.KhoiGiaoLy).FirstOrDefaultAsync(l => l.Id == lopDichId, ct);
+        if (lopDich is null) return null;
+
+        var chon = await db.ChiTietLopGiaoLy.Where(c => chiTietIds.Contains(c.Id))
+            .Select(c => new { c.LopGiaoLyId, c.GiaoDanId }).ToListAsync(ct);
+        if (chon.Count == 0) return null;
+        var lopNguonIds = chon.Select(c => c.LopGiaoLyId).Distinct().ToList();
+        if (lopNguonIds.Count != 1) return null;
+        var lopNguon = await db.LopGiaoLy.FirstOrDefaultAsync(l => l.Id == lopNguonIds[0], ct);
+        if (lopNguon is null) return null;
+
+        var giaoDanIdsChon = chon.Select(c => c.GiaoDanId).Distinct().ToList();
+        var daCoODich = await db.ChiTietLopGiaoLy
+            .Where(c => c.LopGiaoLyId == lopDichId && giaoDanIdsChon.Contains(c.GiaoDanId))
+            .Select(c => c.GiaoDanId).Distinct().CountAsync(ct);
+
+        return new ChuyenLopXemTruoc(
+            chon.Count, giaoDanIdsChon.Count - daCoODich, daCoODich,
+            lopNguon.TenLop, lopDich.TenLop, lopDich.KhoiGiaoLy!.TenKhoi, lopDich.Nam);
+    }
+
+    /// <summary>Ghi thật, trong MỘT transaction (yêu cầu an toàn bắt buộc của nhiệm vụ — bản gốc
+    /// chỉ gọi <c>Memory.UpdateDataSet(ds)</c> một lần cho cả loạt dòng mới, không có transaction
+    /// rõ ràng, có thể dở dang nếu lỗi giữa chừng). KHÔNG xoá học viên khỏi lớp NGUỒN — đúng
+    /// bug-for-bug của <c>frmChuyenLop.cs</c>: tên chức năng là "Chuyển lớp" nhưng mã gốc
+    /// (<c>gxCommand1_OnOK</c>, dòng 140-202) chỉ THÊM một dòng <c>ChiTietLopGiaoLy</c> mới vào
+    /// lớp đích cho mỗi học viên được chọn, không hề đụng tới dòng ở lớp nguồn — một học viên
+    /// "chuyển lớp" xong vẫn còn nguyên trong danh sách lớp cũ (ghi ở can-review-sau.md). Học
+    /// viên nào đã có sẵn trong lớp đích (theo <c>GiaoDanId</c>) bị BỎ QUA — đúng nhánh
+    /// <c>MessageBox.Show("... đã tồn tại trong lớp ...")</c> của bản gốc, chỉ bỏ người đó chứ
+    /// không chặn cả thao tác. <c>SoThuTu</c> của các dòng mới nối tiếp từ MAX hiện có ở lớp
+    /// đích, đúng biến <c>soThuTuNext</c> gốc (dòng 172-179). Không kiểm tra "đã thuộc lớp khác
+    /// trong cùng khối" như <see cref="ThemHocVien"/> — bản gốc không kiểm tra gì ở đường ghi
+    /// hàng loạt này (khác đường thêm-từng-người addGiaoDan), cố tình KHÔNG mở rộng phạm vi theo
+    /// đúng chỉ đạo nhiệm vụ.</summary>
+    public async Task<ChuyenLopKetQua?> ChuyenLop(List<Guid> chiTietIds, Guid lopDichId, CancellationToken ct)
+    {
+        await using var giaoTac = await db.Database.BeginTransactionAsync(ct);
+
+        if (!await db.LopGiaoLy.AnyAsync(l => l.Id == lopDichId, ct)) return null;
+
+        var chon = await db.ChiTietLopGiaoLy.Where(c => chiTietIds.Contains(c.Id))
+            .Select(c => c.GiaoDanId).Distinct().ToListAsync(ct);
+        if (chon.Count == 0) return new ChuyenLopKetQua(0);
+
+        var daCoODich = await db.ChiTietLopGiaoLy
+            .Where(c => c.LopGiaoLyId == lopDichId && chon.Contains(c.GiaoDanId))
+            .Select(c => c.GiaoDanId).ToListAsync(ct);
+        var canThem = chon.Except(daCoODich).ToList();
+
+        var soThuTuKeTiep = await db.ChiTietLopGiaoLy
+            .Where(c => c.LopGiaoLyId == lopDichId).MaxAsync(c => (int?)c.SoThuTu, ct) ?? 0;
+
+        var giaoXuId = boiCanh.GiaoXuId;
+        foreach (var giaoDanId in canThem)
+        {
+            soThuTuKeTiep++;
+            db.ChiTietLopGiaoLy.Add(new ChiTietLopGiaoLy
+            {
+                GiaoXuId = giaoXuId, LopGiaoLyId = lopDichId, GiaoDanId = giaoDanId,
+                SoThuTu = soThuTuKeTiep, HoanThanh = false, GhiChuGLy = "",
+            });
+        }
+        await db.SaveChangesAsync(ct);
+        await giaoTac.CommitAsync(ct);
+        return new ChuyenLopKetQua(canThem.Count);
+    }
 }

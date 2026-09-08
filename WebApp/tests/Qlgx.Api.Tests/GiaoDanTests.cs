@@ -230,6 +230,69 @@ public class GiaoDanTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     }
 
     [Fact]
+    public async Task Doi_loai_chuyen_xu_ma_trung_ngay_voi_dong_dang_co_thi_bi_chan_Rule_11()
+    {
+        // frmGiaoDan.cs:399-414 — chỉ áp dụng khi ĐANG có một dòng ChuyenXu hiệu lực (LoaiChuyen
+        // > 0), loại MỚI nhập cũng > 0 (khác "Ở tại xứ") và KHÁC loại đã lưu.
+        var id = await TaoGiaoDan(8036, "Nguoi doi loai chuyen xu trung ngay");
+        var client = app.CreateAuthClient();
+        var b1 = await client.GetFromJsonAsync<ChiTiet>($"/api/giao-dan/{id}");
+        await client.PutAsJsonAsync($"/api/giao-dan/{id}", new
+        {
+            HoTen = "Nguoi doi loai chuyen xu trung ngay", Phai = "Nam", NgaySinh = "2000-01-01",
+            RowVersion = b1!.RowVersion,
+            ChuyenXu = new { LoaiChuyen = 1, NgayChuyen = "2020-06-15", NoiChuyen = "Noi cu", GhiChuChuyen = (string?)null },
+        });
+        var b2 = await client.GetFromJsonAsync<ChiTiet>($"/api/giao-dan/{id}");
+
+        // Đổi LoaiChuyen từ 1 sang 2 nhưng GIỮ NGUYÊN NgayChuyen — đúng bug-for-bug gốc, dòng
+        // hiện có (cùng giáo dân, cùng ngày) tự khớp điều kiện và bị báo trùng dù đang sửa CHÍNH
+        // dòng đó.
+        var res = await client.PutAsJsonAsync($"/api/giao-dan/{id}", new
+        {
+            HoTen = "Nguoi doi loai chuyen xu trung ngay", Phai = "Nam", NgaySinh = "2000-01-01",
+            RowVersion = b2!.RowVersion,
+            ChuyenXu = new
+            {
+                LoaiChuyen = 2, NgayChuyen = "2020-06-15", NoiChuyen = "Noi moi",
+                GhiChuChuyen = (string?)null, RowVersion = b2.ChuyenXu!.RowVersion,
+            },
+        });
+
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var loi = await res.Content.ReadFromJsonAsync<ThongBaoLoi>();
+        loi!.ThongBao.Should().Contain("Đã có ngày chuyển xứ của giáo dân này trùng với ngày chuyển xứ bạn nhập");
+    }
+
+    [Fact]
+    public async Task Doi_loai_chuyen_xu_ma_doi_ca_ngay_thi_khong_bi_chan()
+    {
+        var id = await TaoGiaoDan(8037, "Nguoi doi loai chuyen xu doi ngay");
+        var client = app.CreateAuthClient();
+        var b1 = await client.GetFromJsonAsync<ChiTiet>($"/api/giao-dan/{id}");
+        await client.PutAsJsonAsync($"/api/giao-dan/{id}", new
+        {
+            HoTen = "Nguoi doi loai chuyen xu doi ngay", Phai = "Nam", NgaySinh = "2000-01-01",
+            RowVersion = b1!.RowVersion,
+            ChuyenXu = new { LoaiChuyen = 1, NgayChuyen = "2020-06-15", NoiChuyen = "Noi cu", GhiChuChuyen = (string?)null },
+        });
+        var b2 = await client.GetFromJsonAsync<ChiTiet>($"/api/giao-dan/{id}");
+
+        var res = await client.PutAsJsonAsync($"/api/giao-dan/{id}", new
+        {
+            HoTen = "Nguoi doi loai chuyen xu doi ngay", Phai = "Nam", NgaySinh = "2000-01-01",
+            RowVersion = b2!.RowVersion,
+            ChuyenXu = new
+            {
+                LoaiChuyen = 2, NgayChuyen = "2021-01-01", NoiChuyen = "Noi moi",
+                GhiChuChuyen = (string?)null, RowVersion = b2.ChuyenXu!.RowVersion,
+            },
+        });
+
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task Gui_LoaiChuyen_0_khi_da_co_ban_ghi_thi_xoa_han_ban_ghi_ChuyenXu()
     {
         var id = await TaoGiaoDan(8033, "Nguoi ve lai tai xu");

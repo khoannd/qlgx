@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Qlgx.Api.Services;
 using Qlgx.Domain.Entities;
 
 namespace Qlgx.Api.Tests;
@@ -22,12 +23,23 @@ public class GiaoLyTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     private sealed record GiaoLyVienDto(Guid Id, Guid GiaoDanId, string HoTen, string? TenThanh, uint RowVersion);
     private sealed record ThongBaoLoi(string ThongBao);
 
-    private static int _maGiaoDanKeTiep = 60001;
-
+    /// <summary>Tạo một giáo dân tối giản cho test. Cấp MaGiaoDanCu qua CHÍNH
+    /// <see cref="SinhMaService"/> (bảng đếm nguyên tử <c>bo_dem_ma</c>, cùng cơ chế
+    /// NhapHocVienGiaoLyService.ThucHien dùng khi tự tạo giáo dân mới từ Excel) — KHÔNG dùng một
+    /// bộ đếm tĩnh riêng của test nữa: bộ đếm riêng cũ (Interlocked, độc lập MAX(MaGiaoDanCu)
+    /// thật trong CSDL) từng đụng độ THẬT với SinhMaService — xunit chạy các [Fact] của lớp
+    /// test này XEN KẼ nhau (không tuần tự như tưởng — đã xác nhận bằng log), nên khi
+    /// SinhMaService đọc MAX tại đúng lúc bộ đếm test đã ghi xong giá trị NGAY TRƯỚC giá trị nó
+    /// SẮP dùng, cả hai cùng ra đúng MỘT số → lỗi 23505 trên
+    /// "ix_giao_dan_giao_xu_id_ma_giao_dan_cu". Dùng chung một nguồn cấp mã nguyên tử loại bỏ
+    /// hẳn khe hở này.</summary>
     private async Task<Guid> TaoGiaoDan(string hoTen)
     {
         await using var db = app.TaoContextThuan();
-        var gd = new GiaoDan { GiaoXuId = app.GiaoXuId, MaGiaoDanCu = Interlocked.Increment(ref _maGiaoDanKeTiep), HoTen = hoTen };
+        var sinhMa = new SinhMaService(db);
+        var maxHienCo = await db.GiaoDan.Where(x => x.GiaoXuId == app.GiaoXuId).MaxAsync(x => (int?)x.MaGiaoDanCu, default) ?? 0;
+        var ma = await sinhMa.LayMaTiepTheo(app.GiaoXuId, "giao_dan", maxHienCo, default);
+        var gd = new GiaoDan { GiaoXuId = app.GiaoXuId, MaGiaoDanCu = ma, HoTen = hoTen };
         db.GiaoDan.Add(gd);
         await db.SaveChangesAsync();
         return gd.Id;
@@ -349,5 +361,189 @@ public class GiaoLyTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
 
         var xoaLai = await client.DeleteAsync($"/api/giao-ly/khoi/{khoiId}");
         xoaLai.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    // --- "Chuyển lớp" hàng loạt (frmChuyenLop.cs) ---------------------------------------
+
+    private sealed record ChuyenLopXemTruocDto(int SoLuongDaChon, int SoLuongSeChuyen,
+        int SoLuongDaCoODichRoi, string TenLopNguon, string TenLopDich, string TenKhoiDich, int? NamDich);
+    private sealed record ChuyenLopKetQuaDto(int SoLuongDaChuyen);
+
+    [Fact]
+    public async Task Chuyen_lop_xem_truoc_roi_ghi_khong_xoa_khoi_lop_nguon_va_bo_qua_trung()
+    {
+        var client = app.CreateAuthClient();
+        var nguoiQuanLyId = await TaoGiaoDan("Quan ly chuyen lop");
+        var khoiId = await TaoKhoi(client, "Khối chuyển lớp", nguoiQuanLyId);
+        var lopNguonId = await TaoLop(client, khoiId, "Lớp nguồn");
+        // Lớp đích ở một KHỐI KHÁC — ThemHocVien (frmLopGiaoLy.cs) chặn một giáo dân thuộc
+        // hai lớp CÙNG khối cùng lúc (KetQuaThemHocVien.DaThuocLopKhac), nên để dựng được tình
+        // huống "hv2 đã có sẵn trong lớp đích" bằng chính đường thêm-từng-người, lớp đích phải
+        // khác khối với lớp nguồn — quy tắc đó không áp dụng cho ChuyenLop (xem chú thích dài ở
+        // GiaoLyService.ChuyenLop, cố tình không kiểm tra).
+        var khoiDichId = await TaoKhoi(client, "Khối chuyển lớp - đích", nguoiQuanLyId);
+        var lopDichId = await TaoLop(client, khoiDichId, "Lớp đích");
+
+        var hv1 = await TaoGiaoDan("Hoc vien chuyen 1");
+        var hv2 = await TaoGiaoDan("Hoc vien chuyen 2 da co o dich");
+        (await client.PostAsJsonAsync($"/api/giao-ly/lop/{lopNguonId}/hoc-vien", new { giaoDanId = hv1 }))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await client.PostAsJsonAsync($"/api/giao-ly/lop/{lopNguonId}/hoc-vien", new { giaoDanId = hv2 }))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        // hv2 đã có sẵn trong lớp đích — chuyển lớp phải BỎ QUA (đúng bản gốc), không lỗi.
+        (await client.PostAsJsonAsync($"/api/giao-ly/lop/{lopDichId}/hoc-vien", new { giaoDanId = hv2 }))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var dsNguon = await client.GetFromJsonAsync<List<HocVienDto>>($"/api/giao-ly/lop/{lopNguonId}/hoc-vien");
+        var chiTietIds = dsNguon!.Select(h => h.ChiTietId).ToList();
+
+        var xemTruocRes = await client.PostAsJsonAsync("/api/giao-ly/chuyen-lop/xem-truoc",
+            new { chiTietIds, lopDichId });
+        xemTruocRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var xemTruoc = await xemTruocRes.Content.ReadFromJsonAsync<ChuyenLopXemTruocDto>();
+        xemTruoc!.SoLuongDaChon.Should().Be(2);
+        xemTruoc.SoLuongSeChuyen.Should().Be(1);
+        xemTruoc.SoLuongDaCoODichRoi.Should().Be(1);
+        xemTruoc.TenLopNguon.Should().Be("Lớp nguồn");
+        xemTruoc.TenLopDich.Should().Be("Lớp đích");
+
+        var ghiRes = await client.PostAsJsonAsync("/api/giao-ly/chuyen-lop", new { chiTietIds, lopDichId });
+        ghiRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var ketQua = await ghiRes.Content.ReadFromJsonAsync<ChuyenLopKetQuaDto>();
+        ketQua!.SoLuongDaChuyen.Should().Be(1);
+
+        // KHÔNG xoá khỏi lớp nguồn — bug-for-bug đúng bản gốc (tên "Chuyển lớp" nhưng thực chất
+        // là THÊM vào lớp đích).
+        (await client.GetFromJsonAsync<List<HocVienDto>>($"/api/giao-ly/lop/{lopNguonId}/hoc-vien"))
+            .Should().HaveCount(2);
+        var dsDich = await client.GetFromJsonAsync<List<HocVienDto>>($"/api/giao-ly/lop/{lopDichId}/hoc-vien");
+        dsDich!.Select(h => h.GiaoDanId).Should().BeEquivalentTo([hv1, hv2]);
+    }
+
+    [Fact]
+    public async Task Chuyen_lop_khong_co_hoc_vien_nao_chon_thi_bao_loi()
+    {
+        var client = app.CreateAuthClient();
+        var res = await client.PostAsJsonAsync("/api/giao-ly/chuyen-lop/xem-truoc",
+            new { chiTietIds = Array.Empty<Guid>(), lopDichId = Guid.NewGuid() });
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    // --- "Nhập học viên hàng loạt" từ Excel (frmImportHocVien.cs) -----------------------
+
+    private sealed record DongNhapDto(int SoDong, string? MaGD, string? TenThanh, string HoTen,
+        string? Phai, string? NgaySinhHienThi, string? GiaoHo, string? GhiChu, bool DaHocXong,
+        bool LaGiaoDanMoi, string? Loi);
+    private sealed record NhapXemTruocDto(bool TepHopLe, string? LoiTep, string TenLop,
+        List<DongNhapDto> Dong, int SoSeNhap, int SoBiBoQua);
+    private sealed record NhapKetQuaDto(int SoDaNhap, int SoBiBoQua);
+
+    private static byte[] TaoExcelHocVien(params (string? maGD, string? tenThanh, string hoTen,
+        string phai, string ngaySinh, string? giaoHo, string? ghiChu, string? daHocXong)[] hang)
+    {
+        using var wb = new ClosedXML.Excel.XLWorkbook();
+        var ws = wb.Worksheets.Add("Sheet1");
+        string[] cot = ["Mã GD", "Tên thánh", "Họ tên", "Phái", "Ngày sinh", "Giáo họ", "Ghi chú", "Đã học xong"];
+        for (var i = 0; i < cot.Length; i++) ws.Cell(1, i + 1).Value = cot[i];
+        for (var r = 0; r < hang.Length; r++)
+        {
+            var h = hang[r];
+            ws.Cell(r + 2, 1).Value = h.maGD ?? "";
+            ws.Cell(r + 2, 2).Value = h.tenThanh ?? "";
+            ws.Cell(r + 2, 3).Value = h.hoTen;
+            ws.Cell(r + 2, 4).Value = h.phai;
+            ws.Cell(r + 2, 5).Value = h.ngaySinh;
+            ws.Cell(r + 2, 6).Value = h.giaoHo ?? "";
+            ws.Cell(r + 2, 7).Value = h.ghiChu ?? "";
+            ws.Cell(r + 2, 8).Value = h.daHocXong ?? "";
+        }
+        using var ms = new MemoryStream();
+        wb.SaveAs(ms);
+        return ms.ToArray();
+    }
+
+    private static MultipartFormDataContent TaoFormTep(byte[] tep, string tenTep = "hoc-vien.xlsx")
+    {
+        var noiDung = new ByteArrayContent(tep);
+        noiDung.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        var form = new MultipartFormDataContent { { noiDung, "tep", tenTep } };
+        return form;
+    }
+
+    [Fact]
+    public async Task Nhap_hoc_vien_tu_excel_xem_truoc_roi_ghi_that()
+    {
+        var client = app.CreateAuthClient();
+        var nguoiQuanLyId = await TaoGiaoDan("Quan ly nhap hoc vien");
+        var khoiId = await TaoKhoi(client, "Khối nhập Excel", nguoiQuanLyId);
+        var lopId = await TaoLop(client, khoiId, "Lớp nhập Excel");
+
+        // Một giáo dân có sẵn (khớp bằng Họ tên+Phái+Ngày sinh), một dòng thiếu Phái (lỗi, bị bỏ
+        // qua), một giáo dân MỚI (không khớp ai, không có "Mã GD").
+        var coSanId = await TaoGiaoDan("Nguyen Van Co San");
+        await using (var db = app.TaoContextThuan())
+        {
+            var gd = await db.GiaoDan.SingleAsync(x => x.Id == coSanId);
+            gd.Phai = "Nam"; gd.NgaySinh = new DateOnly(2010, 3, 15);
+            await db.SaveChangesAsync();
+        }
+
+        var tep = TaoExcelHocVien(
+            (null, null, "Nguyen Van Co San", "Nam", "15/03/2010", null, "Ghi chu co san", null),
+            (null, null, "Thieu Phai", "", "01/01/2011", null, null, null),
+            (null, "Giuse", "Nguyen Van Moi Tinh", "Nam", "20/05/2012", null, "Hoc vien moi", "x"));
+
+        var xemTruocRes = await client.PostAsync($"/api/giao-ly/lop/{lopId}/nhap-hoc-vien/xem-truoc", TaoFormTep(tep));
+        xemTruocRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var xemTruoc = await xemTruocRes.Content.ReadFromJsonAsync<NhapXemTruocDto>();
+        xemTruoc!.TepHopLe.Should().BeTrue();
+        xemTruoc.SoSeNhap.Should().Be(2);
+        xemTruoc.SoBiBoQua.Should().Be(1);
+        xemTruoc.Dong.Should().HaveCount(3);
+        xemTruoc.Dong[0].LaGiaoDanMoi.Should().BeFalse();
+        xemTruoc.Dong[1].Loi.Should().NotBeNullOrEmpty();
+        xemTruoc.Dong[2].LaGiaoDanMoi.Should().BeTrue();
+
+        var ghiRes = await client.PostAsync($"/api/giao-ly/lop/{lopId}/nhap-hoc-vien", TaoFormTep(tep));
+        ghiRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var ketQua = await ghiRes.Content.ReadFromJsonAsync<NhapKetQuaDto>();
+        ketQua!.SoDaNhap.Should().Be(2);
+        ketQua.SoBiBoQua.Should().Be(1);
+
+        var ds = await client.GetFromJsonAsync<List<HocVienDto>>($"/api/giao-ly/lop/{lopId}/hoc-vien");
+        ds.Should().HaveCount(2);
+        ds!.Should().Contain(h => h.GiaoDanId == coSanId && h.GhiChuGLy == "Ghi chu co san");
+        var moi = ds.Single(h => h.GiaoDanId != coSanId);
+        moi.HoTen.Should().Be("Nguyen Van Moi Tinh");
+        moi.HoanThanh.Should().BeTrue();
+
+        await using var dbSau = app.TaoContextThuan();
+        (await dbSau.GiaoDan.CountAsync(g => g.HoTen == "Nguyen Van Moi Tinh")).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Nhap_hoc_vien_tu_tep_khong_phai_excel_thi_bao_loi_dinh_dang()
+    {
+        var client = app.CreateAuthClient();
+        var nguoiQuanLyId = await TaoGiaoDan("Quan ly nhap tep sai");
+        var khoiId = await TaoKhoi(client, "Khối tệp sai", nguoiQuanLyId);
+        var lopId = await TaoLop(client, khoiId, "Lớp tệp sai");
+
+        var tepGia = "not an excel file"u8.ToArray();
+        var res = await client.PostAsync($"/api/giao-ly/lop/{lopId}/nhap-hoc-vien/xem-truoc", TaoFormTep(tepGia));
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var kq = await res.Content.ReadFromJsonAsync<NhapXemTruocDto>();
+        kq!.TepHopLe.Should().BeFalse();
+        kq.LoiTep.Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task Tai_mau_excel_hoc_vien_tra_ve_tep()
+    {
+        var client = app.CreateAuthClient();
+        var res = await client.GetAsync("/api/giao-ly/nhap-hoc-vien/mau-excel");
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await res.Content.ReadAsByteArrayAsync()).Length.Should().BeGreaterThan(0);
     }
 }

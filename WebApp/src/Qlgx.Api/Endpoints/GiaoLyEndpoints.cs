@@ -121,5 +121,56 @@ public static class GiaoLyEndpoints
         // Khớp bản gốc: KHÔNG có hộp xác nhận (`gxAddEdit2_DeleteClick`, xem giao-ly.md mục 4).
         nhom.MapDelete("/giao-ly-vien/{id:guid}", async (GiaoLyService dv, Guid id, CancellationToken ct) =>
             await dv.XoaGiaoLyVien(id, ct) ? Results.Ok() : Results.NotFound());
+
+        // --- "Chuyển lớp" hàng loạt (frmChuyenLop.cs) ---
+        nhom.MapPost("/chuyen-lop/xem-truoc", async (GiaoLyService dv, ChuyenLopRequest yc, CancellationToken ct) =>
+        {
+            if (yc.ChiTietIds.Count == 0) return Results.BadRequest(new { thongBao = "Hãy chọn ít nhất 1 học viên để chuyển lớp" });
+            var kq = await dv.XemTruocChuyenLop(yc.ChiTietIds, yc.LopDichId, ct);
+            return kq is null ? Results.NotFound() : Results.Ok(kq);
+        });
+
+        nhom.MapPost("/chuyen-lop", async (GiaoLyService dv, ChuyenLopRequest yc, CancellationToken ct) =>
+        {
+            if (yc.ChiTietIds.Count == 0) return Results.BadRequest(new { thongBao = "Hãy chọn ít nhất 1 học viên để chuyển lớp" });
+            var kq = await dv.ChuyenLop(yc.ChiTietIds, yc.LopDichId, ct);
+            return kq is null ? Results.NotFound() : Results.Ok(kq);
+        });
+
+        // --- "Nhập học viên hàng loạt" từ Excel (frmImportHocVien.cs) ---
+        // .DisableAntiforgery(): endpoint có IFormFile — cùng lý do NhapDuLieuEndpoints.cs/
+        // GiaoDanEndpoints.cs (xác thực Bearer JWT, không cookie phiên nên không antiforgery).
+        nhom.MapGet("/nhap-hoc-vien/mau-excel", () =>
+            Results.File(NhapHocVienGiaoLyService.TaoTepMau(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "MauNhapHocVien.xlsx"));
+
+        nhom.MapPost("/lop/{lopId:guid}/nhap-hoc-vien/xem-truoc",
+            async (NhapHocVienGiaoLyService dv, Guid lopId, IFormFile? tep, CancellationToken ct) =>
+        {
+            var loiTep = KiemTraTepExcel(tep);
+            if (loiTep is not null) return Results.BadRequest(new { thongBao = loiTep });
+            await using var luong = tep!.OpenReadStream();
+            return Results.Ok(await dv.XemTruoc(lopId, luong, ct));
+        }).DisableAntiforgery();
+
+        nhom.MapPost("/lop/{lopId:guid}/nhap-hoc-vien",
+            async (NhapHocVienGiaoLyService dv, Guid lopId, IFormFile? tep, CancellationToken ct) =>
+        {
+            var loiTep = KiemTraTepExcel(tep);
+            if (loiTep is not null) return Results.BadRequest(new { thongBao = loiTep });
+            await using var luong = tep!.OpenReadStream();
+            var kq = await dv.ThucHien(lopId, luong, ct);
+            return kq is null ? Results.NotFound() : Results.Ok(kq);
+        }).DisableAntiforgery();
+    }
+
+    private const long GioiHanDoDaiTepExcel = 10 * 1024 * 1024;
+
+    private static string? KiemTraTepExcel(IFormFile? tep)
+    {
+        if (tep is null || tep.Length == 0) return "Chưa chọn tệp Excel để nhập.";
+        if (tep.Length > GioiHanDoDaiTepExcel)
+            return $"Tệp quá lớn. Kích thước tối đa cho phép là {GioiHanDoDaiTepExcel / 1024 / 1024} MB.";
+        return null;
     }
 }

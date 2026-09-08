@@ -4,7 +4,6 @@ import type { GiaoDanListItem, GiaoHo } from '../api/types'
 import { GioiThieuModal } from '../components/GioiThieuModal'
 import { GxGiaoDanList, menuGiaoDanMacDinh } from '../components/GxGiaoDanList'
 import { GxToolbar } from '../components/GxToolbar'
-import { chuaHoTro } from '../lib/thongBao'
 import { useGioiThieuGiaoDan } from '../lib/useGioiThieuGiaoDan'
 
 /** Sentinel hiển thị cho "Ngoài xứ" — cùng quy ước của GiaoDanList.tsx. */
@@ -124,7 +123,10 @@ export function GiaoDanLuuTruList({
             onClick: () => dongChon && api.giaoDan.inChungNhanBiTich(dongChon.id)
               .catch((e: unknown) => window.alert(e instanceof Error ? e.message : 'In thất bại, thử lại sau.')),
             title: 'In chứng nhận bí tích cho giáo dân đang chọn' },
-          { label: 'In giới thiệu hôn phối', needSel: true, onClick: chuaHoTro },
+          { label: 'In giới thiệu hôn phối', needSel: true,
+            onClick: () => dongChon && api.giaoDan.inGioiThieuHonPhoi(dongChon.id)
+              .catch((e: unknown) => window.alert(e instanceof Error ? e.message : 'In thất bại, thử lại sau.')),
+            title: 'In giấy xin điều tra và rao hôn phối (đôi rao mới nhất của giáo dân đang chọn)' },
         ]}
       />
 

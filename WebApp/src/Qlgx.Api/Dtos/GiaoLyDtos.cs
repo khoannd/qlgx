@@ -39,3 +39,39 @@ public record SuaHocVienRequest(int? SoThuTu, bool HoanThanh, string? GhiChuGLy,
 public record GiaoLyVienDto(Guid Id, Guid GiaoDanId, string HoTen, string? TenThanh, uint RowVersion);
 
 public record ThemGiaoLyVienRequest(Guid GiaoDanId);
+
+// --- "Chuyển lớp" hàng loạt (frmChuyenLop.cs, xem GiaoLyService.XemTruocChuyenLop/ChuyenLop) ---
+
+/// <summary>Yêu cầu chuyển một số học viên (theo `ChiTietId` — khoá của `ChiTietLopGiaoLy`,
+/// KHÔNG phải `GiaoDanId`) đang ở lớp nguồn sang lớp đích. Dùng chung cho cả bước xem trước lẫn
+/// bước ghi thật — hai endpoint khác nhau ở đường dẫn, không phải ở request body.</summary>
+public record ChuyenLopRequest(List<Guid> ChiTietIds, Guid LopDichId);
+
+/// <summary>Kết quả bước xem trước — nêu đủ số liệu để hộp thoại xác nhận hiển thị "sẽ chuyển X
+/// học viên từ lớp A sang lớp B" (yêu cầu bắt buộc của nhiệm vụ, KHÁC bản gốc — bản gốc không có
+/// bước xem trước, xem GiaoLyService). `SoLuongDaCoODichRoi` đếm riêng học viên bị BỎ QUA vì đã
+/// có sẵn trong lớp đích (đúng nhánh `MessageBox.Show("... đã tồn tại trong lớp ...")` của
+/// frmChuyenLop.cs:163-166, KHÔNG chặn cả thao tác — chỉ bỏ qua từng học viên đó).</summary>
+public record ChuyenLopXemTruoc(
+    int SoLuongDaChon, int SoLuongSeChuyen, int SoLuongDaCoODichRoi,
+    string TenLopNguon, string TenLopDich, string TenKhoiDich, int? NamDich);
+
+public record ChuyenLopKetQua(int SoLuongDaChuyen);
+
+// --- "Nhập học viên hàng loạt" từ Excel (frmImportHocVien.cs + ImportData.ImportGiaoLy) -------
+
+/// <summary>Một dòng dữ liệu Excel đã đọc/đối chiếu — dùng cho CẢ bước xem trước lẫn kết quả sau
+/// khi ghi thật (trường <see cref="Loi"/> giữ nguyên nếu dòng đó bị bỏ qua ở cả hai bước, vì
+/// logic đối chiếu chạy lại y hệt — xem GiaoLyService.DocVaDoiChieuExcel).</summary>
+public record DongNhapHocVien(
+    int SoDong, string? MaGD, string? TenThanh, string HoTen, string? Phai, string? NgaySinhHienThi,
+    string? GiaoHo, string? GhiChu, bool DaHocXong, bool LaGiaoDanMoi, string? Loi);
+
+/// <summary>Kết quả bước xem trước — <see cref="TepHopLe"/> false nghĩa là bản thân tệp không
+/// đọc được (không phải .xlsx thật, hoặc thiếu cột bắt buộc) — khi đó <see cref="Dong"/> rỗng và
+/// <see cref="LoiTep"/> có nội dung, hiện ngay không cần xem từng dòng.</summary>
+public record NhapHocVienXemTruoc(
+    bool TepHopLe, string? LoiTep, string TenLop, List<DongNhapHocVien> Dong,
+    int SoSeNhap, int SoBiBoQua);
+
+public record NhapHocVienKetQua(int SoDaNhap, int SoBiBoQua);

@@ -89,6 +89,7 @@ builder.Services.AddScoped<RaoHonPhoiService>();
 builder.Services.AddScoped<HoiDoanQuanLyService>();
 // Giáo lý (Khối/Lớp/Học viên/Giáo lý viên) — xem docs/superpowers/specs/man-hinh/giao-ly.md.
 builder.Services.AddScoped<GiaoLyService>();
+builder.Services.AddScoped<NhapHocVienGiaoLyService>();
 // Thống kê chung / Thống kê ơn gọi tận hiến / Biểu đồ — xem
 // docs/superpowers/specs/man-hinh/thong-ke-bieu-do.md. ThongKeService phụ thuộc GiaDinhService
 // (Scoped) để dùng lại LayThongKeTongSoGiaDinh, nên bản thân cũng phải Scoped.
