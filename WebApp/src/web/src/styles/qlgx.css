@@ -1253,7 +1253,10 @@ tbody tr[aria-selected="true"] .rowhead {
 }
 .frow:last-child { margin-bottom: 0; }
 .frow > label { color: var(--ink-soft); font-size: 13px; font-weight: 500; }
-.frow .val { display: flex; align-items: center; gap: 8px; min-width: 0; }
+/* `position: relative` để `.gx-date-loi` (thông báo lỗi ngày, xem bên dưới) định vị TUYỆT ĐỐI
+ * theo đúng bề rộng của cả hàng `.val` này — không phải theo `.gx-date` hẹp hơn — và không ảnh
+ * hưởng gì tới các `.frow` không có ô ngày nào (không phần tử con nào khác dùng `position`). */
+.frow .val { display: flex; align-items: center; gap: 8px; min-width: 0; position: relative; }
 .frow .val > input[type="text"],
 .frow .val > input[type="date"],
 .frow .val > select,
@@ -1266,14 +1269,31 @@ tbody tr[aria-selected="true"] .rowhead {
 .frow textarea { resize: vertical; min-height: 50px; line-height: 1.5; }
 .frow .inline-label { color: var(--ink-soft); font-size: 13px; padding-left: 4px; white-space: nowrap; }
 
+/* `<fieldset>`/`<legend>` (dùng ở `RaoHonPhoiDetail.tsx` để nhóm "Người thứ nhất"/"Người thứ
+ * hai"/"Rao"/"Điều tra" — không có màn hình nào khác dùng `fieldset` nên trước đây không có CSS
+ * nào áp cho nó, hiện ra bằng viền/khoảng đệm MẶC ĐỊNH của trình duyệt, lạc phong cách với các
+ * khối `.card glass` bo góc kính mờ khắp nơi khác — góp ý người dùng 2026-09-08 "not good"/
+ * "không có thẻ bo góc kính mờ như các màn hình khác"). Không đổi hẳn sang `.card` lồng trong
+ * `.card` (kính mờ chồng kính mờ trông rối) — chỉ viền mảnh + bo góc + nhãn nhóm nhỏ, ĐỦ để
+ * phân biệt các nhóm mà không rời hẳn phong cách chung. */
+fieldset { border: 1px solid rgba(14,32,76,.13); border-radius: var(--r-card); padding: 4px 12px 8px; margin: 0; }
+fieldset legend { padding: 0 6px; font-size: 12px; font-weight: 600; color: var(--ink-soft); }
+
 /* Ô chọn giáo dân (thay cho GxGiaoDan) */
 .picker {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: 1;
   min-width: 0;
-  padding: 5px 6px 5px 10px;
+  /* Góp ý người dùng (2026-09-08): "Nơi sinh" (input văn bản thường, `min-height:30px` — xem
+   * `select, input[type="text"]…` phía trên, tổng cao 30px kể cả viền) và "Tên Cha"/"Tên Mẹ"
+   * (`.picker`) cao KHÔNG BẰNG NHAU — đo trước: `.picker` cao 36px (padding dọc 5+5, viền 1+1,
+   * ba nút tròn `.mini` 24px choán hết chiều cao nội dung: 24+10+2 = 36) trong khi ô văn bản chỉ
+   * 30px. Giảm đệm dọc còn 4px và nút tròn còn 20px (20+8+2 = 30) để `.picker` cao ĐÚNG BẰNG
+   * 30px như mọi ô văn bản khác trong `.frow` — không đổi bo góc/độ đậm chữ đã chốt trước đó. */
+  padding: 4px 6px 4px 10px;
+  min-height: 30px;
   /* Bo góc/nền GIỐNG HỆT ô văn bản thường (`--r-field`, xem `select, input[type="text"]…` phía
    * trên) — trước đây bo tròn gần hết (999px) và chữ đậm hơn (500) khiến control chọn giáo dân
    * (Tên Cha/Tên Mẹ…) trông lạc lõng cạnh các ô văn bản như "Nơi sinh" (góp ý người dùng: "cần
@@ -1288,12 +1308,12 @@ tbody tr[aria-selected="true"] .rowhead {
 .picker .mini {
   appearance: none;
   border: 0;
-  width: 24px; height: 24px;
+  width: 20px; height: 20px;
   border-radius: 50%;
   background: rgba(29,93,219,.1);
   color: var(--brand-ink);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1;
   flex: none;
 }
@@ -1303,10 +1323,12 @@ tbody tr[aria-selected="true"] .rowhead {
 
 /* Ô nhập ngày dùng chung (GxDate) — thay input[type=date] gốc để không phụ thuộc locale máy
  * người dùng, xem docs/superpowers/specs/man-hinh/can-review-sau.md mục W1. */
-/* `display: flex` (không phải `inline-flex`) để khối chiếm TRỌN bề rộng ô của nó trong `.frow
- * .val` — cần thiết để `.gx-date-loi` bên dưới có đúng bề rộng mà XUỐNG DÒNG thay vì tràn ra
- * ngoài viền ô (góp ý người dùng: "thông báo lỗi là control bị tràn"). `max-width: 100%` để
- * không phá bố cục khi phần tử cha co hẹp hơn `maxWidth` truyền qua prop `style`. */
+/* `display: flex; flex-direction: column` giữ cho GIÁ TRỊ TRẢ VỀ của `.gx-date` không đổi khi
+ * `.gx-date-loi` chuyển sang `position: absolute` (xem dưới) — về mặt bố cục bây giờ `.gx-date`
+ * thực chất chỉ còn MỘT phần tử con tham gia luồng (`.gx-date-row`), `.gx-date-loi` bị lấy ra
+ * khỏi luồng hoàn toàn nên không còn cộng chiều cao/chiều rộng vào đây nữa — xem chú thích ở
+ * `.gx-date-loi`. `max-width: 100%` để không phá bố cục khi phần tử cha co hẹp hơn `maxWidth`
+ * truyền qua prop `style`. */
 .gx-date { display: flex; flex-direction: column; gap: 3px; min-width: 0; max-width: 100%; }
 .gx-date-row { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 .gx-date-row input[type="text"] { min-width: 0; flex: 1; }
@@ -1346,14 +1368,37 @@ tbody tr[aria-selected="true"] .rowhead {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
 }
+/* Góp ý người dùng (2026-09-08, ảnh chụp khối "Thông tin cá nhân"): thông báo lỗi này trước
+ * đây nằm TRONG luồng bố cục (`display:block`, phần tử con thứ hai của `.gx-date` — flex
+ * column) nên khi hiện ra, nó cộng thêm chiều cao vào `.gx-date`, kéo `.frow .val` (flex hàng,
+ * `align-items:center`) cao thêm — và vì `.gx-date` không có bề rộng cố định, trình duyệt tính
+ * "max-content" của khối flex-column này dựa trên câu chữ lỗi CHƯA XUỐNG DÒNG (khá dài), khiến
+ * `.gx-date` co giãn tranh chỗ với ô <select> "Giới tính" đứng cùng hàng — `<select>` có
+ * `flex:1; min-width:0` (xem `.frow .val > select` phía trên) nên bị ép co lại tới mức chỉ còn
+ * hiện được mũi tên, mất hẳn phần chữ giá trị. Chuyển sang `position: absolute` (định vị theo
+ * `.frow .val` — cha gần nhất có `position:relative`, xem trên — KHÔNG theo `.gx-date`, để lấy
+ * được bề rộng CẢ HÀNG thay vì chỉ bề rộng hẹp của ô ngày) để thông báo lỗi tràn ra NGOÀI luồng
+ * bố cục hoàn toàn: không còn cộng chiều cao cho `.gx-date`/`.frow .val`, không còn ảnh hưởng gì
+ * tới kích thước các ô lân cận dù lỗi có hiện hay không. Nền/viền/đổ bóng nhẹ để đọc được rõ dù
+ * đang nằm đè lên hàng bên dưới trong lúc người dùng gõ dở ngày. */
 .gx-date-loi {
-  display: block;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 3px;
+  padding: 3px 8px;
   font-size: 11.5px;
+  line-height: 1.35;
   color: var(--rose-ink);
-  width: 100%;
+  background: #fff;
+  border: 1px solid rgba(225, 29, 72, .25);
+  border-radius: 6px;
+  box-shadow: 0 4px 10px rgba(14, 32, 76, .12);
   white-space: normal;
   overflow-wrap: anywhere;
   box-sizing: border-box;
+  z-index: 5;
 }
 
 /* Biểu tượng cảnh báo MỀM cạnh ô ngày (GxCanhBaoNgay.tsx) — CỐ Ý dùng màu hổ phách (--amber*),

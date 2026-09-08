@@ -3,6 +3,7 @@ import { api, LoiXungDot } from '../api/client'
 import type { GiaoDanTimKiem, HoiDoanQuanLy, ThanhVienHoiDoan } from '../api/types'
 import { GxGrid } from '../components/GxGrid'
 import { GxDate } from '../components/GxDate'
+import { GxField, GxInline } from '../components/GxField'
 import { GxPicker } from '../components/GxPicker'
 import { TrangThaiTai } from '../components/TrangThaiTai'
 import { cotThanhVienHoiDoan } from '../cot/cotHoiDoan'
@@ -210,33 +211,45 @@ export function HoiDoanDetail({ id, onTieuDe, onDaLuu, moGiaoDanMoiChoPicker }: 
           <h1>{hd ? hd.tenHoiDoan : 'Hội đoàn mới'}</h1>
         </div>
 
+        {/* Góp ý người dùng (2026-09-08, ảnh chụp "Legio Mariae"): khối này trước đây dùng
+            `.form-grid`/`.field span-2` — hai lớp KHÔNG HỀ có CSS nào định nghĩa (`grep` "form-
+            grid"/"span-2" trong qlgx.css ra rỗng); `.field` thật ra là lớp của HÀNG LỌC
+            (`.filters-bar .field`, nhãn+ô cùng một dòng, nhãn co theo đúng độ dài chữ) — dùng
+            nhầm sang một form chi tiết khiến mỗi nhãn dài ngắn khác nhau đẩy ô nhập bắt đầu ở
+            một vị trí khác nhau (nhãn và ô "không thẳng hàng, không theo lưới" — nguyên văn góp
+            ý). Các `<input>` cũng THIẾU `type="text"` nên không khớp selector CSS
+            `input[type="text"]` (yêu cầu đúng thuộc tính `type`) — hiện ra bằng đúng kiểu ô nhập
+            mặc định của trình duyệt, không bo góc, không cỡ chữ 12px như mọi ô khác trong ứng
+            dụng ("mỗi ô một kiểu"). Chuyển sang đúng khuôn `.frow`/`GxField` mà các màn hình
+            chính đang dùng: nhãn trái CỐ ĐỊNH 132px, ô phải giãn hết bề ngang còn lại, thẳng
+            hàng suốt khối — không phát minh khuôn mới. */}
         <div className="card glass" style={{ marginBottom: 12 }}>
-          <div className="form-grid">
-            <div className="field span-2">
-              <label htmlFor="hd-ten">Tên hội đoàn</label>
-              <input id="hd-ten" value={tenHoiDoan} onChange={(e) => setTenHoiDoan(e.target.value)} />
-            </div>
-            <div className="field">
-              <label htmlFor="hd-bonmang">Thánh bổn mạng</label>
-              <input id="hd-bonmang" value={thanhBonMang} onChange={(e) => setThanhBonMang(e.target.value)} />
-            </div>
-            <div className="field">
-              <label htmlFor="hd-ngaybonmang">Ngày bổn mạng</label>
-              <GxDate id="hd-ngaybonmang" defaultValue={ngayBonMang} onIsoChange={(iso) => setNgayBonMang(iso || null)} />
-            </div>
-            <div className="field">
-              <label htmlFor="hd-ngaythanhlap">Ngày thành lập</label>
-              <GxDate id="hd-ngaythanhlap" defaultValue={ngayThanhLap} onIsoChange={(iso) => setNgayThanhLap(iso || null)} />
-            </div>
-            <div className="field span-2">
-              <label htmlFor="hd-ghichu">Ghi chú</label>
-              <input id="hd-ghichu" value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} />
-            </div>
-          </div>
+          <GxField label="Tên hội đoàn" id="hd-ten">
+            <input id="hd-ten" type="text" value={tenHoiDoan} onChange={(e) => setTenHoiDoan(e.target.value)} />
+          </GxField>
+          <GxField label="Thánh bổn mạng" id="hd-bonmang">
+            <input id="hd-bonmang" type="text" value={thanhBonMang} onChange={(e) => setThanhBonMang(e.target.value)} />
+            <GxInline>Ngày bổn mạng</GxInline>
+            <GxDate id="hd-ngaybonmang" defaultValue={ngayBonMang} onIsoChange={(iso) => setNgayBonMang(iso || null)}
+              style={{ maxWidth: 170, marginLeft: 'auto' }} />
+          </GxField>
+          <GxField label="Ngày thành lập" id="hd-ngaythanhlap">
+            <GxDate id="hd-ngaythanhlap" defaultValue={ngayThanhLap} onIsoChange={(iso) => setNgayThanhLap(iso || null)}
+              style={{ maxWidth: 170 }} />
+          </GxField>
+          <GxField label="Ghi chú" id="hd-ghichu">
+            <input id="hd-ghichu" type="text" value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} />
+          </GxField>
           {loiLuu && <p className="hint" role="alert">{loiLuu}</p>}
           <div className="cmdbar">
             {hd && (
-              <button type="button" className="btn btn-danger" disabled={dangXoa}
+              // Góp ý người dùng: nút xoá đứng lẻ giữa các ô unstyled trông như điểm nổi bật
+              // nhất trang — trong khi Ở NƠI KHÁC (`HoiDoanListPage.tsx`, nút "Xóa" của
+              // `GxToolbar`), nút KHỞI ĐỘNG việc xoá luôn trung tính (`.btn` thường, không màu
+              // đỏ) — chỉ nút XÁC NHẬN cuối cùng trong hộp thoại mới tô đỏ (`.btn-danger`, xem
+              // ngay bên dưới). Đổi nút khởi động này về đúng quy ước đó cho kín đáo, không đổi
+              // gì luồng xác nhận hai bước đã có.
+              <button type="button" className="btn" disabled={dangXoa}
                 onClick={() => setXacNhanXoa(true)}>
                 Xóa hội đoàn
               </button>
@@ -292,20 +305,18 @@ export function HoiDoanDetail({ id, onTieuDe, onDaLuu, moGiaoDanMoiChoPicker }: 
             {dongChonTV && (
               <div className="card glass">
                 <b>{(dongChonTV.tenThanh ? dongChonTV.tenThanh + ' ' : '') + dongChonTV.hoTen}</b>
-                <div className="form-grid" style={{ marginTop: 8 }}>
-                  <div className="field">
-                    <label htmlFor="tv-ngayvao">Ngày vào hội đoàn</label>
-                    <GxDate id="tv-ngayvao" defaultValue={ngayVaoSua} onIsoChange={(iso) => setNgayVaoSua(iso || null)} />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="tv-ngayra">Ngày ra hội đoàn</label>
-                    <GxDate id="tv-ngayra" defaultValue={ngayRaSua} onIsoChange={(iso) => setNgayRaSua(iso || null)} />
-                  </div>
-                  <div className="field span-2">
-                    <label htmlFor="tv-vaitro">Vai trò</label>
-                    <input id="tv-vaitro" value={vaiTroSua} onChange={(e) => setVaiTroSua(e.target.value)}
+                <div style={{ marginTop: 8 }}>
+                  <GxField label="Ngày vào hội đoàn" id="tv-ngayvao">
+                    <GxDate id="tv-ngayvao" defaultValue={ngayVaoSua} onIsoChange={(iso) => setNgayVaoSua(iso || null)}
+                      style={{ maxWidth: 170 }} />
+                    <GxInline>Ngày ra hội đoàn</GxInline>
+                    <GxDate id="tv-ngayra" defaultValue={ngayRaSua} onIsoChange={(iso) => setNgayRaSua(iso || null)}
+                      style={{ maxWidth: 170, marginLeft: 'auto' }} />
+                  </GxField>
+                  <GxField label="Vai trò" id="tv-vaitro">
+                    <input id="tv-vaitro" type="text" value={vaiTroSua} onChange={(e) => setVaiTroSua(e.target.value)}
                       placeholder="Hội viên" />
-                  </div>
+                  </GxField>
                 </div>
                 <div className="cmdbar">
                   <button type="button" className="btn btn-danger" disabled={dangLuuTV} onClick={() => { void xoaThanhVien() }}>

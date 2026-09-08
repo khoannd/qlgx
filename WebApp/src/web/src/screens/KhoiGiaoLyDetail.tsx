@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { api, LoiXungDot } from '../api/client'
 import type { GiaoDanTimKiem, KhoiGiaoLy, LopGiaoLy } from '../api/types'
 import { GxGrid } from '../components/GxGrid'
+import { GxField } from '../components/GxField'
 import { GxPicker } from '../components/GxPicker'
 import { TrangThaiTai } from '../components/TrangThaiTai'
 import { cotLopGiaoLy } from '../cot/cotGiaoLy'
@@ -136,33 +137,30 @@ export function KhoiGiaoLyDetail({ id, onTieuDe, onDaLuu, moLop, moGiaoDanMoiCho
           <h1>{khoi ? khoi.tenKhoi : 'Khối giáo lý mới'}</h1>
         </div>
 
+        {/* Cùng lý do đổi `.form-grid`/`.field` sang `.frow`/`GxField` như `HoiDoanDetail.tsx`
+            (rà thêm theo yêu cầu người dùng 2026-09-08) — xem chú thích dài ở đó. */}
         <div className="card glass" style={{ marginBottom: 12 }}>
-          <div className="form-grid">
-            <div className="field span-2">
-              <label htmlFor="kgl-ten">Tên khối</label>
-              <input id="kgl-ten" value={tenKhoi} onChange={(e) => setTenKhoi(e.target.value)} />
-            </div>
-            <div className="field span-2">
-              <label htmlFor="kgl-nguoiql">Người quản lý</label>
-              <GxPicker
-                id="kgl-nguoiql"
-                value={nguoiQuanLy?.ten}
-                onChon={(gd: GiaoDanTimKiem) => setNguoiQuanLy({ id: gd.id, ten: (gd.tenThanh ? gd.tenThanh + ' ' : '') + gd.hoTen })}
-                onThemMoi={moGiaoDanMoiChoPicker
-                  ? () => moGiaoDanMoiChoPicker((gd) => setNguoiQuanLy({ id: gd.id, ten: (gd.tenThanh ? gd.tenThanh + ' ' : '') + gd.hoTen }))
-                  : undefined}
-                onBoChon={() => setNguoiQuanLy(null)}
-              />
-            </div>
-            <div className="field span-2">
-              <label htmlFor="kgl-ghichu">Ghi chú</label>
-              <input id="kgl-ghichu" value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} />
-            </div>
-          </div>
+          <GxField label="Tên khối" id="kgl-ten">
+            <input id="kgl-ten" type="text" value={tenKhoi} onChange={(e) => setTenKhoi(e.target.value)} />
+          </GxField>
+          <GxField label="Người quản lý" id="kgl-nguoiql">
+            <GxPicker
+              id="kgl-nguoiql"
+              value={nguoiQuanLy?.ten}
+              onChon={(gd: GiaoDanTimKiem) => setNguoiQuanLy({ id: gd.id, ten: (gd.tenThanh ? gd.tenThanh + ' ' : '') + gd.hoTen })}
+              onThemMoi={moGiaoDanMoiChoPicker
+                ? () => moGiaoDanMoiChoPicker((gd) => setNguoiQuanLy({ id: gd.id, ten: (gd.tenThanh ? gd.tenThanh + ' ' : '') + gd.hoTen }))
+                : undefined}
+              onBoChon={() => setNguoiQuanLy(null)}
+            />
+          </GxField>
+          <GxField label="Ghi chú" id="kgl-ghichu">
+            <input id="kgl-ghichu" type="text" value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} />
+          </GxField>
           {loiLuu && <p className="hint" role="alert">{loiLuu}</p>}
           <div className="cmdbar">
             {khoi && (
-              <button type="button" className="btn btn-danger" disabled={dangXoa} onClick={() => setXacNhanXoa(true)}>
+              <button type="button" className="btn" disabled={dangXoa} onClick={() => setXacNhanXoa(true)}>
                 Xóa khối
               </button>
             )}

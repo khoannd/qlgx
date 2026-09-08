@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api, LoiXungDot } from '../api/client'
 import type { GiaoDanTimKiem, RaoHonPhoiDetail as RaoHonPhoiDetailType } from '../api/types'
 import { GxDate } from '../components/GxDate'
+import { GxField, GxInline } from '../components/GxField'
 import { GxPicker } from '../components/GxPicker'
 import { TrangThaiTai } from '../components/TrangThaiTai'
 
@@ -128,64 +129,99 @@ export function RaoHonPhoiDetail({ id, onTieuDe, onDaLuu, moGiaoDanMoiChoPicker 
           <h1>{rao ? (rao.tenRaoHonPhoi || `Đôi rao #${rao.maRaoHonPhoiCu}`) : 'Đôi rao mới'}</h1>
         </div>
 
+        {/* Cùng lý do đổi `.field` (lớp của HÀNG LỌC, `.filters-bar .field` — nhãn co theo chữ,
+            không có cột cố định) sang `.frow`/`GxField` như `HoiDoanDetail.tsx` (rà thêm theo
+            yêu cầu người dùng 2026-09-08) — xem chú thích dài ở đó. Các `<input>` cũng thiếu
+            `type="text"` nên trước đây hiện bằng kiểu mặc định của trình duyệt, không đồng bộ
+            với phần còn lại của ứng dụng. */}
         <div className="card glass" style={{ marginBottom: 12 }}>
-          <div className="field" style={{ marginBottom: 10 }}>
-            <label htmlFor="rhp-ten" style={{ minWidth: 90 }}>Đôi rao</label>
-            <input id="rhp-ten" value={nhap.tenRaoHonPhoi} onChange={(e) => d('tenRaoHonPhoi', e.target.value)} style={{ flex: 1 }} />
-          </div>
+          <GxField label="Đôi rao" id="rhp-ten">
+            <input id="rhp-ten" type="text" value={nhap.tenRaoHonPhoi} onChange={(e) => d('tenRaoHonPhoi', e.target.value)} />
+          </GxField>
 
-          <div className="cols-even" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="cols-even" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 10 }}>
             <fieldset>
               <legend>Người thứ nhất</legend>
-              <div className="field"><label>Giáo dân</label>
-                <GxPicker value={nhap.tenGiaoDan1}
+              <GxField label="Giáo dân" id="rhp-gd1">
+                <GxPicker id="rhp-gd1" value={nhap.tenGiaoDan1}
                   onChon={(gd) => setNhap((n) => ({ ...n, giaoDan1Id: gd.id, tenGiaoDan1: (gd.tenThanh ? gd.tenThanh + ' ' : '') + gd.hoTen }))}
                   onThemMoi={moGiaoDanMoiChoPicker
                     ? () => moGiaoDanMoiChoPicker((gd) => setNhap((n) => ({ ...n, giaoDan1Id: gd.id, tenGiaoDan1: (gd.tenThanh ? gd.tenThanh + ' ' : '') + gd.hoTen })))
                     : undefined}
                   onBoChon={() => setNhap((n) => ({ ...n, giaoDan1Id: null, tenGiaoDan1: '' }))} />
-              </div>
-              <div className="field"><label>Giáo xứ</label><input value={nhap.giaoXu1} onChange={(e) => d('giaoXu1', e.target.value)} /></div>
-              <div className="field"><label>Giáo phận</label><input value={nhap.giaoPhan1} onChange={(e) => d('giaoPhan1', e.target.value)} /></div>
-              <div className="field"><label>Xứ trước</label><input value={nhap.giaoXuTruoc1} onChange={(e) => d('giaoXuTruoc1', e.target.value)} /></div>
-              <div className="field"><label>Giáo phận trước</label><input value={nhap.giaoPhanTruoc1} onChange={(e) => d('giaoPhanTruoc1', e.target.value)} /></div>
-              <div className="field"><label>Ghi chú khác 1</label><input value={nhap.giaoXuNQ1} onChange={(e) => d('giaoXuNQ1', e.target.value)} /></div>
-              <div className="field"><label>Ghi chú khác 1b</label><input value={nhap.giaoPhanNQ1} onChange={(e) => d('giaoPhanNQ1', e.target.value)} /></div>
+              </GxField>
+              <GxField label="Giáo xứ" id="rhp-gx1">
+                <input id="rhp-gx1" type="text" value={nhap.giaoXu1} onChange={(e) => d('giaoXu1', e.target.value)} />
+                <GxInline>Giáo phận</GxInline>
+                <input aria-label="Giáo phận (người thứ nhất)" type="text" value={nhap.giaoPhan1} onChange={(e) => d('giaoPhan1', e.target.value)} />
+              </GxField>
+              <GxField label="Xứ trước" id="rhp-xt1">
+                <input id="rhp-xt1" type="text" value={nhap.giaoXuTruoc1} onChange={(e) => d('giaoXuTruoc1', e.target.value)} />
+                <GxInline>Giáo phận trước</GxInline>
+                <input aria-label="Giáo phận trước (người thứ nhất)" type="text" value={nhap.giaoPhanTruoc1} onChange={(e) => d('giaoPhanTruoc1', e.target.value)} />
+              </GxField>
+              <GxField label="Ghi chú khác 1" id="rhp-gc1a">
+                <input id="rhp-gc1a" type="text" value={nhap.giaoXuNQ1} onChange={(e) => d('giaoXuNQ1', e.target.value)} />
+                <GxInline>Ghi chú khác 1b</GxInline>
+                <input aria-label="Ghi chú khác 1b" type="text" value={nhap.giaoPhanNQ1} onChange={(e) => d('giaoPhanNQ1', e.target.value)} />
+              </GxField>
             </fieldset>
             <fieldset>
               <legend>Người thứ hai</legend>
-              <div className="field"><label>Giáo dân</label>
-                <GxPicker value={nhap.tenGiaoDan2}
+              <GxField label="Giáo dân" id="rhp-gd2">
+                <GxPicker id="rhp-gd2" value={nhap.tenGiaoDan2}
                   onChon={(gd) => setNhap((n) => ({ ...n, giaoDan2Id: gd.id, tenGiaoDan2: (gd.tenThanh ? gd.tenThanh + ' ' : '') + gd.hoTen }))}
                   onThemMoi={moGiaoDanMoiChoPicker
                     ? () => moGiaoDanMoiChoPicker((gd) => setNhap((n) => ({ ...n, giaoDan2Id: gd.id, tenGiaoDan2: (gd.tenThanh ? gd.tenThanh + ' ' : '') + gd.hoTen })))
                     : undefined}
                   onBoChon={() => setNhap((n) => ({ ...n, giaoDan2Id: null, tenGiaoDan2: '' }))} />
-              </div>
-              <div className="field"><label>Giáo xứ</label><input value={nhap.giaoXu2} onChange={(e) => d('giaoXu2', e.target.value)} /></div>
-              <div className="field"><label>Giáo phận</label><input value={nhap.giaoPhan2} onChange={(e) => d('giaoPhan2', e.target.value)} /></div>
-              <div className="field"><label>Xứ trước</label><input value={nhap.giaoXuTruoc2} onChange={(e) => d('giaoXuTruoc2', e.target.value)} /></div>
-              <div className="field"><label>Giáo phận trước</label><input value={nhap.giaoPhanTruoc2} onChange={(e) => d('giaoPhanTruoc2', e.target.value)} /></div>
-              <div className="field"><label>Ghi chú khác 2</label><input value={nhap.giaoXuNQ2} onChange={(e) => d('giaoXuNQ2', e.target.value)} /></div>
-              <div className="field"><label>Ghi chú khác 2b</label><input value={nhap.giaoPhanNQ2} onChange={(e) => d('giaoPhanNQ2', e.target.value)} /></div>
+              </GxField>
+              <GxField label="Giáo xứ" id="rhp-gx2">
+                <input id="rhp-gx2" type="text" value={nhap.giaoXu2} onChange={(e) => d('giaoXu2', e.target.value)} />
+                <GxInline>Giáo phận</GxInline>
+                <input aria-label="Giáo phận (người thứ hai)" type="text" value={nhap.giaoPhan2} onChange={(e) => d('giaoPhan2', e.target.value)} />
+              </GxField>
+              <GxField label="Xứ trước" id="rhp-xt2">
+                <input id="rhp-xt2" type="text" value={nhap.giaoXuTruoc2} onChange={(e) => d('giaoXuTruoc2', e.target.value)} />
+                <GxInline>Giáo phận trước</GxInline>
+                <input aria-label="Giáo phận trước (người thứ hai)" type="text" value={nhap.giaoPhanTruoc2} onChange={(e) => d('giaoPhanTruoc2', e.target.value)} />
+              </GxField>
+              <GxField label="Ghi chú khác 2" id="rhp-gc2a">
+                <input id="rhp-gc2a" type="text" value={nhap.giaoXuNQ2} onChange={(e) => d('giaoXuNQ2', e.target.value)} />
+                <GxInline>Ghi chú khác 2b</GxInline>
+                <input aria-label="Ghi chú khác 2b" type="text" value={nhap.giaoPhanNQ2} onChange={(e) => d('giaoPhanNQ2', e.target.value)} />
+              </GxField>
             </fieldset>
           </div>
 
           <fieldset style={{ marginTop: 12 }}>
             <legend>Rao</legend>
-            <div className="field"><label>Rao lần 1</label><GxDate defaultValue={nhap.ngayRaoLan1} onIsoChange={(v) => d('ngayRaoLan1', v)} /></div>
-            <div className="field"><label>Rao lần 2</label><GxDate defaultValue={nhap.ngayRaoLan2} onIsoChange={(v) => d('ngayRaoLan2', v)} /></div>
-            <div className="field"><label>Rao lần 3</label><GxDate defaultValue={nhap.ngayRaoLan3} onIsoChange={(v) => d('ngayRaoLan3', v)} /></div>
+            <GxField label="Rao lần 1" id="rhp-rao1">
+              <GxDate id="rhp-rao1" defaultValue={nhap.ngayRaoLan1} onIsoChange={(v) => d('ngayRaoLan1', v)} style={{ maxWidth: 170 }} />
+              <GxInline>Rao lần 2</GxInline>
+              <GxDate ariaLabel="Rao lần 2" defaultValue={nhap.ngayRaoLan2} onIsoChange={(v) => d('ngayRaoLan2', v)} style={{ maxWidth: 170 }} />
+              <GxInline>Rao lần 3</GxInline>
+              <GxDate ariaLabel="Rao lần 3" defaultValue={nhap.ngayRaoLan3} onIsoChange={(v) => d('ngayRaoLan3', v)} style={{ maxWidth: 170, marginLeft: 'auto' }} />
+            </GxField>
           </fieldset>
 
           <fieldset style={{ marginTop: 12 }}>
             <legend>Điều tra / Ghi chú</legend>
-            <div className="field"><label>Cha nhận điều tra</label><input value={nhap.linhMucNhan} onChange={(e) => d('linhMucNhan', e.target.value)} /></div>
-            <div className="field"><label>Giáo xứ nhận</label><input value={nhap.giaoXuNhan} onChange={(e) => d('giaoXuNhan', e.target.value)} /></div>
-            <div className="field"><label>Ghi chú</label><input value={nhap.ghiChu} onChange={(e) => d('ghiChu', e.target.value)} style={{ flex: 1 }} /></div>
-            <div className="field"><label>Tạm 1</label><input value={nhap.tam1} onChange={(e) => d('tam1', e.target.value)} /></div>
-            <div className="field"><label>Tạm 2</label><input value={nhap.tam2} onChange={(e) => d('tam2', e.target.value)} /></div>
-            <div className="field"><label>Tạm 3</label><input value={nhap.tam3} onChange={(e) => d('tam3', e.target.value)} /></div>
+            <GxField label="Cha nhận điều tra" id="rhp-linhmuc">
+              <input id="rhp-linhmuc" type="text" value={nhap.linhMucNhan} onChange={(e) => d('linhMucNhan', e.target.value)} />
+              <GxInline>Giáo xứ nhận</GxInline>
+              <input aria-label="Giáo xứ nhận" type="text" value={nhap.giaoXuNhan} onChange={(e) => d('giaoXuNhan', e.target.value)} />
+            </GxField>
+            <GxField label="Ghi chú" id="rhp-ghichu">
+              <input id="rhp-ghichu" type="text" value={nhap.ghiChu} onChange={(e) => d('ghiChu', e.target.value)} />
+            </GxField>
+            <GxField label="Tạm 1" id="rhp-tam1">
+              <input id="rhp-tam1" type="text" value={nhap.tam1} onChange={(e) => d('tam1', e.target.value)} />
+              <GxInline>Tạm 2</GxInline>
+              <input aria-label="Tạm 2" type="text" value={nhap.tam2} onChange={(e) => d('tam2', e.target.value)} />
+              <GxInline>Tạm 3</GxInline>
+              <input aria-label="Tạm 3" type="text" value={nhap.tam3} onChange={(e) => d('tam3', e.target.value)} />
+            </GxField>
           </fieldset>
 
           {loiLuu && <p className="hint" role="alert">{loiLuu}</p>}

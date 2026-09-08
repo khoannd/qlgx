@@ -2,6 +2,7 @@ import { useEffect, useState, type CSSProperties } from 'react'
 import { api, LoiXungDot } from '../api/client'
 import type { GiaoDanTimKiem, GiaoLyVienLop, HocVienLopGiaoLy, LopGiaoLy } from '../api/types'
 import { GxGrid } from '../components/GxGrid'
+import { GxField, GxInline } from '../components/GxField'
 import { GxPicker } from '../components/GxPicker'
 import { TrangThaiTai } from '../components/TrangThaiTai'
 import { cotGiaoLyVien, cotHocVienGiaoLy } from '../cot/cotGiaoLy'
@@ -225,29 +226,28 @@ export function LopGiaoLyDetail({ id, khoiId, namMoi, onTieuDe, onXoaThanhCong, 
           <h1>{lop ? lop.tenLop : 'Lớp giáo lý mới'}</h1>
         </div>
 
+        {/* Cùng lý do đổi `.form-grid`/`.field` sang `.frow`/`GxField` như `HoiDoanDetail.tsx`
+            (rà thêm theo yêu cầu người dùng 2026-09-08 — "các màn hình mới migrate đêm qua"):
+            `.form-grid`/`.field span-2` không có CSS nào định nghĩa, `.field` là lớp của hàng
+            lọc (`.filters-bar .field`) dùng nhầm sang đây, và các `<input>` thiếu `type="text"`
+            nên không khớp style ô nhập chung — xem chú thích dài ở `HoiDoanDetail.tsx`. */}
         <div className="card glass" style={{ marginBottom: 12 }}>
-          <div className="form-grid">
-            <div className="field span-2">
-              <label htmlFor="lgl-ten">Tên lớp</label>
-              <input id="lgl-ten" value={tenLop} onChange={(e) => setTenLop(e.target.value)} />
-            </div>
-            <div className="field">
-              <label htmlFor="lgl-nam">Năm</label>
-              <input id="lgl-nam" type="number" value={nam} onChange={(e) => setNam(e.target.value === '' ? '' : Number(e.target.value))} />
-            </div>
-            <div className="field">
-              <label htmlFor="lgl-phonghoc">Phòng học</label>
-              <input id="lgl-phonghoc" value={phongHoc} onChange={(e) => setPhongHoc(e.target.value)} />
-            </div>
-            <div className="field span-2">
-              <label htmlFor="lgl-ghichu">Ghi chú</label>
-              <input id="lgl-ghichu" value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} />
-            </div>
-          </div>
+          <GxField label="Tên lớp" id="lgl-ten">
+            <input id="lgl-ten" type="text" value={tenLop} onChange={(e) => setTenLop(e.target.value)} />
+          </GxField>
+          <GxField label="Năm" id="lgl-nam">
+            <input id="lgl-nam" type="number" value={nam} onChange={(e) => setNam(e.target.value === '' ? '' : Number(e.target.value))}
+              style={{ maxWidth: 100 }} />
+            <GxInline>Phòng học</GxInline>
+            <input aria-label="Phòng học" id="lgl-phonghoc" type="text" value={phongHoc} onChange={(e) => setPhongHoc(e.target.value)} />
+          </GxField>
+          <GxField label="Ghi chú" id="lgl-ghichu">
+            <input id="lgl-ghichu" type="text" value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} />
+          </GxField>
           {loiLuu && <p className="hint" role="alert">{loiLuu}</p>}
           <div className="cmdbar">
             {lop && (
-              <button type="button" className="btn btn-danger" disabled={dangXoa} onClick={() => setXacNhanXoa(true)}>
+              <button type="button" className="btn" disabled={dangXoa} onClick={() => setXacNhanXoa(true)}>
                 Xóa lớp
               </button>
             )}
@@ -296,21 +296,18 @@ export function LopGiaoLyDetail({ id, khoiId, namMoi, onTieuDe, onXoaThanhCong, 
             {dongChonHV && (
               <div className="card glass" style={{ marginBottom: 12 }}>
                 <b>{(dongChonHV.tenThanh ? dongChonHV.tenThanh + ' ' : '') + dongChonHV.hoTen}</b>
-                <div className="form-grid" style={{ marginTop: 8 }}>
-                  <div className="field">
-                    <label htmlFor="hv-stt">Số thứ tự</label>
-                    <input id="hv-stt" type="number" value={soThuTuSua} onChange={(e) => setSoThuTuSua(e.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 18 }}>
+                <div style={{ marginTop: 8 }}>
+                  <GxField label="Số thứ tự" id="hv-stt">
+                    <input id="hv-stt" type="number" value={soThuTuSua} onChange={(e) => setSoThuTuSua(e.target.value)}
+                      style={{ maxWidth: 100 }} />
+                    <label className="toggle" style={{ marginLeft: 12 }}>
                       <input type="checkbox" checked={hoanThanhSua} onChange={(e) => setHoanThanhSua(e.target.checked)} />
                       Hoàn thành khóa học
                     </label>
-                  </div>
-                  <div className="field span-2">
-                    <label htmlFor="hv-ghichu">Ghi chú</label>
-                    <input id="hv-ghichu" value={ghiChuGLySua} onChange={(e) => setGhiChuGLySua(e.target.value)} />
-                  </div>
+                  </GxField>
+                  <GxField label="Ghi chú" id="hv-ghichu">
+                    <input id="hv-ghichu" type="text" value={ghiChuGLySua} onChange={(e) => setGhiChuGLySua(e.target.value)} />
+                  </GxField>
                 </div>
                 <div className="cmdbar">
                   <button type="button" className="btn btn-danger" disabled={dangLuuHV} onClick={() => { void xoaHocVien() }}>

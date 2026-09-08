@@ -4136,3 +4136,116 @@ Quyết định dừng ở mục 1: đúng tinh thần "làm được đến đ�
 việc nhỏ, kiểm chứng thật, ghi lại rõ ràng, còn hơn làm dở cả sáu việc lớn trong cùng một lượt
 mà không kịp nghiên cứu/kiểm chứng đàng hoàng cho từng việc (đặc biệt mục 4 đụng tới sửa dữ
 liệu hàng loạt — cần cẩn trọng theo đúng bốn nguyên tắc nhiệm vụ yêu cầu, không thể làm vội).
+
+### 68. Task "hai vấn đề giao diện người dùng vừa phát hiện" (2026-09-08) — lỗi ngày làm vỡ bố
+### cục "Thông tin cá nhân", và màn hình Hội đoàn (+ 4 màn hình mới migrate khác) dùng nhầm CSS
+
+**Vấn đề 1 — thông báo lỗi ngày làm co ô "Giới tính", "Nơi sinh"/"Tên Cha"/"Tên Mẹ" cao lệch
+nhau.** Đọc kỹ mới thấy đây là MỘT nguyên nhân gốc rất cụ thể, không phải "cân đối lại cho đẹp":
+
+- `.gx-date-loi` (thông báo lỗi ngày, `GxDate.tsx`) trước đây `display: block` — là phần tử con
+  THỨ HAI trong `.gx-date` (chính nó là `flex-direction: column`). Khi lỗi hiện ra, nó cộng thêm
+  chiều cao vào `.gx-date`; và vì `.gx-date` không có bề rộng cố định, trình duyệt tính
+  "max-content" của khối flex-column này dựa trên câu chữ lỗi CHƯA XUỐNG DÒNG (khá dài — "Ngày
+  không hợp lệ — nhập theo dd/mm/yyyy…"), khiến `.gx-date` đột nhiên đòi một bề rộng rất lớn,
+  tranh chỗ với `<select>` "Giới tính" đứng CÙNG hàng `.frow .val` (hai control này chia sẻ một
+  hàng, xem `GiaoDanDetail.tsx` dòng 826-838). `<select>` có `flex:1; min-width:0` nên bị ép co
+  lại tới mức chỉ còn hiện được mũi tên, mất hẳn chữ "Nam"/"Nữ" — ĐÚNG NHƯ ẢNH người dùng gửi.
+  **Sửa**: `.gx-date-loi` chuyển sang `position: absolute` (định vị theo `.frow .val` — cha gần
+  nhất được thêm `position: relative` — KHÔNG theo `.gx-date` hẹp hơn, để lấy được bề rộng CẢ
+  HÀNG mà wrap chữ), tràn hẳn ra NGOÀI luồng bố cục như người dùng đã chấp nhận trước ("dành sẵn
+  chỗ, hoặc cho nó tràn ra ngoài luồng bố cục — miễn các ô xung quanh giữ nguyên kích thước").
+  Kết quả: `.gx-date`/`.frow .val` không còn cộng thêm chiều cao/chiều rộng nào khi lỗi hiện ra —
+  các ô lân cận GIỮ NGUYÊN kích thước dù lỗi có hiện hay không. Thêm nền trắng/viền/đổ bóng nhẹ
+  cho thông báo để đọc được rõ dù nó đè lên hàng bên dưới trong lúc người dùng gõ dở ngày.
+- `.picker` (`GxPicker`, dùng cho "Tên Cha"/"Tên Mẹ") đo được cao **36px** (padding dọc 5+5, viền
+  1+1, ba nút tròn `.mini` 24px) trong khi ô văn bản thường (`Nơi sinh`, GxGoiY) chỉ **30px**
+  (`min-height:30px` chuẩn của `select, input[type="text"]…`) — lệch 6px, đúng như góp ý "textbox
+  tên cha và nơi sinh chiều cao ko bằng nhau". Giảm đệm dọc `.picker` còn 4px và nút tròn `.mini`
+  còn 20px (20+8+2=30) để bằng đúng 30px như ô văn bản khác — không đổi bo góc/độ đậm chữ đã chốt.
+
+  Đo `getBoundingClientRect()` trên trình duyệt thật (Playwright MCP, `qlgx_thu`, giáo dân "Giuse
+  Nguyễn Đức Mạnh"), TRƯỚC và SAU khi gõ ngày sinh sai "99/99/2020":
+
+  | Ô | Trước lỗi | Sau khi hiện lỗi |
+  |---|---|---|
+  | `#gd-phai` (Giới tính) | x=997 y=267 **w=100 h=30** | x=997 y=267 **w=100 h=30** (không đổi) |
+  | `#gd-noisinh` (Nơi sinh) | x=997 y=303 w=460 **h=30** | không đổi |
+  | `#gd-tencha` (Tên Cha) | x=997 y=339 w=460 **h=30** | không đổi |
+  | `#gd-tenme` (Tên Mẹ) | x=997 y=375 w=460 **h=30** | không đổi |
+  | `.gx-date-loi` | (không tồn tại) | x=997 y=300 w=460 h=39 — đè lên hàng "Nơi sinh", KHÔNG đẩy nó |
+
+  Nơi sinh/Tên Cha/Tên Mẹ nay cao ĐÚNG BẰNG NHAU (30px cả ba, trước đây Tên Cha/Tên Mẹ 36px).
+  Khung ảnh 3x4 vẫn tỉ lệ `0,753` (134,x×178,x không đổi vì các sửa đổi trên không đụng tới số
+  hàng/chiều cao chuẩn của `.canhan-top-fields`) — ảnh `195`/`196` ở `WebApp/anh-chup-kiem-thu/`.
+
+**Vấn đề 2 — màn hình chi tiết Hội đoàn (và 4 màn hình mới migrate khác) dùng CSS sai lớp.**
+Nguyên nhân gốc: `HoiDoanDetail.tsx`, `KhoiGiaoLyDetail.tsx`, `LopGiaoLyDetail.tsx`,
+`DotBiTichDetail.tsx` dùng `<div className="form-grid">`/`<div className="field">`/
+`<div className="field span-2">` cho form chi tiết — nhưng **`.form-grid` và `.span-2` không hề
+có CSS nào định nghĩa** (`grep` trong `qlgx.css` ra rỗng), còn `.field` thực ra là lớp của HÀNG
+LỌC (`.filters-bar .field` — nhãn+ô nằm cùng dòng, nhãn co theo đúng độ dài chữ, KHÔNG có cột
+nhãn cố định) bị dùng nhầm sang một form chi tiết hoàn toàn khác ngữ cảnh. Hệ quả đúng như người
+dùng mô tả: nhãn dài ngắn khác nhau đẩy ô nhập bắt đầu ở vị trí khác nhau ("không thẳng hàng,
+không theo lưới"). Thêm nữa, phần lớn `<input>` trong các form này THIẾU thuộc tính `type="text"`
+nên KHÔNG khớp selector CSS `input[type="text"]` (đòi đúng thuộc tính) — hiện ra bằng kiểu ô nhập
+MẶC ĐỊNH của trình duyệt (không bo góc, không cỡ chữ 12px, viền khác) — đúng "mỗi ô một kiểu".
+`RaoHonPhoiDetail.tsx` không dùng `.form-grid` nhưng cũng dùng nhầm `.field` y hệt, thêm
+`<fieldset>`/`<legend>` chưa từng có CSS nào áp cho (viền/đệm mặc định trình duyệt, lạc phong
+cách kính mờ chung).
+
+Về nút "Xóa hội đoàn" đỏ to nổi bật giữa trang: SO SÁNH với quy ước đã có ở
+`HoiDoanListPage.tsx` (nút "Xóa" của `GxToolbar`, trung tính — chỉ nút XÁC NHẬN cuối trong hộp
+thoại mới tô đỏ), `HoiDoanDetail.tsx`/`KhoiGiaoLyDetail.tsx` lại để nút KHỞI ĐỘNG việc xoá (mở
+hộp thoại xác nhận, chưa xoá gì) tô đỏ `btn-danger` ngay từ đầu — sai đúng quy ước "kín đáo" đã
+dùng nơi khác. Đổi hai nút khởi động này về `.btn` trung tính, giữ nguyên luồng xác nhận hai bước
+(nút xác nhận cuối trong hộp thoại `role="alertdialog"` vẫn `btn-danger`). Các nút xoá-hàng đơn
+lẻ khác (Xóa khỏi hội đoàn/lớp/danh sách người nhận) đã có `window.confirm` gác trước khi gọi API
+— giữ nguyên `btn-danger` vì bản thân cú click đó ĐÃ LÀ bước xác nhận cuối, không phải nút khởi
+động một hộp thoại riêng.
+
+**Sửa**: chuyển toàn bộ 5 file trên (`HoiDoanDetail.tsx`, `KhoiGiaoLyDetail.tsx`,
+`LopGiaoLyDetail.tsx`, `DotBiTichDetail.tsx`, `RaoHonPhoiDetail.tsx`) sang đúng khuôn
+`GxField`/`.frow` (nhãn trái cố định 132px, ô phải giãn hết bề ngang, thẳng hàng suốt khối) mà
+bốn màn hình chính đang dùng — không phát minh khuôn mới; thêm `type="text"` cho mọi `<input>`
+còn thiếu; thêm CSS cho `fieldset`/`legend` (viền mảnh + bo góc + nhãn nhóm nhỏ, không lồng
+`.card` trong `.card` gây rối) ở `RaoHonPhoiDetail.tsx`. Đo `.picker`/input sau khi sửa ở màn
+hình Hội đoàn (Legio Mariae): `#hd-ten` x=447,6 y=176,3 **w=1022,8 h=30**; `#hd-bonmang` cùng
+x/y-hàng riêng **h=30**; `#hd-ngaybonmang`/`#hd-ngaythanhlap` (GxDate, `maxWidth:170`) **w=138
+h=30**; `#hd-ghichu` **h=30** — tất cả cùng x=447,6 (thẳng hàng lưới) và cùng h=30 (đồng nhất
+với ô văn bản chuẩn). Nút "Xóa hội đoàn" đo được `className="btn"` (không còn `btn-danger`),
+kích thước chuẩn `w=110,8 h=34` — không còn là điểm nổi bật nhất trang.
+
+**Rà thêm các màn hình mới migrate đêm trước** theo đúng yêu cầu — mở thật qua Playwright MCP
+trên `qlgx_thu`, không chỉ đọc mã:
+- **Rao hôn phối** (`RaoHonPhoiDetail.tsx`, "Đôi rao mới") — cùng lỗi `.field`, đã sửa y hệt cách
+  trên; thêm hai fieldset "Người thứ nhất"/"Người thứ hai" giờ có viền/nhãn nhóm rõ ràng, các cặp
+  "Giáo xứ"/"Giáo phận", "Xứ trước"/"Giáo phận trước" ghép GxInline cùng hàng cho gọn. Ảnh `197`.
+- **Giáo lý (khối)** (`KhoiGiaoLyDetail.tsx`, "Khối giáo lý mới") — sửa y hệt, "Tên khối"/"Người
+  quản lý"/"Ghi chú" nay thẳng hàng, nút "Xóa khối" chuyển trung tính. Ảnh `198`.
+- **Giáo lý (lớp)** (`LopGiaoLyDetail.tsx`) — sửa y hệt phần khối chính VÀ phần sửa học viên
+  (Số thứ tự/Hoàn thành khóa học/Ghi chú); nút "Xóa lớp" chuyển trung tính, "Xóa khỏi lớp" giữ
+  nguyên (có `window.confirm` gác).
+- **Sổ bí tích** (`DotBiTichDetail.tsx`, "Rửa tội (đợt mới)") — sửa y hệt phần "Mô tả/Ngày bí
+  tích/Linh mục/Nơi nhận" VÀ phần sửa người nhận (Số rửa tội/Người đỡ đầu/Ghi chú). Ảnh `199`.
+- **Đã xem qua nhưng KHÔNG cần sửa** (đã dùng đúng `.card glass`/`.frow`/`GxField` từ đầu, không
+  có lệch rõ ràng nào so với phong cách chung): giáo họ, giáo xứ, giáo dân/gia đình lưu trữ, thống
+  kê, tìm và thay thế, các công cụ dữ liệu (kiểm tra dữ liệu, chuyển họ hàng loạt, chuẩn hoá dữ
+  liệu, tạo danh sách bí tích tự động) — các màn hình này KHÔNG dùng `.form-grid`/`.field` sai lớp
+  nên không nằm trong phạm vi lỗi đã tìm thấy; không đổi gì thêm ở các màn hình đó lượt này.
+
+**Không đụng tới** (đã chốt trước, không phải trọng tâm lượt này, tránh sửa lan): bố cục hai màn
+hình chi tiết chính (chỉ sửa hai điểm nêu ở Vấn đề 1), header/hàng lọc lưới, gợi ý nhập liệu,
+cảnh báo ngày bất thường, xuất Excel, mẫu in, nút "+" `GxPicker`.
+
+Test: `dotnet test` không đụng (chỉ sửa frontend). `npm test -- --run` vẫn **403** (không thêm
+test riêng — các thay đổi chỉ đổi lớp CSS bao ngoài, không đổi hành vi mà test cũ đã che phủ qua
+`HoiDoanDetail.test.tsx`, hành vi `getByLabelText`/`getByText` vẫn khớp vì `id`/nhãn giữ nguyên).
+`npx tsc --noEmit` và `npm run build` đều sạch. Chạy thật qua Playwright MCP trên `qlgx_thu`,
+đăng nhập `giaoxu`: xác nhận trước/sau bằng cách `git stash push` tạm hai file đã sửa
+(`HoiDoanDetail.tsx`, `qlgx.css`) để chụp ảnh **trước** (`193`), rồi `git stash pop` khôi phục và
+chụp ảnh **sau** (`194`) — đúng cùng một hội đoàn "Legio Mariae", không suy diễn. Ảnh
+`193`-`199` ở `WebApp/anh-chup-kiem-thu/`. Dữ liệu `qlgx_thu` xác nhận đúng nguyên trạng sau khi
+chạy thử (mọi thao tác thử — tạo "Đôi rao mới"/"Khối giáo lý mới"/"Rửa tội (đợt mới)" — đều KHÔNG
+bấm "Cập nhật" nên không ghi gì xuống CSDL): 2050 giáo dân / 40 gia đình / 145 thành viên / 1
+giáo họ / 1108 đợt bí tích / 6150 bí tích chi tiết / 2 hội đoàn / 2 chi tiết hội đoàn / 1 tận hiến.

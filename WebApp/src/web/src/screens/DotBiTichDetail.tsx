@@ -3,6 +3,7 @@ import { api, LoiXungDot } from '../api/client'
 import type { DotBiTichDetail as DotBiTichDetailType, GiaoDanTimKiem, LoaiBiTich, NguoiNhanBiTich } from '../api/types'
 import { GxGrid } from '../components/GxGrid'
 import { GxDate } from '../components/GxDate'
+import { GxField, GxInline } from '../components/GxField'
 import { GxPicker } from '../components/GxPicker'
 import { TrangThaiTai } from '../components/TrangThaiTai'
 import { cotNguoiNhanBiTich } from '../cot/cotNguoiNhanBiTich'
@@ -155,25 +156,21 @@ export function DotBiTichDetail({ id, loaiBiTich, onTieuDe, onDaLuu, moGiaoDanMo
           <h1>{TEN_LOAI[loaiBiTich]} {dot ? `— ${dot.moTa}` : '(đợt mới)'}</h1>
         </div>
 
+        {/* Cùng lý do đổi `.form-grid`/`.field` sang `.frow`/`GxField` như `HoiDoanDetail.tsx`
+            (rà thêm theo yêu cầu người dùng 2026-09-08 — "sổ bí tích" nằm trong danh sách các
+            màn hình mới migrate cần rà) — xem chú thích dài ở đó. */}
         <div className="card glass" style={{ marginBottom: 12 }}>
-          <div className="form-grid">
-            <div className="field span-2">
-              <label htmlFor="dbt-mota">Mô tả</label>
-              <input id="dbt-mota" value={moTa} onChange={(e) => setMoTa(e.target.value)} />
-            </div>
-            <div className="field">
-              <label htmlFor="dbt-ngay">Ngày bí tích</label>
-              <GxDate id="dbt-ngay" defaultValue={ngayBiTich} onIsoChange={setNgayBiTich} />
-            </div>
-            <div className="field">
-              <label htmlFor="dbt-linhmuc">Linh mục</label>
-              <input id="dbt-linhmuc" value={linhMuc} onChange={(e) => setLinhMuc(e.target.value)} />
-            </div>
-            <div className="field span-2">
-              <label htmlFor="dbt-noi">Nơi nhận bí tích</label>
-              <input id="dbt-noi" value={noiBiTich} onChange={(e) => setNoiBiTich(e.target.value)} />
-            </div>
-          </div>
+          <GxField label="Mô tả" id="dbt-mota">
+            <input id="dbt-mota" type="text" value={moTa} onChange={(e) => setMoTa(e.target.value)} />
+          </GxField>
+          <GxField label="Ngày bí tích" id="dbt-ngay">
+            <GxDate id="dbt-ngay" defaultValue={ngayBiTich} onIsoChange={setNgayBiTich} style={{ maxWidth: 170 }} />
+            <GxInline>Linh mục</GxInline>
+            <input aria-label="Linh mục" id="dbt-linhmuc" type="text" value={linhMuc} onChange={(e) => setLinhMuc(e.target.value)} />
+          </GxField>
+          <GxField label="Nơi nhận bí tích" id="dbt-noi">
+            <input id="dbt-noi" type="text" value={noiBiTich} onChange={(e) => setNoiBiTich(e.target.value)} />
+          </GxField>
           {loiLuu && <p className="hint" role="alert">{loiLuu}</p>}
           <div className="cmdbar">
             <div className="spacer" />
@@ -206,21 +203,19 @@ export function DotBiTichDetail({ id, loaiBiTich, onTieuDe, onDaLuu, moGiaoDanMo
             {dongChon && (
               <div className="card glass">
                 <b>{(dongChon.tenThanh ? dongChon.tenThanh + ' ' : '') + dongChon.hoTen}</b>
-                <div className="form-grid" style={{ marginTop: 8 }}>
-                  <div className="field">
-                    <label htmlFor="nn-so">{NHAN_SO[loaiBiTich]}</label>
-                    <input id="nn-so" value={soBiTich} onChange={(e) => setSoBiTich(e.target.value)} />
-                  </div>
-                  {CO_NGUOI_DO_DAU[loaiBiTich] && (
-                    <div className="field">
-                      <label htmlFor="nn-dodau">Người đỡ đầu</label>
-                      <input id="nn-dodau" value={nguoiDoDau} onChange={(e) => setNguoiDoDau(e.target.value)} />
-                    </div>
-                  )}
-                  <div className="field span-2">
-                    <label htmlFor="nn-ghichu">Ghi chú</label>
-                    <input id="nn-ghichu" value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} />
-                  </div>
+                <div style={{ marginTop: 8 }}>
+                  <GxField label={NHAN_SO[loaiBiTich]} id="nn-so">
+                    <input id="nn-so" type="text" value={soBiTich} onChange={(e) => setSoBiTich(e.target.value)} style={{ maxWidth: 150 }} />
+                    {CO_NGUOI_DO_DAU[loaiBiTich] && (
+                      <>
+                        <GxInline>Người đỡ đầu</GxInline>
+                        <input aria-label="Người đỡ đầu" id="nn-dodau" type="text" value={nguoiDoDau} onChange={(e) => setNguoiDoDau(e.target.value)} />
+                      </>
+                    )}
+                  </GxField>
+                  <GxField label="Ghi chú" id="nn-ghichu">
+                    <input id="nn-ghichu" type="text" value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} />
+                  </GxField>
                 </div>
                 <div className="cmdbar">
                   <button type="button" className="btn btn-danger" disabled={dangLuuNguoiNhan} onClick={() => { void xoaNguoiNhan() }}>
