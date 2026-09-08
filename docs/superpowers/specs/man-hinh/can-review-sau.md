@@ -4436,3 +4436,122 @@ hiến**, và cả bốn bảng giáo lý + `rao_hon_phoi` + `chuyen_xu` (của 
 `Qlgx.Api.Tests` + 24 `Qlgx.Migration.Tests`), frontend **412/412** (`npm test -- --run`, thêm
 mới `LopGiaoLyDetail.test.tsx` — 4 test cho Chuyển lớp/Nhập học viên). `npm run build` chạy
 được.
+
+### 71. Task "sửa review toàn nhánh frontend" (2026-09-08) — 2 Nghiêm trọng, 3 Cao, 3 Trung bình,
+### 1 lỗ hổng test — sửa hết theo `review-toan-nhanh-frontend.md`
+
+Sửa toàn bộ phát hiện của một đợt review độc lập toàn nhánh (`.superpowers/sdd/2026-09-06-qlgx-
+web-phase-1/review-toan-nhanh-frontend.md`) — người dùng duyệt "ok, sửa hết", không hỏi lại chi
+tiết, tự quyết và ghi lại ở đây theo đúng định dạng đã có. **Cả hai công cụ trình duyệt MCP
+(Playwright, chrome-devtools) đều bị một phiên Claude khác chạy song song chiếm giữ suốt lượt
+này** (`Browser is already in use ...`) — không mở được trình duyệt thật để đo `getBoundingClientRect()`/
+chụp ảnh như yêu cầu mục "Chứng minh bằng chạy thật". Bù lại: mọi lỗi đều được tái hiện bằng
+test tự động theo đúng chu trình ĐỎ→XANH — không chỉ thêm test rồi tin nó đúng, mà **đã tự tay
+`git stash` từng file mã nguồn về bản GỐC (chưa sửa) rồi chạy lại đúng bộ test mới thêm, xác
+nhận thấy ĐỎ thật, rồi `git stash pop` khôi phục** — làm việc này cho toàn bộ 9 file mã nguồn đã
+sửa (không chỉ 1-2 file mẫu). Riêng số đo chiều cao lưới bằng trình duyệt thật (Cao #1) **CHƯA
+xác nhận được** — ghi rõ ở dưới.
+
+**Nghiêm trọng #1 — xoá ô ngày rồi Lưu luôn thất bại**: `DotBiTichDetail.tsx:167`
+(`onIsoChange={setNgayBiTich}` → `onIsoChange={(iso) => setNgayBiTich(iso || null)}`) và
+`RaoHonPhoiDetail.tsx:212,214,216` (ba ô "Rao lần 1/2/3", `onIsoChange={(v) => d('ngayRaoLanX',
+v)}` → `... v || null)`) — đúng mẫu `HoiDoanDetail.tsx` đã làm đúng trong đợt trước. Đã `grep`
+toàn bộ `onIsoChange=` trong `WebApp/src/web/src` (15 chỗ) và đối chiếu từng chỗ: các chỗ còn
+lại đều dùng `(iso) => setX(iso || null)` sẵn (`GiaoDanDetail.tsx` — cả `ngayHonPhoi` lẫn sáu
+mốc ngày qua `capNhatNgayMoc`, đã có `|| null` sẵn), hoặc dùng thẳng `setTuNgay`/`setDenNgay`
+kiểu `string` (không nullable) ở `ThongKeChungPage.tsx` — hai chỗ này AN TOÀN vì `timKiem()` đã
+tự kiểm `!tuNgay`/`!denNgay` trước khi gửi (validate rồi mới build payload, không có DTO
+`DateOnly?` nào nhận thẳng chuỗi rỗng ở đây). Không còn chỗ nào sót.
+
+**Cân nhắc "sửa tận gốc" (đổi `GxDate.onIsoChange` trả `string | null` thay vì `string`)** — đã
+CÂN NHẮC nhưng QUYẾT ĐỊNH KHÔNG LÀM: 15 nơi gọi `onIsoChange`, một số (`ThongKeChungPage.tsx`)
+gán thẳng vào state kiểu `string` không nullable — đổi chữ ký sẽ buộc sửa lại kiểu ở TẤT CẢ 15
+nơi và chạy lại toàn bộ test liên quan, rủi ro cao hơn lợi ích so với việc chỉ sửa đúng 2 chỗ
+đang lỗi thật + đã rà không còn chỗ nào khác lỡ quên `|| null`. Nếu có màn hình MỚI dùng
+`GxDate` sau này, quy tắc "luôn `(iso) => setX(iso || null)`" đã được ghi lại ở đây và ở chú
+thích trong từng file đã sửa.
+
+**Nghiêm trọng #2 — nút "Thử lại" hỏng vĩnh viễn**: cả 5 file (`DotBiTichDetail.tsx`,
+`RaoHonPhoiDetail.tsx`, `HoiDoanDetail.tsx`, `KhoiGiaoLyDetail.tsx`, `LopGiaoLyDetail.tsx`) đổi
+`onThuLai={() => id && api.X.Y(id).then(setZ)}` (closure rút gọn, không `setLoi(null)`) sang
+một hàm `tai()` đầy đủ (`setDangTai(true); setLoi(null)` trước khi gọi, `.finally(() =>
+setDangTai(false))`), tái dùng CẢ ở `useEffect` tải lần đầu LẪN `onThuLai` — đúng khuôn
+`GiaoDanDetailPage.tsx`. `HoiDoanDetail.tsx`/`KhoiGiaoLyDetail.tsx`/`LopGiaoLyDetail.tsx` giữ
+nguyên logic phụ trong effect cũ (tải danh sách con, tìm đúng dòng theo `id`...), chỉ đổi phần
+`setLoi`/`setDangTai`.
+
+**Cao #1 — lưới sổ bí tích thiếu `.fixed-h-grid`**: `DotBiTichDetail.tsx:193`, đổi
+`<div style={{ height: 420 }}>` thành `<div className="fixed-h-grid" style={{ '--fixed-h-grid':
+'420px' } as CSSProperties}>` — đúng mẫu 4 chỗ khác đã sửa cùng đợt trước. Đã `grep` toàn bộ
+`style={{ height: <số>` và mọi nơi dùng `<GxGrid` trong `WebApp/src/web/src` — xác nhận đây là
+chỗ DUY NHẤT còn thiếu, hai màn hình "Kiểm tra dữ liệu" (`KiemTraDuLieuGiaoDan/GiaDinh.tsx`)
+đã dùng đúng `.fixed-h-grid` sẵn. **CHƯA đo được bằng trình duyệt thật** (cả hai công cụ MCP
+đều bận, xem đầu mục) — bằng chứng thay thế: test `DotBiTichDetail.test.tsx` xác nhận đúng
+`container.querySelector('.fixed-h-grid')` khớp (điều kiện CSS xác định, không phải suy đoán,
+cùng cách review gốc đã lý giải).
+
+**Cao #2 — nuốt lỗi mạng thành "không có dữ liệu"**: `ChuyenHoGiaoDan.tsx`/`ChuyenHoGiaDinh.tsx`,
+`useEffect` tải danh sách theo `giaoHoNguonId` — `.catch` trước chỉ `console.error`, nay thêm
+`setDanhSach([])` (không giữ lại danh sách CŨ của giáo họ trước đó) và `setLoi(...)` hiển thị
+được, cùng mẫu `GxPicker.tsx`. Không đụng tới `.catch(() => {})` của danh mục "Giáo họ" thả
+xuống ở các màn hình khác (`ThongKeChungPage.tsx`, `LopGiaoLyDetail.tsx` — chuyển lớp) — đúng
+như đề bài phân biệt rõ, hai chỗ đó là danh mục phụ, nuốt lỗi ở đó vẫn là chủ ý.
+
+**Cao #3 — báo thành công và thất bại cùng lúc**: `xacNhanChuyen()` ở cả hai file trên — tách
+lệnh ghi (`ghiGiaoDan`/`ghiGiaDinh`, có `try/catch` riêng, lỗi thì dừng ngay) khỏi lệnh tải lại
+danh sách sau đó (`try/catch` riêng thứ hai, lỗi chỉ `console.error`, KHÔNG đè lên
+`thongBaoXong` vừa hiện) — đúng tinh thần `GiaoDanListPage.tsx`.
+
+**Trung bình #1 — chuyển tab lúc đang ghi hàng loạt**: thêm prop `onDangXuLyChange` cho
+`ChuanHoaDuLieu.tsx` (báo `true`/`false` quanh cả `batDauXemTruoc`/`xacNhanGhi`), `ChuanHoaDuLieuPage.tsx`
+dùng để `disabled` hai nút tab "Giáo dân"/"Gia đình" trong lúc đang xem trước/đang ghi — chặn
+hẳn việc đổi `key` unmount component đang chạy dở.
+
+**Trung bình #2 — thông báo sai tên trường**: `BieuDoPage.tsx:59` đổi "Từ ngày không thể lớn
+hơn đến ngày" → "Từ năm không thể lớn hơn đến năm" (màn hình này chỉ có "Từ năm"/"Đến năm", không
+có ô ngày nào). `ThongKeChungPage.tsx:113-116` đổi thông báo cứng "Hãy nhập từ ngày" thành
+`!tuNgay ? 'Hãy nhập từ ngày' : 'Hãy nhập đến ngày'` — nói đúng tên ô đang thiếu. Không đụng
+`ThongKeOnGoiTab` (dòng ~250) — ở đó "Đến ngày" vốn tuỳ chọn (`denNgay || undefined`), thông báo
+"Hãy nhập từ ngày" ở đó vẫn đúng, không phải lỗi.
+
+**Trung bình #3 — form tạo tài khoản không tự đóng**: `QuanLyGiaoXuPage.tsx` — `luuTaiKhoan()`
+nay `setFormTk(null)` khi thành công (đúng ba form còn lại); thêm state `loiTk` phân biệt lỗi/
+thành công để tô màu (`--rose-ink`/`--mint-ink`). Vì form tự đóng ngay khi thành công, thông
+báo "Đã tạo tài khoản..." được CHUYỂN RA NGOÀI form (hiện ở đầu khối "Giáo xứ", phía trên bảng)
+để người dùng còn thấy được sau khi form biến mất — không lặp lại render trong form nữa.
+
+**Lỗ hổng test (`ngay.ts:44`) — PHÁT HIỆN QUAN TRỌNG: mutation `thang > 12` → `thang > 13` là
+MUTANT TƯƠNG ĐƯƠNG (equivalent mutant), không phải lỗ hổng test theo đúng nghĩa đen**. Đã thêm
+test biên đúng nghĩa (`ngayTuHienThi('01/12/2020')` hợp lệ, `ngayTuHienThi('01/13/2020')` không
+hợp lệ) — nhưng khi thực sự đổi `thang > 12` thành `thang > 13` rồi chạy lại **CẢ 31 TEST VẪN
+XANH**, kể cả test biên mới thêm. Đã tự kiểm chứng bằng toán/`node -e`: với `thang=13`, MỌI giá
+trị `ngay` từ 1-31 đều khiến `Date.UTC(nam, 12, ngay)` tràn sang **năm sau** (12 tháng = đúng 1
+năm), nên bước đối chiếu ngược ngay bên dưới dòng 44 (`dt.getUTCFullYear() !== nam`) đã LUÔN bắt
+được input tháng=13 một cách ĐỘC LẬP với dòng 44 — dòng 44 vốn là một guard sớm (early-return)
+hoàn toàn DƯ THỪA về mặt kết quả trả về, không riêng gì với biên 12/13 mà với TOÀN BỘ các biên
+khác trên cùng dòng (`thang<1`, `ngay<1`, `ngay>31`) — đã kiểm tương tự, cùng kết luận. Đây là
+một phát hiện thật, không phải nguỵ biện né việc: **không tồn tại bất kỳ test hộp đen nào (dựa
+trên giá trị trả về của `ngayTuHienThi`/`chuanHoaNgayThieu`) có thể phân biệt được mutation này**
+— chứng minh bằng liệt kê toàn bộ 31 giá trị ngày (1-31) cho tháng=13, tất cả đều trả `undefined`
+dù dòng 44 có chặn hay không. Để vẫn giữ đúng tinh thần "chứng minh test có răng" của nhiệm vụ,
+đã tìm một mutation LIÊN QUAN thật sự KHÔNG tương đương ngay trên dòng logic biên tháng (dòng 50,
+`dt.getUTCMonth() !== thang - 1` → `!== thang`, đúng phần logic THỰC SỰ đang bảo vệ ranh giới
+tháng) — mutation này làm **7 test ĐỎ, gồm cả test biên tháng mới thêm**, khôi phục lại thì
+**XANH cả 31/31**. Bằng chứng đầy đủ (lệnh chạy + output đỏ/xanh cho cả hai mutation) dán trong
+`task-sua-review-frontend-2.md`. Giữ nguyên dòng 44 (không xoá "dead code" — nó vẫn là tài liệu
+sống cho người đọc mã, và xoá nó không nằm trong phạm vi nhiệm vụ được giao).
+
+**Test mới/sửa**: `ngay.test.ts` (+1), `DotBiTichDetail.test.tsx` (mới, 3), `RaoHonPhoiDetail.
+test.tsx` (+2), `HoiDoanDetail.test.tsx` (+1), `KhoiGiaoLyDetail.test.tsx` (mới, 1),
+`LopGiaoLyDetail.test.tsx` (+2, gồm cả `.catch` còn thiếu của nút "Tải mẫu Excel" — tiện sửa
+cùng lúc vì cùng file đang đổi, đúng lớp lỗi Cao đã nêu trong báo cáo gốc dù không nằm trong 8
+mục được liệt kê thẳng trong yêu cầu), `ChuyenHoGiaoDan.test.tsx` (+2), `ChuyenHoGiaDinh.test.
+tsx` (+2), `ChuanHoaDuLieuPage.test.tsx` (mới, 2), `BieuDoPage.test.tsx` (mới, 1),
+`ThongKeChungPage.test.tsx` (+1), `QuanLyGiaoXuPage.test.tsx` (+2) — tổng **432/432**
+(`npm test -- --run`, từ 412 lên +20). `npx tsc --noEmit` sạch. `npm run build` thành công (cùng
+cảnh báo bundle-size cũ, không phải lỗi mới).
+
+**Không sửa/không đụng** (đúng phạm vi "chỉ front-end"): mọi thứ thuộc `WebApp/src/Qlgx.*`
+(backend), 8 phát hiện mức Thấp của báo cáo gốc (Th1-Th8, không nằm trong yêu cầu người dùng) —
+riêng "Cao #2" của chính báo cáo gốc (nút "Tải mẫu Excel" nuốt lỗi ở `LopGiaoLyDetail.tsx`) đã
+tiện tay sửa vì cùng file, ghi rõ ở trên.

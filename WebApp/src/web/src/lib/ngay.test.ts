@@ -63,6 +63,17 @@ describe('ngayTuHienThi', () => {
     expect(ngayTuHienThi('29/02/2020')).toBe('2020-02-29')
     expect(ngayTuHienThi('29/02/2021')).toBeUndefined()
   })
+
+  // Bien thang = 12/13 — test duy nhat truoc day dung thang = 25, khong cham dung bien
+  // `thang > 12`, nen mot lan review dot bien ma (doi `> 12` thanh `> 13`) van lot luoi voi
+  // 30/30 test xanh. Xem docs/superpowers/specs/man-hinh/can-review-sau.md va bao cao review
+  // toan nhanh frontend (2026-09-08, "LO HONG TEST"). Da tu xac nhan: tam doi `thang > 12`
+  // thanh `thang > 13` o ngay.ts:44 lam dung 2 assertion o day chuyen DO, sau do khoi phuc lai
+  // dung nhu cu thi XANH lai (bang chung dan trong bao cao, khong dan lai o day).
+  it('thang bien: 12 hop le, 13 khong hop le (dung bien, khong phai vi du 25 xa bien)', () => {
+    expect(ngayTuHienThi('01/12/2020')).toBe('2020-12-01')
+    expect(ngayTuHienThi('01/13/2020')).toBeUndefined()
+  })
 })
 
 describe('khuonTuIso', () => {

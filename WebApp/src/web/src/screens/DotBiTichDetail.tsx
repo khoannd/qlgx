@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { api, LoiXungDot } from '../api/client'
 import type { DotBiTichDetail as DotBiTichDetailType, GiaoDanTimKiem, LoaiBiTich, NguoiNhanBiTich } from '../api/types'
 import { GxGrid } from '../components/GxGrid'
@@ -49,12 +49,16 @@ export function DotBiTichDetail({ id, loaiBiTich, onTieuDe, onDaLuu, moGiaoDanMo
   const [dangLuuNguoiNhan, setDangLuuNguoiNhan] = useState(false)
   const [loiNguoiNhan, setLoiNguoiNhan] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!id) {
-      onTieuDe?.(`Đợt bí tích mới — ${TEN_LOAI[loaiBiTich]}`)
-      return
-    }
+  // Tái sử dụng ở cả tải lần đầu (effect) lẫn nút "Thử lại" của `TrangThaiTai` — trước đây nút
+  // "Thử lại" gọi thẳng một closure rút gọn (`api.dotBiTich.chiTiet(id).then(setDot)`) không hề
+  // `setLoi(null)`/`setDangTai(true)`, nên dù tải lại thành công màn hình vẫn đứng yên ở nhánh
+  // lỗi của `TrangThaiTai` (nó render theo `loi`, không phải theo dữ liệu đã có) — xem
+  // can-review-sau.md, rà lại theo yêu cầu người dùng 2026-09-08 (review toàn nhánh, "Nghiêm
+  // trọng #2"). Khuôn đúng lấy từ `GiaoDanDetailPage.tsx`.
+  function tai() {
+    if (!id) return
     setDangTai(true)
+    setLoi(null)
     api.dotBiTich.chiTiet(id)
       .then((d) => {
         setDot(d)
@@ -66,7 +70,16 @@ export function DotBiTichDetail({ id, loaiBiTich, onTieuDe, onDaLuu, moGiaoDanMo
       })
       .catch((e: unknown) => setLoi(e instanceof Error ? e.message : String(e)))
       .finally(() => setDangTai(false))
-  }, [id, loaiBiTich, onTieuDe])
+  }
+
+  useEffect(() => {
+    if (!id) {
+      onTieuDe?.(`Đợt bí tích mới — ${TEN_LOAI[loaiBiTich]}`)
+      return
+    }
+    tai()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, loaiBiTich])
 
   function chonDong(d: NguoiNhanBiTich | null) {
     setDongChon(d)
@@ -150,7 +163,7 @@ export function DotBiTichDetail({ id, loaiBiTich, onTieuDe, onDaLuu, moGiaoDanMo
   }
 
   return (
-    <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={() => id && api.dotBiTich.chiTiet(id).then(setDot)}>
+    <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={tai}>
       <section className="page" style={{ overflowY: 'auto', display: 'block' }}>
         <div className="page-head">
           <h1>{TEN_LOAI[loaiBiTich]} {dot ? `— ${dot.moTa}` : '(đợt mới)'}</h1>
@@ -164,7 +177,7 @@ export function DotBiTichDetail({ id, loaiBiTich, onTieuDe, onDaLuu, moGiaoDanMo
             <input id="dbt-mota" type="text" value={moTa} onChange={(e) => setMoTa(e.target.value)} />
           </GxField>
           <GxField label="Ngày bí tích" id="dbt-ngay">
-            <GxDate id="dbt-ngay" defaultValue={ngayBiTich} onIsoChange={setNgayBiTich} style={{ maxWidth: 170 }} />
+            <GxDate id="dbt-ngay" defaultValue={ngayBiTich} onIsoChange={(iso) => setNgayBiTich(iso || null)} style={{ maxWidth: 170 }} />
             <GxInline>Linh mục</GxInline>
             <input aria-label="Linh mục" id="dbt-linhmuc" type="text" value={linhMuc} onChange={(e) => setLinhMuc(e.target.value)} />
           </GxField>
@@ -190,7 +203,14 @@ export function DotBiTichDetail({ id, loaiBiTich, onTieuDe, onDaLuu, moGiaoDanMo
                   onThemMoi={moGiaoDanMoiChoPicker ? () => moGiaoDanMoiChoPicker((gd) => { void themNguoiNhan(gd) }) : undefined} />
               </div>
               {loiNguoiNhan && <p className="hint" role="alert">{loiNguoiNhan}</p>}
-              <div style={{ height: 420 }}>
+              {/* `.fixed-h-grid` (qlgx.css) — KHÔNG dùng inline `style={{ height }}` đơn thuần
+                  trên div bọc: gây "table-card cao ~3px, ẩn hết dòng dữ liệu" trong trang
+                  cuộn-cả-trang (`section.page` ở đây khai `display:'block'`, kéo `.card` con
+                  cũng thành block) — đúng lớp lỗi đã phát hiện và sửa ở Hội đoàn/Giáo lý khối/
+                  lớp cùng đợt commit này nhưng bị sót lại đúng ở đây, nơi PHÁT HIỆN RA lớp lỗi
+                  này lần đầu — rà lại theo yêu cầu người dùng 2026-09-08 (review toàn nhánh,
+                  "Cao #1"). Xem chú thích dài trong qlgx.css. */}
+              <div className="fixed-h-grid" style={{ '--fixed-h-grid': '420px' } as CSSProperties}>
                 <GxGrid<NguoiNhanBiTich>
                   columnDefs={cotNguoiNhanBiTich(NHAN_SO[loaiBiTich], CO_NGUOI_DO_DAU[loaiBiTich])}
                   rowData={dot.nguoiNhan}

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { HoiDoanDetail } from './HoiDoanDetail'
 import { api } from '../api/client'
@@ -96,5 +96,23 @@ describe('HoiDoanDetail', () => {
     fireEvent.click(await screen.findByText('Xóa khỏi hội đoàn'))
 
     await vi.waitFor(() => expect(api.hoiDoanQuanLy.xoaThanhVien).toHaveBeenCalledWith('tv1'))
+  })
+
+  it('tai loi, bam Thu lai va lan sau thanh cong thi THOAT khoi man hinh loi (Nghiem trong #2)', async () => {
+    vi.mocked(api.hoiDoanQuanLy.danhSach)
+      .mockRejectedValueOnce(new Error('Mất kết nối mạng'))
+      .mockResolvedValueOnce([hoiDoan()])
+    vi.mocked(api.hoiDoanQuanLy.thanhVien).mockResolvedValue([])
+
+    render(<HoiDoanDetail id="hd1" />)
+
+    expect(await screen.findByText(/Không tải được dữ liệu/)).toBeDefined()
+    fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }))
+
+    // TRƯỚC KHI SỬA: `onThuLai` gọi thẳng một closure rút gọn không hề `setLoi(null)` — màn
+    // hình đứng yên ở nhánh lỗi dù lần gọi lại thành công (xem review toàn nhánh 2026-09-08
+    // "Nghiêm trọng #2"). Assertion dưới RED nếu quay lại closure cũ.
+    await waitFor(() => expect(screen.queryByText(/Không tải được dữ liệu/)).toBeNull())
+    expect(await screen.findByText('Legio Mariae')).toBeDefined()
   })
 })

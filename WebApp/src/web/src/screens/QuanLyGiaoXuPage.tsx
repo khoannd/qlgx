@@ -42,6 +42,12 @@ export function QuanLyGiaoXuPage() {
   const [dangLuu, setDangLuu] = useState(false)
   const [thongBao, setThongBao] = useState<string | null>(null)
   const [thongBaoTk, setThongBaoTk] = useState<string | null>(null)
+  // Phân biệt lỗi/thành công của `thongBaoTk` — khác ba form còn lại (đóng ngay khi lưu xong nên
+  // không cần giữ lại thông báo), form "Tạo tài khoản quản trị" GIỮ LẠI thông báo sau khi đóng
+  // form (để còn thấy đúng tên tài khoản vừa tạo — có mật khẩu, không tiện hiện lại), nên cần
+  // biết đang hiện lỗi hay thành công để tô đúng màu (rà lại theo yêu cầu người dùng 2026-09-08,
+  // review toàn nhánh "Trung bình #3").
+  const [loiTk, setLoiTk] = useState(false)
 
   function tai() {
     setDangTai(true)
@@ -101,16 +107,21 @@ export function QuanLyGiaoXuPage() {
   async function luuTaiKhoan(e: FormEvent) {
     e.preventDefault()
     if (!formTk) return
-    setDangLuu(true); setThongBaoTk(null)
+    setDangLuu(true); setThongBaoTk(null); setLoiTk(false)
     try {
       await api.quanTri.giaoXu.taoTaiKhoan(formTk.giaoXuId, {
         tenTaiKhoan: formTk.tenTaiKhoan.trim(), matKhau: formTk.matKhau,
         hoTenNguoiDung: formTk.hoTenNguoiDung.trim(),
         email: formTk.email.trim() || null, soDienThoai: formTk.soDienThoai.trim() || null,
       })
+      // Khác trước đây: TỰ ĐÓNG form khi thành công, giống ba form còn lại (Giáo phận/Giáo hạt/
+      // Giáo xứ) — trước đây form này không `setFormTk(null)`, người dùng dễ tưởng chưa xong và
+      // bấm "Tạo tài khoản" lần hai. Giữ lại `thongBaoTk` (đổi sang render NGOÀI form, xem JSX)
+      // vì đây là xác nhận có giá trị (tên tài khoản vừa tạo) đáng thấy sau khi form đã đóng.
       setThongBaoTk(`Đã tạo tài khoản "${formTk.tenTaiKhoan.trim()}" cho giáo xứ "${formTk.tenGiaoXu}".`)
+      setFormTk(null)
       tai()
-    } catch (err) { setThongBaoTk(err instanceof Error ? err.message : String(err)) }
+    } catch (err) { setLoiTk(true); setThongBaoTk(err instanceof Error ? err.message : String(err)) }
     finally { setDangLuu(false) }
   }
 
@@ -209,6 +220,17 @@ export function QuanLyGiaoXuPage() {
               + Thêm giáo xứ
             </button>
           </div>
+          {/* Hiện NGOÀI form "Tạo tài khoản quản trị" (khác `thongBao` của ba form còn lại, chỉ
+              hiện TRONG form) — vì form đó nay tự đóng ngay khi thành công (xem `luuTaiKhoan`),
+              cần giữ lại đúng tên tài khoản vừa tạo cho người dùng thấy sau khi form đã biến
+              mất. Tô màu theo `loiTk` — trước đây không phân biệt màu lỗi/thành công, cả hai
+              cùng một kiểu chữ thường, dễ đọc nhầm khi thấy chữ (rà lại theo yêu cầu người dùng
+              2026-09-08, review toàn nhánh "Trung bình #3"). */}
+          {thongBaoTk && (
+            <p role={loiTk ? 'alert' : undefined} style={{ margin: 0, fontSize: 12.5, color: loiTk ? 'var(--rose-ink)' : 'var(--mint-ink)' }}>
+              {thongBaoTk}
+            </p>
+          )}
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead><tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(14,32,76,.13)' }}>
               <th>Giáo hạt</th><th>Tên giáo xứ</th><th>Địa chỉ</th><th>Số tài khoản</th><th /></tr></thead>
@@ -221,7 +243,7 @@ export function QuanLyGiaoXuPage() {
                   <td>{x.soTaiKhoan}</td>
                   <td>
                     <button type="button" onClick={() => { setThongBao(null); setFormXu({ id: x.id, giaoHatId: x.giaoHatId ?? '', tenGiaoXu: x.tenGiaoXu, diaChi: x.diaChi ?? '', dienThoai: x.dienThoai ?? '', email: x.email ?? '', website: x.website ?? '', ghiChu: x.ghiChu ?? '' }) }}>Sửa</button>{' '}
-                    <button type="button" onClick={() => { setThongBaoTk(null); setFormTk({ giaoXuId: x.id, tenGiaoXu: x.tenGiaoXu, tenTaiKhoan: '', matKhau: '', hoTenNguoiDung: '', email: '', soDienThoai: '' }) }}>Tạo tài khoản quản trị</button>
+                    <button type="button" onClick={() => { setThongBaoTk(null); setLoiTk(false); setFormTk({ giaoXuId: x.id, tenGiaoXu: x.tenGiaoXu, tenTaiKhoan: '', matKhau: '', hoTenNguoiDung: '', email: '', soDienThoai: '' }) }}>Tạo tài khoản quản trị</button>
                   </td>
                 </tr>
               ))}
@@ -267,7 +289,8 @@ export function QuanLyGiaoXuPage() {
                 <input type="text" value={formTk.email} onChange={(e) => setFormTk({ ...formTk, email: e.target.value })} /></label>
               <label className="field" style={oFieldCot}>Số điện thoại
                 <input type="text" value={formTk.soDienThoai} onChange={(e) => setFormTk({ ...formTk, soDienThoai: e.target.value })} /></label>
-              {thongBaoTk && <div style={{ fontSize: 12.5 }}>{thongBaoTk}</div>}
+              {/* Thông báo hiện Ở NGOÀI form (trên bảng "Giáo xứ", xem trên) — không lặp lại ở
+                  đây, vì form này TỰ ĐÓNG ngay khi thành công (mất luôn chỗ hiện trong form). */}
               <div style={{ display: 'flex', gap: 8 }}>
                 <button type="submit" className="btn" disabled={dangLuu}>{dangLuu ? 'Đang tạo…' : 'Tạo tài khoản'}</button>
                 <button type="button" onClick={() => setFormTk(null)} disabled={dangLuu}>Đóng</button>

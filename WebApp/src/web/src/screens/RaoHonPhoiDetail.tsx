@@ -65,12 +65,14 @@ export function RaoHonPhoiDetail({ id, onTieuDe, onDaLuu, moGiaoDanMoiChoPicker 
   const [dangLuu, setDangLuu] = useState(false)
   const [loiLuu, setLoiLuu] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!id) {
-      onTieuDe?.('Đôi rao mới')
-      return
-    }
+  // Tái sử dụng ở cả tải lần đầu (effect) lẫn nút "Thử lại" của `TrangThaiTai` — trước đây nút
+  // "Thử lại" gọi thẳng một closure rút gọn không hề `setLoi(null)`/`setDangTai(true)`, nên dù
+  // tải lại thành công màn hình vẫn đứng yên ở nhánh lỗi (rà lại theo yêu cầu người dùng
+  // 2026-09-08, review toàn nhánh "Nghiêm trọng #2"). Khuôn đúng lấy từ `GiaoDanDetailPage.tsx`.
+  function tai() {
+    if (!id) return
     setDangTai(true)
+    setLoi(null)
     api.raoHonPhoi.chiTiet(id)
       .then((d) => {
         setRao(d)
@@ -79,7 +81,16 @@ export function RaoHonPhoiDetail({ id, onTieuDe, onDaLuu, moGiaoDanMoiChoPicker 
       })
       .catch((e: unknown) => setLoi(e instanceof Error ? e.message : String(e)))
       .finally(() => setDangTai(false))
-  }, [id, onTieuDe])
+  }
+
+  useEffect(() => {
+    if (!id) {
+      onTieuDe?.('Đôi rao mới')
+      return
+    }
+    tai()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
 
   function d<K extends keyof Nhap>(k: K, v: Nhap[K]) { setNhap((n) => ({ ...n, [k]: v })) }
 
@@ -135,7 +146,7 @@ export function RaoHonPhoiDetail({ id, onTieuDe, onDaLuu, moGiaoDanMoiChoPicker 
   }
 
   return (
-    <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={() => id && api.raoHonPhoi.chiTiet(id).then(setRao)}>
+    <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={tai}>
       <section className="page" style={{ overflowY: 'auto', display: 'block' }}>
         <div className="page-head">
           <h1>{rao ? (rao.tenRaoHonPhoi || `Đôi rao #${rao.maRaoHonPhoiCu}`) : 'Đôi rao mới'}</h1>
@@ -209,11 +220,11 @@ export function RaoHonPhoiDetail({ id, onTieuDe, onDaLuu, moGiaoDanMoiChoPicker 
           <fieldset style={{ marginTop: 12 }}>
             <legend>Rao</legend>
             <GxField label="Rao lần 1" id="rhp-rao1">
-              <GxDate id="rhp-rao1" defaultValue={nhap.ngayRaoLan1} onIsoChange={(v) => d('ngayRaoLan1', v)} style={{ maxWidth: 170 }} />
+              <GxDate id="rhp-rao1" defaultValue={nhap.ngayRaoLan1} onIsoChange={(v) => d('ngayRaoLan1', v || null)} style={{ maxWidth: 170 }} />
               <GxInline>Rao lần 2</GxInline>
-              <GxDate ariaLabel="Rao lần 2" defaultValue={nhap.ngayRaoLan2} onIsoChange={(v) => d('ngayRaoLan2', v)} style={{ maxWidth: 170 }} />
+              <GxDate ariaLabel="Rao lần 2" defaultValue={nhap.ngayRaoLan2} onIsoChange={(v) => d('ngayRaoLan2', v || null)} style={{ maxWidth: 170 }} />
               <GxInline>Rao lần 3</GxInline>
-              <GxDate ariaLabel="Rao lần 3" defaultValue={nhap.ngayRaoLan3} onIsoChange={(v) => d('ngayRaoLan3', v)} style={{ maxWidth: 170, marginLeft: 'auto' }} />
+              <GxDate ariaLabel="Rao lần 3" defaultValue={nhap.ngayRaoLan3} onIsoChange={(v) => d('ngayRaoLan3', v || null)} style={{ maxWidth: 170, marginLeft: 'auto' }} />
             </GxField>
           </fieldset>
 

@@ -67,4 +67,45 @@ describe('QuanLyGiaoXuPage', () => {
       email: null, soDienThoai: null,
     }))
   })
+
+  it('tao tai khoan thanh cong thi TU DONG DONG form va hien thong bao mau xanh (Trung binh #3)', async () => {
+    moDanhSach()
+    vi.mocked(api.quanTri.giaoXu.taoTaiKhoan).mockResolvedValue({ id: 'tk1' })
+
+    render(<QuanLyGiaoXuPage />)
+    await screen.findByText('Vô Nhiễm')
+    fireEvent.click(screen.getByText('Tạo tài khoản quản trị'))
+    fireEvent.change(screen.getByLabelText('Họ tên người dùng'), { target: { value: 'Văn phòng Xứ Mới' } })
+    fireEvent.change(screen.getByLabelText('Tên đăng nhập'), { target: { value: 'xumoi' } })
+    fireEvent.change(screen.getByLabelText('Mật khẩu'), { target: { value: 'MatKhauManh123' } })
+    fireEvent.click(screen.getByText('Tạo tài khoản'))
+
+    await vi.waitFor(() => expect(api.quanTri.giaoXu.taoTaiKhoan).toHaveBeenCalled())
+
+    // TRƯỚC KHI SỬA: khác ba form còn lại (Giáo phận/Giáo hạt/Giáo xứ), form "Tạo tài khoản
+    // quản trị" không `setFormTk(null)` sau khi thành công — người dùng dễ tưởng chưa xong và
+    // bấm lại lần hai (xem review toàn nhánh 2026-09-08 "Trung bình #3"). Assertion dưới RED
+    // nếu form không tự đóng.
+    await vi.waitFor(() => expect(screen.queryByLabelText('Mật khẩu')).toBeNull())
+    const thongBao = await screen.findByText(/Đã tạo tài khoản "xumoi"/)
+    expect(thongBao.getAttribute('style')).toContain('mint-ink')
+  })
+
+  it('tao tai khoan that bai thi GIU form mo va hien loi mau do', async () => {
+    moDanhSach()
+    vi.mocked(api.quanTri.giaoXu.taoTaiKhoan).mockRejectedValue(new Error('Tên đăng nhập đã tồn tại'))
+
+    render(<QuanLyGiaoXuPage />)
+    await screen.findByText('Vô Nhiễm')
+    fireEvent.click(screen.getByText('Tạo tài khoản quản trị'))
+    fireEvent.change(screen.getByLabelText('Họ tên người dùng'), { target: { value: 'Văn phòng Xứ Mới' } })
+    fireEvent.change(screen.getByLabelText('Tên đăng nhập'), { target: { value: 'trung' } })
+    fireEvent.change(screen.getByLabelText('Mật khẩu'), { target: { value: 'MatKhauManh123' } })
+    fireEvent.click(screen.getByText('Tạo tài khoản'))
+
+    const thongBao = await screen.findByText('Tên đăng nhập đã tồn tại')
+    expect(thongBao.getAttribute('style')).toContain('rose-ink')
+    // Lỗi thì form PHẢI còn mở để người dùng sửa lại, khác nhánh thành công.
+    expect(screen.getByLabelText('Mật khẩu')).toBeDefined()
+  })
 })

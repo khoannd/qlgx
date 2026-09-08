@@ -56,7 +56,11 @@ export function BieuDoPage() {
         return
       }
       if (tu > den) {
-        setLoi('Từ ngày không thể lớn hơn đến ngày')
+        // Trước đây chép nguyên câu từ `ThongKeChungPage.tsx` ("Từ ngày...đến ngày") mà quên đổi
+        // tên trường — hai ô trên màn hình này tên là "Từ năm"/"Đến năm" (không phải ô ngày thật,
+        // xem chú thích ở đầu file), thông báo cũ nói sai tên khiến người dùng khó hiểu cần sửa ô
+        // nào (rà lại theo yêu cầu người dùng 2026-09-08, review toàn nhánh "Trung bình #2").
+        setLoi('Từ năm không thể lớn hơn đến năm')
         return
       }
     }

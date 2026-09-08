@@ -111,7 +111,10 @@ function ThongKeChungTab() {
       return
     }
     if (!laTuoi && !laKhongLocNgay && (!tuNgay || !denNgay)) {
-      setLoi('Hãy nhập từ ngày')
+      // Trước đây luôn nói "Hãy nhập từ ngày" dù ô thiếu thực sự có thể là "Đến ngày" — xoá
+      // trống đúng ô "Đến ngày" thì thông báo vẫn nói sai tên ô cần sửa (rà lại theo yêu cầu
+      // người dùng 2026-09-08, review toàn nhánh "Trung bình #2").
+      setLoi(!tuNgay ? 'Hãy nhập từ ngày' : 'Hãy nhập đến ngày')
       return
     }
     if (!laTuoi && !laKhongLocNgay && tuNgay > denNgay) {

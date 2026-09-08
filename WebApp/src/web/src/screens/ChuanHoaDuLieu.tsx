@@ -6,6 +6,13 @@ type Props = {
   moTaXacNhan: string
   goiXemTruoc: () => Promise<ChuanHoaXemTruoc>
   goiGhiThat: () => Promise<{ soBanGhiDaDoi: number }>
+  /** Báo cho nơi gọi biết đang xem trước/đang ghi hàng loạt — `ChuanHoaDuLieuPage` dùng để KHOÁ
+   * hai nút chuyển tab "Giáo dân"/"Gia đình" trong lúc này. Trước đây không có cơ chế này: bấm
+   * sang tab kia lúc lệnh ghi (có thể tới cả nghìn bản ghi) đang chạy → `key` đổi → component
+   * bị unmount → `setThongBaoXong(...)` gọi trên component đã gỡ, im lặng không hiện gì dù việc
+   * ghi đã xong ở máy chủ — người dùng tưởng thất bại rồi chạy lại (rà lại theo yêu cầu người
+   * dùng 2026-09-08, review toàn nhánh "Trung bình #1"). */
+  onDangXuLyChange?: (dang: boolean) => void
 }
 
 /**
@@ -14,7 +21,7 @@ type Props = {
  * bước "Xem trước" bắt buộc trước, hộp xác nhận nêu con số cụ thể, ghi thật trong MỘT
  * transaction phía máy chủ (xem ChuanHoaDuLieuService) — cùng khuôn với ChuyenHoGiaoDan/GiaDinh.
  */
-export function ChuanHoaDuLieu({ nhan, moTaXacNhan, goiXemTruoc, goiGhiThat }: Props) {
+export function ChuanHoaDuLieu({ nhan, moTaXacNhan, goiXemTruoc, goiGhiThat, onDangXuLyChange }: Props) {
   const [xemTruoc, setXemTruoc] = useState<ChuanHoaXemTruoc | null>(null)
   const [dangXemTruoc, setDangXemTruoc] = useState(false)
   const [dangGhi, setDangGhi] = useState(false)
@@ -22,18 +29,18 @@ export function ChuanHoaDuLieu({ nhan, moTaXacNhan, goiXemTruoc, goiGhiThat }: P
   const [thongBaoXong, setThongBaoXong] = useState<string | null>(null)
 
   async function batDauXemTruoc() {
-    setLoi(null); setThongBaoXong(null); setDangXemTruoc(true)
+    setLoi(null); setThongBaoXong(null); setDangXemTruoc(true); onDangXuLyChange?.(true)
     try {
       setXemTruoc(await goiXemTruoc())
     } catch (e) {
       setLoi(e instanceof Error ? e.message : 'Không xem trước được, thử lại sau.')
     } finally {
-      setDangXemTruoc(false)
+      setDangXemTruoc(false); onDangXuLyChange?.(false)
     }
   }
 
   async function xacNhanGhi() {
-    setDangGhi(true); setLoi(null)
+    setDangGhi(true); setLoi(null); onDangXuLyChange?.(true)
     try {
       const kq = await goiGhiThat()
       setThongBaoXong(`Đã chuẩn hoá xong! ${kq.soBanGhiDaDoi} bản ghi đã được đổi.`)
@@ -41,7 +48,7 @@ export function ChuanHoaDuLieu({ nhan, moTaXacNhan, goiXemTruoc, goiGhiThat }: P
     } catch (e) {
       setLoi(e instanceof Error ? e.message : 'Chuẩn hoá thất bại, thử lại sau.')
     } finally {
-      setDangGhi(false)
+      setDangGhi(false); onDangXuLyChange?.(false)
     }
   }
 

@@ -53,12 +53,14 @@ export function KhoiGiaoLyDetail({ id, onTieuDe, onDaLuu, moLop, moGiaoDanMoiCho
       .catch((e: unknown) => setLoiLop(e instanceof Error ? e.message : String(e)))
   }
 
-  useEffect(() => {
-    if (!id) {
-      onTieuDe?.('Khối giáo lý mới')
-      return
-    }
+  // Tái sử dụng ở cả tải lần đầu (effect) lẫn nút "Thử lại" của `TrangThaiTai` — trước đây nút
+  // "Thử lại" gọi thẳng một closure rút gọn không hề `setLoi(null)`/`setDangTai(true)`, nên dù
+  // tải lại thành công màn hình vẫn đứng yên ở nhánh lỗi (rà lại theo yêu cầu người dùng
+  // 2026-09-08, review toàn nhánh "Nghiêm trọng #2"). Khuôn đúng lấy từ `GiaoDanDetailPage.tsx`.
+  function tai() {
+    if (!id) return
     setDangTai(true)
+    setLoi(null)
     api.giaoLy.khoi()
       .then((ds) => {
         const dong = ds.find((k) => k.id === id)
@@ -72,6 +74,14 @@ export function KhoiGiaoLyDetail({ id, onTieuDe, onDaLuu, moLop, moGiaoDanMoiCho
       })
       .catch((e: unknown) => setLoi(e instanceof Error ? e.message : String(e)))
       .finally(() => setDangTai(false))
+  }
+
+  useEffect(() => {
+    if (!id) {
+      onTieuDe?.('Khối giáo lý mới')
+      return
+    }
+    tai()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
@@ -131,7 +141,7 @@ export function KhoiGiaoLyDetail({ id, onTieuDe, onDaLuu, moLop, moGiaoDanMoiCho
   }
 
   return (
-    <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={() => id && api.giaoLy.khoi().then((ds) => setKhoi(ds.find((k) => k.id === id) ?? null))}>
+    <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={tai}>
       <section className="page" style={{ overflowY: 'auto', display: 'block' }}>
         <div className="page-head">
           <h1>{khoi ? khoi.tenKhoi : 'Khối giáo lý mới'}</h1>

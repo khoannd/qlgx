@@ -10,14 +10,22 @@ import { ChuanHoaDuLieu } from './ChuanHoaDuLieu'
  */
 export function ChuanHoaDuLieuPage() {
   const [tab, setTab] = useState<'giaoDan' | 'giaDinh'>('giaoDan')
+  // Khoá hai nút chuyển tab trong lúc tab con đang xem trước/đang ghi hàng loạt — đổi `tab` đổi
+  // luôn `key` của `ChuanHoaDuLieu` bên dưới nên chuyển tab giữa chừng sẽ UNMOUNT component đang
+  // chạy dở, làm mất luôn thông báo "Đã chuẩn hoá xong" dù việc ghi đã thành công ở máy chủ (rà
+  // lại theo yêu cầu người dùng 2026-09-08, review toàn nhánh "Trung bình #1"). Xem
+  // `ChuanHoaDuLieu.tsx` (`onDangXuLyChange`).
+  const [dangXuLy, setDangXuLy] = useState(false)
 
   return (
     <div>
       <div className="filters-bar glass" style={{ gap: 8, marginBottom: 12 }}>
-        <button type="button" className={tab === 'giaoDan' ? 'btn btn-primary' : 'btn'} onClick={() => setTab('giaoDan')}>
+        <button type="button" className={tab === 'giaoDan' ? 'btn btn-primary' : 'btn'} disabled={dangXuLy}
+          onClick={() => setTab('giaoDan')}>
           Giáo dân
         </button>
-        <button type="button" className={tab === 'giaDinh' ? 'btn btn-primary' : 'btn'} onClick={() => setTab('giaDinh')}>
+        <button type="button" className={tab === 'giaDinh' ? 'btn btn-primary' : 'btn'} disabled={dangXuLy}
+          onClick={() => setTab('giaDinh')}>
           Gia đình
         </button>
       </div>
@@ -28,6 +36,7 @@ export function ChuanHoaDuLieuPage() {
           moTaXacNhan="Bạn có chắc muốn thực hiện việc chuẩn hoá dữ liệu giáo dân không?"
           goiXemTruoc={api.chuanHoaDuLieu.xemTruocGiaoDan}
           goiGhiThat={api.chuanHoaDuLieu.ghiGiaoDan}
+          onDangXuLyChange={setDangXuLy}
         />
       ) : (
         <ChuanHoaDuLieu
@@ -36,6 +45,7 @@ export function ChuanHoaDuLieuPage() {
           moTaXacNhan="Bạn có chắc muốn thực hiện việc chuẩn hoá dữ liệu gia đình không?"
           goiXemTruoc={api.chuanHoaDuLieu.xemTruocGiaDinh}
           goiGhiThat={api.chuanHoaDuLieu.ghiGiaDinh}
+          onDangXuLyChange={setDangXuLy}
         />
       )}
     </div>

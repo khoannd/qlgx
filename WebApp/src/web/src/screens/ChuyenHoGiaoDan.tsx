@@ -30,9 +30,20 @@ export function ChuyenHoGiaoDan({ danhMucGiaoHo }: Props) {
     setDaChon(new Set())
     setXemTruoc(null)
     setThongBaoXong(null)
+    setLoi(null)
     api.giaoDan.danhSach(giaoHoNguonId || undefined)
       .then(setDanhSach)
-      .catch((e: unknown) => { console.error('Không tải được danh sách giáo dân', e) })
+      .catch((e: unknown) => {
+        // Trước đây chỉ `console.error` — nuốt lỗi mạng thành "Không có giáo dân nào" (bảng
+        // rỗng, danh sách CŨ của giáo họ trước đó vẫn còn hiện, không có dấu hiệu gì báo lỗi).
+        // Đúng lớp lỗi đã sửa ở `GxPicker.tsx` (chú thích ở đó: nhân viên tưởng người đó chưa
+        // có trong hệ thống rồi tạo bản ghi trùng) — rà lại theo yêu cầu người dùng 2026-09-08
+        // (review toàn nhánh, "Cao #2"). `setDanhSach([])` để không giữ lại danh sách CŨ của
+        // giáo họ nguồn trước đó (dễ hiểu nhầm là dữ liệu đúng của giáo họ đang lọc).
+        console.error('Không tải được danh sách giáo dân', e)
+        setDanhSach([])
+        setLoi(e instanceof Error ? e.message : 'Không tải được danh sách giáo dân, thử lại sau.')
+      })
       .finally(() => setDangTai(false))
   }, [giaoHoNguonId])
 
@@ -86,17 +97,33 @@ export function ChuyenHoGiaoDan({ danhMucGiaoHo }: Props) {
     if (!xemTruoc) return
     setDangGhi(true)
     setLoi(null)
+    // QUAN TRỌNG: lệnh GHI (đã thực sự đổi dữ liệu ở máy chủ) và lệnh TẢI LẠI danh sách sau đó
+    // PHẢI ở hai `try` riêng — trước đây gộp chung một `try` nên nếu `ghiGiaoDan` thành công
+    // (đã đổi giáo họ xong) nhưng mạng đứt đúng lúc gọi lại `danhSach(...)`, lỗi rơi vào cùng
+    // một `catch` khiến `loiLuu`("Chuyển họ thất bại...") và `thongBaoXong`("Đã chuyển...")
+    // hiện ĐỒNG THỜI — người dùng tưởng thao tác thất bại, dễ chuyển lại lần nữa những bản ghi
+    // ĐÃ chuyển xong (rà lại theo yêu cầu người dùng 2026-09-08, review toàn nhánh "Cao #3").
+    // Khuôn đúng lấy từ `GiaoDanListPage.tsx`.
+    let kq
     try {
-      const kq = await api.chuyenHo.ghiGiaoDan([...daChon], giaoHoDichId)
-      setThongBaoXong(`Đã chuyển ${kq.soLuongDaChuyen} giáo dân sang giáo họ "${xemTruoc.tenGiaoHoDich}".`)
-      setXemTruoc(null)
-      setDaChon(new Set())
+      kq = await api.chuyenHo.ghiGiaoDan([...daChon], giaoHoDichId)
+    } catch (e) {
+      setLoi(e instanceof Error ? e.message : 'Chuyển họ thất bại, thử lại sau.')
+      setDangGhi(false)
+      return
+    }
+    setThongBaoXong(`Đã chuyển ${kq.soLuongDaChuyen} giáo dân sang giáo họ "${xemTruoc.tenGiaoHoDich}".`)
+    setXemTruoc(null)
+    setDaChon(new Set())
+    setDangGhi(false)
+    try {
       const ds = await api.giaoDan.danhSach(giaoHoNguonId || undefined)
       setDanhSach(ds)
     } catch (e) {
-      setLoi(e instanceof Error ? e.message : 'Chuyển họ thất bại, thử lại sau.')
-    } finally {
-      setDangGhi(false)
+      // Chuyển họ đã THÀNH CÔNG ở máy chủ — chỉ việc tải lại danh sách sau đó lỗi, không phải
+      // lỗi của thao tác chuyển. Không đè lên `thongBaoXong` vừa hiện ở trên; ghi log để còn
+      // tra khi cần, người dùng có thể tự làm mới trang nếu muốn thấy danh sách cập nhật ngay.
+      console.error('Không tải lại được danh sách sau khi chuyển họ (đã chuyển thành công)', e)
     }
   }
 

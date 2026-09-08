@@ -61,12 +61,15 @@ export function HoiDoanDetail({ id, onTieuDe, onDaLuu, moGiaoDanMoiChoPicker }: 
       .catch((e: unknown) => setLoiTV(e instanceof Error ? e.message : String(e)))
   }
 
-  useEffect(() => {
-    if (!id) {
-      onTieuDe?.('Hội đoàn mới')
-      return
-    }
+  // Tái sử dụng ở cả tải lần đầu (effect) lẫn nút "Thử lại" của `TrangThaiTai` — trước đây nút
+  // "Thử lại" gọi thẳng một closure rút gọn (`api.hoiDoanQuanLy.danhSach().then(...)`) không hề
+  // `setLoi(null)`/`setDangTai(true)`, nên dù tải lại thành công màn hình vẫn đứng yên ở nhánh
+  // lỗi của `TrangThaiTai` (rà lại theo yêu cầu người dùng 2026-09-08, review toàn nhánh
+  // "Nghiêm trọng #2"). Khuôn đúng lấy từ `GiaoDanDetailPage.tsx`.
+  function tai() {
+    if (!id) return
     setDangTai(true)
+    setLoi(null)
     api.hoiDoanQuanLy.danhSach()
       .then((ds) => {
         const dong = ds.find((h) => h.id === id)
@@ -82,6 +85,14 @@ export function HoiDoanDetail({ id, onTieuDe, onDaLuu, moGiaoDanMoiChoPicker }: 
       })
       .catch((e: unknown) => setLoi(e instanceof Error ? e.message : String(e)))
       .finally(() => setDangTai(false))
+  }
+
+  useEffect(() => {
+    if (!id) {
+      onTieuDe?.('Hội đoàn mới')
+      return
+    }
+    tai()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
@@ -205,7 +216,7 @@ export function HoiDoanDetail({ id, onTieuDe, onDaLuu, moGiaoDanMoiChoPicker }: 
   }
 
   return (
-    <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={() => id && api.hoiDoanQuanLy.danhSach().then((ds) => setHd(ds.find((h) => h.id === id) ?? null))}>
+    <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={tai}>
       <section className="page" style={{ overflowY: 'auto', display: 'block' }}>
         <div className="page-head">
           <h1>{hd ? hd.tenHoiDoan : 'Hội đoàn mới'}</h1>

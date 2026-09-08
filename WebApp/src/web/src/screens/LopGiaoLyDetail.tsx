@@ -95,12 +95,14 @@ export function LopGiaoLyDetail({ id, khoiId, namMoi, onTieuDe, onXoaThanhCong, 
       .catch((e: unknown) => setLoiGLV(e instanceof Error ? e.message : String(e)))
   }
 
-  useEffect(() => {
-    if (!id) {
-      onTieuDe?.('Lớp giáo lý mới')
-      return
-    }
+  // Tái sử dụng ở cả tải lần đầu (effect) lẫn nút "Thử lại" của `TrangThaiTai` — trước đây nút
+  // "Thử lại" gọi thẳng một closure rút gọn không hề `setLoi(null)`/`setDangTai(true)`, nên dù
+  // tải lại thành công màn hình vẫn đứng yên ở nhánh lỗi (rà lại theo yêu cầu người dùng
+  // 2026-09-08, review toàn nhánh "Nghiêm trọng #2"). Khuôn đúng lấy từ `GiaoDanDetailPage.tsx`.
+  function tai() {
+    if (!id) return
     setDangTai(true)
+    setLoi(null)
     api.giaoLy.lop(khoiId, null)
       .then((ds) => {
         const dong = ds.find((l) => l.id === id)
@@ -116,6 +118,14 @@ export function LopGiaoLyDetail({ id, khoiId, namMoi, onTieuDe, onXoaThanhCong, 
       })
       .catch((e: unknown) => setLoi(e instanceof Error ? e.message : String(e)))
       .finally(() => setDangTai(false))
+  }
+
+  useEffect(() => {
+    if (!id) {
+      onTieuDe?.('Lớp giáo lý mới')
+      return
+    }
+    tai()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, khoiId])
 
@@ -345,7 +355,7 @@ export function LopGiaoLyDetail({ id, khoiId, namMoi, onTieuDe, onXoaThanhCong, 
   }
 
   return (
-    <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={() => id && api.giaoLy.lop(khoiId, null).then((ds) => setLop(ds.find((l) => l.id === id) ?? null))}>
+    <TrangThaiTai dangTai={dangTai} loi={loi} onThuLai={tai}>
       <section className="page" style={{ overflowY: 'auto', display: 'block' }}>
         <div className="page-head">
           <h1>{lop ? lop.tenLop : 'Lớp giáo lý mới'}</h1>
@@ -518,7 +528,12 @@ export function LopGiaoLyDetail({ id, khoiId, namMoi, onTieuDe, onXoaThanhCong, 
                   Cột bắt buộc: Họ tên, Phái, Ngày sinh (dd/MM/yyyy). Cột tuỳ chọn: Mã GD, Tên
                   thánh, Giáo họ, Ghi chú, Đã học xong.{' '}
                   <button type="button" className="btn" style={{ padding: '2px 8px', fontSize: 12.5 }}
-                    onClick={() => { void api.giaoLy.mauExcelNhapHocVien() }}>
+                    onClick={() => {
+                      void api.giaoLy.mauExcelNhapHocVien().catch((e: unknown) => {
+                        console.error('Không tải được mẫu Excel nhập học viên', e)
+                        window.alert(e instanceof Error ? e.message : 'Tải mẫu thất bại, thử lại sau.')
+                      })
+                    }}>
                     Tải mẫu Excel
                   </button>
                 </p>

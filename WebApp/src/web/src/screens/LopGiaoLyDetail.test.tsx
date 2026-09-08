@@ -148,3 +148,46 @@ describe('LopGiaoLyDetail — Nhập học viên hàng loạt', () => {
     expect(api.giaoLy.nhapHocVien).not.toHaveBeenCalled()
   })
 })
+
+describe('LopGiaoLyDetail — nut "Thu lai" khi tai loi (Nghiem trong #2)', () => {
+  it('tai loi, bam Thu lai va lan sau thanh cong thi THOAT khoi man hinh loi', async () => {
+    vi.mocked(api.giaoLy.lop)
+      .mockRejectedValueOnce(new Error('Mất kết nối mạng'))
+      .mockResolvedValueOnce([lop])
+    vi.mocked(api.giaoLy.hocVien).mockResolvedValue([])
+    vi.mocked(api.giaoLy.giaoLyVien).mockResolvedValue([])
+
+    render(<LopGiaoLyDetail id="lop1" khoiId="khoi1" />)
+
+    expect(await screen.findByText(/Không tải được dữ liệu/)).toBeDefined()
+    fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }))
+
+    // TRƯỚC KHI SỬA: `onThuLai` gọi thẳng một closure rút gọn không hề `setLoi(null)` — màn
+    // hình đứng yên ở nhánh lỗi dù lần gọi lại thành công (xem review toàn nhánh 2026-09-08
+    // "Nghiêm trọng #2"). Assertion dưới RED nếu quay lại closure cũ.
+    await waitFor(() => expect(screen.queryByText(/Không tải được dữ liệu/)).toBeNull())
+    expect(await screen.findByText('Lớp Rước lễ A')).toBeDefined()
+  })
+})
+
+describe('LopGiaoLyDetail — "Tải mẫu Excel" khong nuot loi (Cao — bo sung, cung file dang sua)', () => {
+  it('loi mang khi tai mau thi bao alert, khong im lang', async () => {
+    taiCoBan()
+    const loiMang = new Error('Mất kết nối mạng, thử lại sau.')
+    vi.mocked(api.giaoLy.mauExcelNhapHocVien).mockRejectedValue(loiMang)
+    const spyAlert = vi.spyOn(window, 'alert').mockImplementation(() => {})
+
+    render(<LopGiaoLyDetail id="lop1" khoiId="khoi1" />)
+    await screen.findByText('Trần Văn An')
+    fireEvent.click(screen.getByRole('button', { name: 'Nhập học viên' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tải mẫu Excel' }))
+
+    // TRƯỚC KHI SỬA: `onClick={() => { void api.giaoLy.mauExcelNhapHocVien() }}` không có
+    // `.catch` nào — lỗi mạng/máy chủ rơi vào unhandled promise rejection, không alert, không
+    // dòng `hint`, người dùng tưởng bấm trượt (xem review toàn nhánh 2026-09-08 "Cao #2" của
+    // báo cáo review-toan-nhanh-frontend.md, gộp sửa cùng lúc vì cùng file). Assertion dưới RED
+    // nếu quay lại `void ...()` trần không `.catch`.
+    await waitFor(() => expect(spyAlert).toHaveBeenCalledWith(loiMang.message))
+    spyAlert.mockRestore()
+  })
+})

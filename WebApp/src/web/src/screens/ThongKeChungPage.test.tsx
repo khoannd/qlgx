@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ThongKeChungPage } from './ThongKeChungPage'
 import { api } from '../api/client'
@@ -77,5 +77,35 @@ describe('ThongKeChungPage', () => {
     expect(await screen.findByText('GD A')).toBeDefined()
     expect(api.thongKe.chung).toHaveBeenCalledWith(
       expect.objectContaining({ dieuKien: 'TongSoGiaDinh', tuNgay: undefined, denNgay: undefined }))
+  })
+
+  it('xoa trang o "Den ngay" (con "Tu ngay" van co) thi bao dung ten o thieu (Trung binh #2)', async () => {
+    vi.mocked(api.giaoHo.danhMuc).mockResolvedValue([])
+
+    const { container } = render(<ThongKeChungPage />)
+    await screen.findByLabelText('Điều kiện')
+    // `<label>Đến ngày</label>` ở tab "Thống kê chung" KHÔNG gắn `htmlFor`/bọc trực tiếp ô nhập
+    // (`GxDate` dựng ra một cấu trúc `<span>` lồng nhau, không đơn giản là một `<input>` ngay
+    // dưới `<label>`) nên `getByLabelText` không khớp được — lấy trực tiếp ô ngày THỨ HAI
+    // ("Đến ngày" đứng sau "Từ ngày") trong panel tab đang active (không bị `hidden`).
+    const panelDangChon = container.querySelector('.form-body-panel:not([hidden])')!
+    const oNgay = panelDangChon.querySelectorAll<HTMLInputElement>('.gx-date input[type="text"]')
+    const denNgay = oNgay[1]!
+    // Điều kiện mặc định "Sinh ra" đã điền sẵn Từ ngày/Đến ngày của năm hiện tại — xoá trắng
+    // đúng ô "Đến ngày" bằng Backspace liên tục, giữ nguyên "Từ ngày".
+    denNgay.focus()
+    denNgay.setSelectionRange(10, 10)
+    for (let i = 0; i < 10; i++) fireEvent.keyDown(denNgay, { key: 'Backspace' })
+    expect(denNgay.value).toBe('__/__/____')
+
+    fireEvent.click(screen.getAllByText('Tìm kiếm')[0])
+
+    // TRƯỚC KHI SỬA: thông báo luôn nói "Hãy nhập từ ngày" bất kể ô nào thực sự bị thiếu — ở
+    // đây "Từ ngày" vẫn còn giá trị, chỉ "Đến ngày" bị xoá, thông báo cũ nói sai tên ô cần sửa
+    // (xem review toàn nhánh 2026-09-08 "Trung bình #2"). Assertion dưới RED nếu quay lại thông
+    // báo cứng "Hãy nhập từ ngày".
+    await waitFor(() => expect(screen.queryByText('Hãy nhập đến ngày')).not.toBeNull())
+    expect(screen.queryByText('Hãy nhập từ ngày')).toBeNull()
+    expect(api.thongKe.chung).not.toHaveBeenCalled()
   })
 })
