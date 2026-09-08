@@ -2,7 +2,7 @@ import type {
   GiaDinhDetail, GiaDinhListItem, GiaoDanDetail, GiaoDanListItem, GiaoDanTimKiem, GiaoHo,
   HoiDoanCuaGiaoDan, HoiDoanDanhMuc, HoiDoanQuanLy, ThanhVienHoiDoan, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
   TaiKhoanItem, DangNhapKetQua, GiaoXuLuaChon, SucKhoe,
-  GiaoPhan, GiaoHatQuanLy, GiaoXuQuanLy, BaoCaoXemTruoc, TrangThaiNhapDuLieu,
+  GiaoPhan, GiaoHatQuanLy, GiaoXuQuanLy, GiaoXuHienTai, BaoCaoXemTruoc, TrangThaiNhapDuLieu,
   DotBiTichListItem, DotBiTichDetail, LoaiBiTich, RaoHonPhoiListItem, RaoHonPhoiDetail,
   KhoiGiaoLy, LopGiaoLy, HocVienLopGiaoLy, GiaoLyVienLop,
   DieuKienThongKe, TrangThaiHonPhoiThongKe, ThongKeChungKetQua, ThongKeOnGoiKetQua,
@@ -537,6 +537,16 @@ export const api = {
     capNhat: (id: string, than: unknown) =>
       goi<void>(`/api/tai-khoan/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
     xoa: (id: string) => goi<void>(`/api/tai-khoan/${id}`, { method: 'DELETE' }),
+  },
+  /** Màn hình "Giáo xứ" — văn phòng giáo xứ tự sửa thông tin xứ mình (thay `frmGiaoXu.cs`,
+   * xem docs/superpowers/specs/man-hinh/giao-xu.md). KHÔNG nhận GiaoXuId — máy chủ luôn tự lấy
+   * từ claim đăng nhập, khác hẳn `quanTri.giaoXu` (xuyên toàn máy chủ, chỉ Quản trị hệ thống). */
+  giaoXu: {
+    layThongTin: () => goi<GiaoXuHienTai>('/api/giao-xu'),
+    capNhat: (than: {
+      tenGiaoXu: string; diaChi: string | null
+      dienThoai: string | null; email: string | null; website: string | null; ghiChu: string | null
+    }) => goi<void>('/api/giao-xu', { method: 'PUT', body: JSON.stringify(than) }),
   },
   /** Màn hình "Quản lý giáo phận/giáo hạt/giáo xứ" (policy "QuanTriHeThong", LoaiTaiKhoan=9 —
    * xem docs/superpowers/specs/man-hinh/quan-ly-giao-xu.md). CỐ Ý xuyên giáo xứ: chỉ tài

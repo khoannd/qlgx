@@ -24,6 +24,7 @@ import { KiemTraDuLieuGiaoDanPage } from './screens/KiemTraDuLieuGiaoDanPage'
 import { KiemTraDuLieuGiaDinhPage } from './screens/KiemTraDuLieuGiaDinhPage'
 import { ChuyenHoPage } from './screens/ChuyenHoPage'
 import { QuanLyGiaoXuPage } from './screens/QuanLyGiaoXuPage'
+import { GiaoXuPage } from './screens/GiaoXuPage'
 import { ThongKeChungPage } from './screens/ThongKeChungPage'
 import { BieuDoPage } from './screens/BieuDoPage'
 import { NhapDuLieuPage } from './screens/NhapDuLieuPage'
@@ -283,6 +284,12 @@ function App() {
     mo({ id: 'quanLyGiaoXu', tieuDe: 'Quản lý giáo xứ', noiDung: <QuanLyGiaoXuPage /> })
   }
 
+  // "Giáo xứ" (spec giao-xu.md, thay frmGiaoXu.cs) — văn phòng giáo xứ tự sửa thông tin xứ
+  // mình, KHÁC hẳn "Quản lý giáo xứ" ở trên (chỉ Quản trị hệ thống, xuyên toàn máy chủ).
+  function moGiaoXu() {
+    mo({ id: 'giaoXu', tieuDe: 'Giáo xứ', noiDung: <GiaoXuPage /> })
+  }
+
   function moNhapDuLieu() {
     mo({ id: 'nhapDuLieu', tieuDe: 'Nhập dữ liệu Access', noiDung: <NhapDuLieuPage /> })
   }
@@ -322,6 +329,7 @@ function App() {
     else if (id === 'kiemTraDuLieuGiaDinh') moKiemTraDuLieuGiaDinh()
     else if (id === 'chuyenHo') moChuyenHo()
     else if (id === 'quanLyGiaoXu') moQuanLyGiaoXu()
+    else if (id === 'giaoXu') moGiaoXu()
     else if (id === 'nhapDuLieu') moNhapDuLieu()
     else if (id === 'thongKeChung') moThongKeChung()
     else if (id === 'bieuDo') moBieuDo()

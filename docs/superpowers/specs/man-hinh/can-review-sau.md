@@ -3746,3 +3746,38 @@ Hai chỗ **THIẾU thật sự** đáng chú ý cho người dùng quyết đ�
    tương đương ở bản web.
 
 Không kết luận thay người dùng có cần hai mục này không — chỉ ghi lại để quyết định sau.
+
+### 61. Task "migrate màn hình Giáo xứ (tự sửa thông tin xứ mình)" (2026-09-08) — các quyết định tự đưa ra
+
+Việc 3 của nhiệm vụ "4 màn hình cuối cùng" — xem `giao-xu.md` (spec đầy đủ). Ghi lại đây các
+quyết định về PHẠM VI, không lặp lại nội dung đã có ở spec.
+
+1. **Cố ý KHÔNG cho tự sửa tên Giáo phận/Giáo hạt** dù desktop có (2 trong 4 điều kiện bắt buộc
+   của `btnUpdate_Click`) — lý do kiến trúc: ở web một `GiaoHat` có thể có NHIỀU `GiaoXu` cùng
+   trỏ vào (mô hình nhiều giáo xứ/một máy chủ), còn desktop là CSDL riêng cho từng giáo xứ nên
+   sửa tên giáo hạt không ảnh hưởng ai khác. Cho một giáo xứ tự đổi tên giáo hạt của mình sẽ vô
+   tình đổi tên hiển thị của giáo xứ khác dùng chung giáo hạt — coi là rủi ro cao hơn lợi ích,
+   không migrate. Muốn đổi, dùng "Quản lý giáo xứ" (Quản trị hệ thống).
+2. **Cố ý KHÔNG migrate danh sách Linh mục** (`gxLinhMucList1` nhúng trong cùng form desktop) —
+   nhiệm vụ gốc chỉ liệt kê "tên, địa chỉ, điện thoại, email, website, ghi chú". Bảng `LinhMuc`
+   đã có `GiaoXuId` và được RLS bảo vệ (nằm trong `BangTheoGiaoXu` của migration
+   `BatRlsChoBangTheoGiaoXu`) nên không có vấn đề bảo mật cấp bách như chính màn hình Giáo xứ —
+   để làm ở một lượt riêng sau nếu cần một màn hình "Quản lý linh mục".
+3. **Cố ý KHÔNG migrate ảnh đại diện giáo xứ** (`txtHinh`/`btnBrowse`, copy file vào
+   `Memory.AppPath` cục bộ) — mô hình lưu file cục bộ của desktop không áp dụng cho máy chủ web
+   nhiều giáo xứ; nếu cần, thiết kế lại theo kiểu `AnhDaiDienService` đã có cho giáo dân/gia
+   đình.
+4. **Bỏ `required` khỏi 2 ô bắt buộc** (Tên giáo xứ, Địa chỉ) trên form web, dùng validate tay
+   giống desktop (thông báo nguyên văn "Hãy nhập tên giáo xứ!"/"Hãy nhập địa chỉ giáo xứ!") —
+   để trình duyệt không tự chặn submit bằng bong bóng validate mặc định (khác thông báo desktop
+   và khó viết test), khớp đúng cách desktop tự kiểm bằng `MessageBox` thay vì để control tự
+   chặn.
+5. **Không có route nhận `id`** — `GET /api/giao-xu` và `PUT /api/giao-xu` luôn tự lấy
+   `GiaoXuId` từ claim đăng nhập (`IBoiCanhGiaoXu`), khác hẳn `/api/quan-tri/giao-xu/{id}` của
+   "Quản lý giáo xứ". Đây là lớp phòng thủ chính vì `GiaoXu` không có RLS (không có `giao_xu_id`
+   nên không nằm trong danh sách RLS/HasQueryFilter) — xem `giao-xu.md` mục 4, đã viết
+   `GiaoXuTests.cs` chứng minh sửa giáo xứ A không đụng giáo xứ B.
+
+Đã chạy thật trên trình duyệt (đăng nhập `giaoxu`), sửa thông tin giáo xứ Vô Nhiễm → lưu → tải
+lại trang → xác nhận bằng `psql` dữ liệu đã đổi đúng → trả về nguyên trạng ban đầu, xác nhận lại
+bằng `psql`. Ảnh chụp `178-*.png` ở `WebApp/anh-chup-kiem-thu/`.

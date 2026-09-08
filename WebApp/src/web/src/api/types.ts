@@ -487,6 +487,20 @@ export type TaiKhoanItem = {
   rowVersion: number
 }
 
+// --- Màn hình "Giáo xứ" tự sửa thông tin xứ mình (xem
+// docs/superpowers/specs/man-hinh/giao-xu.md) — ánh xạ 1-1 GiaoXuHienTaiResponse. Không có
+// giaoHatId/tenGiaoHat/tenGiaoPhan: màn hình này CỐ Ý không cho tự đổi giáo hạt/giáo phận (xem
+// spec mục "Chỗ chưa chắc" — đổi khác desktop vì ảnh hưởng chéo giáo xứ khác cùng giáo hạt). ---
+export type GiaoXuHienTai = {
+  id: string
+  tenGiaoXu: string
+  diaChi: string | null
+  dienThoai: string | null
+  email: string | null
+  website: string | null
+  ghiChu: string | null
+}
+
 // --- Màn hình "Quản lý giáo phận/giáo hạt/giáo xứ" (policy "QuanTriHeThong", xem
 // docs/superpowers/specs/man-hinh/quan-ly-giao-xu.md) — CỐ Ý xuyên giáo xứ, khác mọi type
 // khác ở trên vốn luôn nằm trong phạm vi giáo xứ của người gọi. ---

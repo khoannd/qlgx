@@ -73,6 +73,7 @@ builder.Services.AddScoped<GiaoDanService>();
 builder.Services.AddScoped<KiemTraDuLieuService>();
 // "Công cụ dữ liệu" -> "Chuyển họ hàng loạt" (spec mục 4) — công cụ sửa dữ liệu hàng loạt.
 builder.Services.AddScoped<ChuyenHoService>();
+builder.Services.AddScoped<GiaoXuService>();
 // Anh dai dien (Task 1.2 VIEC-TIEP-THEO.md) — xem AnhDaiDienService.cs.
 builder.Services.AddScoped<AnhDaiDienService>();
 // Xuat Excel that (ClosedXML, khong Office Interop) cho hai man hinh danh sach — xem
@@ -178,6 +179,7 @@ app.MapChuyenHo();
 app.MapGiaoHo();
 app.MapTaiKhoan();
 app.MapQuanLyGiaoXu();
+app.MapGiaoXu();
 app.MapNhapDuLieu();
 app.MapDanhMuc();
 app.MapDotBiTich();

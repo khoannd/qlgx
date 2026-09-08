@@ -99,6 +99,7 @@ Cập nhật bảng này mỗi khi thêm spec.
 | Hồ sơ lưu trữ giáo dân / gia đình | `ChuongTrinh/frmGiaoDanLuuTruList.cs` + `ChuongTrinh/frmGiaDinhLuuTruList.cs` | 263 + 261 | xong (`ho-so-luu-tru.md`) | xong (danh sách + lọc + sửa + xóa vĩnh viễn + xuất Excel; không có "khôi phục" — bản gốc cũng không có, xem mục 4) |
 | Công cụ dữ liệu (Kiểm tra/Chuẩn hoá/Chuyển hộ/Tạo ds bí tích tự động) | `ChuongTrinh/frmKiemTraGiaoDanList.cs` + `frmKiemTraGiaDinhList.cs` + `ReviewGiaoDanProcess.cs` + `ReviewGiaDinhProcess.cs` + `frmChuyenHoGiaoDan.cs` + `frmChuyenHoGiaDinh.cs` + `UpdateProcess.cs` + `frmTaoDotBiTich.cs` + `GXControl/GenerateDotBiTichProcess.cs` | 316+346+257+266+170+245+233 (Chuẩn hoá/Tạo ds bí tích: đã xác định nguồn, chưa migrate) | đầy đủ (`cong-cu-du-lieu.md`, trừ 2 mục chưa migrate) | một phần (Kiểm tra dữ liệu + Chuyển họ hàng loạt xong cả 2 nửa giáo dân/gia đình; Chuẩn hoá dữ liệu + Tạo danh sách bí tích tự động chưa) |
 
+| Giáo xứ (tự sửa thông tin xứ mình) | `ChuongTrinh/frmGiaoXu.cs` | 280 | xong (`giao-xu.md`) | một phần (tên/địa chỉ/điện thoại/email/website/ghi chú xong; cố ý bỏ sửa giáo phận/giáo hạt, danh sách Linh mục, ảnh đại diện — xem `giao-xu.md` mục 3) |
 | Thống kê chung & Biểu đồ | `ChuongTrinh/frmThongKeChung.cs`+`GXControl/GxThongKeChung.cs`+`GxThongKeOnGoi.cs`+`GXControl/Extract.cs` / `ChuongTrinh/frmBieuDo.cs`+5 mô-đun `ExcelReport/Chart*.cs` | 28+848+195+168 / 400+5×~100 | xong (`thong-ke-bieu-do.md`) | một phần (xem mục 10) |
 
 Còn khoảng 60 màn hình nhỏ hơn — bổ sung dần theo thứ tự migrate.
