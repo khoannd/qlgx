@@ -5,7 +5,7 @@
 | Tệp nguồn tham khảo | `Source/DBAccess/WordEngine.cs` (~140 dòng, UTF-8 BOM), `Source/ExcelReport/Report*.cs` (14 mô-đun) |
 | Mẫu in gốc | `BIN/Template/Chung/*.doc`/`.xls` (14 mẫu dùng chung), `BIN/Template/BMT/` (mẫu riêng giáo phận Ban Mê Thuột, ghi đè `Chung`) |
 | Bảng dữ liệu đụng tới | `GiaoDan`, `GiaoXu`, `GiaoHat`, `GiaoPhan`, `GiaoHo`, `HonPhoi`, `GiaoDanHonPhoi` (tuỳ mẫu) |
-| Trạng thái migrate | **XONG** — hạ tầng dùng chung + 8 mẫu (Lý lịch cá nhân, Chứng nhận bí tích, Phiếu gia đình, Chứng nhận hôn phối, 4 mẫu Giấy giới thiệu) + "In danh sách"/"In lý lịch cá nhân (gia đình)"/"In sổ gia đình" (xem mục 5f). Còn lại Rao hôn phối/Excel thật/biểu đồ — xem mục 8 |
+| Trạng thái migrate | **XONG** — hạ tầng dùng chung + 10 mẫu (Lý lịch cá nhân, Chứng nhận bí tích, Phiếu gia đình [A4+A3], Chứng nhận hôn phối, 4 mẫu Giấy giới thiệu, Rao hôn phối, Kết quả rao hôn phối) + "In danh sách"/"In lý lịch cá nhân (gia đình)"/"In sổ gia đình" (mục 5f) + Xuất Excel ClosedXML cho Giáo dân/Gia đình/Sổ bí tích/Rao hôn phối (mục 5h) + khổ giấy chọn được (mục 5c). Còn lại 5 mô-đun biểu đồ — xem mục 8 |
 
 ## 1. Vì sao cần (bối cảnh)
 
@@ -170,11 +170,29 @@ trống ứng với một giá trị) — `BoDoMauIn.Dung()` thêm tham số `kh
 can-review-sau.md mục 34f) để `InAnService` tự dựng khối `<tr>` lặp lại, tự
 `HtmlEncoder.Default.Encode(...)` từng mẩu dữ liệu người dùng trước khi ghép.
 
-**Bản khổ lớn `PhieuGiaDinh-A3.doc` (yêu cầu gốc mục 2) CHƯA làm** — `BoTrinhDuyet.XuatPdfAsync`
-hiện cố định `Format = "A4"`; hỗ trợ A3 cần thêm tham số khổ giấy xuyên suốt (`InAnService` →
-`BoDoMauIn`/mẫu HTML có bố cục ngang phù hợp hơn cho nhiều cột → `BoTrinhDuyet`). Cân nhắc dừng ở
-đây để ưu tiên đủ 3 mẫu tài liệu (bí tích/gia đình/hôn phối) hơn một biến thể khổ giấy của một
-mẫu đã có — A4 vẫn in đọc được đầy đủ, chỉ chữ nhỏ hơn khi gia đình đông thành viên.
+**Bản khổ lớn `PhieuGiaDinh-A3.doc` (yêu cầu gốc mục 2) — nay đã làm (lượt "in-excel-a3",
+2026-09-08)**. `BoTrinhDuyet.XuatPdfAsync` nhận thêm tham số `khoGiay` (mặc định `"A4"`, GIỮ
+NGUYÊN hành vi cũ mọi nơi gọi khác — chỉ truyền qua thẳng cho `PagePdfOptions.Format`).
+`InAnService.XuatPhieuGiaDinh(giaDinhId, khoGiay, ct)` dùng lại NGUYÊN VẸN mẫu HTML
+`PhieuGiaDinh.html` (bảng đã co giãn theo số người thật ngay từ đầu, không phải 8 dòng cố định
+như bản gốc) — khác biệt A3 so với A4 CHỈ nằm ở khổ giấy Playwright xuất ra (nhiều chỗ trống
+hơn), không phải bố cục khác, đúng tinh thần "chỉ khác khổ giấy và số cột, đừng viết mẫu mới"
+mà nhiệm vụ chỉ đạo. Endpoint `GET /api/gia-dinh/{id}/in/phieu-gia-dinh?khoGiay=A3` chỉ chấp
+nhận `"A4"`/`"A3"` (400 nếu khác — không chuyển thẳng chuỗi tuỳ ý xuống Playwright).
+
+Nối vào giao diện: `GiaDinhDetail.tsx` có thêm ô chọn "Khổ giấy" (A4/A3) cạnh nút "In phiếu gia
+đình"; menu chuột phải `GxGiaDinhList.tsx` có thêm mục riêng "In phiếu gia đình (khổ A3)"
+(nhất quán với cách menu này đã tách "In chứng nhận rửa tội"/"…thêm sức" thành mục riêng thay vì
+hộp thoại chọn loại).
+
+**Phát hiện quan trọng khi khảo sát cho việc bổ sung này**: đối chiếu
+`Source/GXControl/GxGiaDinhList.cs` (`InPhieuGiaDinh`/`XuatSoGiaDinhChungFile`) và
+`Source/ExcelReport/ReportSoGiaDinh.cs` xác nhận **CẢ HAI đường in phiếu gia đình trên desktop
+đều gán cứng tên tệp mẫu `"PhieuGiaDinh"`, không có nhánh nào chọn `PhieuGiaDinh-A3.doc`** — mẫu
+A3 nằm sẵn trong `BIN/Template/Chung/` nhưng là một mẫu CHẾT trên desktop, không menu/nút nào
+từng dùng tới. Việc bổ sung khổ A3 ở web vì vậy là một **khả năng MỚI theo yêu cầu nhiệm vụ**
+("người dùng nên chọn được khổ khi in phiếu gia đình"), KHÔNG PHẢI tái hiện hành vi desktop có
+sẵn — xem can-review-sau.md mục 69.
 
 ## 5d. Mẫu "Chứng nhận hôn phối" (đã làm ở lượt này)
 
@@ -251,8 +269,9 @@ Hồ sơ lưu trữ giáo dân, và lưới thành viên trong Chi tiết gia đ
 (`GxGiaDinhList.tsx`, dùng ở Danh sách gia đình và Hồ sơ lưu trữ gia đình) — state dùng chung
 qua hai hook `lib/useGioiThieuGiaoDan.ts`/`lib/useGioiThieuChuyenXu.ts` để tránh lặp lại ở 5 màn
 hình nhúng. Mục "In giới thiệu hôn phối" (`GxGiaoDanList.tsx`, toolbar Hồ sơ lưu trữ giáo dân)
-**KHÔNG thuộc 4 mẫu này** — đó là giấy RAO hôn phối (`ReportRaoHP.cs`), một hạng mục khác vẫn
-CHƯA làm (xem mục 8), giữ nguyên `chuaHoTro`.
+**KHÔNG thuộc 4 mẫu này** — đó là giấy RAO hôn phối (`ReportRaoHP.cs`) — nay đã in được thật, xem
+mục 5g (khảo sát lại mã desktop cho lượt "in-excel-a3" phát hiện nút này thật ra wire vào một
+mẫu KHÁC trên desktop, xem can-review-sau.md mục 69 mục 1-2).
 
 ## 5f. "In danh sách", "In lý lịch cá nhân (gia đình)", "In sổ gia đình" (lượt "hoàn tất mọi thao
 tác còn báo chưa hỗ trợ") — xem can-review-sau.md mục 66 để biết đầy đủ lý do nghiên cứu mã
@@ -288,6 +307,85 @@ Test: `InAnMauMoiTests.cs` (8 test mới — PDF thành công/404/cách ly giáo
 `GiaDinhLuuTruList.test.tsx`/`GiaDinhDetail.test.tsx`. Chạy thật trên `qlgx_thu`, PDF kiểm bằng
 PyMuPDF — ảnh/PDF `185`-`191` ở `WebApp/anh-chup-kiem-thu/`.
 
+## 5g. "In giới thiệu hôn phối" / "In kết quả rao hôn phối" (lượt "in-excel-a3", 2026-09-08) —
+Rao hôn phối, mẫu cuối cùng còn báo "chưa hỗ trợ" trên toàn ứng dụng
+
+Dựng lại từ `Source/ExcelReport/ReportRaoHP.cs` (`Export`/`Export(printRS: true)`) —
+`BIN/Template/Chung/RaoHonPhoi.doc` ("GIẤY XIN ĐIỀU TRA VÀ RAO HÔN PHỐI") và
+`KQRaoHonPhoi.doc` ("GIẤY KẾT QUẢ RAO HÔN PHỐI"). Đọc trực tiếp text Unicode trong hai tệp `.doc`
+gốc (không qua `antiword` — bảng mã 8-bit của các file này không khớp mã trang chuẩn nào, phải tự
+giải mã CLX/PlcPcd của định dạng Word 97 bằng `olefile` để lấy đúng text UTF-16LE embedded) để có
+đúng nguyên văn tiếng Việt.
+
+**Phát hiện quan trọng — chú thích cũ ở mục 5e sai một phần**: xem can-review-sau.md mục 69 mục
+1 — nút "In giới thiệu hôn phối" (`GxGiaoDanList.tsx`) thật ra desktop wire vào một mẫu KHÁC
+(`frmReportGioiThieuHP`, mẫu giáo lý hôn phối cũ ở mục 65), còn đường dẫn tới `ReportRaoHP.cs`
+(`item7`) bị COMMENT LẠI trên UI thật, không bao giờ chạy được. Nhiệm vụ này chỉ đạo rõ coi nút
+web tương ứng `ReportRaoHP.cs` — đã làm THEO chỉ đạo đó, ghi lại phát hiện để người dùng quyết
+định sau.
+
+**Endpoint** (theo GIÁO DÂN — bấm từ một dòng trên lưới giáo dân, không phải từ một đôi rao cụ
+thể):
+```
+GET /api/giao-dan/{id}/in/gioi-thieu-hon-phoi
+```
+`InAnService.XuatGioiThieuHonPhoi` tìm đôi rao (`RaoHonPhoi`) MỚI NHẤT (theo `CreatedAt`) mà
+giáo dân này là `GiaoDan1` HOẶC `GiaoDan2` — luôn in đủ cả hai người của đôi rao đó (không chỉ
+người vừa bấm), đúng cách bản gốc luôn dựng từ cả `row1`/`row2`. 404 nếu giáo dân chưa có đôi
+rao nào (chưa tạo ở "Danh sách rao hôn phối") — không có gì để in.
+
+Các trường tính toán chép nguyên công thức gốc (`Source/GXControl/frmRaoHonPhoi.cs:270-277`):
+`AnhChi1`/`AnhChi2` = `Phai == "Nam" ? "Anh" : "Chị"`; `Tuoi1`/`Tuoi2` = năm hiện tại − năm sinh
+(`Memory.GetTuoi`, để TRỐNG khi cùng năm hiện tại hoặc thiếu ngày sinh, KHÔNG phải "0"). Sai
+khác migrate Y HỆT có chủ đích: `TenGiaoXuNhan` lấy từ cột `LinhMucNhan`, `TenGiaoPhanNhan` lấy
+từ cột `GiaoXuNhan` — tên cột không khớp nhãn in ra (bảng `RaoHonPhoi` không có cột
+`GiaoPhanNhan` riêng) — xem can-review-sau.md mục 69 mục 3. Nửa dưới trang là phiếu "KẾT QUẢ RAO
+HÔN PHỐI" TRỐNG (dấu chấm để điền tay) y hệt cấu trúc `RaoHonPhoi.doc` gốc — KHÔNG có dữ liệu từ
+CSDL, giữ nguyên như văn bản tĩnh.
+
+**Endpoint thứ hai** (theo ĐÔI RAO cụ thể, nối vào `RaoHonPhoiDetail.tsx` — nút "In kết quả rao
+hôn phối", chỉ bật khi đã lưu):
+```
+GET /api/rao-hon-phoi/{id}/in/ket-qua
+```
+`InAnService.XuatKetQuaRaoHonPhoi` dựng đủ thông tin bí tích (Rửa tội/Thêm sức, dùng lại
+`VanBanInAn.MoTaBiTich`)/địa chỉ/điện thoại của cả hai người — cùng tinh thần với "Chứng nhận
+hôn phối" (mục 5d). Khối "Đã điều tra và rao ba lần vào các ngày" ghép 1-3 dòng từ
+`NgayRaoLan1/2/3` (bỏ dòng nào chưa có ngày, dùng `VanBanInAn.GhepDong`). `TenLinhMucGui` để
+TRỐNG (bản gốc tra từ danh mục `LinhMuc`, web chưa có màn hình quản lý danh mục này — xem mục
+5e và can-review-sau.md mục 69 mục 5). 404 khi không tìm thấy đôi rao (id sai hoặc thuộc giáo xứ
+khác).
+
+## 5h. Xuất Excel ClosedXML cho "Danh sách sổ bí tích"/"Danh sách rao hôn phối" (lượt
+"in-excel-a3", 2026-09-08)
+
+Hai màn hình migrate ở commit `aa4a2af`, phần xuất Excel bị hoãn tới lượt này. Dùng lại
+`XuatExcelService` + ClosedXML đã có (cùng khuôn với `XuatGiaoDan`/`XuatGiaDinh`): tiêu đề in
+đậm, đóng băng hàng đầu, tự giãn cột, `AutoFilter`. CÙNG tham số lọc với GET danh sách hiện có
+(`loaiBiTich`/`tuNam`/`denNam` cho sổ bí tích, `xemTatCa` cho rao hôn phối) — gọi thẳng
+`DotBiTichService.LayDanhSach`/`RaoHonPhoiService.LayDanhSach`, KHÔNG viết lại điều kiện lọc.
+
+```
+GET /api/dot-bi-tich/xuat-excel?loaiBiTich=...&tuNam=...&denNam=...
+GET /api/rao-hon-phoi/xuat-excel?xemTatCa=...
+```
+
+**"Sổ bí tích"**: 5 cột đúng `cotDotBiTich.ts`/`GxDotBiTichList.FormatGrid` — Ngày, Mô tả (kèm
+tên loại bí tích ghép trước, ví dụ "Rửa tội — Đợt Giáng Sinh 2024"), Người ban bí tích, Nơi nhận
+bí tích, Số lượng GD. Ở MỨC ĐỢT — KHÔNG xuất chi tiết 6150 bản ghi từng người nhận trong đợt
+(`BiTichChiTiet` không có màn hình danh sách/bộ lọc riêng để tái dùng, xem can-review-sau.md
+mục 69 mục 6).
+
+**"Rao hôn phối"**: 8 cột đúng `cotRaoHonPhoi.ts`/`GxRaoHonPhoiList.FormatGrid` — Mã rao, Đôi
+rao, Người thứ nhất, Người thứ hai, Rao lần 1/2/3, Ghi chú. Mức TÓM TẮT trên lưới danh sách,
+KHÔNG PHẢI 26 cột chi tiết của `frmRaoHonPhoi` (mẫu gốc `DanhSachRaoHonPhoi.xls`/
+`ReportRaoHP.ExportList` cũng chỉ xuất đúng lưới 8 cột đang hiển thị qua cơ chế GridEX — không
+phải một nguồn dữ liệu khác, xem can-review-sau.md mục 69 mục 7).
+
+Nối vào giao diện: nút "Xuất Excel" trên thanh công cụ `DotBiTichList.tsx` (chỉ bật được sau khi
+đã "Tìm kiếm" — trước đó không có `loaiBiTich` để lọc) và `RaoHonPhoiList.tsx`, cùng khuôn với
+"Xuất Excel" đã có ở `GiaoDanList.tsx`/`GiaDinhList.tsx`.
+
 ## 6. Chọn mẫu theo giáo phận
 
 `BoDoMauIn.ChuanHoaTenGiaoPhan(tenGiaoPhan)` chuẩn hoá tên giáo phận (bỏ dấu, bỏ khoảng trắng —
@@ -311,35 +409,48 @@ với một cột giáo phận cụ thể trong dữ liệu — xem mục 9): b�
   gia đình chưa có hôn phối nào, và KHÔNG in được bản ghi của giáo xứ khác (cách ly dữ liệu —
   đúng ràng buộc "giao_xu_id luôn từ claim").
 - Frontend: `GiaoDanDetail.test.tsx` (nút In lý lịch cá nhân), `GxGiaoDanList.test.tsx` (menu 12
-  mục, mọi mục đều có `chay`, 4 mục bí tích gọi đúng `api.giaoDan.inChungNhanBiTich` với đúng
-  `loai`, 3 mục Giấy giới thiệu mở `GioiThieuModal` với đúng `loai`), `GxGiaDinhList.test.tsx`
-  (3 mục in gọi đúng `api.giaDinh.inChungNhanHonPhoi`/`inPhieuGiaDinh`/mở `GioiThieuModal` cho
-  "In giới thiệu chuyển xứ", 2 mục còn lại vẫn báo "chưa hỗ trợ"), `GiaDinhDetail.test.tsx` (nút
-  "In phiếu gia đình" gọi đúng api, vô hiệu hoá khi gia đình còn là bản nháp chưa lưu).
+  mục, MỌI mục đều đã in được thật — không còn mục nào báo "chưa hỗ trợ" — 4 mục bí tích gọi
+  đúng `api.giaoDan.inChungNhanBiTich` với đúng `loai`, 3 mục Giấy giới thiệu mở `GioiThieuModal`
+  với đúng `loai`, "In giới thiệu hôn phối" gọi đúng `api.giaoDan.inGioiThieuHonPhoi`),
+  `GxGiaDinhList.test.tsx` (mọi mục in gọi đúng api, kể cả "In phiếu gia đình (khổ A3)" truyền
+  thêm `'A3'`), `GiaDinhDetail.test.tsx` (nút "In phiếu gia đình" gọi đúng api kèm khổ giấy đang
+  chọn, vô hiệu hoá khi gia đình còn là bản nháp chưa lưu), `RaoHonPhoiDetail.test.tsx` (nút "In
+  kết quả rao hôn phối" gọi đúng api, vô hiệu hoá khi chưa lưu), `RaoHonPhoiInAnTests.cs`/
+  `SoBiTichRaoHonPhoiExcelTests.cs` (backend, PDF/Excel thành công + 404 + cách ly giáo xứ),
+  `DotBiTichList.test.tsx`/`RaoHonPhoiList.test.tsx` (nút "Xuất Excel").
 - Chạy thật qua API thật (tài khoản tạm, JWT thật, gọi `curl`/`fetch` vào `Qlgx.Api` chạy trên
-  `qlgx_thu`), in cho các bản ghi thật nhiều dữ liệu nhất tìm được, mở PDF kiểm tra — xem ảnh
-  chụp/PDF mẫu `WebApp/anh-chup-kiem-thu/` (đánh số theo báo cáo nhiệm vụ, 4 mẫu Giấy giới thiệu
-  là `181`-`184`) và can-review-sau.md mục 34e/65.
+  `qlgx_thu`), in cho các bản ghi thật nhiều dữ liệu nhất tìm được, mở PDF/Excel kiểm tra bằng
+  PyMuPDF/openpyxl — xem ảnh chụp/PDF/Excel mẫu `WebApp/anh-chup-kiem-thu/` (đánh số theo báo
+  cáo nhiệm vụ, 4 mẫu Giấy giới thiệu là `181`-`184`, lượt "in-excel-a3" là `200` trở lên) và
+  can-review-sau.md mục 34e/65/69.
 
 ## 8. Phạm vi CHƯA làm (khác biệt cố ý với yêu cầu ban đầu)
 
 Yêu cầu ban đầu xếp thứ tự 5 mẫu: hạ tầng, Lý lịch cá nhân, Chứng nhận bí tích, Phiếu gia đình,
 Chứng nhận hôn phối — xong đủ 5/5 phần đó qua hai lượt đầu (xem mục 5-5d). "Giấy giới thiệu" (4
 mẫu) bị hoãn ở lượt đó vì tưởng cần thêm màn hình nhập liệu người thứ hai phức tạp (dữ liệu của
-người thứ hai thường KHÔNG có bản ghi `GiaoDan` nào trong CSDL vì thuộc giáo xứ khác); lượt cuối
-cùng đã làm xong cả 4 mẫu — xem mục 5e (cơ chế thật đơn giản hơn tưởng: chỉ hai ô nhập tự do
+người thứ hai thường KHÔNG có bản ghi `GiaoDan` nào trong CSDL vì thuộc giáo xứ khác); lượt sau
+đã làm xong cả 4 mẫu — xem mục 5e (cơ chế thật đơn giản hơn tưởng: chỉ hai ô nhập tự do
 giáo phận/giáo xứ nhận + tên linh mục, không cần tra cứu người thứ hai trong CSDL nào cả).
 
-Còn lại, CHƯA làm (mọi mục menu tương ứng vẫn báo "chức năng này chưa được hỗ trợ trên web ở
-giai đoạn này" qua `chuaHoTro()`, không có mục nào bấm không phản hồi):
+Lượt "in-excel-a3" (2026-09-08) làm nốt ba việc còn lại của kế hoạch ban đầu: mẫu Rao hôn phối +
+Kết quả rao hôn phối (mục 5g), Xuất Excel ClosedXML cho Giáo dân/Gia đình (đã có từ trước)/Sổ bí
+tích/Rao hôn phối (mục 5h), và khổ giấy chọn được cho Phiếu gia đình (A3, mục 5c) — không còn
+mục menu in ấn nào trên toàn ứng dụng báo "chưa hỗ trợ" (`chuaHoTro()`).
 
-- Phiếu gia đình khổ lớn (`PhieuGiaDinh-A3.doc`) — xem mục 5c, cần thêm tham số khổ giấy xuyên
-  suốt hạ tầng in (hiện `BoTrinhDuyet` cố định A4).
-- Rao hôn phối + danh sách rao (`RaoHonPhoi.doc`, `KQRaoHonPhoi.doc`,
-  `DanhSachRaoHonPhoi.xls` — `ReportRaoHP.cs`).
-- Xuất Excel thật bằng ClosedXML (`ExportGrid.cs`, `mau-excel-giaodan*.xls`) — nút "Xuất dữ
-  liệu (CSV)" hiện tại chỉ xuất CSV thô phía trình duyệt, không dùng mẫu Excel định dạng sẵn.
+Còn lại, CHƯA làm:
+
 - 5 mô-đun biểu đồ (`Chart*.cs`) — theo đúng chỉ đạo "để sau, không thuộc lượt này".
+- "In danh sách theo ngày rao cụ thể" của màn hình Rao hôn phối
+  (`gxAddEdit1.PrintButton`/`GxRaoHonPhoiList.Print()` — hộp thoại chọn "ngày rao" rồi xuất Excel
+  từ bảng tạm `RaoHonPhoiTMP`, khác hẳn "Xuất Excel" đơn giản đã làm ở mục 5h) — xem
+  `rao-hon-phoi.md` mục 10.
+- Xuất Excel chi tiết 6150 bản ghi `BiTichChiTiet` (theo từng người nhận trong một đợt) — mục
+  5h chỉ xuất được 5 cột MỨC ĐỢT, chưa có màn hình danh sách/bộ lọc riêng cho bảng chi tiết để
+  tái dùng logic lọc có sẵn (nguyên tắc xuyên suốt `XuatExcelService`).
+- "In danh sách bí tích"/"In chứng nhận" nối vào màn hình "Danh sách sổ bí tích" — hạ tầng
+  `/api/giao-dan/{id}/in/chung-nhan-bi-tich` đã có (mục 5b) nhưng chưa có nút gọi từ màn hình
+  này, xem `so-bi-tich.md` mục 10.
 
 ## 9. Chỗ chưa chắc
 

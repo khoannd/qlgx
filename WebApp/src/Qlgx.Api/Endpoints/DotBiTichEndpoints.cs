@@ -21,6 +21,19 @@ public static class DotBiTichEndpoints
         nhom.MapGet("/{id:guid}", async (DotBiTichService dv, Guid id, CancellationToken ct) =>
             await dv.LayChiTiet(id, ct) is { } ct2 ? Results.Ok(ct2) : Results.NotFound());
 
+        // "Xuất Excel" — hoãn lại ở lượt migrate màn hình (commit aa4a2af), làm ở lượt này (xem
+        // in-an.md mục 8). CÙNG BA tham số lọc với GET "" phía trên — "/xuat-excel" không khớp
+        // mẫu "/{id:guid}" (không phải GUID) nên hai route không giẫm nhau, giống các nhóm khác
+        // đã có (GiaoDan/GiaDinh).
+        nhom.MapGet("/xuat-excel", async (XuatExcelService dv, LoaiBiTich loaiBiTich, int? tuNam,
+            int? denNam, CancellationToken ct) =>
+        {
+            var noiDung = await dv.XuatDotBiTich(loaiBiTich, tuNam, denNam, ct);
+            var tenTep = $"danh-sach-so-bi-tich-{DateTime.Now:yyyy-MM-dd}.xlsx";
+            return Results.File(noiDung,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", tenTep);
+        });
+
         nhom.MapPost("", async (DotBiTichService dv, TaoDotBiTichRequest yc, CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(yc.MoTa))

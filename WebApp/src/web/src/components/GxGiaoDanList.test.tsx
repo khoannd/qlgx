@@ -12,6 +12,7 @@ vi.mock('../api/client', () => ({
     giaoDan: {
       inLyLichCaNhan: vi.fn(() => Promise.resolve()),
       inChungNhanBiTich: vi.fn(() => Promise.resolve()),
+      inGioiThieuHonPhoi: vi.fn(() => Promise.resolve()),
     },
   },
 }))
@@ -165,8 +166,8 @@ describe('GxGiaoDanList', () => {
         'In giấy giới thiệu chứng nhận thêm sức', 'Xem vị trí',
       ])
       // Trước lượt "in ấn" (VIEC-TIEP-THEO.md mục 1.1), 10/12 mục chỉ có `nhan`, bấm không làm
-      // gì — nay MỌI mục đều có `chay` (đã làm thật, hoặc báo "chưa hỗ trợ" bằng chuaHoTro),
-      // không còn mục nào im lặng không phản hồi.
+      // gì — nay MỌI mục đều có `chay` VÀ đều đã in được thật (không còn mục nào báo "chưa hỗ
+      // trợ" — xem in-an.md mục 8, "In giới thiệu hôn phối" là mục cuối cùng hoàn tất).
       expect(menu.every((m) => typeof m.chay === 'function')).toBe(true)
     })
 
@@ -177,6 +178,17 @@ describe('GxGiaoDanList', () => {
       muc.chay!(nguoi({ id: 'gd-xyz' }))
 
       expect(api.giaoDan.inLyLichCaNhan).toHaveBeenCalledWith('gd-xyz')
+    })
+
+    // Mục cuối cùng còn báo "chưa hỗ trợ" trên toàn ứng dụng (xem in-an.md mục 8) — nay đã in
+    // được thật, tương đương Source/ExcelReport/ReportRaoHP.cs.
+    it('bam "In gioi thieu hon phoi" thi goi api.giaoDan.inGioiThieuHonPhoi voi dung id', () => {
+      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn(), vi.fn())
+      const muc = menu.find((m) => m.nhan === 'In giới thiệu hôn phối')!
+
+      muc.chay!(nguoi({ id: 'gd-rao' }))
+
+      expect(api.giaoDan.inGioiThieuHonPhoi).toHaveBeenCalledWith('gd-rao')
     })
 
     it.each([

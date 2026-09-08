@@ -282,9 +282,12 @@ export const api = {
      * can-review-sau.md mục 5. */
     xoaThanhVien: (id: string, giaoDanId: string, vaiTro: number) =>
       goi<void>(`/api/gia-dinh/${id}/thanh-vien/${giaoDanId}/${vaiTro}`, { method: 'DELETE' }),
-    /** In "Phiếu gia đình" (xem docs/superpowers/specs/man-hinh/in-an.md) — tải PDF về máy. */
-    inPhieuGiaDinh: (id: string) =>
-      taiTepIn(`/api/gia-dinh/${id}/in/phieu-gia-dinh`, 'PhieuGiaDinh.pdf'),
+    /** In "Phiếu gia đình" (xem docs/superpowers/specs/man-hinh/in-an.md) — tải PDF về máy.
+     * `khoGiay` mặc định "A4" (giữ nguyên hành vi cũ khi không truyền) — "A3" ứng với
+     * `PhieuGiaDinh-A3.doc` bản desktop (gia đình đông người, xem in-an.md mục 5c/8). */
+    inPhieuGiaDinh: (id: string, khoGiay?: 'A4' | 'A3') =>
+      taiTepIn(`/api/gia-dinh/${id}/in/phieu-gia-dinh${khoGiay === 'A3' ? '?khoGiay=A3' : ''}`,
+        khoGiay === 'A3' ? 'PhieuGiaDinh_A3.pdf' : 'PhieuGiaDinh.pdf'),
     /** "In lý lịch cá nhân" bấm từ lưới/màn hình GIA ĐÌNH (`GxGiaDinhList.tsx`,
      * `GiaDinhDetail.tsx`) — in CẢ gia đình (một trang PDF/thành viên, gộp một tệp), đúng hành
      * vi `item4_Click`/`XuatLyLichCaNhan(Dictionary)` của bản desktop, KHÔNG phải một người
@@ -379,6 +382,12 @@ export const api = {
       taiTepIn(`/api/giao-dan/${id}/in/gioi-thieu-them-suc${thamSoBenNhan(benNhan)}`, 'GioiThieuThemSuc.pdf'),
     inGioiThieuGiaoLyHonPhoi: (id: string, benNhan: ThongTinBenNhanGioiThieu) =>
       taiTepIn(`/api/giao-dan/${id}/in/gioi-thieu-giao-ly-hon-phoi${thamSoBenNhan(benNhan)}`, 'GioiThieuGiaoLyHonPhoi.pdf'),
+    /** "In giới thiệu hôn phối" (menu chuột phải GxGiaoDanList.tsx) — tương đương
+     * Source/ExcelReport/ReportRaoHP.cs (giấy XIN ĐIỀU TRA VÀ RAO hôn phối, KHÔNG phải 3 mẫu
+     * "Giấy giới thiệu" ở trên — xem docs/superpowers/specs/man-hinh/in-an.md mục 8). In đôi
+     * rao MỚI NHẤT của giáo dân này (404 nếu chưa có đôi rao nào). */
+    inGioiThieuHonPhoi: (id: string) =>
+      taiTepIn(`/api/giao-dan/${id}/in/gioi-thieu-hon-phoi`, 'RaoHonPhoi.pdf'),
     /** Ảnh đại diện (Task 1.2 VIEC-TIEP-THEO.md, xem can-review-sau.md mục 36) — `layAnh` trả
      * object URL (hoặc `null` nếu chưa có ảnh/lỗi mạng, xem `layAnhBlobUrl`), `taiAnhLen` gửi
      * multipart, `xoaAnh` xoá hẳn. */
@@ -454,6 +463,14 @@ export const api = {
     xoaNguoiNhan: (id: string, giaoDanId: string, xoaThongTinBiTich: boolean) =>
       goi<void>(`/api/dot-bi-tich/${id}/nguoi-nhan/${giaoDanId}?xoaThongTinBiTich=${xoaThongTinBiTich}`,
         { method: 'DELETE' }),
+    /** "Xuất Excel" (xem docs/superpowers/specs/man-hinh/in-an.md mục 8) — CÙNG ba tham số lọc
+     * với `danhSach()` ở trên, tôn trọng đúng bộ lọc đang áp dụng trên màn hình. */
+    xuatExcel: (loaiBiTich: LoaiBiTich, tuNam?: number, denNam?: number) => {
+      const p = new URLSearchParams({ loaiBiTich: String(loaiBiTich) })
+      if (tuNam) p.set('tuNam', String(tuNam))
+      if (denNam) p.set('denNam', String(denNam))
+      return taiTepIn(`/api/dot-bi-tich/xuat-excel?${p.toString()}`, 'DanhSachSoBiTich.xlsx')
+    },
   },
   /** "Danh sách rao hôn phối" (frmRaoHonPhoiList.cs + frmRaoHonPhoi.cs) — xem
    * docs/superpowers/specs/man-hinh/rao-hon-phoi.md. */
@@ -465,6 +482,13 @@ export const api = {
     capNhat: (id: string, than: unknown) =>
       goi<void>(`/api/rao-hon-phoi/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
     xoa: (id: string) => goi<void>(`/api/rao-hon-phoi/${id}`, { method: 'DELETE' }),
+    /** "Xuất Excel" (xem docs/superpowers/specs/man-hinh/in-an.md mục 8) — CÙNG tham số lọc
+     * `xemTatCa` với `danhSach()` ở trên. */
+    xuatExcel: (xemTatCa?: boolean) =>
+      taiTepIn(`/api/rao-hon-phoi/xuat-excel${xemTatCa ? '?xemTatCa=true' : ''}`, 'DanhSachRaoHonPhoi.xlsx'),
+    /** "In kết quả rao hôn phối" (RaoHonPhoiDetail.tsx) — tương đương
+     * ReportRaoHP.Export(ds, printRS: true)/KQRaoHonPhoi.doc, xem in-an.md mục 8. */
+    inKetQua: (id: string) => taiTepIn(`/api/rao-hon-phoi/${id}/in/ket-qua`, 'KQRaoHonPhoi.pdf'),
   },
   danhMuc: {
     // Danh sách "Tên thánh" tĩnh (bảng `du_lieu_chung`, 343 dòng đã chuyển từ Access) — một

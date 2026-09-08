@@ -52,8 +52,10 @@ function tuChiTiet(d: RaoHonPhoiDetailType): Nhap {
 }
 
 /**
- * Chi tiết một đôi rao hôn phối — khớp `frmRaoHonPhoi.cs`. Không migrate "In điều tra hôn
- * phối"/"In kết quả rao hôn phối" (usePrint) ở lượt này — xem rao-hon-phoi.md mục 8.
+ * Chi tiết một đôi rao hôn phối — khớp `frmRaoHonPhoi.cs`. "In kết quả rao hôn phối" (usePrint)
+ * nay đã có (xem docs/superpowers/specs/man-hinh/in-an.md mục 8) — "In giấy xin điều tra" (giấy
+ * đầu tiên, RaoHonPhoi.doc) nằm ở menu chuột phải của lưới GIÁO DÂN (GxGiaoDanList.tsx, mục
+ * "In giới thiệu hôn phối"), không lặp lại nút ở đây.
  */
 export function RaoHonPhoiDetail({ id, onTieuDe, onDaLuu, moGiaoDanMoiChoPicker }: Props) {
   const [rao, setRao] = useState<RaoHonPhoiDetailType | null>(null)
@@ -80,6 +82,16 @@ export function RaoHonPhoiDetail({ id, onTieuDe, onDaLuu, moGiaoDanMoiChoPicker 
   }, [id, onTieuDe])
 
   function d<K extends keyof Nhap>(k: K, v: Nhap[K]) { setNhap((n) => ({ ...n, [k]: v })) }
+
+  // "In kết quả rao hôn phối" — chỉ có ý nghĩa khi đã lưu (cần Id thật để tra bí tích/địa chỉ
+  // của cả hai người, xem InAnService.XuatKetQuaRaoHonPhoi).
+  function inKetQua(): void {
+    if (!rao) return
+    api.raoHonPhoi.inKetQua(rao.id).catch((e: unknown) => {
+      console.error(`Không in được kết quả rao hôn phối ${rao.id}`, e)
+      window.alert(e instanceof Error ? e.message : 'In thất bại, thử lại sau.')
+    })
+  }
 
   async function luu() {
     // Khớp gxCommand1_OnOK (frmRaoHonPhoi.cs:97-129) phần không phụ thuộc "In điều tra".
@@ -227,6 +239,10 @@ export function RaoHonPhoiDetail({ id, onTieuDe, onDaLuu, moGiaoDanMoiChoPicker 
           {loiLuu && <p className="hint" role="alert">{loiLuu}</p>}
           <div className="cmdbar">
             <div className="spacer" />
+            <button type="button" className="btn" onClick={inKetQua} disabled={!rao}
+              title={rao ? undefined : 'Lưu đôi rao trước khi in kết quả'}>
+              In kết quả rao hôn phối
+            </button>
             <button type="button" className="btn btn-primary" disabled={dangLuu} onClick={() => { void luu() }}>
               {dangLuu ? 'Đang lưu…' : 'Cập nhật'}
             </button>

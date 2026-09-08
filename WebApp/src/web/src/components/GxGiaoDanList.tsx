@@ -3,7 +3,6 @@ import type { Ref } from 'react'
 import { api } from '../api/client'
 import type { GiaoDanListItem } from '../api/types'
 import { cotGiaoDan, cotQuanHeGiaDinh } from '../cot/cotGiaoDan'
-import { chuaHoTro } from '../lib/thongBao'
 import { moBanDo } from '../lib/xemViTri'
 import { GxGrid, type GxGridHandle, type MucMenu } from './GxGrid'
 
@@ -20,6 +19,15 @@ function baoLoiIn(hanhDong: string, giaoDanId: string) {
 
 function inLyLichCaNhan(d: GiaoDanListItem): void {
   api.giaoDan.inLyLichCaNhan(d.id).catch(baoLoiIn('in được lý lịch cá nhân', d.id))
+}
+
+/** "In giới thiệu hôn phối" — tương đương Source/ExcelReport/ReportRaoHP.cs (giấy XIN ĐIỀU TRA
+ * VÀ RAO hôn phối, KHÔNG phải 3 mẫu "Giấy giới thiệu" migrate ở lượt trước — xem in-an.md mục
+ * 8). In đôi rao MỚI NHẤT của giáo dân này; máy chủ trả 404 nếu chưa có đôi rao nào (thông báo
+ * "In thất bại, thử lại sau." — chưa có tạo đôi rao mới trực tiếp từ đây, người dùng cần vào
+ * "Danh sách rao hôn phối" tạo trước, xem can-review-sau.md). */
+function inGioiThieuHonPhoi(d: GiaoDanListItem): void {
+  api.giaoDan.inGioiThieuHonPhoi(d.id).catch(baoLoiIn('in được giấy giới thiệu hôn phối', d.id))
 }
 
 /** Bốn mục "In chứng nhận bí tích/rửa tội/xưng tội-rước lễ/thêm sức" dùng CHUNG một hàm, chỉ
@@ -61,9 +69,9 @@ export const menuGiaoDanMacDinh = (
   { nhan: 'In lý lịch cá nhân', chay: inLyLichCaNhan },
   // 4 mục "chứng nhận bí tích" — dùng CHUNG một endpoint, khác nhau ở `loai`.
   { nhan: 'In chứng nhận bí tích', chay: inChungNhanBiTich() },
-  // "In giới thiệu hôn phối" KHÔNG thuộc 4 mẫu "Giấy giới thiệu" của lượt này — đây là giấy
-  // RAO hôn phối (ReportRaoHP.cs, xem in-an.md mục 8 "CHƯA làm"), vẫn báo "chưa hỗ trợ".
-  { nhan: 'In giới thiệu hôn phối', chay: chuaHoTro },
+  // "In giới thiệu hôn phối" KHÔNG thuộc 4 mẫu "Giấy giới thiệu" migrate ở lượt trước — đây là
+  // giấy RAO hôn phối (ReportRaoHP.cs, xem in-an.md mục 8) — nay đã in được thật.
+  { nhan: 'In giới thiệu hôn phối', chay: inGioiThieuHonPhoi },
   { nhan: 'In chứng nhận rửa tội', chay: inChungNhanBiTich('RuaToi') },
   { nhan: 'In chứng nhận xưng tội - rước lễ', chay: inChungNhanBiTich('RuocLe') },
   { nhan: 'In chứng nhận thêm sức', chay: inChungNhanBiTich('ThemSuc') },

@@ -100,6 +100,16 @@ describe('GxGiaDinhList', () => {
     expect(api.giaDinh.inPhieuGiaDinh).toHaveBeenCalledWith('gd-1')
   })
 
+  // Mục 2 nhiệm vụ "in-excel-a3": người dùng nên chọn được khổ khi in phiếu gia đình — mục
+  // riêng "In phiếu gia đình (khổ A3)" gọi cùng api nhưng truyền thêm 'A3'.
+  it('menu In phieu gia dinh (kho A3) goi api voi id gia dinh va "A3"', () => {
+    const menu = menuGiaDinhMacDinh(vi.fn(), vi.fn())
+    const inPhieuA3 = menu.find((m) => m.nhan === 'In phiếu gia đình (khổ A3)')
+    inPhieuA3?.chay?.(giaDinh({ id: 'gd-1' }))
+
+    expect(api.giaDinh.inPhieuGiaDinh).toHaveBeenCalledWith('gd-1', 'A3')
+  })
+
   it('menu In chung nhan hon phoi goi dung api voi id gia dinh', () => {
     const menu = menuGiaDinhMacDinh(vi.fn(), vi.fn())
     const inHonPhoi = menu.find((m) => m.nhan === 'In chứng nhận hôn phối')

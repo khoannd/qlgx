@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Times New Roman", "Liberation Serif", Georgia, serif;
+    font-size: 13pt;
+    color: #000;
+    margin: 0;
+    padding: 0;
+  }
+  .quoc-hieu { text-align: center; margin-bottom: 4mm; }
+  .quoc-hieu .dong1 { font-weight: bold; letter-spacing: 0.5px; }
+  .quoc-hieu .dong2 { font-style: italic; }
+  .dau-phan { text-align: center; margin: 1mm 0 6mm 0; }
+  .dau-phan hr { display: inline-block; width: 40mm; border: none; border-top: 1px solid #000; }
+
+  .giao-xu-info { text-align: center; margin-bottom: 6mm; line-height: 1.5; }
+  .giao-xu-info .ten-giao-xu { font-weight: bold; font-size: 14pt; text-transform: uppercase; }
+
+  .tieu-de { text-align: center; margin: 6mm 0; }
+  .tieu-de h1 { font-size: 17pt; margin: 0; letter-spacing: 1px; }
+
+  .kinh-gui { margin: 4mm 0; font-style: italic; }
+  .doan { margin: 2.5mm 0; line-height: 1.6; }
+  .doan-mo-dau { margin: 6mm 0; text-align: justify; line-height: 1.7; }
+
+  .ky-ten { margin-top: 10mm; display: flex; justify-content: flex-end; }
+  .ky-ten .khoi-ky { text-align: center; width: 65mm; }
+  .ky-ten .ngay-thang { font-style: italic; margin-bottom: 16mm; display: block; }
+  .ky-ten .chuc-danh { font-weight: bold; }
+  .ky-ten .an-ky { font-style: italic; font-size: 10.5pt; }
+
+  .ghi-chu-cuoi { margin-top: 8mm; font-size: 10pt; font-style: italic; color: #333; }
+
+  /* Nửa dưới của mẫu gốc RaoHonPhoi.doc: một phiếu "KẾT QUẢ RAO HÔN PHỐI" TRỐNG để giáo xứ
+     nhận điền tay ba ngày rao rồi gửi trả lại — KHÔNG có dữ liệu từ CSDL (bản gốc cũng để
+     dấu chấm trống ".........", xem docs/superpowers/specs/man-hinh/in-an.md mục 8). Giữ
+     nguyên như một phần văn bản tĩnh, ngăn cách bằng ngắt trang cho gọn khi in hai mặt. */
+  .phieu-ket-qua { margin-top: 14mm; page-break-before: always; padding-top: 4mm; }
+  .phieu-ket-qua .dong-cham { border-bottom: 1px dotted #666; display: inline-block; min-width: 60mm; }
+  .phieu-ket-qua .tieu-de-nho { text-align: center; font-weight: bold; font-size: 14pt; margin: 6mm 0; }
+</style>
+</head>
+<body>
+  <div class="quoc-hieu">
+    <div class="dong1">CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+    <div class="dong2">Độc lập – Tự do – Hạnh phúc</div>
+  </div>
+  <div class="dau-phan"><hr /></div>
+
+  <div class="giao-xu-info">
+    <div>Giáo phận {{TenGiaoPhan}} — Giáo hạt {{TenGiaoHat}}</div>
+    <div class="ten-giao-xu">GIÁO XỨ {{TenGiaoXu}}</div>
+  </div>
+
+  <div class="tieu-de">
+    <h1>GIẤY XIN ĐIỀU TRA VÀ RAO HÔN PHỐI</h1>
+  </div>
+
+  <div class="kinh-gui">Kính gửi: Cha Xứ: {{TenGiaoXuNhan}}&emsp;Giáo Phận: {{TenGiaoPhanNhan}}</div>
+
+  <div class="doan">Có {{AnhChi1}}: {{HoTen1}}, {{Tuoi1}} tuổi</div>
+  <div class="doan">Con Ông: {{TenCha1}} và Bà: {{TenMe1}}</div>
+  <div class="doan">Nguyên quán xứ: {{TenGiaoXuNQ1}}&emsp;Giáo Phận: {{TenGiaoPhanNQ1}}</div>
+  <div class="doan">Hiện đang ở: {{TenGiaoXu1}}</div>
+  <div class="doan">Trước đã ở xứ: {{TenGiaoXuTruoc1}}&emsp;Giáo Phận: {{TenGiaoPhanTruoc1}}</div>
+
+  <div class="doan">Xin kết hôn với {{AnhChi2}}: {{HoTen2}}, {{Tuoi2}} tuổi</div>
+  <div class="doan">Con Ông: {{TenCha2}} và Bà: {{TenMe2}}</div>
+  <div class="doan">Nguyên quán xứ: {{TenGiaoXuNQ2}}&emsp;Giáo Phận: {{TenGiaoPhanNQ2}}</div>
+  <div class="doan">Hiện đang ở: {{TenGiaoXu2}}</div>
+  <div class="doan">Trước đã ở xứ: {{TenGiaoXuTruoc2}}&emsp;Giáo Phận: {{TenGiaoPhanTruoc2}}</div>
+
+  <div class="doan-mo-dau">
+    Xin Cha vui lòng điều tra và rao theo luật Giáo Hội, sau đó gửi lại cho chúng con kết quả.
+    Xin chân thành cảm ơn Cha.
+  </div>
+
+  <div class="ky-ten">
+    <div class="khoi-ky">
+      <span class="ngay-thang">Giáo xứ {{TenGiaoXu}}, {{NgayThangNamIn}}</span>
+      <span class="chuc-danh">Linh mục phụ trách</span>
+      <span class="an-ky">(Ấn ký)</span>
+    </div>
+  </div>
+
+  <div class="phieu-ket-qua">
+    <div class="doan">Giáo phận: <span class="dong-cham">&nbsp;</span></div>
+    <div class="doan">Giáo hạt: <span class="dong-cham">&nbsp;</span></div>
+    <div class="doan">Giáo xứ: <span class="dong-cham">&nbsp;</span></div>
+    <div class="tieu-de-nho">KẾT QUẢ RAO HÔN PHỐI</div>
+    <div class="doan">Tôi, linh mục: <span class="dong-cham">&nbsp;</span> phụ trách xứ: <span class="dong-cham">&nbsp;</span></div>
+    <div class="doan">Nhận thực đã điều tra và rao ba lần vào các ngày:</div>
+    <div class="doan">1. <span class="dong-cham">&nbsp;</span></div>
+    <div class="doan">2. <span class="dong-cham">&nbsp;</span></div>
+    <div class="doan">3. <span class="dong-cham">&nbsp;</span></div>
+    <div class="doan">Hết hạn không thấy ai thưa ngăn trở gì.</div>
+    <div class="doan">Giáo xứ <span class="dong-cham">&nbsp;</span> ngày ..... tháng ..... năm .....</div>
+    <div class="ky-ten">
+      <div class="khoi-ky">
+        <span class="chuc-danh">Linh mục phụ trách</span>
+        <span class="an-ky">(Ấn ký)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="ghi-chu-cuoi">Giấy in trực tiếp từ hệ thống quản lý giáo xứ — không có giá trị khi có tẩy xoá, sửa chữa.</div>
+</body>
+</html>

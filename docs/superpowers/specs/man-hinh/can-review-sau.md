@@ -4249,3 +4249,90 @@ chụp ảnh **sau** (`194`) — đúng cùng một hội đoàn "Legio Mariae",
 chạy thử (mọi thao tác thử — tạo "Đôi rao mới"/"Khối giáo lý mới"/"Rửa tội (đợt mới)" — đều KHÔNG
 bấm "Cập nhật" nên không ghi gì xuống CSDL): 2050 giáo dân / 40 gia đình / 145 thành viên / 1
 giáo họ / 1108 đợt bí tích / 6150 bí tích chi tiết / 2 hội đoàn / 2 chi tiết hội đoàn / 1 tận hiến.
+
+### 69. Task "in-excel-a3" (2026-09-08) — nút "In giới thiệu hôn phối" thật ra wire vào một mẫu
+### KHÁC trên desktop, một sai khác cố ý migrate y hệt, và mẫu A3 hoá ra là mẫu CHẾT
+
+Ba việc: (1) mẫu in cuối cùng còn báo "chưa hỗ trợ" trên toàn ứng dụng — "In giới thiệu hôn
+phối" (`GxGiaoDanList.tsx`); (2) Xuất Excel cho "Danh sách sổ bí tích"/"Danh sách rao hôn phối";
+(3) hạ tầng chọn khổ giấy + mẫu "Phiếu gia đình" khổ A3.
+
+1. **Phát hiện quan trọng nhất — mâu thuẫn với chú thích sẵn có trong mã**: chú thích ở
+   `GxGiaoDanList.tsx` (và `in-an.md` mục 5e cũ) nói nút "In giới thiệu hôn phối" tương ứng
+   `Source/ExcelReport/ReportRaoHP.cs`. Đối chiếu lại **mã nguồn desktop thật** cho thấy điều
+   này CHỈ ĐÚNG MỘT NỬA: nút bấm THẬT trên UI (`Source/GXControl/GxGiaoDanList.cs` dòng 56,
+   `item3` — `MenuItem item3 = new MenuItem("In giới thiệu hôn phối")`) gọi
+   `XuatGioiThieuHonPhoi()` (dòng 396-410) → mở `frmReportGioiThieuHP` — **mẫu "Giấy giới thiệu
+   giáo lý hôn phối" CŨ** (cài đặt đầu tiên trong hai cài đặt đã ghi ở mục 65, cái tự chèn một
+   `GiaoDan` "ma" vào CSDL). Mục thật sự gọi `ReportRaoHP.Export`/`frmRaoHonPhoi` là `item7`
+   (dòng 68-69, 375-378) — nhưng `item7` **BỊ COMMENT LẠI HOÀN TOÀN**, không bao giờ được tạo
+   trên UI (`//MenuItem item7 = ...` và `//item7.Click += ...`). Vậy trên bản desktop THẬT, nút
+   nhãn "In giới thiệu hôn phối" chưa từng in ra giấy Rao hôn phối — nó in giấy giới thiệu giáo
+   lý hôn phối (mẫu đã bị coi là mã chết ở mục 65 vì `frmReportGioiThieuHP` không được gọi từ
+   NƠI KHÁC — hoá ra vẫn có MỘT nơi gọi, chỉ là không đọc thấy ở lượt khảo sát trước vì tìm theo
+   tên lớp `frmReportGioiThieuHP`/`frmReport` thay vì lần theo từng `MenuItem` của
+   `GxGiaoDanList.cs`).
+2. **Quyết định đã áp dụng**: nhiệm vụ này CHỈ ĐẠO RÕ (trích nguyên văn phần giao việc) coi nút
+   web hiện tại tương ứng `ReportRaoHP.cs` — đã làm THEO đúng chỉ đạo đó (dựng `RaoHonPhoi.html`
+   từ `BIN/Template/Chung/RaoHonPhoi.doc`, nối vào `GET /api/giao-dan/{id}/in/gioi-thieu-hon-phoi`,
+   xem `InAnService.XuatGioiThieuHonPhoi`), KHÔNG tự ý đổi sang mẫu giáo lý hôn phối cũ mà mã
+   desktop thật sự gọi. Ghi lại phát hiện này để người dùng quyết định: giữ nguyên (web đã ĐÚNG
+   với Ý ĐỊNH ghi trong tên nhãn "hôn phối"+"rao", chỉ khác đường mã desktop thật đang chạy) hay
+   đổi lại cho khớp hành vi desktop thật (nút này in ra giấy giáo lý hôn phối, và nhãn menu tiếp
+   tục "chưa hỗ trợ" cho rao hôn phối thật).
+3. **Sai khác migrate Y HỆT có chủ đích (không sửa cho đúng)**: `Source/ExcelReport/ReportRaoHP.cs`
+   dòng 93-94:
+   ```csharp
+   word.Replace(ReportChungNhanBTConst.TenGiaoXuNhan, rowData[ReportRaoHonPhoiConst.TenLinhMucNhan]);
+   word.Replace(ReportChungNhanBTConst.TenGiaoPhanNhan, rowData[ReportRaoHonPhoiConst.GiaoXuNhan]);
+   ```
+   Bảng `RaoHonPhoi` chỉ có hai cột "nhận" là `LinhMucNhan`/`GiaoXuNhan` (không có cột
+   `GiaoPhanNhan` riêng) — bản gốc gán `LinhMucNhan` vào chỗ trống mẫu `[TenGiaoXuNhan]` ("Cha
+   Xứ: ...", hợp lý) nhưng gán `GiaoXuNhan` vào chỗ trống `[TenGiaoPhanNhan]` ("Giáo Phận: ...",
+   tên cột không khớp nhãn in ra giấy). `InAnService.XuatGioiThieuHonPhoi`/`XuatKetQuaRaoHonPhoi`
+   chép NGUYÊN VĂN cách gán này (`["TenGiaoXuNhan"] = r.LinhMucNhan`,
+   `["TenGiaoPhanNhan"] = r.GiaoXuNhan`) — KHÔNG sửa "cho đúng tên cột".
+4. **"Phiếu gia đình khổ A3" hoá ra là một mẫu CHẾT trên desktop, không phải một biến thể có
+   sẵn đang dùng**: đối chiếu `Source/GXControl/GxGiaDinhList.cs`
+   (`InPhieuGiaDinh`/`XuatSoGiaDinhChungFile`/`InSoGiaDinhChungFile`) và
+   `Source/ExcelReport/ReportSoGiaDinh.cs` xác nhận CẢ HAI đường in phiếu gia đình gán cứng
+   `ReportSoGiaDinh.FileName = GxConstants.REPORT_PHIEUGIADINH_FILENAME` ("PhieuGiaDinh"),
+   không có nhánh nào chọn `PhieuGiaDinh-A3.doc` — mẫu A3 nằm sẵn trong `BIN/Template/Chung/`
+   nhưng không menu/nút/cấu hình nào trên desktop từng chọn nó. Bổ sung khổ A3 ở web (mục
+   "In phiếu gia đình (khổ A3)" ở menu chuột phải `GxGiaDinhList.tsx` + ô chọn khổ giấy ở
+   `GiaDinhDetail.tsx`) vì vậy là một **khả năng MỚI theo yêu cầu nhiệm vụ** ("người dùng nên
+   chọn được khổ khi in phiếu gia đình"), KHÔNG PHẢI tái hiện một hành vi desktop có sẵn — xem
+   `in-an.md` mục 5c/8. Hạ tầng: `BoTrinhDuyet.XuatPdfAsync` nhận thêm tham số `khoGiay` (mặc
+   định "A4", giữ nguyên hành vi cũ mọi nơi gọi khác); endpoint `GET
+   /api/gia-dinh/{id}/in/phieu-gia-dinh?khoGiay=A3` kiểm tra chỉ nhận "A4"/"A3" (400 nếu khác)
+   — KHÔNG chuyển thẳng chuỗi tuỳ ý từ query xuống Playwright. Dùng lại NGUYÊN VẸN mẫu HTML
+   `PhieuGiaDinh.html` (bảng đã co giãn theo số người thật, không phải 8 dòng cố định như bản
+   gốc) — chỉ khác khổ giấy Playwright xuất ra, không dựng mẫu HTML riêng cho A3.
+5. **`TenLinhMucGui` của "Giấy kết quả rao hôn phối" để TRỐNG**: bản gốc lấy tên linh mục đang
+   tại nhiệm đầu tiên từ bảng `LinhMuc` (`SELECT_LINHMUC_LIST ... AND DenNgay IS NULL`) — bản
+   web CHƯA có API/màn hình quản lý danh mục Linh mục (đã ghi nhận ở mục 65 cho 4 mẫu Giấy giới
+   thiệu, áp dụng lại ở đây), nên `InAnService.XuatKetQuaRaoHonPhoi` để `TenLinhMucGui = null`
+   (mẫu HTML hiện dòng trống thay vì bịa tên).
+6. **Xuất Excel "Danh sách sổ bí tích" chỉ ở MỨC ĐỢT (5 cột), không xuất chi tiết từng người
+   nhận trong đợt** — bảng `BiTichChiTiet`/`GxBiTichChiTiet.FormatGrid` không có màn hình danh
+   sách/bộ lọc riêng để `XuatExcelService` tái dùng (nguyên tắc xuyên suốt của lớp này là gọi
+   thẳng `LayDanhSach` có sẵn, không viết lại điều kiện lọc) — nếu người dùng cần xuất Excel
+   6150 bản ghi chi tiết bí tích, cần thêm một hạng mục riêng (màn hình/endpoint danh sách chi
+   tiết theo đợt hiện chỉ có ở trang chi tiết một đợt, không có Excel).
+7. **Xuất Excel "Danh sách rao hôn phối" chỉ 8 cột mức tóm tắt trên lưới danh sách** (đúng
+   `cotRaoHonPhoi.ts`/`GxRaoHonPhoiList.FormatGrid`), KHÔNG PHẢI 26 cột chi tiết đầy đủ của
+   `frmRaoHonPhoi` mà mẫu gốc `DanhSachRaoHonPhoi.xls`/`ReportRaoHP.ExportList` hướng tới (mẫu
+   gốc dùng cơ chế GridEX xuất nguyên lưới ĐANG HIỂN THỊ — đúng lưới 8 cột đó, không phải một
+   nguồn dữ liệu khác) — nhất quán với cách `XuatGiaoDan`/`XuatGiaDinh` đã làm trước đó (xuất
+   đúng những gì lưới danh sách hiển thị).
+8. **"Tuổi" trên giấy "Xin điều tra và rao hôn phối" chép nguyên công thức `Memory.GetTuoi`**
+   (`Source/DBAccess/CMemory.cs:2004-2011`): tuổi = năm hiện tại − năm sinh, để TRỐNG (chuỗi
+   `" "`, không phải `"0"`) khi sinh CÙNG năm hiện tại hoặc thiếu ngày sinh — không dùng cách
+   tính tuổi chính xác theo ngày/tháng sinh mà các màn hình khác của bản web có thể đã dùng.
+9. Chứng minh chạy thật: PDF `RaoHonPhoi.pdf`/`KQRaoHonPhoi.pdf` (dữ liệu mẫu tự tạo cho
+   `rao_hon_phoi`, đã dọn sạch sau khi kiểm — bảng vẫn RỖNG ở giáo xứ Vô Nhiễm như trước),
+   PDF `PhieuGiaDinh_A3.pdf` (kiểm `/MediaBox` đúng khổ A3 bằng PyMuPDF), Excel
+   `DanhSachSoBiTich.xlsx`/`DanhSachRaoHonPhoi.xlsx` (kiểm bằng openpyxl) — ảnh/tệp mẫu
+   `200`-`20x` ở `WebApp/anh-chup-kiem-thu/`. Dữ liệu thật `qlgx_thu` xác nhận nguyên trạng sau
+   khi kiểm: 2050 giáo dân / 40 gia đình / 145 thành viên / 1 giáo họ / 1108 đợt bí tích / 6150
+   bí tích chi tiết / 2 hội đoàn / 2 chi tiết hội đoàn / 1 tận hiến.

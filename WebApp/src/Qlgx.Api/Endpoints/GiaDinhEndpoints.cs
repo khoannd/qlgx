@@ -63,10 +63,18 @@ public static class GiaDinhEndpoints
         // "Lý lịch cá nhân", RequireAuthorization() + lọc GiaoXuId qua claim đã kế thừa từ
         // `nhom`. "Chứng nhận hôn phối" trả 404 khi gia đình chưa có hôn phối nào để chứng
         // nhận, không chỉ khi không tìm thấy gia đình.
-        nhom.MapGet("/{id:guid}/in/phieu-gia-dinh", async (InAnService dv, Guid id, CancellationToken ct) =>
-            await dv.XuatPhieuGiaDinh(id, ct) is { } ketQua
+        // khoGiay: "A4" (mặc định, giữ nguyên hành vi cũ) hoặc "A3" (PhieuGiaDinh-A3.doc bản
+        // desktop, gia đình đông người — xem in-an.md mục 5c/8). Chỉ nhận đúng hai giá trị này —
+        // 400 nếu khác, KHÔNG chuyển thẳng chuỗi tuỳ ý xuống Playwright.
+        nhom.MapGet("/{id:guid}/in/phieu-gia-dinh", async (InAnService dv, Guid id, string? khoGiay, CancellationToken ct) =>
+        {
+            var kg = khoGiay ?? "A4";
+            if (kg != "A4" && kg != "A3")
+                return Results.BadRequest(new { thongBao = "Khổ giấy không hợp lệ — chỉ nhận \"A4\" hoặc \"A3\"." });
+            return await dv.XuatPhieuGiaDinh(id, kg, ct) is { } ketQua
                 ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
-                : Results.NotFound());
+                : Results.NotFound();
+        });
 
         // "In lý lịch cá nhân" bấm từ lưới/màn hình GIA ĐÌNH (GxGiaDinhList.tsx,
         // GiaDinhDetail.tsx) — in CẢ gia đình (mỗi thành viên một trang PDF), KHÔNG phải một

@@ -115,6 +115,16 @@ public static class GiaoDanEndpoints
                 : Results.NotFound();
         });
 
+        // "In giới thiệu hôn phối" (GxGiaoDanList.tsx, toolbar Hồ sơ lưu trữ giáo dân) — tương
+        // đương Source/ExcelReport/ReportRaoHP.cs (giấy XIN ĐIỀU TRA VÀ RAO hôn phối, KHÔNG
+        // phải 4 mẫu "Giấy giới thiệu" ở trên — xem InAnService.XuatGioiThieuHonPhoi và
+        // in-an.md mục 8). 404 khi giáo dân này chưa có đôi rao hôn phối nào (chưa tạo ở màn
+        // hình "Danh sách rao hôn phối").
+        nhom.MapGet("/{id:guid}/in/gioi-thieu-hon-phoi", async (InAnService dv, Guid id, CancellationToken ct) =>
+            await dv.XuatGioiThieuHonPhoi(id, ct) is { } ketQua
+                ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
+                : Results.NotFound());
+
         // Ảnh đại diện (VIEC-TIEP-THEO.md mục 1.2, xem can-review-sau.md mục 36) — lưu nhị phân
         // trong CSDL, KHÔNG ghi đĩa cục bộ máy chủ. Ba route nằm trong `nhom` nên đã kế thừa
         // RequireAuthorization() + lọc GiaoXuId qua claim (AnhDaiDienService không nhận

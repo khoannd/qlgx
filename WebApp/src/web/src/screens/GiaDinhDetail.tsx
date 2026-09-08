@@ -166,9 +166,14 @@ export function GiaDinhDetail({
   // "In phiếu gia đình" — không mơ hồ như "In lý lịch cá nhân" (KHÔNG rõ cho thành viên nào,
   // vẫn dùng menu chuột phải trên lưới thành viên), vì phiếu gia đình luôn in cho CẢ gia đình
   // đang mở, nên nối thẳng nút này vào endpoint — xem docs/superpowers/specs/man-hinh/in-an.md.
+  //
+  // `khoGiayPhieu` — bổ sung theo yêu cầu "người dùng nên chọn được khổ khi in phiếu gia đình"
+  // (mục 2 nhiệm vụ, PhieuGiaDinh-A3.doc bản desktop dùng cho gia đình đông người, A4 không đủ
+  // chỗ khi nhiều thành viên — xem in-an.md mục 5c/8). Mặc định "A4" — giữ nguyên hành vi cũ.
+  const [khoGiayPhieu, setKhoGiayPhieu] = useState<'A4' | 'A3'>('A4')
   function inPhieuGiaDinh(): void {
     if (!duLieu?.id) return
-    api.giaDinh.inPhieuGiaDinh(duLieu.id).catch((e: unknown) => {
+    api.giaDinh.inPhieuGiaDinh(duLieu.id, khoGiayPhieu).catch((e: unknown) => {
       console.error(`Không in được phiếu gia đình ${duLieu.id}`, e)
       window.alert(e instanceof Error ? e.message : 'In thất bại, thử lại sau.')
     })
@@ -548,6 +553,15 @@ export function GiaDinhDetail({
             — MỘT giáo dân, dùng ở menu chuột phải lưới giáo dân) — disable khi gia đình còn là
             bản nháp chưa lưu (chưa có id để in). Xem in-an.md mục 5f. */}
         <button type="button" className="btn" onClick={inLyLichCaNhan} disabled={moi}>In lý lịch cá nhân</button>
+        <label className="hint" htmlFor="gd-kho-giay-phieu" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          Khổ giấy
+          <select id="gd-kho-giay-phieu" value={khoGiayPhieu} disabled={moi}
+            onChange={(e) => setKhoGiayPhieu(e.target.value as 'A4' | 'A3')}
+            title="Khổ A3 dùng cho gia đình đông người — A4 có thể không đủ chỗ">
+            <option value="A4">A4</option>
+            <option value="A3">A3 (gia đình đông người)</option>
+          </select>
+        </label>
         <button type="button" className="btn" onClick={inPhieuGiaDinh} disabled={moi}>In phiếu gia đình</button>
         <button type="button" className="btn btn-quiet" onClick={() => moDanhSachGiaDinh?.()}>Quay về</button>
         <button type="submit" className="btn btn-primary" disabled={moi ? (!onTaoMoi || dangLuu) : (!onLuu || dangLuu)}>

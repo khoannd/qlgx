@@ -289,7 +289,18 @@ describe('GiaDinhDetail', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'In phiếu gia đình' }))
 
-    expect(api.giaDinh.inPhieuGiaDinh).toHaveBeenCalledWith('g9')
+    expect(api.giaDinh.inPhieuGiaDinh).toHaveBeenCalledWith('g9', 'A4')
+  })
+
+  // Bổ sung theo mục 2 nhiệm vụ "người dùng nên chọn được khổ khi in phiếu gia đình"
+  // (PhieuGiaDinh-A3.doc bản desktop — gia đình đông người, xem in-an.md mục 5c/8).
+  it('chon kho A3 roi bam In phieu gia dinh thi goi api voi khoGiay A3', async () => {
+    render(<GiaDinhDetail duLieu={chiTiet({ id: 'g9' })} />)
+
+    await userEvent.selectOptions(screen.getByLabelText('Khổ giấy'), 'A3')
+    await userEvent.click(screen.getByRole('button', { name: 'In phiếu gia đình' }))
+
+    expect(api.giaDinh.inPhieuGiaDinh).toHaveBeenCalledWith('g9', 'A3')
   })
 
   it('gia dinh moi (chua luu): nut In phieu gia dinh bi vo hieu hoa', () => {

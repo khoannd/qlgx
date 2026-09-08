@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { api } from '../api/client'
 import type { DotBiTichListItem, LoaiBiTich } from '../api/types'
 import { GxGrid } from '../components/GxGrid'
 import { GxToolbar } from '../components/GxToolbar'
@@ -32,6 +33,23 @@ export function DotBiTichList({
   const [dongChon, setDongChon] = useState<DotBiTichListItem | null>(null)
   const [trangThaiXoa, setTrangThaiXoa] = useState<'hoi' | 'dang-xoa' | null>(null)
   const [loiXoa, setLoiXoa] = useState<string | null>(null)
+  const [dangXuatExcel, setDangXuatExcel] = useState(false)
+
+  // "Xuất Excel" (xem docs/superpowers/specs/man-hinh/in-an.md mục 8) — CÙNG bộ lọc đang áp
+  // dụng trên màn hình (loaiBiTich/tuNam/denNam), giống cách GiaoDanList/GiaDinhList đã làm.
+  // Chỉ bấm được khi đã "Tìm kiếm" (có loaiBiTich) — trước đó không có gì để xuất.
+  async function xuatExcel() {
+    if (loaiBiTich === null) return
+    setDangXuatExcel(true)
+    try {
+      await api.dotBiTich.xuatExcel(loaiBiTich, Number(tuNam) || undefined, Number(denNam) || undefined)
+    } catch (e) {
+      console.error('Không xuất được Excel danh sách sổ bí tích', e)
+      window.alert(e instanceof Error ? e.message : 'Xuất Excel thất bại, thử lại sau.')
+    } finally {
+      setDangXuatExcel(false)
+    }
+  }
 
   async function thucHienXoa() {
     if (!dongChon) return
@@ -72,6 +90,10 @@ export function DotBiTichList({
               title: 'Thêm đợt bí tích mới' },
             { label: 'Xóa đợt', icon: 'trash', needSel: true, onClick: () => setTrangThaiXoa('hoi'),
               title: 'Loại bỏ đợt bí tích này ra khỏi danh sách' },
+            '>',
+            { label: dangXuatExcel ? 'Đang xuất…' : 'Xuất Excel', icon: 'excel',
+              onClick: !daTimKiem || dangXuatExcel ? undefined : () => { void xuatExcel() },
+              title: 'Xuất danh sách đang hiện trên lưới ra tệp Excel (.xlsx)' },
           ]}
         />
 

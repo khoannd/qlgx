@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { api } from '../api/client'
 import type { RaoHonPhoiListItem } from '../api/types'
 import { GxGrid } from '../components/GxGrid'
 import { GxToolbar } from '../components/GxToolbar'
@@ -21,6 +22,21 @@ export function RaoHonPhoiList({ rows, xemTatCa, onDoiXemTatCa, moRao, onXoa, on
   const [dongChon, setDongChon] = useState<RaoHonPhoiListItem | null>(null)
   const [trangThaiXoa, setTrangThaiXoa] = useState<'hoi' | 'dang-xoa' | null>(null)
   const [loiXoa, setLoiXoa] = useState<string | null>(null)
+  const [dangXuatExcel, setDangXuatExcel] = useState(false)
+
+  // "Xuất Excel" (xem docs/superpowers/specs/man-hinh/in-an.md mục 8) — CÙNG tham số lọc
+  // `xemTatCa` đang áp dụng trên màn hình, giống cách GiaoDanList/GiaDinhList đã làm.
+  async function xuatExcel() {
+    setDangXuatExcel(true)
+    try {
+      await api.raoHonPhoi.xuatExcel(xemTatCa)
+    } catch (e) {
+      console.error('Không xuất được Excel danh sách rao hôn phối', e)
+      window.alert(e instanceof Error ? e.message : 'Xuất Excel thất bại, thử lại sau.')
+    } finally {
+      setDangXuatExcel(false)
+    }
+  }
 
   async function thucHienXoa() {
     if (!dongChon) return
@@ -53,6 +69,10 @@ export function RaoHonPhoiList({ rows, xemTatCa, onDoiXemTatCa, moRao, onXoa, on
             { label: 'Thêm đôi rao', icon: 'plus', kind: 'primary', onClick: () => moRao(null), title: 'Thêm' },
             { label: 'Xóa', icon: 'trash', needSel: true, onClick: () => setTrangThaiXoa('hoi'),
               title: 'Xóa đôi rao được chọn' },
+            '>',
+            { label: dangXuatExcel ? 'Đang xuất…' : 'Xuất Excel', icon: 'excel',
+              onClick: dangXuatExcel ? undefined : () => { void xuatExcel() },
+              title: 'Xuất danh sách đang hiện trên lưới ra tệp Excel (.xlsx)' },
           ]}
         />
 

@@ -19,6 +19,16 @@ public static class RaoHonPhoiEndpoints
         nhom.MapGet("/{id:guid}", async (RaoHonPhoiService dv, Guid id, CancellationToken ct) =>
             await dv.LayChiTiet(id, ct) is { } ct2 ? Results.Ok(ct2) : Results.NotFound());
 
+        // "Xuất Excel" — hoãn lại ở lượt migrate màn hình (commit aa4a2af), làm ở lượt này (xem
+        // in-an.md mục 8). CÙNG tham số lọc `xemTatCa` với GET "" phía trên.
+        nhom.MapGet("/xuat-excel", async (XuatExcelService dv, bool? xemTatCa, CancellationToken ct) =>
+        {
+            var noiDung = await dv.XuatRaoHonPhoi(xemTatCa ?? false, ct);
+            var tenTep = $"danh-sach-rao-hon-phoi-{DateTime.Now:yyyy-MM-dd}.xlsx";
+            return Results.File(noiDung,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", tenTep);
+        });
+
         nhom.MapPost("", async (RaoHonPhoiService dv, LuuRaoHonPhoiRequest yc, CancellationToken ct) =>
         {
             var loi = KiemTra(yc);
@@ -43,11 +53,22 @@ public static class RaoHonPhoiEndpoints
         // phía client (GxRaoHonPhoiList.cs:246).
         nhom.MapDelete("/{id:guid}", async (RaoHonPhoiService dv, Guid id, CancellationToken ct) =>
             await dv.Xoa(id, ct) ? Results.Ok() : Results.NotFound());
+
+        // "In kết quả rao hôn phối" (RaoHonPhoiDetail.tsx) — tương đương
+        // ReportRaoHP.Export(ds, printRS: true)/KQRaoHonPhoi.doc, xem
+        // InAnService.XuatKetQuaRaoHonPhoi và in-an.md mục 8. "In giấy xin điều tra" (RaoHonPhoi.doc)
+        // nằm ở /api/giao-dan/{id}/in/gioi-thieu-hon-phoi (bấm từ MỘT giáo dân, không phải từ
+        // trang chi tiết đôi rao — xem GiaoDanEndpoints.cs).
+        nhom.MapGet("/{id:guid}/in/ket-qua", async (InAnService dv, Guid id, CancellationToken ct) =>
+            await dv.XuatKetQuaRaoHonPhoi(id, ct) is { } ketQua
+                ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
+                : Results.NotFound());
     }
 
     /// <summary>Khớp thứ tự kiểm tra của <c>gxCommand1_OnOK</c>
     /// (Source/GXControl/frmRaoHonPhoi.cs:113-129) cho phần KHÔNG phụ thuộc "In điều tra"
-    /// (usePrint — chưa migrate ở Task này, không có tính năng in điều tra/kết quả rao ở web).
+    /// (usePrint — chức năng in điều tra/kết quả rao nay đã có, xem "in/ket-qua" ở trên và
+    /// GiaoDanEndpoints.cs "in/gioi-thieu-hon-phoi").
     /// </summary>
     private static string? KiemTra(LuuRaoHonPhoiRequest yc)
     {

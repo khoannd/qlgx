@@ -120,6 +120,33 @@ public class InAnMauMoiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
         res.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    // --- Phiếu gia đình khổ A3 (mục 3 nhiệm vụ "in-excel-a3" — PhieuGiaDinh-A3.doc bản desktop,
+    // gia đình đông người, A4 không đủ chỗ) ------------------------------------------------
+
+    [Fact]
+    public async Task Phieu_gia_dinh_kho_A3_xuat_thanh_cong()
+    {
+        var chongId = await TaoGiaoDan(8111, "Nguyen Van Chong A3", g => g.Phai = "Nam");
+        var voId = await TaoGiaoDan(8112, "Tran Thi Vo A3", g => g.Phai = "Nữ");
+        var giaDinhId = await TaoGiaDinhVoiThanhVien(8110,
+            (chongId, VaiTroGiaDinh.Chong, true), (voId, VaiTroGiaDinh.Vo, false));
+
+        var res = await app.CreateAuthClient().GetAsync($"/api/gia-dinh/{giaDinhId}/in/phieu-gia-dinh?khoGiay=A3");
+
+        await VerifyPdf(res);
+    }
+
+    [Fact]
+    public async Task Phieu_gia_dinh_kho_khong_hop_le_tra_400()
+    {
+        var giaDinhId = await TaoGiaDinhVoiThanhVien(8120);
+
+        var res = await app.CreateAuthClient()
+            .GetAsync($"/api/gia-dinh/{giaDinhId}/in/phieu-gia-dinh?khoGiay=A5");
+
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     // --- Chứng nhận hôn phối ---------------------------------------------------------------
 
     [Fact]

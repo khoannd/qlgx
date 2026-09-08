@@ -313,8 +313,16 @@ public class InAnService(
     ///
     /// Mỗi dòng thành viên là một khối HTML tự dựng (KHÔNG qua {{Key}} thông thường vì số dòng
     /// không cố định) — MỌI dữ liệu người dùng chèn vào khối đó đều tự
-    /// <c>HtmlEncoder.Default.Encode</c> trước, xem ghi chú ở BoDoMauIn.Dung.</summary>
-    public async Task<KetQuaInAn?> XuatPhieuGiaDinh(Guid giaDinhId, CancellationToken ct)
+    /// <c>HtmlEncoder.Default.Encode</c> trước, xem ghi chú ở BoDoMauIn.Dung.
+    ///
+    /// <paramref name="khoGiay"/> ("A4" mặc định, hoặc "A3") — bổ sung cho yêu cầu
+    /// `PhieuGiaDinh-A3.doc` (mục 2 nhiệm vụ, gia đình đông người, khổ A4 không đủ chỗ, xem
+    /// in-an.md mục 5c/8). CỐ Ý dùng lại NGUYÊN VẸN mẫu HTML "PhieuGiaDinh" (không dựng mẫu
+    /// riêng cho A3) — bảng thành viên đã co giãn theo số người thật (không phải 8 dòng cố định
+    /// như bản desktop), nên khác biệt A3 so với A4 chỉ nằm ở khổ giấy Playwright xuất ra
+    /// (nhiều chỗ trống hơn, KHÔNG phải bố cục khác) — đúng tinh thần "chỉ khác khổ giấy và số
+    /// cột" mà nhiệm vụ này chỉ đạo tái dùng tối đa.</summary>
+    public async Task<KetQuaInAn?> XuatPhieuGiaDinh(Guid giaDinhId, string khoGiay, CancellationToken ct)
     {
         var giaDinh = await db.GiaDinh
             .Include(x => x.ThanhVien).ThenInclude(tv => tv.GiaoDan)
@@ -388,9 +396,10 @@ public class InAnService(
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
         var html = mau.Dung(slug, "PhieuGiaDinh", duLieu, khoiHtml);
-        var pdf = await trinhDuyet.XuatPdfAsync(html, ct);
+        var pdf = await trinhDuyet.XuatPdfAsync(html, ct, khoGiay: khoGiay);
 
-        return new KetQuaInAn(pdf, $"PhieuGiaDinh_{giaDinh.MaGiaDinhCu}.pdf");
+        var hauTo = khoGiay == "A3" ? "_A3" : "";
+        return new KetQuaInAn(pdf, $"PhieuGiaDinh_{giaDinh.MaGiaDinhCu}{hauTo}.pdf");
     }
 
     private sealed record NguoiHonPhoi(
@@ -655,6 +664,147 @@ public class InAnService(
         var html = mau.Dung(slug, "GioiThieuChuyenXu", duLieu, khoiHtml);
         var pdf = await trinhDuyet.XuatPdfAsync(html, ct);
         return new KetQuaInAn(pdf, $"GioiThieuChuyenXu_{giaDinh.MaGiaDinhCu}.pdf");
+    }
+
+    // --- Rao hôn phối (Source/ExcelReport/ReportRaoHP.cs) --------------------------------
+    //
+    // Nút "In giới thiệu hôn phối" (GxGiaoDanList.tsx, toolbar Hồ sơ lưu trữ giáo dân) — trước
+    // lượt này báo "chưa hỗ trợ" (xem in-an.md mục 5e cuối và mục 8). Đối chiếu mã nguồn desktop
+    // (Source/GXControl/GxGiaoDanList.cs dòng 56/380-393: nút bấm thật trên UI, item3, gọi
+    // `frmReportGioiThieuHP` — MỘT cài đặt "Giấy giới thiệu" cũ khác hẳn) VS phần bị comment
+    // (item7, không bao giờ tạo trên UI) gọi `frmRaoHonPhoi`/`ReportRaoHP.Export` — xem
+    // can-review-sau.md mục mới: nhiệm vụ này CHỈ ĐẠO RÕ coi nút web hiện tại tương ứng
+    // `ReportRaoHP.cs` (rao hôn phối, KHÔNG phải giấy giới thiệu giáo lý hôn phối đã làm ở mục
+    // 5e) — làm theo chỉ đạo, đã ghi rõ phát hiện trên vào can-review-sau.md để lượt sau xem lại
+    // nếu cần.
+    //
+    // "Xin điều tra và rao hôn phối" luôn cần MỘT cặp giáo dân (RaoHonPhoi.GiaoDan1/GiaoDan2,
+    // xem docs/superpowers/specs/man-hinh/rao-hon-phoi.md) — nút bấm từ MỘT giáo dân nên lấy
+    // đôi rao MỚI NHẤT (theo CreatedAt) mà giáo dân đó là GiaoDan1 HOẶC GiaoDan2. 404 khi chưa
+    // có đôi rao nào — không có gì để in (giống "Chứng nhận hôn phối" 404 khi chưa có hôn phối).
+
+    private static string Tuoi(DateOnly? ngaySinh)
+    {
+        // Chép nguyên công thức `Memory.GetTuoi` (Source/DBAccess/CMemory.cs:2004-2011): tuổi =
+        // năm hiện tại - năm sinh, để TRỐNG (không phải "0") khi sinh cùng năm hiện tại hoặc
+        // không có ngày sinh — khác `VanBanInAn.Ngay` (chuỗi rỗng), giữ đúng khoảng trắng " " mà
+        // bản gốc trả về để không lộ "0 tuổi" vô nghĩa trên giấy.
+        if (ngaySinh is null) return " ";
+        var namNay = DateTime.Now.Year;
+        return namNay == ngaySinh.Value.Year ? " " : (namNay - ngaySinh.Value.Year).ToString();
+    }
+
+    private static string AnhChi(string? phai) => phai == "Nam" ? "Anh" : "Chị";
+
+    public async Task<KetQuaInAn?> XuatGioiThieuHonPhoi(Guid giaoDanId, CancellationToken ct)
+    {
+        var giaoXu = await LayGiaoXuHienTai(ct);
+        if (giaoXu is null) return null;
+
+        var r = await db.RaoHonPhoi
+            .Include(x => x.GiaoDan1).Include(x => x.GiaoDan2)
+            .Where(x => x.GiaoDan1Id == giaoDanId || x.GiaoDan2Id == giaoDanId)
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+        if (r is null) return null;
+
+        static string HoTen(GiaoDan? g) => g is null ? ""
+            : string.IsNullOrWhiteSpace(g.TenThanh) ? g.HoTen : $"{g.TenThanh} {g.HoTen}";
+
+        var duLieu = new Dictionary<string, string?>(ThongTinGiaoXu(giaoXu))
+        {
+            // Chép NGUYÊN VĂN cách bản gốc gán hai chỗ trống "Cha Xứ"/"Giáo Phận" của phần
+            // "Kính gửi" — Source/ExcelReport/ReportRaoHP.cs dòng 93-94:
+            //   word.Replace(TenGiaoXuNhan, rowData[TenLinhMucNhan]);
+            //   word.Replace(TenGiaoPhanNhan, rowData[GiaoXuNhan]);
+            // Bảng RaoHonPhoi chỉ có hai cột "LinhMucNhan"/"GiaoXuNhan" (không có cột
+            // "GiaoPhanNhan" riêng) — bản gốc GHÉP LinhMucNhan vào chỗ trống "Cha Xứ" (hợp lý)
+            // nhưng GhÉP GiaoXuNhan vào chỗ trống "Giáo Phận" (tên cột không khớp nhãn in ra) —
+            // MỘT SAI KHÁC CÓ CHỦ Ý được migrate y hệt (xem can-review-sau.md), không "sửa cho
+            // đúng" âm thầm.
+            ["TenGiaoXuNhan"] = r.LinhMucNhan,
+            ["TenGiaoPhanNhan"] = r.GiaoXuNhan,
+
+            ["AnhChi1"] = AnhChi(r.GiaoDan1?.Phai), ["AnhChi2"] = AnhChi(r.GiaoDan2?.Phai),
+            ["HoTen1"] = HoTen(r.GiaoDan1), ["HoTen2"] = HoTen(r.GiaoDan2),
+            ["Tuoi1"] = Tuoi(r.GiaoDan1?.NgaySinh), ["Tuoi2"] = Tuoi(r.GiaoDan2?.NgaySinh),
+            ["TenCha1"] = r.GiaoDan1?.HoTenCha, ["TenCha2"] = r.GiaoDan2?.HoTenCha,
+            ["TenMe1"] = r.GiaoDan1?.HoTenMe, ["TenMe2"] = r.GiaoDan2?.HoTenMe,
+
+            ["TenGiaoXuNQ1"] = r.GiaoXuNQ1, ["TenGiaoPhanNQ1"] = r.GiaoPhanNQ1,
+            ["TenGiaoXuNQ2"] = r.GiaoXuNQ2, ["TenGiaoPhanNQ2"] = r.GiaoPhanNQ2,
+            ["TenGiaoXu1"] = r.GiaoXu1, ["TenGiaoXu2"] = r.GiaoXu2,
+            ["TenGiaoXuTruoc1"] = r.GiaoXuTruoc1, ["TenGiaoPhanTruoc1"] = r.GiaoPhanTruoc1,
+            ["TenGiaoXuTruoc2"] = r.GiaoXuTruoc2, ["TenGiaoPhanTruoc2"] = r.GiaoPhanTruoc2,
+
+            ["NgayThangNamIn"] = DateTime.Now.ToString("dd/MM/yyyy"),
+        };
+
+        var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
+        var html = mau.Dung(slug, "RaoHonPhoi", duLieu);
+        var pdf = await trinhDuyet.XuatPdfAsync(html, ct);
+        return new KetQuaInAn(pdf, $"RaoHonPhoi_{r.MaRaoHonPhoiCu}.pdf");
+    }
+
+    /// <summary>"In kết quả rao hôn phối" (`RaoHonPhoiDetail.tsx`) — tương đương
+    /// `ReportRaoHP.Export(ds, printRS: true)`/`KQRaoHonPhoi.doc`. Khác giấy "xin điều tra" ở
+    /// trên: đây là bản CHỨNG NHẬN đã rao xong, cần đủ thông tin bí tích/địa chỉ của cả hai
+    /// người (giống "Chứng nhận hôn phối", xem <see cref="XuatChungNhanHonPhoi"/>), theo ĐÚNG
+    /// đôi rao được chọn (không suy đoán "mới nhất" như trên vì đây luôn bấm từ trang chi tiết
+    /// MỘT đôi rao cụ thể).</summary>
+    public async Task<KetQuaInAn?> XuatKetQuaRaoHonPhoi(Guid raoHonPhoiId, CancellationToken ct)
+    {
+        var giaoXu = await LayGiaoXuHienTai(ct);
+        if (giaoXu is null) return null;
+
+        var r = await db.RaoHonPhoi
+            .Include(x => x.GiaoDan1).Include(x => x.GiaoDan2)
+            .FirstOrDefaultAsync(x => x.Id == raoHonPhoiId, ct);
+        if (r is null) return null;
+
+        static string HoTen(GiaoDan? g) => g is null ? ""
+            : string.IsNullOrWhiteSpace(g.TenThanh) ? g.HoTen : $"{g.TenThanh} {g.HoTen}";
+        string MoTaRuaToi(GiaoDan? g) => g is null ? "" : VanBanInAn.MoTaBiTich(
+            g.SoRuaToi, g.NgayRuaToi, g.NoiRuaToi, g.ChaRuaToi, "rửa", g.NguoiDoDauRuaToi, "người đỡ đầu");
+        string MoTaThemSuc(GiaoDan? g) => g is null ? "" : VanBanInAn.MoTaBiTich(
+            g.SoThemSuc, g.NgayThemSuc, g.NoiThemSuc, g.ChaThemSuc, "ban", g.NguoiDoDauThemSuc, "người đỡ đầu");
+
+        // Khối văn bản 3 dòng "1. .../2. .../3. ..." — chép nguyên công thức
+        // `string.Format("Với thời gian rao hôn phối:\rNgày rao lần 1: {0}, ...")` mà
+        // `GxGiaDinhList.cs` dùng cho "Chứng nhận hôn phối" (mục 5b), áp dụng lại ở đây cho
+        // đúng placeholder {{RaoHonPhoi}} của KQRaoHonPhoi.doc.
+        var raoHonPhoi = VanBanInAn.GhepDong(
+            !string.IsNullOrEmpty(Ngay(r.NgayRaoLan1)) ? $"1. {Ngay(r.NgayRaoLan1)}" : null,
+            !string.IsNullOrEmpty(Ngay(r.NgayRaoLan2)) ? $"2. {Ngay(r.NgayRaoLan2)}" : null,
+            !string.IsNullOrEmpty(Ngay(r.NgayRaoLan3)) ? $"3. {Ngay(r.NgayRaoLan3)}" : null);
+
+        var duLieu = new Dictionary<string, string?>(ThongTinGiaoXu(giaoXu))
+        {
+            ["TenGiaoXuNhan"] = r.LinhMucNhan, ["TenGiaoPhanNhan"] = r.GiaoXuNhan,
+            ["TenLinhMucGui"] = null,
+
+            ["Phai1"] = r.GiaoDan1?.Phai, ["Phai2"] = r.GiaoDan2?.Phai,
+            ["AnhChi1"] = AnhChi(r.GiaoDan1?.Phai), ["AnhChi2"] = AnhChi(r.GiaoDan2?.Phai),
+            ["HoTen1"] = HoTen(r.GiaoDan1), ["HoTen2"] = HoTen(r.GiaoDan2),
+            ["DienThoai1"] = r.GiaoDan1?.DienThoai, ["DienThoai2"] = r.GiaoDan2?.DienThoai,
+            ["NgaySinh1"] = Ngay(r.GiaoDan1?.NgaySinh), ["NgaySinh2"] = Ngay(r.GiaoDan2?.NgaySinh),
+            ["NoiSinh1"] = r.GiaoDan1?.NoiSinh, ["NoiSinh2"] = r.GiaoDan2?.NoiSinh,
+            ["MoTaRuaToi1"] = MoTaRuaToi(r.GiaoDan1), ["MoTaRuaToi2"] = MoTaRuaToi(r.GiaoDan2),
+            ["MoTaThemSuc1"] = MoTaThemSuc(r.GiaoDan1), ["MoTaThemSuc2"] = MoTaThemSuc(r.GiaoDan2),
+            ["TenCha1"] = r.GiaoDan1?.HoTenCha, ["TenCha2"] = r.GiaoDan2?.HoTenCha,
+            ["TenMe1"] = r.GiaoDan1?.HoTenMe, ["TenMe2"] = r.GiaoDan2?.HoTenMe,
+            ["TenGiaoXu1"] = r.GiaoXu1, ["TenGiaoXu2"] = r.GiaoXu2,
+            ["TenGiaoPhan1"] = r.GiaoPhan1, ["TenGiaoPhan2"] = r.GiaoPhan2,
+            ["DiaChi1"] = r.GiaoDan1?.DiaChi, ["DiaChi2"] = r.GiaoDan2?.DiaChi,
+
+            ["RaoHonPhoi"] = raoHonPhoi,
+            ["NgayThangNamIn"] = DateTime.Now.ToString("dd/MM/yyyy"),
+        };
+
+        var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
+        var html = mau.Dung(slug, "KQRaoHonPhoi", duLieu);
+        var pdf = await trinhDuyet.XuatPdfAsync(html, ct);
+        return new KetQuaInAn(pdf, $"KQRaoHonPhoi_{r.MaRaoHonPhoiCu}.pdf");
     }
 
     private static string ChuoiDs(string? v) => string.IsNullOrEmpty(v) ? "—" : v;

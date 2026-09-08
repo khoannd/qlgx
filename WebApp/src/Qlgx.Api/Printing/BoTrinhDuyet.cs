@@ -51,8 +51,15 @@ public sealed class BoTrinhDuyet : IAsyncDisposable
     /// <paramref name="landscape"/> mặc định `false` (khổ dọc) — GIỮ NGUYÊN hành vi cũ cho mọi
     /// nơi gọi đã có (Lý lịch cá nhân, Chứng nhận…). Thêm tham số này (thay vì hard-code) cho
     /// mẫu "In danh sách" (nhiều cột, cần khổ ngang mới đọc được) — xem
-    /// InAnService.XuatDanhSachGiaoDan/XuatDanhSachGiaDinh và in-an.md mục 5f.</summary>
-    public async Task<byte[]> XuatPdfAsync(string html, CancellationToken ct, bool landscape = false)
+    /// InAnService.XuatDanhSachGiaoDan/XuatDanhSachGiaDinh và in-an.md mục 5f.
+    ///
+    /// <paramref name="khoGiay"/> mặc định "A4" — GIỮ NGUYÊN hành vi cũ cho mọi nơi gọi đã có.
+    /// Thêm tham số này (thay vì hard-code "A4") cho mẫu "Phiếu gia đình" khổ lớn
+    /// (`PhieuGiaDinh-A3.doc` của bản desktop, gia đình đông người) — xem
+    /// InAnService.XuatPhieuGiaDinh và in-an.md mục 5c/8. Chỉ hai giá trị "A4"/"A3" được endpoint
+    /// chấp nhận (kiểm tra ở tầng endpoint, xem GiaDinhEndpoints) — tham số này không tự kiểm
+    /// tra vì Playwright ném lỗi rõ ràng nếu nhận chuỗi khổ giấy không hợp lệ.</summary>
+    public async Task<byte[]> XuatPdfAsync(string html, CancellationToken ct, bool landscape = false, string khoGiay = "A4")
     {
         var trinhDuyet = await LayTrinhDuyet(ct);
         var trang = await trinhDuyet.NewPageAsync();
@@ -61,7 +68,7 @@ public sealed class BoTrinhDuyet : IAsyncDisposable
             await trang.SetContentAsync(html, new PageSetContentOptions { WaitUntil = WaitUntilState.NetworkIdle });
             return await trang.PdfAsync(new PagePdfOptions
             {
-                Format = "A4",
+                Format = khoGiay,
                 // Khổ dọc mặc định — nêu RÕ (không dựa vào mặc định của Playwright) vì "Phiếu
                 // gia đình" từng bị người dùng thật báo "chưa đúng khổ" khi kiểm thử
                 // (2026-09-07); đặt tường minh ở đây để không phụ thuộc hành vi mặc định có thể

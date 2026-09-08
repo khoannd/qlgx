@@ -32,6 +32,14 @@ function inPhieuGiaDinh(d: GiaDinhListItem): void {
   api.giaDinh.inPhieuGiaDinh(d.id).catch(baoLoiIn('in được phiếu gia đình', d.id))
 }
 
+/** "In phiếu gia đình (khổ A3)" — ứng với `PhieuGiaDinh-A3.doc` bản desktop, dùng cho gia
+ * đình đông người (khổ A4 không đủ chỗ) — xem in-an.md mục 5c/8. Mục riêng thay vì hộp thoại
+ * chọn khổ giấy, nhất quán với cách menu chuột phải này đã tách "In chứng nhận rửa tội"/"…
+ * thêm sức" thành các mục riêng thay vì một hộp thoại chọn loại. */
+function inPhieuGiaDinhA3(d: GiaDinhListItem): void {
+  api.giaDinh.inPhieuGiaDinh(d.id, 'A3').catch(baoLoiIn('in được phiếu gia đình khổ A3', d.id))
+}
+
 /** "In lý lịch cá nhân" bấm từ lưới GIA ĐÌNH — in CẢ gia đình (một trang PDF/thành viên, đúng
  * hành vi `item4_Click` của bản desktop — xem in-an.md mục 5f), KHÔNG phải hỏi chọn một người
  * như bản nháp trước đây từng lo ngại. */
@@ -39,7 +47,16 @@ function inLyLichCaNhan(d: GiaDinhListItem): void {
   api.giaDinh.inLyLichCaNhanGiaDinh(d.id).catch(baoLoiIn('in được lý lịch cá nhân', d.id))
 }
 
-/** Đúng 5 mục và đúng thứ tự trong constructor của GxGiaDinhList bản desktop. "In giới thiệu
+/** Đúng 5 mục và đúng thứ tự trong constructor của GxGiaDinhList bản desktop, cộng một mục
+ * "In phiếu gia đình (khổ A3)" bổ sung Ở WEB (KHÔNG có tương ứng trên desktop — đối chiếu
+ * `Source/GXControl/GxGiaDinhList.cs` (`InPhieuGiaDinh`/`XuatSoGiaDinhChungFile`) và
+ * `Source/ExcelReport/ReportSoGiaDinh.cs` xác nhận CẢ HAI đường in phiếu gia đình đều gán cứng
+ * `ReportSoGiaDinh.FileName = GxConstants.REPORT_PHIEUGIADINH_FILENAME` ("PhieuGiaDinh"),
+ * không có nhánh nào chọn `PhieuGiaDinh-A3.doc` — mẫu A3 nằm sẵn trong
+ * `BIN/Template/Chung/` nhưng là mẫu CHẾT trên desktop, không menu/nút nào gọi tới. Việc bổ
+ * sung khổ A3 ở web là một khả năng MỚI (theo yêu cầu mục 2 nhiệm vụ "người dùng nên chọn được
+ * khổ khi in phiếu gia đình"), không phải tái hiện hành vi desktop có sẵn — xem in-an.md mục
+ * 5c/8 và can-review-sau.md. "In giới thiệu
  * chuyển xứ" mở GioiThieuModal để nhập bên nhận trước khi in (mẫu thứ tư của "Giấy giới
  * thiệu" — theo GIA ĐÌNH, xem in-an.md mục 5e). "Xem vị trí" mở Google Maps với đúng địa chỉ
  * gia đình — xem `lib/xemViTri.ts` (cùng cơ chế `Memory.ViewMap` của bản desktop, gửi địa chỉ
@@ -50,6 +67,7 @@ export const menuGiaDinhMacDinh = (
 ): MucMenu<GiaDinhListItem>[] => [
   { nhan: 'In chứng nhận hôn phối', chay: inChungNhanHonPhoi },
   { nhan: 'In phiếu gia đình', chay: inPhieuGiaDinh },
+  { nhan: 'In phiếu gia đình (khổ A3)', chay: inPhieuGiaDinhA3 },
   { nhan: 'In lý lịch cá nhân', chay: inLyLichCaNhan },
   { nhan: 'In giới thiệu chuyển xứ', chay: moGioiThieuChuyenXu },
   { nhan: 'Xem vị trí', chay: (d) => moBanDo(d.diaChi, 'Gia đình này không có địa chỉ để xem bản đồ.') },

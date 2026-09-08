@@ -1,5 +1,6 @@
 using ClosedXML.Excel;
 using Qlgx.Api.Dtos;
+using Qlgx.Domain;
 
 namespace Qlgx.Api.Services;
 
@@ -19,7 +20,8 @@ namespace Qlgx.Api.Services;
 /// ở mỗi hàm) để khớp đúng lưới đang hiển thị — sửa cột ở một trong hai nơi mà quên nơi kia sẽ
 /// làm Excel xuất ra lệch khỏi lưới, xem can-review-sau.md mục "Excel — đối chiếu cột".
 /// </summary>
-public class XuatExcelService(GiaoDanService giaoDan, GiaDinhService giaDinh)
+public class XuatExcelService(
+    GiaoDanService giaoDan, GiaDinhService giaDinh, DotBiTichService dotBiTich, RaoHonPhoiService raoHonPhoi)
 {
     private const string DauTich = "✓";
     private const string DauGach = "—";
@@ -147,6 +149,95 @@ public class XuatExcelService(GiaoDanService giaoDan, GiaDinhService giaDinh)
             ws.Cell(hang, c++).Value = Chuoi(g.TenGiaoHo);
             ws.Cell(hang, c++).Value = Chuoi(g.DienGiaDinh);
             ws.Cell(hang, c++).Value = Chuoi(g.GhiChu);
+            hang++;
+        }
+
+        HoanTat(ws, tieuDe.Length, hang - 1);
+        return DungThanhByteArray(wb);
+    }
+
+    /// <summary>
+    /// Xuất Excel "Danh sách sổ bí tích" — hoãn lại ở lượt migrate màn hình (commit aa4a2af, xem
+    /// docs/superpowers/specs/man-hinh/in-an.md mục 8). CÙNG BA tham số lọc với GET "" của
+    /// <see cref="DotBiTichService.LayDanhSach"/> (loaiBiTich/tuNam/denNam) — không viết lại điều
+    /// kiện lọc, đúng nguyên tắc đã áp dụng cho Giáo dân/Gia đình ở trên.
+    ///
+    /// 5 cột đúng thứ tự `cotDotBiTich.ts` (khớp `GxDotBiTichList.FormatGrid`, Source/GXControl/
+    /// GxDotBiTichList.cs:53-91): Ngày, Mô tả, Người ban bí tích, Nơi nhận bí tích, Số lượng GD —
+    /// ở MỨC ĐỢT, không xuất chi tiết từng người nhận trong đợt (bảng
+    /// <c>BiTichChiTiet</c>/`GxBiTichChiTiet.FormatGrid` không có màn hình danh sách/bộ lọc
+    /// riêng để tái dùng — xem can-review-sau.md).
+    /// </summary>
+    public async Task<byte[]> XuatDotBiTich(LoaiBiTich loaiBiTich, int? tuNam, int? denNam, CancellationToken ct) =>
+        DungExcelDotBiTich(await dotBiTich.LayDanhSach(loaiBiTich, tuNam, denNam, ct));
+
+    private static readonly Dictionary<LoaiBiTich, string> s_tenLoaiBiTich = new()
+    {
+        [LoaiBiTich.RuaToi] = "Rửa tội",
+        [LoaiBiTich.RuocLe] = "Rước lễ (XTRL lần đầu)",
+        [LoaiBiTich.ThemSuc] = "Thêm sức",
+    };
+
+    private static byte[] DungExcelDotBiTich(List<DotBiTichListItemDto> rows)
+    {
+        using var wb = new XLWorkbook();
+        var ws = wb.Worksheets.Add("Sổ bí tích");
+
+        string[] tieuDe = ["Ngày", "Mô tả", "Người ban bí tích", "Nơi nhận bí tích", "Số lượng GD"];
+        GhiTieuDe(ws, tieuDe);
+
+        var hang = 2;
+        foreach (var d in rows)
+        {
+            var c = 1;
+            ws.Cell(hang, c++).Value = Ngay(d.NgayBiTich);
+            ws.Cell(hang, c++).Value = Chuoi(
+                s_tenLoaiBiTich.TryGetValue(d.LoaiBiTich, out var ten) ? $"{ten} — {d.MoTa}" : d.MoTa);
+            ws.Cell(hang, c++).Value = Chuoi(d.LinhMuc);
+            ws.Cell(hang, c++).Value = Chuoi(d.NoiBiTich);
+            ws.Cell(hang, c++).Value = d.SoLuong;
+            hang++;
+        }
+
+        HoanTat(ws, tieuDe.Length, hang - 1);
+        return DungThanhByteArray(wb);
+    }
+
+    /// <summary>
+    /// Xuất Excel "Danh sách rao hôn phối" — hoãn lại cùng lượt với trên. CÙNG tham số lọc
+    /// (<paramref name="xemTatCa"/>) với GET "" của <see cref="RaoHonPhoiService.LayDanhSach"/>.
+    ///
+    /// 8 cột đúng thứ tự `cotRaoHonPhoi.ts` (khớp `GxRaoHonPhoiList.FormatGrid`, Source/GXControl/
+    /// GxRaoHonPhoiList.cs:95-164 — chú thích ở `cotRaoHonPhoi.ts` ghi "7 cột" nhưng liệt kê đủ
+    /// 8, không sửa ở đây): Mã rao, Đôi rao, Người thứ nhất, Người thứ hai, Rao lần 1/2/3, Ghi
+    /// chú — mức TÓM TẮT trên lưới danh sách, KHÔNG phải 26 cột chi tiết đầy đủ của
+    /// `frmRaoHonPhoi` (mẫu Excel gốc `DanhSachRaoHonPhoi.xls`/`ExportGrid.cs` dùng cơ chế
+    /// GridEX xuất nguyên lưới đang hiển thị — cùng lưới 7 cột này — xem can-review-sau.md).
+    /// </summary>
+    public async Task<byte[]> XuatRaoHonPhoi(bool xemTatCa, CancellationToken ct) =>
+        DungExcelRaoHonPhoi(await raoHonPhoi.LayDanhSach(xemTatCa, ct));
+
+    private static byte[] DungExcelRaoHonPhoi(List<RaoHonPhoiListItemDto> rows)
+    {
+        using var wb = new XLWorkbook();
+        var ws = wb.Worksheets.Add("Rao hôn phối");
+
+        string[] tieuDe =
+            ["Mã rao", "Đôi rao", "Người thứ nhất", "Người thứ hai", "Rao lần 1", "Rao lần 2", "Rao lần 3", "Ghi chú"];
+        GhiTieuDe(ws, tieuDe);
+
+        var hang = 2;
+        foreach (var r in rows)
+        {
+            var c = 1;
+            ws.Cell(hang, c++).Value = r.MaRaoHonPhoiCu;
+            ws.Cell(hang, c++).Value = Chuoi(r.TenRaoHonPhoi);
+            ws.Cell(hang, c++).Value = Chuoi(r.Nguoi1);
+            ws.Cell(hang, c++).Value = Chuoi(r.Nguoi2);
+            ws.Cell(hang, c++).Value = Ngay(r.NgayRaoLan1);
+            ws.Cell(hang, c++).Value = Ngay(r.NgayRaoLan2);
+            ws.Cell(hang, c++).Value = Ngay(r.NgayRaoLan3);
+            ws.Cell(hang, c++).Value = Chuoi(r.GhiChu);
             hang++;
         }
 
