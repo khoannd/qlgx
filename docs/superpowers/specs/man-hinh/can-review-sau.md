@@ -3827,3 +3827,38 @@ sẽ đổi → chạy thật trên phạm vi thu hẹp (tạo tạm 1-2 bản g
 `178-*.png`) → xác nhận bằng `psql` → trả lại nguyên trạng → xác nhận lại bằng `psql`. Số liệu
 tổng sau khi xong khớp nguyên trạng ban đầu: 2050 giáo dân / 40 gia đình / 145 thành viên / 1
 giáo họ / 1108 đợt bí tích / 6150 bí tích chi tiết.
+
+### 63. Task "migrate Tạo danh sách bí tích tự động" (2026-09-08) — chỉ hỗ trợ 3 loại bí tích, sắp xếp theo ngày đầy đủ thay vì chỉ theo năm
+
+Việc 2 của nhiệm vụ "4 màn hình cuối cùng" — xem `cong-cu-du-lieu.md` mục 5.2 (spec đầy đủ).
+Ghi lại đây các quyết định phạm vi.
+
+1. **Cố ý ẩn HẾT ba loại bí tích không được thuật toán hỗ trợ** (Hôn phối/An táng/Xức dầu) khỏi
+   combo web — khác desktop chỉ ẩn đúng Hôn phối (`frmTaoDotBiTich.cs:26`,
+   `cbLoaiBiTich.Combo.Items.RemoveAt(3)`) dù `GenerateDotBiTichProcess.reViewData`
+   (`switch (loaiBiTich)`) cũng KHÔNG có case xử lý An táng/Xức dầu — chọn một trong hai giá trị
+   đó trên desktop sẽ khiến `colNameNgay` rỗng và câu SQL hỏng theo cách khó đoán. Không phải
+   quyết định mới: khớp đúng giới hạn đã có sẵn của `DotBiTichService`/"Danh sách sổ bí tích"
+   (`so-bi-tich.md`) — `LoaiBiTich` phía web vốn đã chỉ có 3 giá trị 0/1/2.
+2. **Không migrate thứ tự xử lý "RIGHT(Ngay,4) ASC"** (chỉ sắp theo NĂM, bỏ qua tháng/ngày,
+   `GenerateDotBiTichProcess.cs:145`) — bản web sắp theo ngày đầy đủ tăng dần. Ảnh hưởng DUY
+   NHẤT: giáo dân nào "thắng" khi gán giá trị Nơi bí tích cho một đợt MỚI tạo, trong trường hợp
+   hiếm nhiều giáo dân cùng ngày/linh mục nhưng khác nơi VÀ người dùng không lọc theo Nơi. Rủi
+   ro thấp, lợi ích (thứ tự xử lý hợp lý hơn) cao hơn — chọn cách hợp lý hơn thay vì tái hiện
+   đúng thuật toán sắp xếp thô của bản gốc.
+3. **Bốn nguyên tắc an toàn bắt buộc** áp dụng dù công cụ này CHỈ CHÈN MỚI (không sửa/xoá bản ghi
+   cũ) — an toàn hơn về bản chất so với Chuyển họ/Chuẩn hoá dữ liệu (chỉ sửa), nhưng vẫn migrate
+   đủ xem trước/xác nhận/transaction vì sinh sai hàng loạt trên 1108+ đợt bí tích cũng khó dọn.
+4. **So khớp Nơi/Linh mục**: desktop dùng SQL `LIKE "..."` không tự thêm ký tự đại diện — bản
+   web dùng so khớp CHÍNH XÁC không phân biệt hoa/thường (`OrdinalIgnoreCase`), coi là tương
+   đương quan sát được (không xác nhận được chính xác ngữ nghĩa `LIKE` không wildcard trên
+   Access phụ thuộc locale nào).
+
+Đã chạy thật trên trình duyệt với TOÀN BỘ dữ liệu thật (loại "Rửa tội", khoảng 1990–2026): xem
+trước báo "1429 giáo dân khớp điều kiện, sẽ tạo 4 đợt mới, thêm 6 giáo dân" → xác nhận tạo thành
+công → `psql` xác nhận `dot_bi_tich` 1108→1112, `bi_tich_chi_tiet` 6150→6156, mã cũ đợt mới liên
+tục 1109-1112 (đúng `SinhMaService`) → xoá thủ công 4 đợt mới + 6 chi tiết mới qua `psql` (xác
+định bằng `ma_dot_bi_tich_cu`/`created_at` mới nhất — một chi tiết nằm ở đợt đã có sẵn, không
+phải 1 trong 4 đợt mới, phải tìm riêng bằng `created_at`) → xác nhận lại `dot_bi_tich`=1108,
+`bi_tich_chi_tiet`=6150, khớp nguyên trạng ban đầu. Ảnh `178-taodotbitich-*.png` ở
+`WebApp/anh-chup-kiem-thu/`.

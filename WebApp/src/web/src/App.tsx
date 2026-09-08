@@ -24,6 +24,7 @@ import { KiemTraDuLieuGiaoDanPage } from './screens/KiemTraDuLieuGiaoDanPage'
 import { KiemTraDuLieuGiaDinhPage } from './screens/KiemTraDuLieuGiaDinhPage'
 import { ChuyenHoPage } from './screens/ChuyenHoPage'
 import { ChuanHoaDuLieuPage } from './screens/ChuanHoaDuLieuPage'
+import { TaoDotBiTichTuDongPage } from './screens/TaoDotBiTichTuDongPage'
 import { QuanLyGiaoXuPage } from './screens/QuanLyGiaoXuPage'
 import { GiaoXuPage } from './screens/GiaoXuPage'
 import { ThongKeChungPage } from './screens/ThongKeChungPage'
@@ -287,6 +288,12 @@ function App() {
     mo({ id: 'chuanHoaDuLieu', tieuDe: 'Chuẩn hoá dữ liệu', noiDung: <ChuanHoaDuLieuPage /> })
   }
 
+  // "Công cụ dữ liệu" -> "Tạo danh sách bí tích tự động" (spec mục 5.2, itLapBiTichTuDong của
+  // desktop) — CÔNG CỤ SINH DỮ LIỆU HÀNG LOẠT, xem TaoDotBiTichTuDongService.
+  function moTaoDotBiTichTuDong() {
+    mo({ id: 'taoDotBiTichTuDong', tieuDe: 'Tạo danh sách bí tích tự động', noiDung: <TaoDotBiTichTuDongPage /> })
+  }
+
   function moQuanLyGiaoXu() {
     mo({ id: 'quanLyGiaoXu', tieuDe: 'Quản lý giáo xứ', noiDung: <QuanLyGiaoXuPage /> })
   }
@@ -336,6 +343,7 @@ function App() {
     else if (id === 'kiemTraDuLieuGiaDinh') moKiemTraDuLieuGiaDinh()
     else if (id === 'chuyenHo') moChuyenHo()
     else if (id === 'chuanHoaDuLieu') moChuanHoaDuLieu()
+    else if (id === 'taoDotBiTichTuDong') moTaoDotBiTichTuDong()
     else if (id === 'quanLyGiaoXu') moQuanLyGiaoXu()
     else if (id === 'giaoXu') moGiaoXu()
     else if (id === 'nhapDuLieu') moNhapDuLieu()

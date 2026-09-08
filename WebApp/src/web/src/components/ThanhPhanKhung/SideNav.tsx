@@ -52,12 +52,7 @@ const DANH_SACH_DIEU_HUONG: NhomDieuHuong[] = [
       { id: 'kiemTraDuLieuGiaDinh', nhan: 'Kiểm tra dữ liệu — gia đình' },
       { id: 'chuyenHo', nhan: 'Chuyển họ hàng loạt' },
       { id: 'chuanHoaDuLieu', nhan: 'Chuẩn hoá dữ liệu' },
-      // Mục dưới đây CÓ THẬT trong bản desktop (frmMain.Designer.cs: explorerBarItem19 "Tao
-      // danh sách bí tích tự động" = frmTaoDotBiTich + GenerateDotBiTichProcess) — KHÔNG PHẢI
-      // mục bịa của bản mẫu giao diện. Chưa migrate lượt này vì hết thời gian, xem
-      // cong-cu-du-lieu.md mục 5.2 và can-review-sau.md — cố ý để placeholder (chưa nối `id`)
-      // thay vì xoá, vì đây LÀ chức năng thật của bản gốc.
-      { nhan: 'Tạo danh sách bí tích tự động' },
+      { id: 'taoDotBiTichTuDong', nhan: 'Tạo danh sách bí tích tự động' },
     ],
   },
   {

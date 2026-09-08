@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| Tệp nguồn | `Source/ChuongTrinh/frmKiemTraGiaoDanList.cs` (316d) + `ReviewGiaoDanProcess.cs` (257d) + `frmKiemTraGiaDinhList.cs` (346d) + `ReviewGiaDinhProcess.cs` (266d) + `frmChuyenHoGiaDinh.cs` (245d) + `frmChuyenHoGiaoDan.cs` (170d) + `UpdateProcess.cs` (chuyển họ, đã đọc phần liên quan); "Chuẩn hoá dữ liệu" = `frmMain.cs` (`chuanHoaDuLieu`, `ProcessOptions.AutoUpperFirstChar*`) + `UpdateProcess.AutoUpperCaseFirstCharGiaoDan/GiaDinh` + `CMemory.AutoUpperCaseFirstCharGiaoDan/GiaDinh` + `CMemory.AutoUpperFirstChar` (`Source/DBAccess/CMemory.cs:1079-1155,1637-1666`) — **đã migrate** (mục 5.1); "Tạo danh sách bí tích tự động" = `frmTaoDotBiTich.cs` (77d, UTF-8 BOM) + `Source/GXControl/GenerateDotBiTichProcess.cs` (233d) — **đã xác định được file nguồn, chưa migrate** (mục 5.2) |
+| Tệp nguồn | `Source/ChuongTrinh/frmKiemTraGiaoDanList.cs` (316d) + `ReviewGiaoDanProcess.cs` (257d) + `frmKiemTraGiaDinhList.cs` (346d) + `ReviewGiaDinhProcess.cs` (266d) + `frmChuyenHoGiaDinh.cs` (245d) + `frmChuyenHoGiaoDan.cs` (170d) + `UpdateProcess.cs` (chuyển họ, đã đọc phần liên quan); "Chuẩn hoá dữ liệu" = `frmMain.cs` (`chuanHoaDuLieu`, `ProcessOptions.AutoUpperFirstChar*`) + `UpdateProcess.AutoUpperCaseFirstCharGiaoDan/GiaDinh` + `CMemory.AutoUpperCaseFirstCharGiaoDan/GiaDinh` + `CMemory.AutoUpperFirstChar` (`Source/DBAccess/CMemory.cs:1079-1155,1637-1666`) — **đã migrate** (mục 5.1); "Tạo danh sách bí tích tự động" = `frmTaoDotBiTich.cs` (77d, UTF-8 BOM) + `Source/GXControl/GenerateDotBiTichProcess.cs` (233d) — **đã migrate** (mục 5.2) |
 | UserControl dùng lại | `GxGiaoDanList`/`GxGiaDinhList` (lưới), `GxGiaoHoComboBox` (`cbGiaoHo`, có "Tất cả") |
 | Bảng dữ liệu đụng tới | Kiểm tra dữ liệu: `giao_dan`, `thanh_vien_gia_dinh`, `giao_dan_hon_phoi`, `hon_phoi` (chỉ đọc). Chuyển họ hàng loạt: `giao_dan.giao_ho_id`, `gia_dinh.giao_ho_id` (SỬA — đúng phạm vi desktop, không đụng cột nào khác). Chuẩn hoá dữ liệu: các cột chuỗi của `giao_dan`/`gia_dinh` (SỬA — danh sách đúng phạm vi desktop, xem mục 5.1) |
-| Trạng thái migrate | Kiểm tra dữ liệu (cả giáo dân + gia đình), Chuyển họ hàng loạt (cả giáo dân + gia đình) và Chuẩn hoá dữ liệu (cả giáo dân + gia đình) **đã xong**. "Tạo danh sách bí tích tự động" **chưa migrate** (mục 5.2) |
+| Trạng thái migrate | Kiểm tra dữ liệu, Chuyển họ hàng loạt, Chuẩn hoá dữ liệu (cả giáo dân + gia đình) và Tạo danh sách bí tích tự động **đã xong toàn bộ** |
 
 ## 1. Mục đích
 
@@ -403,29 +403,71 @@ Backend: `WebApp/src/Qlgx.Api/Dtos/ChuanHoaDuLieuDtos.cs`,
 `WebApp/tests/Qlgx.Api.Tests/ChuanHoaDuLieuTests.cs` (7 test) +
 `WebApp/src/web/src/screens/ChuanHoaDuLieu.test.tsx` (4 test).
 
-### 5.2 "Tạo danh sách bí tích tự động" = `itLapBiTichTuDong` → `frmTaoDotBiTich.cs` (77d) + `GenerateDotBiTichProcess.cs` (233d, `Source/GXControl/`)
+### 5.2 "Tạo danh sách bí tích tự động" = `itLapBiTichTuDong` → `frmTaoDotBiTich.cs` (77d) + `GenerateDotBiTichProcess.cs` (233d, `Source/GXControl/`) — ĐÃ MIGRATE
 
 Công cụ TỰ ĐỘNG gộp giáo dân vào "đợt bí tích" theo khoảng ngày — khác hẳn quy trình thủ công đã
 migrate ở `so-bi-tich.md` (người dùng tự tạo đợt rồi tự thêm từng người):
 
 - Form nhận: Loại bí tích (bỏ mục thứ 4 trong combo, `frmTaoDotBiTich.cs:26`), Linh mục, Nơi bí
-  tích, khoảng Từ ngày–Đến ngày.
+  tích, khoảng Từ ngày–Đến ngày. Hai thông báo lỗi nguyên văn (`frmTaoDotBiTich.cs:31-42`):
+  "Xin vui lòng chọn loại bí tích cần tạo tự động." và "Từ ngày phải nhỏ hơn hoặc bằng đến
+  ngày.".
 - `GenerateDotBiTichProcess.reViewData` (dòng 99-193): với loại bí tích đã chọn, xác định cột
   ngày/linh mục/nơi tương ứng (`NgayRuaToi/ChaRuaToi/NoiRuaToi` hoặc `NgayRuocLe/...` hoặc
-  `NgayThemSuc/...`), quét MỌI giáo dân có ngày đó rơi vào khoảng Từ-Đến (và khớp Nơi/Linh mục
-  nếu form có điền), với mỗi giáo dân: tìm (hoặc TẠO MỚI nếu chưa có) một `DotBiTich` khớp CHÍNH
-  XÁC (cùng Linh mục + Loại bí tích + Ngày, `GetDotBiTich` dòng 196-231), rồi thêm giáo dân đó
-  vào `BiTichChiTiet` của đợt (nếu chưa có). Kết quả trả về: tổng số đợt bí tích tạo mới + tổng
-  số giáo dân được thêm vào sổ.
-- Đây cũng là công cụ SỬA DỮ LIỆU HÀNG LOẠT (tạo mới đợt bí tích + thêm hàng loạt chi tiết bí
-  tích) — khi migrate phải áp dụng đúng 4 nguyên tắc an toàn như "Chuyển họ hàng loạt" (xem mục
-  4.4). **CHƯA MIGRATE lượt này** — hết thời gian cho lượt làm việc.
+  `NgayThemSuc/...`), quét MỌI giáo dân có ngày đó rơi vào khoảng Từ-Đến — **KHÔNG lọc
+  `DaXoa`/`DaChuyenXu`**, giống mọi công cụ hàng loạt khác — (và khớp Nơi/Linh mục nếu form có
+  điền), với mỗi giáo dân: tìm (hoặc TẠO MỚI nếu chưa có) một `DotBiTich` khớp CHÍNH XÁC (cùng
+  Linh mục + Loại bí tích + Ngày, `GetDotBiTich` dòng 196-231, **KHÔNG xét Nơi khi gộp nhóm** —
+  hai giáo dân cùng ngày/linh mục nhưng khác nơi vẫn gộp chung một đợt, đợt mang Nơi của giáo
+  dân ĐẦU TIÊN xử lý), rồi thêm giáo dân đó vào `BiTichChiTiet` của đợt (nếu chưa có — KHÔNG bao
+  giờ sửa/xoá chi tiết đã có sẵn, đây là công cụ CHỈ THÊM MỚI). Kết quả trả về: tổng số đợt bí
+  tích tạo mới + tổng số giáo dân được thêm vào sổ (nguyên văn `frmTaoDotBiTich.cs:66-67`: "Tổng
+  số đợt bí tích được tạo: {0}" / "Tổng số giáo dân được cho vào sổ bí tích: {0}").
+- CHỈ hỗ trợ Rửa tội/Rước lễ/Thêm sức (switch không có case cho Hôn phối/An táng/Xức dầu, dù
+  combo chỉ ẩn Hôn phối) — ĐÚNG giới hạn đã có sẵn của `DotBiTichService` ("Danh sách sổ bí
+  tích", so-bi-tich.md), không phải giới hạn mới. Bản web CỐ Ý ẩn HẾT ba loại không hỗ trợ khỏi
+  combo (không chỉ Hôn phối) — an toàn hơn, tránh người dùng chọn được loại gây lỗi khó hiểu.
+- Đây là công cụ SINH DỮ LIỆU HÀNG LOẠT trên khối lớn nhất CSDL (1108 đợt/6150 chi tiết) — migrate
+  áp dụng đúng 4 nguyên tắc an toàn như "Chuyển họ hàng loạt" (mục 4.4): xem trước tách riêng,
+  xác nhận nêu con số cụ thể, MỘT transaction, không mở rộng phạm vi. Khác các công cụ SỬA khác
+  ở chỗ nó CHỈ CHÈN MỚI, không bao giờ sửa/xoá bản ghi cũ — an toàn hơn về bản chất, vẫn cần đủ 4
+  nguyên tắc vì sinh sai hàng loạt cũng khó dọn không kém (xem đầu nhiệm vụ gốc).
+- KHÔNG migrate cách desktop sắp thứ tự xử lý "RIGHT(Ngay,4) ASC" (chỉ theo NĂM,
+  `GenerateDotBiTichProcess.cs:145`) — bản web sắp theo ngày ĐẦY ĐỦ tăng dần, chỉ ảnh hưởng việc
+  giáo dân nào "thắng" khi gán Nơi cho một đợt MỚI trong trường hợp hiếm không lọc theo Nơi —
+  xem can-review-sau.md mục 63.
+- Lọc theo Nơi/Linh mục: desktop dùng SQL `LIKE "..."` không tự thêm ký tự đại diện (khớp gần
+  như chính xác tuỳ locale Access) — bản web dùng so khớp CHÍNH XÁC không phân biệt hoa/thường,
+  coi là tương đương quan sát được.
 
-### 5.3 Quyết định giữ nguyên placeholder trên `SideNav.tsx`
+#### Bản web đã làm
 
-Cả hai mục vẫn để dạng placeholder (chưa nối `id`, bấm vào chưa làm gì) — KHÔNG gỡ bỏ, vì nhiệm
-vụ gốc chỉ yêu cầu gỡ nếu mục đó KHÔNG có thật; cả hai đều có thật trong bản desktop, chỉ chưa
-kịp migrate. Đã thêm chú thích trong `SideNav.tsx` trỏ rõ nguồn desktop.
+Backend: `WebApp/src/Qlgx.Api/Dtos/TaoDotBiTichTuDongDtos.cs`,
+`Services/TaoDotBiTichTuDongService.cs`, `Endpoints/TaoDotBiTichTuDongEndpoints.cs` — 2 endpoint
+(`POST /api/cong-cu-du-lieu/tao-dot-bi-tich/xem-truoc`, `POST .../tao-dot-bi-tich`). Frontend:
+`WebApp/src/web/src/screens/TaoDotBiTichTuDongPage.tsx`. Test:
+`WebApp/tests/Qlgx.Api.Tests/TaoDotBiTichTuDongTests.cs` (7 test) +
+`WebApp/src/web/src/screens/TaoDotBiTichTuDongPage.test.tsx` (3 test).
+
+#### Chứng minh bằng chạy thật, đối chiếu `psql` (2026-09-08)
+
+Chạy thật trên trình duyệt, loại "Rửa tội", khoảng 01/01/1990–08/09/2026 (toàn bộ dữ liệu thật):
+
+| Bước | Kết quả web | `psql` |
+|---|---|---|
+| Xem trước | "Đã kiểm tra 1429 giáo dân khớp điều kiện. Sẽ tạo 4 đợt bí tích mới và thêm 6 giáo dân vào sổ bí tích." | `dot_bi_tich`=1108, `bi_tich_chi_tiet`=6150 (chưa đổi) |
+| Xác nhận tạo | "Tổng số đợt bí tích được tạo: 4. Tổng số giáo dân được cho vào sổ bí tích: 6." | `dot_bi_tich`=1112 (+4, mã cũ 1109-1112 liên tục, đúng `SinhMaService`), `bi_tich_chi_tiet`=6156 (+6) |
+| Xoá 4 đợt mới + 6 chi tiết mới (thủ công qua `psql`, xác định bằng `ma_dot_bi_tich_cu`/`created_at` mới nhất) | — | `dot_bi_tich`=1108, `bi_tich_chi_tiet`=6150 — khớp nguyên trạng ban đầu |
+
+Ảnh `178-taodotbitich-*.png` ở `WebApp/anh-chup-kiem-thu/`. Số liệu tổng sau khi xong khớp
+nguyên trạng: 2050 giáo dân / 40 gia đình / 145 thành viên / 1 giáo họ / 1108 đợt bí tích / 6150
+bí tích chi tiết.
+
+### 5.3 (Lịch sử) Placeholder trên `SideNav.tsx` — nay đã nối đủ cả hai
+
+Ở các lượt trước, cả hai mục "Chuẩn hoá dữ liệu"/"Tạo danh sách bí tích tự động" từng để dạng
+placeholder (chưa nối `id`) vì chưa kịp migrate — KHÔNG gỡ bỏ khi đó vì cả hai đều có thật trong
+bản desktop. Nay cả hai đã migrate xong (mục 5.1, 5.2) và đã nối `id` thật trên `SideNav.tsx`.
 
 ## 6. Chỗ chưa chắc
 
@@ -442,7 +484,9 @@ kịp migrate. Đã thêm chú thích trong `SideNav.tsx` trỏ rõ nguồn desk
 - "Chuẩn hoá dữ liệu" — đã đọc hết thân xử lý, ĐÃ MIGRATE (mục 5.1). Chỗ chưa chắc còn lại: có
   nên thêm bước 4-5 (NFC/đổi vị trí dấu thanh) không — cố ý bỏ, chờ người dùng quyết định
   (`can-review-sau.md` mục 62).
-- "Tạo danh sách bí tích tự động" — đã đọc đủ sâu để viết spec (mục 5.2) nhưng CHƯA migrate.
+- "Tạo danh sách bí tích tự động" — ĐÃ MIGRATE (mục 5.2). Chỗ chưa chắc: ngữ nghĩa khớp Nơi/Linh
+  mục chính xác của SQL `LIKE` không ký tự đại diện trên Access (có thể phụ thuộc locale) — bản
+  web dùng so khớp chính xác không phân biệt hoa/thường, coi là tương đương.
 - Hai mục "THIẾU thật sự" phát hiện khi đối chiếu menu (không thuộc nhóm Công cụ dữ liệu, ghi
   lại nhân tiện): **"Giáo xứ"** (sửa thông tin giáo xứ hiện tại, `frmGiaoXu`) — ĐÃ MIGRATE, xem
   `giao-xu.md` — và **"Tìm và thay thế"** (`frmReplace`, chưa đọc mã) — xem bảng đối chiếu đầy
@@ -458,8 +502,10 @@ kịp migrate. Đã thêm chú thích trong `SideNav.tsx` trỏ rõ nguồn desk
   bên giáo dân: KHÔNG migrate Sửa/Xoá tại chỗ hay "In danh sách" (Excel) — "Xem chi tiết" điều
   hướng sang thẻ chi tiết gia đình đã có.
 - **Chuyển họ hàng loạt** (lượt trước): xem mục 4.
-- **Chuẩn hoá dữ liệu** (lượt này): xem mục 5.1.
+- **Chuẩn hoá dữ liệu** (lượt trước): xem mục 5.1.
+- **Tạo danh sách bí tích tự động** (lượt này): xem mục 5.2.
 
 ## 8. Chưa migrate
 
-- Tạo danh sách bí tích tự động (mục 5.2)
+Không còn mục nào trong nhóm "Công cụ dữ liệu" — cả 4 công cụ (Kiểm tra dữ liệu, Chuyển họ hàng
+loạt, Chuẩn hoá dữ liệu, Tạo danh sách bí tích tự động) đã migrate đầy đủ.

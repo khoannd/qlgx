@@ -487,6 +487,13 @@ export type TaiKhoanItem = {
   rowVersion: number
 }
 
+// --- "Tạo danh sách bí tích tự động" (nhóm Công cụ dữ liệu, xem cong-cu-du-lieu.md mục 5.2) ---
+export type DuKienDotMoi = { ngay: string; linhMuc: string | null; noiBiTich: string | null; soGiaoDan: number }
+export type TaoDotBiTichXemTruoc = {
+  tongGiaoDanKhopDieuKien: number; soDotMoiSeTao: number; soGiaoDanMoiSeThem: number; mauDotMoi: DuKienDotMoi[]
+}
+export type TaoDotBiTichKetQua = { soDotDaTao: number; soGiaoDanDaThem: number }
+
 // --- "Chuẩn hoá dữ liệu" (nhóm Công cụ dữ liệu, xem cong-cu-du-lieu.md mục 5.1) ---
 export type TruongThayDoi = { tenTruong: string; giaTriCu: string | null; giaTriMoi: string | null }
 export type DongThayDoi = { id: string; nhanDien: string; truong: TruongThayDoi[] }

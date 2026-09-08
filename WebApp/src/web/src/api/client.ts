@@ -9,7 +9,7 @@ import type {
   BieuDoNam, BieuDoBiTichNam, BieuDoDoTuoi, BieuDoGiaoHo,
   KiemTraGiaoDanKetQua, KiemTraGiaoDanTuyChon, KiemTraGiaDinhKetQua, KiemTraGiaDinhTuyChon,
   ChuyenHoGiaoDanXemTruoc, ChuyenHoGiaoDanKetQua, ChuyenHoGiaDinhXemTruoc, ChuyenHoGiaDinhKetQua,
-  ChuanHoaXemTruoc, ChuanHoaKetQua,
+  ChuanHoaXemTruoc, ChuanHoaKetQua, TaoDotBiTichXemTruoc, TaoDotBiTichKetQua,
 } from './types'
 import { authStore } from './authStore'
 
@@ -495,6 +495,21 @@ export const api = {
       goi<ChuanHoaXemTruoc>('/api/cong-cu-du-lieu/chuan-hoa/gia-dinh/xem-truoc', { method: 'POST' }),
     ghiGiaDinh: () =>
       goi<ChuanHoaKetQua>('/api/cong-cu-du-lieu/chuan-hoa/gia-dinh', { method: 'POST' }),
+  },
+  // "Tạo danh sách bí tích tự động" (spec mục 5.2) — CÔNG CỤ SINH DỮ LIỆU HÀNG LOẠT: chỉ THÊM
+  // mới đợt/chi tiết bí tích, không sửa/xoá bản ghi cũ, nhưng vẫn bắt buộc xem trước trước khi
+  // ghi thật (nguyên tắc an toàn chung của nhóm).
+  taoDotBiTich: {
+    xemTruoc: (than: {
+      loaiBiTich: LoaiBiTich; linhMuc: string | null; noiBiTich: string | null; tuNgay: string; denNgay: string
+    }) => goi<TaoDotBiTichXemTruoc>('/api/cong-cu-du-lieu/tao-dot-bi-tich/xem-truoc', {
+      method: 'POST', body: JSON.stringify(than),
+    }),
+    ghi: (than: {
+      loaiBiTich: LoaiBiTich; linhMuc: string | null; noiBiTich: string | null; tuNgay: string; denNgay: string
+    }) => goi<TaoDotBiTichKetQua>('/api/cong-cu-du-lieu/tao-dot-bi-tich', {
+      method: 'POST', body: JSON.stringify(than),
+    }),
   },
   timKiem: {
     // Dùng cho GxPicker thật (gõ để tìm Tên Cha/Mẹ, Người nam/nữ…) — giới hạn kết quả, KHÔNG
