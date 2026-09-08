@@ -3594,3 +3594,155 @@ sánh trực tiếp bằng trình duyệt thật, không chỉ đọc code).
 **Số test cuối:** backend **329/329** (315 cũ + 14 test mới `ThongKeTests.cs`), frontend
 **366/366** (362 cũ + 4 test mới `ThongKeChungPage.test.tsx`). `dotnet build`/`npm run build`
 đều chạy được. Không có dữ liệu thử nào được tạo trong `qlgx_thu` (mọi bước kiểm chứng chỉ ĐỌC).
+
+### 60. Task "hoàn tất Công cụ dữ liệu" (2026-09-08) — gia đình, Chuyển họ hàng loạt, xác minh 2 mục còn lại
+
+**Việc 1 — Kiểm tra dữ liệu gia đình.**
+
+- **`KHOANGCACH_TUOI_CHAME_CONCAI=16` xác nhận là nhãn lỗi thời, không phải bug tính toán**:
+  đọc thẳng `ReviewGiaDinhProcess.cs:186-221` (mã THẬT SỰ chạy khi bấm "Bắt đầu kiểm tra") — quy
+  tắc "khoảng cách tuổi cha mẹ — con cái" dùng đúng `TUOI_HON_PHOI_NAM=20`/`TUOI_HON_PHOI_NU=18`
+  (ngưỡng tuổi kết hôn tối thiểu), KHÔNG hề tham chiếu `KHOANGCACH_TUOI_CHAME_CONCAI` ở đâu cả —
+  hằng số đó chỉ xuất hiện trong `frmKiemTraGiaDinhList.cs:52` để DỰNG NHÃN ô tick (hiện chữ "16
+  tuổi" cho người dùng đọc) rồi không dùng tới nữa. Bản web migrate đúng: nhãn ô tick nói "16"
+  hoặc chung chung, nhưng số dùng để so sánh thật là 20/18 theo giới cha/mẹ — xem
+  `KiemTraDuLieuService.KiemTraGiaDinh`.
+- **Tái hiện đúng bug ghi đè `NguyenNhan`** của `ReviewGiaDinhProcess.nhieuVoChong` (dòng 259):
+  nếu gia đình vi phạm CẢ "nhiều vợ/chồng" LẪN một trong 3 quy tắc kia, hàm `nhieuVoChong` GHI
+  ĐÈ toàn bộ `NguyenNhan` bằng đúng câu của riêng nó — xoá mất lý do 3 quy tắc kia khỏi chuỗi
+  hiển thị, dù `KetQua` (cờ bit) vẫn cộng đủ cả 2. Ở CSDL PostgreSQL mới quy tắc "nhiều vợ/chồng"
+  luôn ra 0 (ràng buộc UNIQUE `ux_thanh_vien_gia_dinh_mot_chong_mot_vo` chặn cứng) nên bug này
+  hiện KHÔNG quan sát được trên dữ liệu thật — migrate đúng mã, không tự sửa, để dành khi có
+  dữ liệu import từ Access cũ có thể tái hiện được.
+- **Cách gộp hôn phối theo gia đình là quyết định MỚI, không sao chép trực tiếp vòng lặp desktop**:
+  bản gốc join `GiaDinh` với `HonPhoi` qua `ThanhVienGiaDinh(VaiTro 0/1) → GiaoDanHonPhoi` rồi
+  LẶP TỪNG DÒNG kết quả join (một gia đình có thể ra ≥2 dòng nếu chồng/vợ mỗi người có ≥1 hôn
+  phối riêng) — bản web gộp tất cả `NgayHonPhoi` tìm được qua bất kỳ người chồng/vợ nào vào MỘT
+  tập rồi áp dụng ngữ nghĩa "có tồn tại vi phạm" (existential) thay vì lặp qua từng dòng join
+  riêng lẻ. Hai cách cho cùng kết quả trên dữ liệu thật hiện tại (đã đối chiếu `psql` khớp tuyệt
+  đối), khác nhau chỉ khi một gia đình có ≥2 hôn phối khác nhau gắn qua các người khác nhau —
+  trường hợp hiếm, không quan sát được ở `qlgx_thu`.
+- **Đối chiếu `psql` (40 gia đình, `da_xoa=false`, giáo xứ Vô Nhiễm, 2026-09-08)**:
+
+  | Quy tắc | Số gia đình | Ghi chú |
+  |---|---|---|
+  | Không có ngày hôn phối | 10 | không có hôn phối nào (qua chồng/vợ) có `ngay_hon_phoi` khác null |
+  | Hôn phối trước tuổi (20 nam/18 nữ) | 5 | |
+  | Khoảng cách tuổi cha/mẹ – con | 3 | |
+  | Nhiều vợ/chồng | 0 | luôn 0 do ràng buộc UNIQUE PostgreSQL |
+  | **Hợp nhất cả 4 (chạy thật trên web)** | **16** | khớp `UNION` 3 tập đầu bằng `psql` |
+
+  Chạy thật trên trình duyệt (đăng nhập `giaoxu`, "Tất cả" giáo họ, cả 4 ô tick): web hiện đúng
+  **16 gia đình có lỗi** — khớp tuyệt đối. Ảnh `176-kiem-tra-du-lieu-gia-dinh.png`.
+
+**Việc 2 — Chuyển họ hàng loạt (`ChuyenHoService.cs`, `ChuyenHoGiaoDan.tsx`/`ChuyenHoGiaDinh.tsx`).**
+
+- **Cố ý làm KHÁC desktop ở 3 điểm an toàn** (đây là yêu cầu tường minh của nhiệm vụ, không phải
+  "tự sửa" âm thầm — đã ghi rõ trong docstring `ChuyenHoService`):
+  1. Thêm bước "Xem trước" (`POST .../xem-truoc`) trả số liệu THẬT từ CSDL ngay trước khi ghi —
+     desktop không có bước này, chỉ có lưới chọn sẵn rồi ghi thẳng khi bấm "Bắt đầu chuyển".
+  2. Hộp thoại xác nhận nêu đúng con số lấy từ bước xem trước ("Sẽ chuyển N giáo dân sang giáo
+     họ X"), không tự bịa số ở phía trình duyệt.
+  3. Toàn bộ thao tác ghi bọc trong MỘT `BeginTransactionAsync` — desktop dùng
+     `Memory.UpdateDataSet` (DataAdapter.Update từng dòng), không có transaction rõ ràng.
+- **Gộp 2 màn hình desktop (`frmChuyenHoGiaoDan.cs` + `frmChuyenHoGiaDinh.cs`, 2 mục menu riêng
+  `itChuyenHoGiaoDan`/`itChuyenHoGiaDinh`) thành MỘT thẻ tài liệu web có 2 tab** (`ChuyenHoPage`)
+  thay vì 2 mục điều hướng riêng — quyết định tự đưa ra để đỡ tốn một mục trong `SideNav`, vì
+  hai công cụ dùng chung logic xem trước/xác nhận/transaction, chỉ khác đối tượng (giáo dân đơn
+  lẻ hay cả gia đình kéo theo thành viên). Có thể tách lại thành 2 mục riêng nếu người dùng thấy
+  gộp làm khó tìm.
+- **Chuyển họ gia đình kéo theo TẤT CẢ thành viên** (mọi `VaiTro`, không chỉ chồng/vợ) — đúng
+  `UpdateProcess.chuyenHoThanhVienGiaDinh` dòng 273-300 (đọc toàn bộ `ThanhVienGiaDinh` của gia
+  đình rồi đổi `GiaoHoId` từng người), đã viết test khoá đúng hành vi này
+  (`ChuyenHoTests.Ghi_that_gia_dinh_doi_giaoHoId_ca_gia_dinh_lan_toan_bo_thanh_vien`).
+- **Không migrate "Chọn giáo họ đích trùng giáo họ nguồn cụ thể thì báo lỗi"** theo đúng nghĩa hẹp
+  của desktop (`(int)cbGiaoHo.SelectedValue == (int)cbGiaoHoDich.SelectedValue`) mà mở rộng nhẹ:
+  chỉ báo lỗi khi nguồn là MỘT giáo họ cụ thể (không phải "Tất cả") và trùng đích — giữ đúng ý
+  nghĩa gốc (không cho chuyển về chính giáo họ đang lọc) mà không chặn nhầm trường hợp lọc "Tất
+  cả" rồi chuyển vào một giáo họ cụ thể (trường hợp desktop không hề tính tới vì so sánh int trực
+  tiếp, "Tất cả" ở desktop là `-1` nên hầu như không bao giờ trùng đích thật — hành vi tương
+  đương, chỉ diễn đạt rõ hơn).
+- **Chứng minh bằng chạy thật, đối chiếu `psql`, 2026-09-08** (tạo giáo họ tạm
+  `TEST Chuyen ho (tam)` bằng UI để có đích khác nguồn, xoá sau khi xong):
+  - Chuyển 1 giáo dân (Nguyễn Đức Mạnh, mã 1) từ "Simon Phan Đắc Hòa" sang giáo họ tạm — xem
+    trước hiện đúng "Sẽ chuyển 1 giáo dân sang giáo họ TEST Chuyen ho (tam)" — `psql` xác nhận
+    `giao_ho_id` đổi đúng — chuyển ngược lại — `psql` xác nhận về nguyên trạng.
+  - Chuyển 1 gia đình (Anna Nguyễn Thị Lan, mã 1, 2 thành viên) — xem trước hiện đúng "Sẽ chuyển
+    1 gia đình (2 thành viên)" — `psql` xác nhận CẢ gia đình LẪN 2 giáo dân thành viên đổi
+    `giao_ho_id` — chuyển ngược lại — `psql` xác nhận cả 3 bản ghi về đúng giáo họ cũ.
+  - Xoá giáo họ tạm sau khi xác nhận không còn gia đình/giáo dân nào tham chiếu tới.
+  - Số liệu tổng cuối cùng khớp nguyên trạng ban đầu: **2050 giáo dân / 40 gia đình / 145 thành
+    viên / 1 giáo họ / 1108 đợt bí tích / 6150 bí tích chi tiết**.
+  - Ảnh `177-chuyen-ho-*.png` (8 ảnh: 2 tab ban đầu, xem trước, thành công, hoàn tác) ở
+    `WebApp/anh-chup-kiem-thu/`.
+
+**Việc 3 — Xác minh "Chuẩn hoá dữ liệu" và "Tạo danh sách bí tích tự động".**
+
+Cả hai **CÓ THẬT** trong bản desktop — lượt trước không tìm ra vì tìm sai từ khoá (`ChuanHoa`
+không khớp `AutoUpperFirstChar`, `TaoDanhSachBiTich` không khớp `TaoDotBiTich`/`GenerateDotBiTich`).
+Rà `frmMain.Designer.cs` (26 `explorerBarItem`, đối chiếu `frmMain.cs.LoadFunction` để biết mỗi
+mục mở form/tiến trình nào) tìm ra cả hai:
+
+- **"Chuẩn hoá dữ liệu"** thật ra là **HAI mục riêng** trên desktop: "Chuẩn hóa dữ liệu giáo dân"
+  và "Chuẩn hóa dữ liệu gia đình" (`itChuanHoaDuLieuGiaoDan`/`itChuanHoaDuLieuGiaDinh`,
+  `frmMain.cs:365-370`, gọi `chuanHoaDuLieu(ProcessOptions.AutoUpperFirstCharGiaoDan/GiaDinh)`,
+  `frmMain.cs:423-458`). Đây là công cụ SỬA DỮ LIỆU HÀNG LOẠT: viết hoa chữ cái đầu mỗi từ, các
+  ký tự khác chuyển thường, áp dụng cho "tất cả các dữ liệu được nhập" của giáo dân/gia đình,
+  TRỪ các cột ghi chú (nguyên văn hộp thoại xác nhận, `frmMain.cs:430-431`) — chạy qua
+  `UpdateProcess` (`ProcessOptions.AutoUpperFirstCharGiaoDan/GiaDinh`, `UpdateProcess.cs:44-49`,
+  thân hàm xử lý chưa đọc hết — cần đọc rõ DANH SÁCH CHÍNH XÁC cột nào bị chuẩn hoá trước khi
+  migrate). **CHƯA MIGRATE lượt này** — hết thời gian cho lượt làm việc, để dành spec đã có sẵn
+  nguồn cho lượt sau.
+- **"Tạo danh sách bí tích tự động"** = `itLapBiTichTuDong` → `frmTaoDotBiTich` (đã có sẵn
+  `Source/ChuongTrinh/frmTaoDotBiTich.cs`, mã hoá UTF-8 có BOM — KHÁC hầu hết `.cs` khác trong
+  `ChuongTrinh` là UTF-16LE, đã kiểm bằng `file -b` trước khi đọc) chạy
+  `GxControl.GenerateDotBiTichProcess` (233d). Đây là công cụ TỰ ĐỘNG gộp giáo dân vào "đợt bí
+  tích" theo khoảng ngày: với Loại bí tích + Linh mục + Nơi bí tích + khoảng Từ ngày-Đến ngày
+  người dùng chọn, quét MỌI giáo dân có ngày bí tích tương ứng (`NgayRuaToi`/`NgayRuocLe`/
+  `NgayThemSuc`) rơi vào khoảng đó, tự tạo (nếu chưa có) một `DotBiTich` khớp (Linh mục + Loại +
+  Ngày trùng khớp CHÍNH XÁC) rồi thêm giáo dân vào `BiTichChiTiet` của đợt đó — khác hẳn quy
+  trình thủ công đã migrate ở `so-bi-tich.md` (người dùng tự tạo đợt rồi tự thêm từng người).
+  Đây cũng là công cụ SỬA DỮ LIỆU HÀNG LOẠT (tạo mới đợt bí tích + thêm hàng loạt chi tiết bí
+  tích). **CHƯA MIGRATE lượt này** — cùng lý do hết thời gian, để dành spec cho lượt sau.
+- Cả hai mục vẫn để nguyên dạng **placeholder** (chưa nối `id`) trong `SideNav.tsx`, KHÔNG gỡ
+  bỏ — vì nhiệm vụ gốc yêu cầu chỉ gỡ nếu mục đó KHÔNG có thật; cả hai đều có thật, chỉ chưa kịp
+  migrate. Đã thêm chú thích trong `SideNav.tsx` trỏ rõ nguồn desktop để lượt sau không phải tìm
+  lại từ đầu.
+
+**Đối chiếu đầy đủ menu desktop (`frmMain.Designer.cs`, 26 `explorerBarItem` trong 11 nhóm +
+`menuStrip1` phía trên) với `SideNav.tsx`:**
+
+| Nhóm desktop | Mục desktop | Có ở web? |
+|---|---|---|
+| Thông tin Giáo xứ | Giáo xứ (sửa thông tin giáo xứ hiện tại, `frmGiaoXu`) | **THIẾU** — xem ghi chú dưới |
+| Thông tin Giáo xứ | Giáo họ | Có (`giaoHoList`) |
+| Giáo dân & Gia đình | Danh sách giáo dân | Có (`giaoDanList`) |
+| Giáo dân & Gia đình | Danh sách gia đình | Có (`giaDinhList`) |
+| Hội đoàn | Danh sách hội đoàn | Có (`hoiDoanList`) |
+| Hồ sơ lưu trữ | Hồ sơ lưu trữ giáo dân/gia đình | Có (2 mục) |
+| Bí tích | Danh sách sổ bí tích | Có (`dotBiTichList`) |
+| Bí tích | Danh sách rao hôn phối | Có (`raoHonPhoiList`) |
+| Tìm kiếm | Tìm giáo dân / Tìm gia đình của một giáo dân | Có — gộp vào "Tìm kiếm toàn hệ thống" (Ctrl+K) ở header, khác cơ chế hộp thoại riêng của desktop |
+| Tìm kiếm | Tìm và thay thế (`frmReplace`) | **THIẾU** — chưa thấy chức năng tương đương ở bản web |
+| Công cụ dữ liệu | Kiểm tra dữ liệu giáo dân/gia đình | Có (2 mục, task này + lượt trước) |
+| Công cụ dữ liệu | Chuẩn hóa dữ liệu giáo dân/gia đình | Placeholder — xem Việc 3 |
+| Công cụ dữ liệu | Chuyển họ cho giáo dân/gia đình | Có, gộp 1 mục 2 tab (task này) |
+| Công cụ dữ liệu | Tao danh sách bí tích tự động | Placeholder — xem Việc 3 |
+| Thống kê | Thống kê chung / Biểu đồ | Có (2 mục) |
+| Quản lý giáo lý | Danh sách khối lớp | Có (`khoiGiaoLyList`, nhãn "Quản lý giáo lý") |
+| Quản lý người dùng | Danh sách tài khoản | Có (`taiKhoanList`, chỉ Quản trị viên) |
+| Thông tin phần mềm | Phần mềm & tác giả / Liên hệ / Online | Không cần — đã có nút "Trợ giúp" riêng ở header, không đối chiếu chi tiết trong lượt này |
+| `menuStrip1` → Hệ thống | Nhập dữ liệu từ cùng chương trình/Excel/MGC | Có vẻ tương ứng "Nhập dữ liệu Access" (`nhapDuLieu`, chỉ Quản trị hệ thống) — chưa đối chiếu 3 nguồn nhập riêng biệt của desktop với 1 mục web |
+| `menuStrip1` → Hệ thống | Đổi mật khẩu | Có (`DoiMatKhauModal.tsx`) |
+| `menuStrip1` → Hệ thống | Sao lưu / Khôi phục dữ liệu | Không áp dụng — mô hình máy chủ tập trung, không phải file `.mdb` cục bộ |
+| Web có, desktop không có | Quản lý giáo xứ (`quanLyGiaoXu`) | Xuyên TOÀN BỘ máy chủ, mô hình đa giáo xứ — khác biệt CHỦ Ý đã ghi ở `quan-ly-giao-xu.md` |
+
+Hai chỗ **THIẾU thật sự** đáng chú ý cho người dùng quyết định có cần migrate không:
+1. **"Giáo xứ" (sửa thông tin giáo xứ hiện tại)** — desktop có màn hình riêng
+   (`itNhapGiaoXu` → `frmGiaoXu`) để cha xứ tự sửa tên/địa chỉ/điện thoại giáo xứ mình; bản web
+   chỉ có "Quản lý giáo xứ" dành cho Quản trị hệ thống (xuyên toàn bộ máy chủ) — CHƯA có màn
+   hình để một giáo xứ tự sửa thông tin của chính mình.
+2. **"Tìm và thay thế"** (`frmReplace`) — chưa rõ công cụ này làm gì (chưa đọc mã), chưa thấy
+   tương đương ở bản web.
+
+Không kết luận thay người dùng có cần hai mục này không — chỉ ghi lại để quyết định sau.

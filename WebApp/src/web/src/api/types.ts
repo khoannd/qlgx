@@ -82,6 +82,32 @@ export type KiemTraGiaoDanTuyChon = {
   coNhieuHonPhoi: boolean
 }
 
+/** Ánh xạ 1-1 với KiemTraGiaDinhKetQuaDto phía backend — một dòng kết quả của "Công cụ dữ
+ * liệu" → "Kiểm tra dữ liệu — gia đình" (xem cong-cu-du-lieu.md mục 3). */
+export type KiemTraGiaDinhKetQua = {
+  giaDinh: GiaDinhListItem
+  nguyenNhan: string
+  ketQua: number
+}
+
+/** Bốn tuỳ chọn của "Kiểm tra dữ liệu — gia đình", đúng tên tham số truy vấn phía backend. */
+export type KiemTraGiaDinhTuyChon = {
+  khongCoNgayHonPhoi: boolean
+  honPhoiTruocTuoi: boolean
+  khoangCachTuoiConCai: boolean
+  cacVanDeKhac: boolean
+}
+
+/** "Chuyển họ hàng loạt — giáo dân" (spec mục 4) — kết quả bước "Xem trước", bắt buộc gọi
+ * trước khi ghi thật (nguyên tắc an toàn của nhiệm vụ, KHÔNG có ở bản desktop). */
+export type ChuyenHoGiaoDanXemTruoc = { soLuongGiaoDan: number; tenGiaoHoDich: string }
+export type ChuyenHoGiaoDanKetQua = { soLuongDaChuyen: number }
+
+/** "Chuyển họ hàng loạt — gia đình" — chuyển gia đình kéo theo TOÀN BỘ thành viên (mọi vai
+ * trò), xem ChuyenHoService.ChuyenHoGiaDinh. */
+export type ChuyenHoGiaDinhXemTruoc = { soLuongGiaDinh: number; soLuongThanhVien: number; tenGiaoHoDich: string }
+export type ChuyenHoGiaDinhKetQua = { soLuongGiaDinhDaChuyen: number; soLuongThanhVienDaChuyen: number }
+
 export type ThanhVien = {
   giaoDanId: string
   /** Mã giáo dân hệ cũ (Access) — khác `giaoDanId` (Guid). Lưới "Thành viên khác trong gia

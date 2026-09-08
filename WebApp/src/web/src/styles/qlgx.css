@@ -607,6 +607,30 @@ input:disabled, textarea:disabled {
 }
 .filters-bar .spacer { flex: 1; }
 
+/* --- Bảng chọn đơn giản (Chuyển họ hàng loạt) --- KHÔNG dùng .table-card ở đây: class đó có
+ * grid-template-rows CỐ ĐỊNH 2 hàng khớp đúng cấu trúc DOM của GxGrid (.grid-wrap + .table-foot)
+ * — một <table> thường làm con trực tiếp sẽ lệch số hàng khai báo, có nguy cơ lặp lại đúng bug
+ * "lưới co về 0px" đã ghi ở CLAUDE.md. */
+.bang-chon-cuon {
+  max-height: var(--fixed-h-grid, 420px);
+  overflow: auto;
+  border-radius: 12px;
+  padding: 4px;
+}
+table.bang-chon { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.bang-chon th, table.bang-chon td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-soft, rgba(0,0,0,.08));
+  text-align: left;
+}
+table.bang-chon thead th {
+  position: sticky;
+  top: 0;
+  background: var(--brand-mist);
+  color: var(--brand-ink);
+  z-index: 1;
+}
+
 /* --- Bảng dữ liệu --- */
 .table-card {
   display: grid;

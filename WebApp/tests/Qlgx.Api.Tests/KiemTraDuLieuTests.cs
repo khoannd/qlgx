@@ -213,3 +213,146 @@ public class KiemTraDuLieuTests(QlgxApiFactory app) : IClassFixture<QlgxApiFacto
         ds.Should().NotContain(x => x.GiaoDan.MaGiaoDanCu == 91022);
     }
 }
+
+/// <summary>
+/// "Kiểm tra dữ liệu — gia đình" (docs/superpowers/specs/man-hinh/cong-cu-du-lieu.md mục 3).
+/// Mỗi test khoá đúng MỘT trong 4 quy tắc của ReviewGiaDinhProcess.cs, tắt các quy tắc còn lại.
+/// </summary>
+public class KiemTraGiaDinhTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
+{
+    private sealed record Ket(GiaDinhTom GiaDinh, string NguyenNhan, int KetQua);
+    private sealed record GiaDinhTom(Guid Id, int MaGiaDinhCu);
+
+    private const string TatCaCoFalse =
+        "&khongCoNgayHonPhoi=false&honPhoiTruocTuoi=false&khoangCachTuoiConCai=false&cacVanDeKhac=false";
+
+    private async Task<List<Ket>> Goi(string co)
+    {
+        var client = app.CreateAuthClient();
+        var res = await client.GetAsync(
+            $"/api/cong-cu-du-lieu/kiem-tra-gia-dinh?{TatCaCoFalse.Replace($"&{co}=false", "")}&{co}=true");
+        var noiDung = await res.Content.ReadAsStringAsync();
+        if (!res.IsSuccessStatusCode) throw new Exception($"{res.StatusCode}: {noiDung}");
+        return System.Text.Json.JsonSerializer.Deserialize<List<Ket>>(
+            noiDung, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))!;
+    }
+
+    [Fact]
+    public async Task Gia_dinh_khong_co_hon_phoi_nao_bi_bao_khong_co_ngay_hon_phoi()
+    {
+        await using var db = app.TaoContextThuan();
+        var gdinh = new GiaDinh { GiaoXuId = app.GiaoXuId, MaGiaDinhCu = 92001, TenGiaDinh = "GD Khong Ngay HP" };
+        db.GiaDinh.Add(gdinh);
+        await db.SaveChangesAsync();
+
+        var ds = await Goi("khongCoNgayHonPhoi");
+
+        var dong = ds.Single(x => x.GiaDinh.MaGiaDinhCu == 92001);
+        dong.NguyenNhan.Should().Be("- Không có ngày hôn phối");
+        dong.KetQua.Should().Be(1); // ReviewGiaDinhType.KhongCoNgayHonPhoi
+    }
+
+    [Fact]
+    public async Task Gia_dinh_co_hon_phoi_co_ngay_KHONG_bi_bao()
+    {
+        await using var db = app.TaoContextThuan();
+        var gdinh = new GiaDinh { GiaoXuId = app.GiaoXuId, MaGiaDinhCu = 92002, TenGiaDinh = "GD Co Ngay HP" };
+        var chong = new GiaoDan { GiaoXuId = app.GiaoXuId, MaGiaoDanCu = 92002, HoTen = "Chong", Phai = "Nam" };
+        db.GiaDinh.Add(gdinh);
+        db.GiaoDan.Add(chong);
+        await db.SaveChangesAsync();
+        var hp = new HonPhoi { GiaoXuId = app.GiaoXuId, MaHonPhoiCu = 92002, NgayHonPhoi = new DateOnly(2020, 1, 1) };
+        db.HonPhoi.Add(hp);
+        db.ThanhVienGiaDinh.Add(new ThanhVienGiaDinh
+        { GiaoXuId = app.GiaoXuId, GiaDinhId = gdinh.Id, GiaoDanId = chong.Id, VaiTro = VaiTroGiaDinh.Chong });
+        await db.SaveChangesAsync();
+        db.GiaoDanHonPhoi.Add(new GiaoDanHonPhoi
+        { GiaoXuId = app.GiaoXuId, GiaoDanId = chong.Id, HonPhoiId = hp.Id, SoThuTu = 1 });
+        await db.SaveChangesAsync();
+
+        var ds = await Goi("khongCoNgayHonPhoi");
+
+        ds.Should().NotContain(x => x.GiaDinh.MaGiaDinhCu == 92002);
+    }
+
+    /// <summary>Ngưỡng thật do ReviewGiaDinhProcess dùng là TUOI_HON_PHOI_NAM=20 (không phải
+    /// KHOANGCACH_TUOI_CHAME_CONCAI=16 mà nhãn ô tick gợi ý) — xem spec mục 3.4 và
+    /// can-review-sau.md.</summary>
+    [Fact]
+    public async Task Nguoi_nam_hon_phoi_truoc_20_tuoi_bi_bao()
+    {
+        await using var db = app.TaoContextThuan();
+        var gdinh = new GiaDinh { GiaoXuId = app.GiaoXuId, MaGiaDinhCu = 92003, TenGiaDinh = "GD Cuoi Som" };
+        var chong = new GiaoDan
+        {
+            GiaoXuId = app.GiaoXuId, MaGiaoDanCu = 92003, HoTen = "Chong Som", Phai = "Nam",
+            NgaySinh = new DateOnly(2000, 1, 1),
+        };
+        db.GiaDinh.Add(gdinh);
+        db.GiaoDan.Add(chong);
+        await db.SaveChangesAsync();
+        var hp = new HonPhoi { GiaoXuId = app.GiaoXuId, MaHonPhoiCu = 92003, NgayHonPhoi = new DateOnly(2015, 1, 1) }; // 15 < 20
+        db.HonPhoi.Add(hp);
+        db.ThanhVienGiaDinh.Add(new ThanhVienGiaDinh
+        { GiaoXuId = app.GiaoXuId, GiaDinhId = gdinh.Id, GiaoDanId = chong.Id, VaiTro = VaiTroGiaDinh.Chong });
+        await db.SaveChangesAsync();
+        db.GiaoDanHonPhoi.Add(new GiaoDanHonPhoi
+        { GiaoXuId = app.GiaoXuId, GiaoDanId = chong.Id, HonPhoiId = hp.Id, SoThuTu = 1 });
+        await db.SaveChangesAsync();
+
+        var ds = await Goi("honPhoiTruocTuoi");
+
+        var dong = ds.Single(x => x.GiaDinh.MaGiaDinhCu == 92003);
+        dong.NguyenNhan.Should().Be("- Người nam hôn phối trước 20 tuổi");
+        dong.KetQua.Should().Be(2); // ReviewGiaDinhType.HonPhoiTruocTuoi
+    }
+
+    [Fact]
+    public async Task Khoang_cach_tuoi_cha_va_con_qua_gan_bi_bao()
+    {
+        await using var db = app.TaoContextThuan();
+        var gdinh = new GiaDinh { GiaoXuId = app.GiaoXuId, MaGiaDinhCu = 92004, TenGiaDinh = "GD Cha Con Gan" };
+        var cha = new GiaoDan
+        {
+            GiaoXuId = app.GiaoXuId, MaGiaoDanCu = 92004, HoTen = "Cha", Phai = "Nam",
+            NgaySinh = new DateOnly(2000, 1, 1),
+        };
+        var con = new GiaoDan
+        {
+            GiaoXuId = app.GiaoXuId, MaGiaoDanCu = 92005, HoTen = "Con", NgaySinh = new DateOnly(2015, 1, 1), // cach 15 < 20
+        };
+        db.GiaDinh.Add(gdinh);
+        db.GiaoDan.AddRange(cha, con);
+        await db.SaveChangesAsync();
+        db.ThanhVienGiaDinh.AddRange(
+            new ThanhVienGiaDinh { GiaoXuId = app.GiaoXuId, GiaDinhId = gdinh.Id, GiaoDanId = cha.Id, VaiTro = VaiTroGiaDinh.Chong },
+            new ThanhVienGiaDinh { GiaoXuId = app.GiaoXuId, GiaDinhId = gdinh.Id, GiaoDanId = con.Id, VaiTro = VaiTroGiaDinh.Con });
+        await db.SaveChangesAsync();
+
+        var ds = await Goi("khoangCachTuoiConCai");
+
+        var dong = ds.Single(x => x.GiaDinh.MaGiaDinhCu == 92004);
+        dong.NguyenNhan.Should().Be("- Khoảng cách tuổi giữa người cha và con cái không hợp lý (nhỏ hơn 20 tuổi)");
+        dong.KetQua.Should().Be(4); // ReviewGiaDinhType.KhoangCachTuoiKhongHopLe
+    }
+
+    [Fact]
+    public async Task Loc_theo_giao_ho_chi_tra_gia_dinh_cua_giao_ho_do()
+    {
+        await using var db = app.TaoContextThuan();
+        var gh = new GiaoHo { GiaoXuId = app.GiaoXuId, MaGiaoHoCu = 92030, TenGiaoHo = "Giao Ho GD Test" };
+        db.GiaoHo.Add(gh);
+        await db.SaveChangesAsync();
+        var trongGh = new GiaDinh { GiaoXuId = app.GiaoXuId, MaGiaDinhCu = 92031, TenGiaDinh = "Trong Ho", GiaoHoId = gh.Id };
+        var ngoaiGh = new GiaDinh { GiaoXuId = app.GiaoXuId, MaGiaDinhCu = 92032, TenGiaDinh = "Ngoai Ho" };
+        db.GiaDinh.AddRange(trongGh, ngoaiGh);
+        await db.SaveChangesAsync();
+
+        var client = app.CreateAuthClient();
+        var ds = await client.GetFromJsonAsync<List<Ket>>(
+            $"/api/cong-cu-du-lieu/kiem-tra-gia-dinh?giaoHoId={gh.Id}{TatCaCoFalse.Replace("&khongCoNgayHonPhoi=false", "")}&khongCoNgayHonPhoi=true");
+
+        ds!.Should().Contain(x => x.GiaDinh.MaGiaDinhCu == 92031);
+        ds.Should().NotContain(x => x.GiaDinh.MaGiaDinhCu == 92032);
+    }
+}

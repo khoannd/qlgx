@@ -7,7 +7,8 @@ import type {
   KhoiGiaoLy, LopGiaoLy, HocVienLopGiaoLy, GiaoLyVienLop,
   DieuKienThongKe, TrangThaiHonPhoiThongKe, ThongKeChungKetQua, ThongKeOnGoiKetQua,
   BieuDoNam, BieuDoBiTichNam, BieuDoDoTuoi, BieuDoGiaoHo,
-  KiemTraGiaoDanKetQua, KiemTraGiaoDanTuyChon,
+  KiemTraGiaoDanKetQua, KiemTraGiaoDanTuyChon, KiemTraGiaDinhKetQua, KiemTraGiaDinhTuyChon,
+  ChuyenHoGiaoDanXemTruoc, ChuyenHoGiaoDanKetQua, ChuyenHoGiaDinhXemTruoc, ChuyenHoGiaDinhKetQua,
 } from './types'
 import { authStore } from './authStore'
 
@@ -449,6 +450,37 @@ export const api = {
       p.set('coNhieuHonPhoi', String(tuyChon.coNhieuHonPhoi))
       return goi<KiemTraGiaoDanKetQua[]>(`/api/cong-cu-du-lieu/kiem-tra-giao-dan?${p.toString()}`)
     },
+    // "Kiểm tra dữ liệu — gia đình" (spec mục 3) — 4 cờ đúng tên tham số phía backend, mỗi cờ
+    // mặc định true nếu bỏ trống.
+    kiemTraGiaDinh: (giaoHoId: string | undefined, tuyChon: KiemTraGiaDinhTuyChon) => {
+      const p = new URLSearchParams()
+      if (giaoHoId) p.set('giaoHoId', giaoHoId)
+      p.set('khongCoNgayHonPhoi', String(tuyChon.khongCoNgayHonPhoi))
+      p.set('honPhoiTruocTuoi', String(tuyChon.honPhoiTruocTuoi))
+      p.set('khoangCachTuoiConCai', String(tuyChon.khoangCachTuoiConCai))
+      p.set('cacVanDeKhac', String(tuyChon.cacVanDeKhac))
+      return goi<KiemTraGiaDinhKetQua[]>(`/api/cong-cu-du-lieu/kiem-tra-gia-dinh?${p.toString()}`)
+    },
+  },
+  // "Chuyển họ hàng loạt" (spec mục 4) — CÔNG CỤ SỬA DỮ LIỆU HÀNG LOẠT NGUY HIỂM: luôn gọi
+  // xemTruoc* trước, hiện đúng con số đó trong hộp thoại xác nhận, rồi mới gọi ghi thật.
+  chuyenHo: {
+    xemTruocGiaoDan: (giaoDanIds: string[], giaoHoDichId: string) =>
+      goi<ChuyenHoGiaoDanXemTruoc>('/api/cong-cu-du-lieu/chuyen-ho/giao-dan/xem-truoc', {
+        method: 'POST', body: JSON.stringify({ giaoDanIds, giaoHoDichId }),
+      }),
+    ghiGiaoDan: (giaoDanIds: string[], giaoHoDichId: string) =>
+      goi<ChuyenHoGiaoDanKetQua>('/api/cong-cu-du-lieu/chuyen-ho/giao-dan', {
+        method: 'POST', body: JSON.stringify({ giaoDanIds, giaoHoDichId }),
+      }),
+    xemTruocGiaDinh: (giaDinhIds: string[], giaoHoDichId: string) =>
+      goi<ChuyenHoGiaDinhXemTruoc>('/api/cong-cu-du-lieu/chuyen-ho/gia-dinh/xem-truoc', {
+        method: 'POST', body: JSON.stringify({ giaDinhIds, giaoHoDichId }),
+      }),
+    ghiGiaDinh: (giaDinhIds: string[], giaoHoDichId: string) =>
+      goi<ChuyenHoGiaDinhKetQua>('/api/cong-cu-du-lieu/chuyen-ho/gia-dinh', {
+        method: 'POST', body: JSON.stringify({ giaDinhIds, giaoHoDichId }),
+      }),
   },
   timKiem: {
     // Dùng cho GxPicker thật (gõ để tìm Tên Cha/Mẹ, Người nam/nữ…) — giới hạn kết quả, KHÔNG

@@ -27,3 +27,26 @@ public record KiemTraGiaoDanTuyChon(
     bool ThuocNhieuGiaDinh,
     bool KhongThuocGiaDinhNao,
     bool CoNhieuHonPhoi);
+
+/// <summary>
+/// Kết quả một dòng của "Kiểm tra dữ liệu — gia đình" (frmKiemTraGiaDinhList.cs +
+/// ReviewGiaDinhProcess.cs — xem docs/superpowers/specs/man-hinh/cong-cu-du-lieu.md mục 3).
+/// Bọc nguyên <see cref="GiaDinhListItemDto"/> giống cách làm bên giáo dân.
+/// </summary>
+public record KiemTraGiaDinhKetQuaDto(
+    GiaDinhListItemDto GiaDinh,
+    /// <summary>Các lý do vi phạm — TÁI HIỆN NGUYÊN VĂN một bug thật của
+    /// ReviewGiaDinhProcess.nhieuVoChong (dòng 259): khi quy tắc "nhiều vợ/chồng" khớp, nó GHI
+    /// ĐÈ toàn bộ NguyenNhan bằng đúng một câu của riêng nó, XOÁ MẤT lý do của 3 quy tắc kia dù
+    /// KetQua (cờ bit) vẫn cộng dồn đủ. Xem spec mục 3.5 — không tự sửa.</summary>
+    string NguyenNhan,
+    /// <summary>Tổng các cờ bit ReviewGiaDinhType đã vi phạm (GxConstants.cs:202-207).</summary>
+    int KetQua);
+
+/// <summary>Tuỳ chọn 4 loại kiểm tra của "Kiểm tra dữ liệu — gia đình" — mặc định true nếu
+/// không truyền (đúng "4 ô tick đều tick sẵn" của desktop).</summary>
+public record KiemTraGiaDinhTuyChon(
+    bool KhongCoNgayHonPhoi,
+    bool HonPhoiTruocTuoi,
+    bool KhoangCachTuoiConCai,
+    bool CacVanDeKhac);

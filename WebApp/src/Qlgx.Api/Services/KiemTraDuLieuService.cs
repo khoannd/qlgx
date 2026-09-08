@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
+using Qlgx.Domain;
 
 namespace Qlgx.Api.Services;
 
@@ -16,7 +17,7 @@ namespace Qlgx.Api.Services;
 /// bằng C#). Kết quả CUỐI CÙNG giống hệt desktop (đã đối chiếu bằng psql, xem spec mục 2.4);
 /// chỉ cách tính khác, không phải hành vi khác.
 /// </summary>
-public class KiemTraDuLieuService(QlgxDbContext db)
+public class KiemTraDuLieuService(QlgxDbContext db, GiaDinhService giaDinhService)
 {
     public async Task<List<KiemTraGiaoDanKetQuaDto>> KiemTraGiaoDan(
         Guid? giaoHoId, KiemTraGiaoDanTuyChon tuyChon, CancellationToken ct)
@@ -160,4 +161,166 @@ public class KiemTraDuLieuService(QlgxDbContext db)
         }
         return ketQua;
     }
+
+    // Hai ngưỡng tuổi kết hôn tối thiểu theo giới — GxConstants.cs:110-111. Nhãn ô tick "Sai
+    // tuổi con cái cha mẹ" trên form desktop nói tới hằng số KHOANGCACH_TUOI_CHAME_CONCAI=16
+    // (GxConstants.cs:108), nhưng ReviewGiaDinhProcess.coNgayThangLoi dòng 186-221 (mã THẬT SỰ
+    // chạy) lại dùng lại đúng 2 hằng số này (20 nam / 18 nữ) — nhãn nói một đằng, mã chạy một
+    // nẻo. Migrate y hệt mã chạy, xem spec mục 3.4 và can-review-sau.md.
+    private const int TuoiHonPhoiNam = 20;
+    private const int TuoiHonPhoiNu = 18;
+
+    /// <summary>
+    /// "Kiểm tra dữ liệu — gia đình" (frmKiemTraGiaDinhList.cs + ReviewGiaDinhProcess.cs, xem
+    /// spec mục 3). Khác desktop (tải cả bảng GiaDinh JOIN HonPhoi vào một DataTable rồi lặp
+    /// từng dòng): ở đây gom bốn quy tắc bằng vài truy vấn theo lô (số gia đình luôn nhỏ — hộ
+    /// gia đình, không phải giáo dân — nên gộp trong bộ nhớ ứng dụng sau khi đã lọc DaXoa/giáo
+    /// họ ở CSDL là an toàn về hiệu năng).
+    ///
+    /// TÁI HIỆN NGUYÊN VĂN bug ghi đè NguyenNhan của ReviewGiaDinhProcess.nhieuVoChong (dòng
+    /// 259): nếu quy tắc "nhiều vợ/chồng" khớp, toàn bộ NguyenNhan bị THAY THẾ bằng đúng câu
+    /// của riêng quy tắc đó — lý do của 3 quy tắc kia (nếu có) bị xoá khỏi chuỗi hiển thị dù
+    /// KetQua (cờ bit) vẫn cộng đủ. Ở CSDL PostgreSQL mới, quy tắc "nhiều vợ/chồng" luôn ra 0
+    /// (ràng buộc UNIQUE ux_thanh_vien_gia_dinh_mot_chong_mot_vo chặn cứng) nên bug này hiện
+    /// không quan sát được trên dữ liệu thật — vẫn migrate đúng mã để không lặng lẽ "sửa cho
+    /// đúng" một hành vi desktop.
+    /// </summary>
+    public async Task<List<KiemTraGiaDinhKetQuaDto>> KiemTraGiaDinh(
+        Guid? giaoHoId, KiemTraGiaDinhTuyChon tuyChon, CancellationToken ct)
+    {
+        // Nền lọc ĐÚNG reViewData dòng 92-96: "AND DaXoa=0" + (MaGiaoHo=x nếu chọn cụ thể).
+        var goc = db.GiaDinh.Where(g => !g.DaXoa);
+        if (giaoHoId is { } id) goc = goc.Where(g => g.GiaoHoId == id);
+        var idsGiaDinh = await goc.Select(g => g.Id).ToListAsync(ct);
+        if (idsGiaDinh.Count == 0) return [];
+        var idSet = idsGiaDinh.ToHashSet();
+
+        // Chồng/vợ (VaiTro<=1) của các gia đình đang xét, kèm giới tính + ngày sinh.
+        var voChong = await db.ThanhVienGiaDinh
+            .Where(tv => idSet.Contains(tv.GiaDinhId) &&
+                (tv.VaiTro == VaiTroGiaDinh.Chong || tv.VaiTro == VaiTroGiaDinh.Vo))
+            .Select(tv => new { tv.GiaDinhId, tv.GiaoDanId, tv.VaiTro, tv.GiaoDan!.Phai, tv.GiaoDan.NgaySinh })
+            .ToListAsync(ct);
+        var voChongTheoGiaDinh = voChong.GroupBy(v => v.GiaDinhId)
+            .ToDictionary(nhom => nhom.Key, nhom => nhom.ToList());
+
+        // Con cái (VaiTro=2), chỉ cần ngày sinh, gộp theo gia đình.
+        var conCaiTheoGiaDinh = (await db.ThanhVienGiaDinh
+                .Where(tv => idSet.Contains(tv.GiaDinhId) && tv.VaiTro == VaiTroGiaDinh.Con)
+                .Select(tv => new { tv.GiaDinhId, tv.GiaoDan!.NgaySinh })
+                .ToListAsync(ct))
+            .GroupBy(c => c.GiaDinhId).ToDictionary(nhom => nhom.Key, nhom => nhom.Select(c => c.NgaySinh).ToList());
+
+        // Hôn phối gắn với gia đình qua BẤT KỲ người chồng/vợ nào (SELECT_GIADINH_LIST_CO_HONPHOI
+        // join TVGD(VaiTro 0/1) -> GiaoDanHonPhoi -> HonPhoi) — gộp theo gia đình, giữ mọi ngày
+        // hôn phối tìm được (một gia đình có thể có ≥2 nếu chồng/vợ mỗi người từng có hôn phối
+        // ghi nhận riêng — hiếm, xem can-review-sau.md).
+        var idNguoiVoChong = voChong.Select(v => v.GiaoDanId).ToHashSet();
+        var ngayHonPhoiTheoGiaDinh = idNguoiVoChong.Count == 0
+            ? new Dictionary<Guid, List<DateOnly?>>()
+            : (await db.GiaoDanHonPhoi
+                    .Where(gdh => idNguoiVoChong.Contains(gdh.GiaoDanId))
+                    .Select(gdh => new { gdh.GiaoDanId, gdh.HonPhoi!.NgayHonPhoi })
+                    .ToListAsync(ct))
+                .Join(voChong, h => h.GiaoDanId, v => v.GiaoDanId, (h, v) => new { v.GiaDinhId, h.NgayHonPhoi })
+                .GroupBy(x => x.GiaDinhId)
+                .ToDictionary(nhom => nhom.Key, nhom => nhom.Select(x => x.NgayHonPhoi).ToList());
+
+        var lyDoTheoGiaDinh = new Dictionary<Guid, (List<string> LyDo, int KetQua)>();
+
+        foreach (var giaDinhId in idsGiaDinh)
+        {
+            var lyDo = new List<string>();
+            var co = 0;
+            voChongTheoGiaDinh.TryGetValue(giaDinhId, out var vc);
+            vc ??= [];
+            ngayHonPhoiTheoGiaDinh.TryGetValue(giaDinhId, out var ngayHps);
+            ngayHps ??= [];
+
+            // Quy tắc 1: Không có ngày hôn phối (coNgayThangLoi dòng 151-158) — không có hôn
+            // phối nào gắn với gia đình NÀY có NgayHonPhoi khác rỗng.
+            if (tuyChon.KhongCoNgayHonPhoi && ngayHps.TrueForAll(n => n is null))
+            {
+                lyDo.Add("- Không có ngày hôn phối");
+                co += 1; // ReviewGiaDinhType.KhongCoNgayHonPhoi
+            }
+
+            // Quy tắc 2: Hôn phối trước tuổi (dòng 160-184) — người chồng/vợ đầu tiên (theo thứ
+            // tự Chồng rồi Vợ) hôn phối trước ngưỡng theo giới, so với BẤT KỲ ngày hôn phối nào
+            // gắn với gia đình. Dừng ở người đầu tiên vi phạm — đúng "break" của vòng lặp gốc.
+            if (tuyChon.HonPhoiTruocTuoi)
+            {
+                foreach (var nguoi in vc.OrderBy(v => v.VaiTro))
+                {
+                    if (nguoi.NgaySinh is not { } ns) continue;
+                    var nguong = LaNam(nguoi.Phai) ? TuoiHonPhoiNam : TuoiHonPhoiNu;
+                    var viPham = ngayHps.Any(nhp => nhp is { } n && n.Year - ns.Year < nguong);
+                    if (viPham)
+                    {
+                        lyDo.Add($"- Người {(LaNam(nguoi.Phai) ? "nam" : "nữ")} hôn phối trước {nguong} tuổi");
+                        co += 2; // ReviewGiaDinhType.HonPhoiTruocTuoi
+                        break;
+                    }
+                }
+            }
+
+            // Quy tắc 3: Khoảng cách tuổi cha/mẹ – con cái (dòng 186-221) — ngưỡng theo giới của
+            // NGƯỜI CHA/MẸ (không phải của con), dùng lại đúng 2 hằng số ở quy tắc 2 (xem ghi
+            // chú TuoiHonPhoiNam/Nu ở trên).
+            if (tuyChon.KhoangCachTuoiConCai && conCaiTheoGiaDinh.TryGetValue(giaDinhId, out var conCai) && conCai.Count > 0)
+            {
+                foreach (var nguoi in vc.OrderBy(v => v.VaiTro))
+                {
+                    if (nguoi.NgaySinh is not { } ns) continue;
+                    var nguong = LaNam(nguoi.Phai) ? TuoiHonPhoiNam : TuoiHonPhoiNu;
+                    var viPham = conCai.Any(c => c is { } nsCon && nsCon.Year - ns.Year < nguong);
+                    if (viPham)
+                    {
+                        var chaMe = LaNam(nguoi.Phai) ? "người cha" : "người mẹ";
+                        lyDo.Add($"- Khoảng cách tuổi giữa {chaMe} và con cái không hợp lý (nhỏ hơn {nguong} tuổi)");
+                        co += 4; // ReviewGiaDinhType.KhoangCachTuoiKhongHopLe
+                        break;
+                    }
+                }
+            }
+
+            // Quy tắc 4: Nhiều vợ/chồng (dòng 234-264) — ≥2 người VaiTro=0 hoặc ≥2 người
+            // VaiTro=1. TRÊN CSDL POSTGRESQL MỚI LUÔN RA 0 (ràng buộc UNIQUE chặn cứng), giữ lại
+            // đúng mã vì đây là quy tắc mã nguồn thật có, không phải suy đoán.
+            if (tuyChon.CacVanDeKhac)
+            {
+                var soChong = vc.Count(v => v.VaiTro == VaiTroGiaDinh.Chong);
+                var soVo = vc.Count(v => v.VaiTro == VaiTroGiaDinh.Vo);
+                if (soChong > 1 || soVo > 1)
+                {
+                    var strNhieu = "- ";
+                    if (soChong > 1) strNhieu += "Gia đình có nhiều chồng. ";
+                    if (soVo > 1) strNhieu += "Gia đình có nhiều vợ. ";
+                    strNhieu += "(do lỗi phiên bản trước. Hãy mở gia đình này lên, xem lại thông " +
+                                "tin và bấm nút cập nhật để sửa lỗi)";
+                    // BUG TÁI HIỆN Ở ĐÂY: ghi đè toàn bộ lyDo thay vì thêm vào — đúng
+                    // nhieuVoChong dòng 259 (row[NGUYEN_NHAN] = str.ToString(), không nối thêm
+                    // vào giá trị coNgayThangLoi đã ghi trước đó).
+                    lyDo = [strNhieu];
+                    co += 8; // ReviewGiaDinhType.NhieuVoChong
+                }
+            }
+
+            if (co > 0) lyDoTheoGiaDinh[giaDinhId] = (lyDo, co);
+        }
+
+        if (lyDoTheoGiaDinh.Count == 0) return [];
+
+        var dsDto = await giaDinhService.LayTheoDanhSachId(lyDoTheoGiaDinh.Keys, ct);
+        return dsDto
+            .Where(d => lyDoTheoGiaDinh.ContainsKey(d.Id))
+            .Select(d =>
+            {
+                var (lyDo, ketQuaCo) = lyDoTheoGiaDinh[d.Id];
+                return new KiemTraGiaDinhKetQuaDto(d, string.Join("\n", lyDo), ketQuaCo);
+            })
+            .ToList();
+    }
+
+    private static bool LaNam(string? phai) => string.Equals(phai, "Nam", StringComparison.OrdinalIgnoreCase);
 }

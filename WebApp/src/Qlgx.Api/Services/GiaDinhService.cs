@@ -80,6 +80,27 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         DungDanhSachGiaDinh(XayDungTruyVan(db, giaoHoId, chiKhongThongKe), ct);
 
     /// <summary>
+    /// Dựng đúng bộ cột <see cref="GiaDinhListItemDto"/> (tên vợ/chồng ghép sẵn, Gạch, hôn phối
+    /// hiện tại…) cho một tập Id gia đình đã biết trước — dùng bởi
+    /// "Kiểm tra dữ liệu — gia đình" (KiemTraDuLieuService) để khỏi chép lại logic ghép tên,
+    /// KHÔNG lọc DaXoa/DaChuyenXu vì tập id truyền vào coi như đã lọc đúng phạm vi từ nơi gọi.
+    /// </summary>
+    public Task<List<GiaDinhListItemDto>> LayTheoDanhSachId(
+        IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
+        DungDanhSachGiaDinh(
+            db.GiaDinh.Where(g => ids.Contains(g.Id)).OrderBy(g => g.MaGiaDinhCu).Select(g => new HangTho(
+                g.Id, g.MaGiaDinhCu, g.MaGiaDinhRieng, g.TenGiaDinh,
+                g.ThanhVien.Where(tv => tv.VaiTro == VaiTroGiaDinh.Chong)
+                    .Select(tv => new NguoiVoChong(tv.GiaoDanId, tv.GiaoDan!.TenThanh, tv.GiaoDan.HoTen, tv.GiaoDan.DienThoai, tv.GiaoDan.QuaDoi))
+                    .FirstOrDefault(),
+                g.ThanhVien.Where(tv => tv.VaiTro == VaiTroGiaDinh.Vo)
+                    .Select(tv => new NguoiVoChong(tv.GiaoDanId, tv.GiaoDan!.TenThanh, tv.GiaoDan.HoTen, tv.GiaoDan.DienThoai, tv.GiaoDan.QuaDoi))
+                    .FirstOrDefault(),
+                g.ThanhVien.Count, g.DienThoai, g.DiaChi,
+                g.GiaoHo == null ? "Ngoài xứ" : g.GiaoHo.TenGiaoHo, g.DienGiaDinh, g.GhiChu, g.KhongThongKe)),
+            ct);
+
+    /// <summary>
     /// Danh sách "Hồ sơ lưu trữ gia đình" (`frmGiaDinhLuuTruList.cs` + `cbGiaoHo.IsLuuTru =
     /// true`) — đúng where thật dùng khi `IsLuuTru=true` (GxGiaoHo.LoadGridData dòng 293):
     /// "AND (DaXoa=-1 OR DaChuyenXu=-1)" — OR, không AND; KHÔNG có điều kiện QuaDoi (gia đình

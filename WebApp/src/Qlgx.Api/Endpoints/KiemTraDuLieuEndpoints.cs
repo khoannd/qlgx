@@ -25,5 +25,18 @@ public static class KiemTraDuLieuEndpoints
                 thuocNhieuGiaDinh ?? true, khongThuocGiaDinhNao ?? true, coNhieuHonPhoi ?? true);
             return Results.Ok(await dv.KiemTraGiaoDan(giaoHoId, tuyChon, ct));
         });
+
+        // "Kiểm tra dữ liệu — gia đình" (spec mục 3) — 4 cờ mặc định true khi không truyền,
+        // đúng "4 ô tick đều tick sẵn" của desktop.
+        nhom.MapGet("/kiem-tra-gia-dinh", async (
+            KiemTraDuLieuService dv, Guid? giaoHoId,
+            bool? khongCoNgayHonPhoi, bool? honPhoiTruocTuoi, bool? khoangCachTuoiConCai,
+            bool? cacVanDeKhac, CancellationToken ct) =>
+        {
+            var tuyChon = new KiemTraGiaDinhTuyChon(
+                khongCoNgayHonPhoi ?? true, honPhoiTruocTuoi ?? true,
+                khoangCachTuoiConCai ?? true, cacVanDeKhac ?? true);
+            return Results.Ok(await dv.KiemTraGiaDinh(giaoHoId, tuyChon, ct));
+        });
     }
 }

@@ -21,6 +21,8 @@ import { RaoHonPhoiListPage } from './screens/RaoHonPhoiListPage'
 import { RaoHonPhoiDetail } from './screens/RaoHonPhoiDetail'
 import type { LoaiBiTich } from './api/types'
 import { KiemTraDuLieuGiaoDanPage } from './screens/KiemTraDuLieuGiaoDanPage'
+import { KiemTraDuLieuGiaDinhPage } from './screens/KiemTraDuLieuGiaDinhPage'
+import { ChuyenHoPage } from './screens/ChuyenHoPage'
 import { QuanLyGiaoXuPage } from './screens/QuanLyGiaoXuPage'
 import { ThongKeChungPage } from './screens/ThongKeChungPage'
 import { BieuDoPage } from './screens/BieuDoPage'
@@ -261,6 +263,22 @@ function App() {
     })
   }
 
+  // "Công cụ dữ liệu" -> "Kiểm tra dữ liệu" nửa gia đình (spec mục 3) — cùng khuôn nửa giáo dân
+  // ở trên, "Xem chi tiết" mở thẳng thẻ chi tiết gia đình đã có.
+  function moKiemTraDuLieuGiaDinh() {
+    mo({
+      id: 'kiemTraDuLieuGiaDinh',
+      tieuDe: 'Kiểm tra dữ liệu gia đình',
+      noiDung: <KiemTraDuLieuGiaDinhPage moGiaDinh={(id) => moChiTietGiaDinh(id)} />,
+    })
+  }
+
+  // "Công cụ dữ liệu" -> "Chuyển họ hàng loạt" (spec mục 4, itChuyenHoGiaoDan/itChuyenHoGiaDinh
+  // của desktop) — CÔNG CỤ SỬA DỮ LIỆU HÀNG LOẠT, xem ChuyenHoService.
+  function moChuyenHo() {
+    mo({ id: 'chuyenHo', tieuDe: 'Chuyển họ hàng loạt', noiDung: <ChuyenHoPage /> })
+  }
+
   function moQuanLyGiaoXu() {
     mo({ id: 'quanLyGiaoXu', tieuDe: 'Quản lý giáo xứ', noiDung: <QuanLyGiaoXuPage /> })
   }
@@ -301,6 +319,8 @@ function App() {
     else if (id === 'dotBiTichList') moDanhSachSoBiTich()
     else if (id === 'raoHonPhoiList') moDanhSachRaoHonPhoi()
     else if (id === 'kiemTraDuLieuGiaoDan') moKiemTraDuLieuGiaoDan()
+    else if (id === 'kiemTraDuLieuGiaDinh') moKiemTraDuLieuGiaDinh()
+    else if (id === 'chuyenHo') moChuyenHo()
     else if (id === 'quanLyGiaoXu') moQuanLyGiaoXu()
     else if (id === 'nhapDuLieu') moNhapDuLieu()
     else if (id === 'thongKeChung') moThongKeChung()
