@@ -7,6 +7,7 @@ import type {
   KhoiGiaoLy, LopGiaoLy, HocVienLopGiaoLy, GiaoLyVienLop,
   DieuKienThongKe, TrangThaiHonPhoiThongKe, ThongKeChungKetQua, ThongKeOnGoiKetQua,
   BieuDoNam, BieuDoBiTichNam, BieuDoDoTuoi, BieuDoGiaoHo,
+  KiemTraGiaoDanKetQua, KiemTraGiaoDanTuyChon,
 } from './types'
 import { authStore } from './authStore'
 
@@ -433,6 +434,21 @@ export const api = {
       goi<void>('/api/giao-ho', { method: 'POST', body: JSON.stringify(than) }),
     sua: (id: string, than: { tenGiaoHo: string; giaoHoChaId?: string | null }) =>
       goi<void>(`/api/giao-ho/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+  },
+  congCuDuLieu: {
+    // "Kiểm tra dữ liệu — giáo dân" (xem docs/superpowers/specs/man-hinh/cong-cu-du-lieu.md
+    // mục 2) — 6 cờ đúng tên tham số phía backend, mỗi cờ mặc định true nếu bỏ trống.
+    kiemTraGiaoDan: (giaoHoId: string | undefined, tuyChon: KiemTraGiaoDanTuyChon) => {
+      const p = new URLSearchParams()
+      if (giaoHoId) p.set('giaoHoId', giaoHoId)
+      p.set('khongCoNgayThang', String(tuyChon.khongCoNgayThang))
+      p.set('saiQuanHeNgayThang', String(tuyChon.saiQuanHeNgayThang))
+      p.set('ruocLeTruocTuoi', String(tuyChon.ruocLeTruocTuoi))
+      p.set('thuocNhieuGiaDinh', String(tuyChon.thuocNhieuGiaDinh))
+      p.set('khongThuocGiaDinhNao', String(tuyChon.khongThuocGiaDinhNao))
+      p.set('coNhieuHonPhoi', String(tuyChon.coNhieuHonPhoi))
+      return goi<KiemTraGiaoDanKetQua[]>(`/api/cong-cu-du-lieu/kiem-tra-giao-dan?${p.toString()}`)
+    },
   },
   timKiem: {
     // Dùng cho GxPicker thật (gõ để tìm Tên Cha/Mẹ, Người nam/nữ…) — giới hạn kết quả, KHÔNG

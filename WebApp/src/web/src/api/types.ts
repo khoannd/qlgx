@@ -62,6 +62,26 @@ export type GiaoDanListItem = {
   khongThongKe: boolean
 }
 
+/** Ánh xạ 1-1 với KiemTraGiaoDanKetQuaDto phía backend — một dòng kết quả của "Công cụ dữ
+ * liệu" → "Kiểm tra dữ liệu" (xem docs/superpowers/specs/man-hinh/cong-cu-du-lieu.md mục 2). */
+export type KiemTraGiaoDanKetQua = {
+  giaoDan: GiaoDanListItem
+  /** Các lý do vi phạm, mỗi lý do một dòng bắt đầu bằng "- ", nối bằng "\n". */
+  nguyenNhan: string
+  /** Tổng cờ bit ReviewGiaoDanType đã vi phạm — chỉ giữ để đối chiếu, KHÔNG hiển thị trên lưới. */
+  ketQua: number
+}
+
+/** Sáu tuỳ chọn của "Kiểm tra dữ liệu — giáo dân", đúng tên tham số truy vấn phía backend. */
+export type KiemTraGiaoDanTuyChon = {
+  khongCoNgayThang: boolean
+  saiQuanHeNgayThang: boolean
+  ruocLeTruocTuoi: boolean
+  thuocNhieuGiaDinh: boolean
+  khongThuocGiaDinhNao: boolean
+  coNhieuHonPhoi: boolean
+}
+
 export type ThanhVien = {
   giaoDanId: string
   /** Mã giáo dân hệ cũ (Access) — khác `giaoDanId` (Guid). Lưới "Thành viên khác trong gia

@@ -20,6 +20,7 @@ import { DotBiTichDetail } from './screens/DotBiTichDetail'
 import { RaoHonPhoiListPage } from './screens/RaoHonPhoiListPage'
 import { RaoHonPhoiDetail } from './screens/RaoHonPhoiDetail'
 import type { LoaiBiTich } from './api/types'
+import { KiemTraDuLieuGiaoDanPage } from './screens/KiemTraDuLieuGiaoDanPage'
 import { QuanLyGiaoXuPage } from './screens/QuanLyGiaoXuPage'
 import { ThongKeChungPage } from './screens/ThongKeChungPage'
 import { BieuDoPage } from './screens/BieuDoPage'
@@ -249,6 +250,17 @@ function App() {
     })
   }
 
+  // "Công cụ dữ liệu" -> "Kiểm tra dữ liệu" (chỉ nửa giáo dân, xem cong-cu-du-lieu.md).
+  // "Xem chi tiết" mở ĐÚNG cùng thẻ chi tiết giáo dân mà "Danh sách giáo dân" dùng — không có
+  // màn hình chi tiết riêng, giống cách hồ sơ lưu trữ tái dùng moChiTietGiaoDan.
+  function moKiemTraDuLieuGiaoDan() {
+    mo({
+      id: 'kiemTraDuLieuGiaoDan',
+      tieuDe: 'Kiểm tra dữ liệu',
+      noiDung: <KiemTraDuLieuGiaoDanPage moGiaoDan={(id) => moChiTietGiaoDan(id)} />,
+    })
+  }
+
   function moQuanLyGiaoXu() {
     mo({ id: 'quanLyGiaoXu', tieuDe: 'Quản lý giáo xứ', noiDung: <QuanLyGiaoXuPage /> })
   }
@@ -288,6 +300,7 @@ function App() {
     else if (id === 'giaDinhLuuTruList') moDanhSachHoSoLuuTruGiaDinh()
     else if (id === 'dotBiTichList') moDanhSachSoBiTich()
     else if (id === 'raoHonPhoiList') moDanhSachRaoHonPhoi()
+    else if (id === 'kiemTraDuLieuGiaoDan') moKiemTraDuLieuGiaoDan()
     else if (id === 'quanLyGiaoXu') moQuanLyGiaoXu()
     else if (id === 'nhapDuLieu') moNhapDuLieu()
     else if (id === 'thongKeChung') moThongKeChung()

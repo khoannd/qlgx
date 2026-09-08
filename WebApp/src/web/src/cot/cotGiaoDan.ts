@@ -68,3 +68,15 @@ export const cotQuanHeGiaDinh: ColDef<GiaoDanListItem> = {
   headerName: 'Quan hệ GĐ',
   width: 130,
 }
+
+/** Cột "Nguyên nhân" — chỉ dùng ở lưới kết quả "Kiểm tra dữ liệu" (2 cột `NguyenNhan`/`KetQua`
+ * mà `ReviewGiaoDanProcess` thêm động vào DataTable, xem cong-cu-du-lieu.md mục 2.6). Cố ý
+ * KHÔNG có cột `ketQua` (cờ bit) trên lưới — số khó hiểu với người dùng cuối, xem spec mục 7. */
+export const cotNguyenNhan: ColDef = {
+  field: 'nguyenNhan',
+  headerName: 'Nguyên nhân',
+  width: 320,
+  wrapText: true,
+  autoHeight: true,
+  cellClass: 'cell-wrap',
+}

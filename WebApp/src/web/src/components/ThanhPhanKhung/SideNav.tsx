@@ -47,7 +47,7 @@ const DANH_SACH_DIEU_HUONG: NhomDieuHuong[] = [
   {
     nhan: 'Công cụ dữ liệu',
     muc: [
-      { nhan: 'Kiểm tra dữ liệu' },
+      { id: 'kiemTraDuLieuGiaoDan', nhan: 'Kiểm tra dữ liệu' },
       { nhan: 'Chuẩn hoá dữ liệu' },
       { nhan: 'Chuyển họ hàng loạt' },
       { nhan: 'Tạo danh sách bí tích tự động' },

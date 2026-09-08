@@ -69,6 +69,8 @@ builder.Services.AddDbContext<QlgxDbContext>((sp, opt) =>
 builder.Services.AddScoped<SinhMaService>();
 builder.Services.AddScoped<GiaDinhService>();
 builder.Services.AddScoped<GiaoDanService>();
+// "Công cụ dữ liệu" -> "Kiểm tra dữ liệu" (chỉ nửa giáo dân, xem cong-cu-du-lieu.md).
+builder.Services.AddScoped<KiemTraDuLieuService>();
 // Anh dai dien (Task 1.2 VIEC-TIEP-THEO.md) — xem AnhDaiDienService.cs.
 builder.Services.AddScoped<AnhDaiDienService>();
 // Xuat Excel that (ClosedXML, khong Office Interop) cho hai man hinh danh sach — xem
@@ -169,6 +171,7 @@ app.MapAuth();
 // khong chi tren nhom), dam bao khong endpoint nghiep vu nao lot luoi.
 app.MapGiaDinh();
 app.MapGiaoDan();
+app.MapKiemTraDuLieu();
 app.MapGiaoHo();
 app.MapTaiKhoan();
 app.MapQuanLyGiaoXu();
