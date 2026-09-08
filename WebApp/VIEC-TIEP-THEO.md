@@ -15,6 +15,13 @@ Chốt ngày 2026-09-07, sau khi hoàn tất phần cài đặt giai đoạn 1 v
 > (`Giáo xứ Thánh Gia`) — xem `docs/superpowers/specs/man-hinh/can-review-sau.md` mục 37 và
 > `.superpowers/sdd/2026-09-06-qlgx-web-phase-1/task-quan-ly-giao-xu-report.md`.
 
+> **Cập nhật 2026-09-08 (đêm)**: đã **migrate xong TOÀN BỘ màn hình** trong thanh điều hướng
+> và **cả 8 mẫu in**. Test: **387 backend + 394 front-end**, `npm run build` chạy được.
+> Dữ liệu `qlgx_thu` nguyên vẹn: 2050 giáo dân / 40 gia đình / 145 thành viên / 1 giáo họ /
+> 1108 đợt bí tích / 6150 bí tích chi tiết.
+>
+> Mục 3.1 ("hơn 60 màn hình phụ") nay **đã xong** — xem mục "Màn hình đã migrate" bên dưới.
+
 Xếp theo thứ tự nên làm. Lý do xếp hạng ghi ngay dưới mỗi mục — đừng đảo thứ tự nếu chưa
 đọc lý do.
 
@@ -47,10 +54,13 @@ Mã desktop tham khảo: `Source/ExcelReport/`, `Source/GXControl/frmReport.cs`,
   Chứng nhận bí tích (4 biến thể), Phiếu gia đình, Chứng nhận hôn phối. Ảnh đại diện đã
   vào Lý lịch cá nhân và Phiếu gia đình.
 
-**Còn lại**: 4 mẫu **Giấy giới thiệu** (chuyển xứ, rửa tội, thêm sức, giáo lý hôn phối) —
-cần màn hình nhập thông tin bên thứ hai, vì người kia thường **không phải giáo dân** của
-giáo xứ này nên không có sẵn trong CSDL. Ngoài ra: rao hôn phối, xuất Excel thật (ClosedXML),
-biểu đồ, và `PhieuGiaDinh-A3` (hạ tầng đang cố định khổ A4).
+**✅ Bốn mẫu Giấy giới thiệu đã xong** (commit `984896d`). Vấn đề "thông tin bên thứ hai" đã
+được giải: đọc mã desktop thấy `frmReport.cs` dùng **hai ô nhập tay** cho giáo xứ/giáo phận
+người nhận (không tra bảng nào, vì bên kia thuộc giáo xứ khác), không lưu gì xuống CSDL.
+Bản web làm theo đúng cách đó. Đáng chú ý: cả hai bản cài đặt Giấy giới thiệu trong desktop
+đều là **mã chết**, chưa từng được gọi từ menu nào.
+
+**Còn lại**: `PhieuGiaDinh-A3` (hạ tầng đang cố định khổ A4) — việc nhỏ, không chặn.
 
 ### 1.2 Ảnh đại diện  ← ✅ ĐÃ XONG
 
@@ -152,13 +162,37 @@ giữ nguyên không lẫn lộn, nhập lại lần hai không tạo trùng —
 
 ## Mức 3 — Còn nợ, không chặn
 
-### 3.1 Hơn 60 màn hình phụ chưa migrate
+### 3.1 Hơn 60 màn hình phụ chưa migrate  ← ✅ ĐÃ XONG
 
 Kiểm tra dữ liệu, chuẩn hoá dữ liệu, chuyển họ hàng loạt, thống kê, biểu đồ, hồ sơ lưu trữ,
 toàn bộ phân hệ giáo lý (lớp, khối, học viên, giáo lý viên), rao hôn phối, sổ bí tích.
 
-Dữ liệu của tất cả các màn hình này **đã có sẵn** trong PostgreSQL (đủ 26/26 bảng Access),
-nên chỉ còn phần giao diện và nghiệp vụ. Vẫn theo quy trình **spec trước, migrate sau**.
+**✅ Đã xong hết ngày 2026-09-08**, mỗi màn hình đều qua đủ vòng: nghiên cứu mã desktop →
+viết spec có trích dẫn dòng → migrate → test → chạy thật trên trình duyệt với dữ liệu thật.
+
+| Màn hình | Commit |
+|---|---|
+| Sổ bí tích, Rao hôn phối | `aa4a2af` |
+| Giáo họ, Danh sách hội đoàn | `7d27f64` |
+| Hồ sơ lưu trữ giáo dân + gia đình | `d1631c9` |
+| Phân hệ Giáo lý (khối/lớp/học viên/giáo lý viên) | `d4c4b27` |
+| Thống kê chung, Biểu đồ | `7200c86` |
+| Kiểm tra dữ liệu — giáo dân | `da622a2` |
+| Kiểm tra dữ liệu — gia đình, Chuyển họ hàng loạt | `8f3dee5` |
+| Giáo xứ (tự sửa thông tin xứ) | `d344162` |
+| Chuẩn hoá dữ liệu | `9d25033` |
+| Tạo danh sách bí tích tự động | `d9795ef` |
+| Tìm và thay thế | `c91c883` |
+| 4 mẫu Giấy giới thiệu | `984896d` |
+
+**Bốn màn hình sửa dữ liệu hàng loạt** (chuẩn hoá, chuyển họ, tạo danh sách bí tích, tìm và
+thay thế) đều có **bước xem trước bắt buộc** nêu số bản ghi sẽ đổi, xác nhận rõ ràng, và chạy
+trong **một transaction**.
+
+**Ba lỗi thật của bản desktop được phát hiện và TÁI HIỆN Y HỆT** (không tự sửa, đúng chỉ đạo):
+số học tuổi bị đảo trong `Extract.cs` khiến nhóm "Giới trẻ"/"Thiếu nhi" luôn rỗng; mốc năm
+`1990` viết cứng trong biểu đồ độ tuổi; và bug ghi đè `NguyenNhan` ở kiểm tra gia đình. Tất cả
+đã khoá lại bằng test và ghi vào `can-review-sau.md`.
 
 ### 3.2 Thu hồi token chủ động
 
