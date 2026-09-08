@@ -23,6 +23,7 @@ import type { LoaiBiTich } from './api/types'
 import { KiemTraDuLieuGiaoDanPage } from './screens/KiemTraDuLieuGiaoDanPage'
 import { KiemTraDuLieuGiaDinhPage } from './screens/KiemTraDuLieuGiaDinhPage'
 import { ChuyenHoPage } from './screens/ChuyenHoPage'
+import { ChuanHoaDuLieuPage } from './screens/ChuanHoaDuLieuPage'
 import { QuanLyGiaoXuPage } from './screens/QuanLyGiaoXuPage'
 import { GiaoXuPage } from './screens/GiaoXuPage'
 import { ThongKeChungPage } from './screens/ThongKeChungPage'
@@ -280,6 +281,12 @@ function App() {
     mo({ id: 'chuyenHo', tieuDe: 'Chuyển họ hàng loạt', noiDung: <ChuyenHoPage /> })
   }
 
+  // "Công cụ dữ liệu" -> "Chuẩn hoá dữ liệu" (spec mục 5.1, itChuanHoaDuLieuGiaoDan/GiaDinh
+  // của desktop) — CÔNG CỤ SỬA DỮ LIỆU HÀNG LOẠT, xem ChuanHoaDuLieuService.
+  function moChuanHoaDuLieu() {
+    mo({ id: 'chuanHoaDuLieu', tieuDe: 'Chuẩn hoá dữ liệu', noiDung: <ChuanHoaDuLieuPage /> })
+  }
+
   function moQuanLyGiaoXu() {
     mo({ id: 'quanLyGiaoXu', tieuDe: 'Quản lý giáo xứ', noiDung: <QuanLyGiaoXuPage /> })
   }
@@ -328,6 +335,7 @@ function App() {
     else if (id === 'kiemTraDuLieuGiaoDan') moKiemTraDuLieuGiaoDan()
     else if (id === 'kiemTraDuLieuGiaDinh') moKiemTraDuLieuGiaDinh()
     else if (id === 'chuyenHo') moChuyenHo()
+    else if (id === 'chuanHoaDuLieu') moChuanHoaDuLieu()
     else if (id === 'quanLyGiaoXu') moQuanLyGiaoXu()
     else if (id === 'giaoXu') moGiaoXu()
     else if (id === 'nhapDuLieu') moNhapDuLieu()

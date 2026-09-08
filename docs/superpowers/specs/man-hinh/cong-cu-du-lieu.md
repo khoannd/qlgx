@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| Tệp nguồn | `Source/ChuongTrinh/frmKiemTraGiaoDanList.cs` (316d) + `ReviewGiaoDanProcess.cs` (257d) + `frmKiemTraGiaDinhList.cs` (346d) + `ReviewGiaDinhProcess.cs` (266d) + `frmChuyenHoGiaDinh.cs` (245d) + `frmChuyenHoGiaoDan.cs` (170d) + `UpdateProcess.cs` (chuyển họ, đã đọc phần liên quan); "Chuẩn hoá dữ liệu" = `frmMain.cs` (`chuanHoaDuLieu`, `ProcessOptions.AutoUpperFirstChar*`) + `UpdateProcess.cs` (chưa đọc hết phần này); "Tạo danh sách bí tích tự động" = `frmTaoDotBiTich.cs` (77d, UTF-8 BOM) + `Source/GXControl/GenerateDotBiTichProcess.cs` (233d) — cả hai **đã xác định được file nguồn, chưa migrate** (xem mục 5) |
+| Tệp nguồn | `Source/ChuongTrinh/frmKiemTraGiaoDanList.cs` (316d) + `ReviewGiaoDanProcess.cs` (257d) + `frmKiemTraGiaDinhList.cs` (346d) + `ReviewGiaDinhProcess.cs` (266d) + `frmChuyenHoGiaDinh.cs` (245d) + `frmChuyenHoGiaoDan.cs` (170d) + `UpdateProcess.cs` (chuyển họ, đã đọc phần liên quan); "Chuẩn hoá dữ liệu" = `frmMain.cs` (`chuanHoaDuLieu`, `ProcessOptions.AutoUpperFirstChar*`) + `UpdateProcess.AutoUpperCaseFirstCharGiaoDan/GiaDinh` + `CMemory.AutoUpperCaseFirstCharGiaoDan/GiaDinh` + `CMemory.AutoUpperFirstChar` (`Source/DBAccess/CMemory.cs:1079-1155,1637-1666`) — **đã migrate** (mục 5.1); "Tạo danh sách bí tích tự động" = `frmTaoDotBiTich.cs` (77d, UTF-8 BOM) + `Source/GXControl/GenerateDotBiTichProcess.cs` (233d) — **đã xác định được file nguồn, chưa migrate** (mục 5.2) |
 | UserControl dùng lại | `GxGiaoDanList`/`GxGiaDinhList` (lưới), `GxGiaoHoComboBox` (`cbGiaoHo`, có "Tất cả") |
-| Bảng dữ liệu đụng tới | Kiểm tra dữ liệu: `giao_dan`, `thanh_vien_gia_dinh`, `giao_dan_hon_phoi`, `hon_phoi` (chỉ đọc). Chuyển họ hàng loạt: `giao_dan.giao_ho_id`, `gia_dinh.giao_ho_id` (SỬA — đúng phạm vi desktop, không đụng cột nào khác) |
-| Trạng thái migrate | Kiểm tra dữ liệu (cả giáo dân + gia đình) và Chuyển họ hàng loạt (cả giáo dân + gia đình) **đã xong**. "Chuẩn hoá dữ liệu", "Tạo danh sách bí tích tự động" **chưa migrate** (mục 5) |
+| Bảng dữ liệu đụng tới | Kiểm tra dữ liệu: `giao_dan`, `thanh_vien_gia_dinh`, `giao_dan_hon_phoi`, `hon_phoi` (chỉ đọc). Chuyển họ hàng loạt: `giao_dan.giao_ho_id`, `gia_dinh.giao_ho_id` (SỬA — đúng phạm vi desktop, không đụng cột nào khác). Chuẩn hoá dữ liệu: các cột chuỗi của `giao_dan`/`gia_dinh` (SỬA — danh sách đúng phạm vi desktop, xem mục 5.1) |
+| Trạng thái migrate | Kiểm tra dữ liệu (cả giáo dân + gia đình), Chuyển họ hàng loạt (cả giáo dân + gia đình) và Chuẩn hoá dữ liệu (cả giáo dân + gia đình) **đã xong**. "Tạo danh sách bí tích tự động" **chưa migrate** (mục 5.2) |
 
 ## 1. Mục đích
 
@@ -307,15 +307,101 @@ trong `qlgx_thu`), xoá ngay sau khi kiểm chứng xong:
 Xác minh dứt điểm bằng cách rà `frmMain.Designer.cs` (26 `explorerBarItem`) đối chiếu
 `frmMain.cs.LoadFunction` — chi tiết đầy đủ và bảng đối chiếu menu ở `can-review-sau.md` mục 60.
 
-### 5.1 "Chuẩn hoá dữ liệu" = HAI mục desktop (`itChuanHoaDuLieuGiaoDan`/`itChuanHoaDuLieuGiaDinh`)
+### 5.1 "Chuẩn hoá dữ liệu" = HAI mục desktop (`itChuanHoaDuLieuGiaoDan`/`itChuanHoaDuLieuGiaDinh`) — ĐÃ MIGRATE
 
 `frmMain.cs:365-370` gọi `chuanHoaDuLieu(ProcessOptions.AutoUpperFirstCharGiaoDan/GiaDinh)`
 (`frmMain.cs:423-458`) — công cụ SỬA DỮ LIỆU HÀNG LOẠT: viết hoa chữ cái đầu mỗi từ, ký tự khác
 chuyển thường, áp dụng "tất cả các dữ liệu được nhập" của giáo dân/gia đình, TRỪ ghi chú (nguyên
 văn hộp thoại xác nhận `frmMain.cs:430-431`/`441-442`), chạy qua
-`UpdateProcess.ProcessOptions.AutoUpperFirstCharGiaoDan/GiaDinh` (`UpdateProcess.cs:44-49`).
-**Chưa đọc hết thân xử lý** để biết chính xác cột nào bị đổi — cần một lượt đọc riêng trước khi
-viết spec đủ để migrate. **CHƯA MIGRATE lượt này.**
+`UpdateProcess.AutoUpperCaseFirstCharGiaoDan/GiaDinh` (`UpdateProcess.cs:326-386`).
+
+#### 5.1.1 Thuật toán thật (`CMemory.cs:1079-1155`)
+
+`UpdateProcess.AutoUpperCaseFirstCharGiaoDan/GiaDinh` tải TOÀN BỘ bảng (`Memory.GetTable(Ten,
+"")` → `SELECT * FROM {Ten} WHERE 1` — **KHÔNG lọc `DaXoa`/`DaChuyenXu` gì cả**, khác mọi màn
+hình danh sách bình thường), gọi `CMemory.AutoUpperCaseFirstCharGiaoDan/GiaDinh(tbl)`
+(`CMemory.cs:1637-1666`) — duyệt MỌI cột kiểu chuỗi của bảng, TRỪ đúng tên cột `GhiChu` (so khớp
+CHÍNH XÁC — `GhiChuXucDau` KHÔNG bị loại vì tên khác `GhiChu`, một sơ suất có thể có của bản gốc
+— xem mục 9), `MaNhanDang`, và mọi cột có tên bắt đầu bằng `"Ngay"` hoặc `"So"` (loại được cả
+`SoRuaToi/SoRuocLe/SoThemSuc/SoAnTang/SoHoKhau` — mã số văn bản không nên viết hoa).
+
+Với mỗi ô còn lại, gọi `CMemory.AutoUpperFirstChar(string)` (`CMemory.cs:1079-1089`) — đọc 3
+cấu hình từ `CauHinh` (`CF_CHUANHOA_TRONGNGOAC` mặc định `"3"`, `CF_CHUANHOA_TUDOIDAU` mặc định
+`"1"`/bật, `CF_CHUANHOA_TUCHUYENMA` mặc định `"1"`/bật — `UpdateProcess.cs:1154-1210`, giá trị
+gán khi nâng cấp CSDL cũ) rồi gọi overload 4 tham số (`CMemory.cs:1091-1155`):
+
+1. Tách chuỗi theo dấu cách (`Split(" ", RemoveEmptyEntries)` — hệ quả phụ: khoảng trắng thừa/
+   đầu/cuối bị gộp về đúng 1 dấu cách khi `Join` lại ở bước cuối, không phải cố ý).
+2. Với mỗi từ dài hơn 1 ký tự: nếu ký tự đầu tiên nằm trong `"(){[]}<>"` thì áp dụng theo
+   `FontCase` cấu hình (`CF_CHUANHOA_TRONGNGOAC`) — enum `FontCase` (`ConvertFont/Enum.cs:91`)
+   thứ tự `UpperCase=0, LowerCase=1, UpperCaseFirstChar=2, Normal=3`; giá trị mặc định `"3"` =
+   `Normal` → nhánh này chỉ `continue` (**GIỮ NGUYÊN không đổi gì cho từ bắt đầu bằng ký tự đặc
+   biệt** — ở cấu hình mặc định, chưa từng thấy `frmOption.cs` (đổi cấu hình) được người dùng
+   phổ thông dùng tới). Ngược lại (không bắt đầu bằng ký tự đặc biệt): viết hoa ký tự đầu, hạ
+   toàn bộ phần còn lại thành chữ thường.
+3. Từ chỉ có đúng 1 ký tự: viết hoa.
+4. Nếu `CHUANHOA_TUCHUYENMA` bật (mặc định có): `convertFont.Convert(word, iUTH, iUNI)` — đổi
+   Unicode "tổ hợp" (dấu tách rời, kiểu NFD) sang Unicode "dựng sẵn" (kiểu NFC) bằng bảng tra cứu
+   tay hàng trăm dòng (`ConvertFont/ConvertContinue.cs`).
+5. Nếu `CHUANHOA_TUDOIDAU` bật (mặc định có): `Memory.ChuanHoaDau`/`ConvertVietnameseSign`
+   (`ConvertFont/Convert.cs:610-720`, ~110 dòng) — đổi VỊ TRÍ dấu thanh trong nguyên âm đôi (gõ
+   kiểu cũ "hoà" → kiểu mới đặt dấu ở nguyên âm đầu, trừ sau "qu"/"gi").
+
+**BUG THẬT phát hiện khi đọc `AutoUpperCaseFirstCharGiaDinh`** (`UpdateProcess.cs:357-386`): hàm
+tính chuẩn hoá cho CẢ `GiaDinh` lẫn `HonPhoi` (`Memory.AutoUpperCaseFirstCharGiaDinh(tblHonPhoi)`
+dòng 372), nhưng `DataSet ds` chỉ `ds.Tables.Add(tblGiaDinh)` (dòng 378) — **`tblHonPhoi` không
+bao giờ được thêm vào `ds`, nên `Memory.UpdateDataSet(ds)` không ghi gì xuống bảng `HonPhoi` cả**.
+Toàn bộ phép tính chuẩn hoá cho `HonPhoi` bị vứt bỏ âm thầm — không lỗi, không thông báo, người
+dùng tưởng đã chuẩn hoá cả dữ liệu hôn phối nhưng thực ra không có gì thay đổi. Bản web **không
+tái hiện bug này theo nghĩa xử lý bảng HonPhoi** vì bảng `HonPhoi` (web) không có cột chuỗi nào
+nằm trong phạm vi migrate (xem mục 5.1.2) — coi như "kết quả quan sát được giống hệt" (không ai
+thấy `HonPhoi` đổi) mà không cần cố tình viết lại đúng cái bug ghi-nhưng-không-lưu.
+
+#### 5.1.2 Bản web migrate PHẦN NÀO
+
+**Migrate**: bước 1-3 (tách từ, viết hoa chữ cái đầu/hạ phần còn lại, giữ nguyên từ bắt đầu bằng
+ký tự đặc biệt theo đúng hành vi mặc định `FontCase.Normal`), đúng phạm vi cột (danh sách cột
+chuỗi gốc từ Access — `GiaoDanConst`/`GiaDinhConst` — trừ CHÍNH XÁC `GhiChu`, `MaNhanDang`, và
+mọi cột bắt đầu `Ngay`/`So`), đúng phạm vi bản ghi (TOÀN BỘ giáo dân/gia đình của giáo xứ, không
+lọc `DaXoa`/`DaChuyenXu`, giống desktop). Cột MỚI chỉ có ở web (`AnhDaiDienLoaiNoiDung`, `ChaId`,
+`MeId`...) không được đụng tới — không mở rộng phạm vi so với desktop.
+
+**Ghi bug y hệt (không sửa)**: `GhiChuXucDau` VẪN bị viết hoa/hạ chữ như một trường bình thường
+(chỉ `GhiChu` khớp CHÍNH XÁC mới được loại trừ) — xem `ChuanHoaDuLieuTests.Ghi_chu_khong_bi_dam_vao_nhung_ghi_chu_xuc_dau_thi_co_dung_bug_ban_goc`.
+
+**CỐ Ý KHÔNG migrate bước 4-5** (`can-review-sau.md` mục 62 — quyết định tự đưa ra do rủi ro cao
+hơn lợi ích, không phải "hết thời gian"):
+- Bước 4 (NFD→NFC): thay bằng `string.Normalize(NormalizationForm.FormC)` chuẩn của .NET —
+  ĐẠT ĐÚNG CÙNG MỤC ĐÍCH kỹ thuật (đổi Unicode tổ hợp sang Unicode dựng sẵn) mà không cần chép
+  lại bảng tra cứu tay hàng trăm dòng — coi là "triển khai khác, cùng ý nghĩa", không phải bỏ.
+  Với dữ liệu đã ở dạng NFC (phổ biến khi nhập qua UTF-8/Postgres hiện đại), bước này gần như
+  luôn là no-op.
+- Bước 5 (đổi vị trí dấu thanh, `ConvertVietnameseSign`): KHÔNG migrate — thuật toán ngôn ngữ
+  học ~110 dòng, rất dễ sai một vài trường hợp biên trên dữ liệu thật của giáo xứ mà không có
+  cách nào người dùng phát hiện ngay (một tên riêng bị đổi dấu sai khó nhận ra hơn nhiều so với
+  "không đổi gì"). Với công cụ sửa dữ liệu hàng loạt trên sổ sách giáo xứ, "làm dở nguy hiểm hơn
+  không làm" — chờ người dùng quyết định có cần thêm bước này không.
+
+#### 5.1.3 Bốn nguyên tắc an toàn bắt buộc (CỐ Ý khác desktop)
+
+Giống khuôn "Chuyển họ hàng loạt" (mục 4.4): có bước "Xem trước" tách riêng (desktop KHÔNG có —
+chạy thẳng sau hộp xác nhận Yes/No, không cho biết trước sẽ đổi bao nhiêu/đổi thành gì), hộp xác
+nhận nêu con số cụ thể lấy từ xem trước, MỘT transaction (`BeginTransactionAsync` +
+`SaveChangesAsync` một lần + `CommitAsync` — desktop dùng `Memory.UpdateDataSet`, không có
+transaction rõ ràng), không mở rộng phạm vi cột/bản ghi so với desktop. Xem trước hiện MẪU tối
+đa 30 bản ghi đầu tiên có thay đổi (kèm giá trị cũ/mới từng cột) cùng TỔNG số bản ghi sẽ đổi —
+không tải hết hàng nghìn dòng chi tiết về trình duyệt.
+
+#### 5.1.4 Bản web đã làm
+
+Backend: `WebApp/src/Qlgx.Api/Dtos/ChuanHoaDuLieuDtos.cs`,
+`Services/ChuanHoaDuLieuService.cs`, `Endpoints/ChuanHoaDuLieuEndpoints.cs` — 4 endpoint
+(`POST /api/cong-cu-du-lieu/chuan-hoa/giao-dan/xem-truoc`, `.../giao-dan`, `.../gia-dinh/xem-truoc`,
+`.../gia-dinh`, không nhận tham số nào từ trình duyệt). Frontend:
+`WebApp/src/web/src/screens/ChuanHoaDuLieuPage.tsx` (container 2 tab, cùng khuôn
+`ChuyenHoPage.tsx`) + `ChuanHoaDuLieu.tsx` (thân dùng chung). Test:
+`WebApp/tests/Qlgx.Api.Tests/ChuanHoaDuLieuTests.cs` (7 test) +
+`WebApp/src/web/src/screens/ChuanHoaDuLieu.test.tsx` (4 test).
 
 ### 5.2 "Tạo danh sách bí tích tự động" = `itLapBiTichTuDong` → `frmTaoDotBiTich.cs` (77d) + `GenerateDotBiTichProcess.cs` (233d, `Source/GXControl/`)
 
@@ -353,26 +439,27 @@ kịp migrate. Đã thêm chú thích trong `SideNav.tsx` trỏ rõ nguồn desk
   được qua bất kỳ chồng/vợ nào) có thể khác desktop (lặp từng dòng JOIN riêng lẻ) khi một gia
   đình có ≥2 hôn phối khác nhau gắn qua các người khác nhau — trường hợp hiếm, không quan sát
   được ở `qlgx_thu`, xem `can-review-sau.md` mục 60.
-- "Chuẩn hoá dữ liệu" — đã xác định đúng file nguồn (`UpdateProcess.cs`,
-  `ProcessOptions.AutoUpperFirstCharGiaoDan/GiaDinh`) nhưng CHƯA đọc hết thân xử lý (danh sách
-  chính xác cột nào bị chuẩn hoá) — cần một lượt đọc riêng trước khi migrate.
+- "Chuẩn hoá dữ liệu" — đã đọc hết thân xử lý, ĐÃ MIGRATE (mục 5.1). Chỗ chưa chắc còn lại: có
+  nên thêm bước 4-5 (NFC/đổi vị trí dấu thanh) không — cố ý bỏ, chờ người dùng quyết định
+  (`can-review-sau.md` mục 62).
 - "Tạo danh sách bí tích tự động" — đã đọc đủ sâu để viết spec (mục 5.2) nhưng CHƯA migrate.
 - Hai mục "THIẾU thật sự" phát hiện khi đối chiếu menu (không thuộc nhóm Công cụ dữ liệu, ghi
-  lại nhân tiện): **"Giáo xứ"** (sửa thông tin giáo xứ hiện tại, `frmGiaoXu`) và **"Tìm và thay
-  thế"** (`frmReplace`, chưa đọc mã) — xem bảng đối chiếu đầy đủ ở `can-review-sau.md` mục 60.
+  lại nhân tiện): **"Giáo xứ"** (sửa thông tin giáo xứ hiện tại, `frmGiaoXu`) — ĐÃ MIGRATE, xem
+  `giao-xu.md` — và **"Tìm và thay thế"** (`frmReplace`, chưa đọc mã) — xem bảng đối chiếu đầy
+  đủ ở `can-review-sau.md` mục 60.
 
 ## 7. Bản web đã làm
 
 - **Kiểm tra dữ liệu — giáo dân** (lượt trước): `KiemTraDuLieuService.KiemTraGiaoDan`,
   `GET /api/cong-cu-du-lieu/kiem-tra-giao-dan`, `KiemTraDuLieuGiaoDan.tsx` — xem mục 2.
-- **Kiểm tra dữ liệu — gia đình** (lượt này): `KiemTraDuLieuService.KiemTraGiaDinh`,
+- **Kiểm tra dữ liệu — gia đình** (lượt trước): `KiemTraDuLieuService.KiemTraGiaDinh`,
   `GET /api/cong-cu-du-lieu/kiem-tra-gia-dinh?giaoHoId=&khongCoNgayHonPhoi=&honPhoiTruocTuoi=&khoangCachTuoiConCai=&cacVanDeKhac=`
   (mỗi cờ mặc định `true`), `KiemTraDuLieuGiaDinh.tsx` — xem mục 3.5. Cùng giới hạn phạm vi với
   bên giáo dân: KHÔNG migrate Sửa/Xoá tại chỗ hay "In danh sách" (Excel) — "Xem chi tiết" điều
   hướng sang thẻ chi tiết gia đình đã có.
-- **Chuyển họ hàng loạt** (lượt này): xem mục 4.
+- **Chuyển họ hàng loạt** (lượt trước): xem mục 4.
+- **Chuẩn hoá dữ liệu** (lượt này): xem mục 5.1.
 
-## 8. Chưa migrate lượt này
+## 8. Chưa migrate
 
-- Chuẩn hoá dữ liệu (mục 5.1)
 - Tạo danh sách bí tích tự động (mục 5.2)

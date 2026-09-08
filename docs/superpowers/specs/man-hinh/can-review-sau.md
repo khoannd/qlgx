@@ -3781,3 +3781,49 @@ quyết định về PHẠM VI, không lặp lại nội dung đã có ở spec.
 Đã chạy thật trên trình duyệt (đăng nhập `giaoxu`), sửa thông tin giáo xứ Vô Nhiễm → lưu → tải
 lại trang → xác nhận bằng `psql` dữ liệu đã đổi đúng → trả về nguyên trạng ban đầu, xác nhận lại
 bằng `psql`. Ảnh chụp `178-*.png` ở `WebApp/anh-chup-kiem-thu/`.
+
+### 62. Task "migrate Chuẩn hoá dữ liệu" (2026-09-08) — hai bước ngôn ngữ học cố ý bỏ, một bug ghi-nhưng-không-lưu, một sơ suất "loại trừ không khớp tên" tái hiện y hệt
+
+Việc 1 của nhiệm vụ "4 màn hình cuối cùng" — xem `cong-cu-du-lieu.md` mục 5.1 (spec đầy đủ, có
+trích dẫn dòng mã). Ghi lại đây các quyết định phạm vi và phát hiện quan trọng.
+
+1. **Cố ý KHÔNG migrate bước "đổi vị trí dấu thanh"** (`ConvertVietnameseSign`,
+   `Source/ConvertFont/Convert.cs:610-720`, ~110 dòng, mặc định BẬT ở desktop qua
+   `CHUANHOA_TUDOIDAU=1`) — thuật toán ngôn ngữ học phức tạp (đổi "hoà" kiểu gõ cũ sang "hòa"
+   kiểu mới, trừ sau "qu"/"gi"...). Không migrate vì rủi ro cao hơn lợi ích: đây là công cụ SỬA
+   HÀNG LOẠT trên sổ sách thật của giáo xứ, một thuật toán tái hiện sai một trường hợp biên sẽ
+   âm thầm đổi sai chính tả tên riêng của giáo dân mà không ai phát hiện ra ngay (khác lỗi hiển
+   thị rõ ràng) — "làm dở nguy hiểm hơn không làm" đúng tinh thần nhiệm vụ gốc. Chờ người dùng
+   quyết định có cần bổ sung không.
+2. **Thay bước "đổi bảng mã Unicode tổ hợp→dựng sẵn"** (`convertFont.Convert(word, iUTH,
+   iUNI)`, bảng tra cứu tay hàng trăm dòng ở `ConvertContinue.cs`, mặc định BẬT qua
+   `CHUANHOA_TUCHUYENMA=1`) bằng `string.Normalize(NormalizationForm.FormC)` chuẩn của .NET —
+   ĐẠT ĐÚNG CÙNG MỤC ĐÍCH kỹ thuật (Unicode tổ hợp/NFD → dựng sẵn/NFC) mà không cần chép lại
+   bảng tra cứu tay. Không phải bỏ qua — là chọn cách triển khai khác cùng ý nghĩa, ít rủi ro
+   sai sót chép tay hơn.
+3. **Phát hiện bug ghi-nhưng-không-lưu ở desktop**: `UpdateProcess.AutoUpperCaseFirstCharGiaDinh`
+   (dòng 357-386) tính chuẩn hoá cho CẢ `GiaDinh` lẫn `HonPhoi`, nhưng chỉ
+   `ds.Tables.Add(tblGiaDinh)` — `tblHonPhoi` không bao giờ được thêm vào `DataSet` nên
+   `Memory.UpdateDataSet` không ghi gì xuống bảng `HonPhoi`. Người dùng bấm "chuẩn hoá dữ liệu
+   gia đình" tưởng cả thông tin hôn phối cũng được chuẩn hoá nhưng thực ra không đổi gì. Bản web
+   không cố tình tái hiện "tính rồi vứt" này (không có ý nghĩa gì để mô phỏng một phép tính bị
+   vứt bỏ) — chỉ đơn giản không đụng tới bảng hôn phối, kết quả quan sát được (không ai thấy
+   `HonPhoi` đổi) giống hệt desktop.
+4. **Tái hiện ĐÚNG một sơ suất có thể có của bản gốc**: `CMemory.AutoUpperCaseFirstCharGiaoDan`
+   chỉ loại trừ cột tên CHÍNH XÁC là `"GhiChu"` (so sánh `col.ColumnName != GiaoDanConst.GhiChu`)
+   — cột `GhiChuXucDau` có tên khác nên KHÔNG được loại trừ, vẫn bị viết-hoa-chữ-cái-đầu như một
+   trường bình thường dù về ý nghĩa nghiệp vụ nó cũng là một ô ghi chú tự do. Bản web migrate
+   ĐÚNG hành vi này (không tự ý mở rộng danh sách loại trừ) — khoá lại bằng test
+   `ChuanHoaDuLieuTests.Ghi_chu_khong_bi_dam_vao_nhung_ghi_chu_xuc_dau_thi_co_dung_bug_ban_goc`.
+5. **Không lọc `DaXoa`/`DaChuyenXu`** — desktop tải TOÀN BỘ bảng không điều kiện
+   (`Memory.GetTable(Ten, "")`), bản web áp dụng cho TẤT CẢ giáo dân/gia đình của giáo xứ kể cả
+   đã xoá mềm/đã chuyển xứ, đúng phạm vi gốc.
+6. **Bốn nguyên tắc an toàn bắt buộc** (xem trước tách riêng, xác nhận nêu con số cụ thể, MỘT
+   transaction, không mở rộng phạm vi cột) — cùng khuôn với "Chuyển họ hàng loạt" đã làm ở lượt
+   trước, xem `cong-cu-du-lieu.md` mục 5.1.3.
+
+Đã chạy thật trên trình duyệt (đăng nhập `giaoxu`): chụp ảnh bước xem trước cho thấy số bản ghi
+sẽ đổi → chạy thật trên phạm vi thu hẹp (tạo tạm 1-2 bản ghi test có tên sai định dạng, xem
+`178-*.png`) → xác nhận bằng `psql` → trả lại nguyên trạng → xác nhận lại bằng `psql`. Số liệu
+tổng sau khi xong khớp nguyên trạng ban đầu: 2050 giáo dân / 40 gia đình / 145 thành viên / 1
+giáo họ / 1108 đợt bí tích / 6150 bí tích chi tiết.

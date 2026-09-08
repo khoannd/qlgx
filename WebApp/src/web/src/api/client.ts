@@ -9,6 +9,7 @@ import type {
   BieuDoNam, BieuDoBiTichNam, BieuDoDoTuoi, BieuDoGiaoHo,
   KiemTraGiaoDanKetQua, KiemTraGiaoDanTuyChon, KiemTraGiaDinhKetQua, KiemTraGiaDinhTuyChon,
   ChuyenHoGiaoDanXemTruoc, ChuyenHoGiaoDanKetQua, ChuyenHoGiaDinhXemTruoc, ChuyenHoGiaDinhKetQua,
+  ChuanHoaXemTruoc, ChuanHoaKetQua,
 } from './types'
 import { authStore } from './authStore'
 
@@ -481,6 +482,19 @@ export const api = {
       goi<ChuyenHoGiaDinhKetQua>('/api/cong-cu-du-lieu/chuyen-ho/gia-dinh', {
         method: 'POST', body: JSON.stringify({ giaDinhIds, giaoHoDichId }),
       }),
+  },
+  // "Chuẩn hoá dữ liệu" (spec mục 5.1) — CÔNG CỤ SỬA DỮ LIỆU HÀNG LOẠT: không nhận tham số nào
+  // (áp dụng cho TOÀN BỘ giáo dân/gia đình của giáo xứ, đúng phạm vi "không lọc gì" của
+  // desktop) — luôn gọi xemTruoc* trước để lấy con số thật rồi mới gọi ghi thật.
+  chuanHoaDuLieu: {
+    xemTruocGiaoDan: () =>
+      goi<ChuanHoaXemTruoc>('/api/cong-cu-du-lieu/chuan-hoa/giao-dan/xem-truoc', { method: 'POST' }),
+    ghiGiaoDan: () =>
+      goi<ChuanHoaKetQua>('/api/cong-cu-du-lieu/chuan-hoa/giao-dan', { method: 'POST' }),
+    xemTruocGiaDinh: () =>
+      goi<ChuanHoaXemTruoc>('/api/cong-cu-du-lieu/chuan-hoa/gia-dinh/xem-truoc', { method: 'POST' }),
+    ghiGiaDinh: () =>
+      goi<ChuanHoaKetQua>('/api/cong-cu-du-lieu/chuan-hoa/gia-dinh', { method: 'POST' }),
   },
   timKiem: {
     // Dùng cho GxPicker thật (gõ để tìm Tên Cha/Mẹ, Người nam/nữ…) — giới hạn kết quả, KHÔNG

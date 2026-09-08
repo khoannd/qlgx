@@ -487,6 +487,12 @@ export type TaiKhoanItem = {
   rowVersion: number
 }
 
+// --- "Chuẩn hoá dữ liệu" (nhóm Công cụ dữ liệu, xem cong-cu-du-lieu.md mục 5.1) ---
+export type TruongThayDoi = { tenTruong: string; giaTriCu: string | null; giaTriMoi: string | null }
+export type DongThayDoi = { id: string; nhanDien: string; truong: TruongThayDoi[] }
+export type ChuanHoaXemTruoc = { tongSoBanGhiKiemTra: number; soBanGhiSeDoi: number; mauThayDoi: DongThayDoi[] }
+export type ChuanHoaKetQua = { soBanGhiDaDoi: number }
+
 // --- Màn hình "Giáo xứ" tự sửa thông tin xứ mình (xem
 // docs/superpowers/specs/man-hinh/giao-xu.md) — ánh xạ 1-1 GiaoXuHienTaiResponse. Không có
 // giaoHatId/tenGiaoHat/tenGiaoPhan: màn hình này CỐ Ý không cho tự đổi giáo hạt/giáo phận (xem
