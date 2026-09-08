@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<style>
+  @page { size: A4 portrait; margin: 0; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Times New Roman", "Liberation Serif", Georgia, serif;
+    font-size: 12pt;
+    color: #000;
+    margin: 0;
+    padding: 0;
+  }
+  .quoc-hieu { text-align: center; margin-bottom: 3mm; }
+  .quoc-hieu .dong1 { font-weight: bold; letter-spacing: 0.5px; }
+  .quoc-hieu .dong2 { font-style: italic; }
+  .dau-phan { text-align: center; margin: 1mm 0 5mm 0; }
+  .dau-phan hr { display: inline-block; width: 40mm; border: none; border-top: 1px solid #000; }
+
+  .giao-xu-info { text-align: center; margin-bottom: 5mm; line-height: 1.5; }
+  .giao-xu-info .ten-giao-xu { font-weight: bold; font-size: 13pt; text-transform: uppercase; }
+
+  .tieu-de { text-align: center; margin: 6mm 0; }
+  .tieu-de h1 { font-size: 17pt; margin: 0; letter-spacing: 1px; }
+
+  .kinh-gui { margin: 4mm 0; font-style: italic; }
+  .doan-mo-dau { margin: 5mm 0; text-align: justify; line-height: 1.6; }
+
+  table.thong-tin { width: 100%; border-collapse: collapse; margin-bottom: 4mm; font-size: 11.5pt; }
+  table.thong-tin td { padding: 1.2mm 2mm; vertical-align: top; }
+  table.thong-tin td.nhan { width: 40mm; font-weight: bold; white-space: nowrap; }
+  table.thong-tin td.gia-tri { border-bottom: 1px dotted #666; }
+
+  table.thanh-vien { width: 100%; border-collapse: collapse; margin: 3mm 0 4mm 0; font-size: 10.5pt; table-layout: fixed; }
+  table.thanh-vien th, table.thanh-vien td {
+    border: 1px solid #000; padding: 1.2mm 1.5mm; vertical-align: top; text-align: left;
+    word-break: break-word; overflow-wrap: break-word;
+  }
+  table.thanh-vien th { text-align: center; font-weight: bold; background: #f0f0f0; }
+  table.thanh-vien td.stt { text-align: center; white-space: nowrap; }
+
+  .doan-noi-dung { margin: 5mm 0; text-align: justify; line-height: 1.6; }
+
+  .ky-ten { margin-top: 10mm; display: flex; justify-content: flex-end; }
+  .ky-ten .khoi-ky { text-align: center; width: 65mm; }
+  .ky-ten .ngay-thang { font-style: italic; margin-bottom: 3mm; display: block; }
+  .ky-ten .ten-linh-muc { font-weight: bold; margin-top: 14mm; display: block; }
+  .ky-ten .chuc-danh { font-weight: bold; }
+
+  .ghi-chu-cuoi { margin-top: 8mm; font-size: 9.5pt; font-style: italic; color: #333; }
+</style>
+</head>
+<body>
+  <div class="quoc-hieu">
+    <div class="dong1">CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+    <div class="dong2">Độc lập – Tự do – Hạnh phúc</div>
+  </div>
+  <div class="dau-phan"><hr /></div>
+
+  <div class="giao-xu-info">
+    <div>Giáo phận {{TenGiaoPhan}} — Giáo hạt {{TenGiaoHat}}</div>
+    <div class="ten-giao-xu">GIÁO XỨ {{TenGiaoXu}}</div>
+    <div>{{DiaChiGiaoXu}}{{DienThoaiGiaoXu}}{{EmailGiaoXu}}</div>
+  </div>
+
+  <div class="tieu-de">
+    <h1>GIẤY GIỚI THIỆU CHUYỂN XỨ</h1>
+  </div>
+
+  <div class="kinh-gui">Kính gửi: Giáo xứ {{TenGiaoXu2}}, Giáo phận {{TenGiaoPhan2}}</div>
+
+  <div class="doan-mo-dau">
+    Linh mục chính xứ Giáo xứ {{TenGiaoXu}} trân trọng giới thiệu hộ gia đình sau đây, chủ hộ
+    <b>{{TenChuHo}}</b>, hiện đang sinh hoạt tại giáo xứ, nay chuyển đến Quý giáo xứ:
+  </div>
+
+  <table class="thong-tin">
+    <tr><td class="nhan">Điện thoại</td><td class="gia-tri">{{DienThoaiGiaDinh}}</td></tr>
+    <tr><td class="nhan">Địa chỉ mới</td><td class="gia-tri">{{DiaChiGiaDinh}}</td></tr>
+  </table>
+
+  <table class="thanh-vien">
+    <thead>
+      <tr>
+        <th style="width:8%">STT</th><th style="width:16%">Tên thánh</th><th style="width:30%">Họ và tên</th>
+        <th style="width:14%">Ngày sinh</th><th style="width:18%">Nơi sinh</th><th style="width:14%">Vai trò</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{HangThanhVien}}
+    </tbody>
+  </table>
+
+  <div class="doan-noi-dung">
+    Kính xin Quý giáo xứ tiếp nhận gia đình vào sổ giáo dân và sinh hoạt tại giáo xứ.
+  </div>
+
+  <div class="ky-ten">
+    <div class="khoi-ky">
+      <span class="ngay-thang">{{TenGiaoXu}}, ngày {{NgayThangNamIn}}</span>
+      <span class="chuc-danh">Linh mục chính xứ</span>
+      <span class="ten-linh-muc">{{TenLinhMuc}}</span>
+    </div>
+  </div>
+
+  <div class="ghi-chu-cuoi">Giấy in trực tiếp từ hệ thống quản lý giáo xứ — không có giá trị khi có tẩy xoá, sửa chữa.</div>
+</body>
+</html>

@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
 import { api } from '../api/client'
 import type { GiaoDanListItem, GiaoHo } from '../api/types'
+import { GioiThieuModal } from '../components/GioiThieuModal'
 import { GxGiaoDanList, menuGiaoDanMacDinh } from '../components/GxGiaoDanList'
 import { GxToolbar } from '../components/GxToolbar'
 import { chuaHoTro } from '../lib/thongBao'
+import { useGioiThieuGiaoDan } from '../lib/useGioiThieuGiaoDan'
 
 /** Sentinel hiển thị cho "Ngoài xứ" — đúng quy ước `MaGiaoHo = 0` của bản desktop; ở bản web
  * ứng với `tenGiaoHo === "Ngoài xứ"` (xem GiaoDanService.DungDanhSach). */
@@ -86,9 +88,10 @@ export function GiaoDanList({
   // "Xem gia đình" phải tra theo `d.giaDinhId` (mã GIA ĐÌNH) — KHÔNG phải `d.id` (mã giáo
   // dân); dùng nhầm `d.id` từng khiến mục này mở ra một thẻ "Gia đình mới" trống vì không
   // tra được gia đình nào khớp. Mục menu tự ẩn khi `giaDinhId` null (xem `menuGiaoDanMacDinh`).
+  const gioiThieu = useGioiThieuGiaoDan()
   const menu = useMemo(
-    () => menuGiaoDanMacDinh((d) => moGiaoDan(d.id), (d) => { if (d.giaDinhId) moGiaDinh?.(d.giaDinhId) }),
-    [moGiaoDan, moGiaDinh],
+    () => menuGiaoDanMacDinh((d) => moGiaoDan(d.id), (d) => { if (d.giaDinhId) moGiaDinh?.(d.giaDinhId) }, gioiThieu.mo),
+    [moGiaoDan, moGiaDinh, gioiThieu.mo],
   )
 
   // "Xuất Excel" (thay CSV cũ theo góp ý người dùng: "người dùng thông thường không dùng CSV") —
@@ -201,6 +204,9 @@ export function GiaoDanList({
       </div>
 
       <GxGiaoDanList rows={rowsLoc} onMo={(d) => moGiaoDan(d.id)} onChon={setDongChon} menuChuotPhai={menu} />
+      {gioiThieu.dangMo && (
+        <GioiThieuModal tieuDe={gioiThieu.tieuDe} onXuat={gioiThieu.xuat} onDong={gioiThieu.dong} />
+      )}
     </section>
   )
 }

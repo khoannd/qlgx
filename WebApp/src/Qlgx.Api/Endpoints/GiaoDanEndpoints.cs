@@ -68,6 +68,42 @@ public static class GiaoDanEndpoints
                 ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
                 : Results.NotFound());
 
+        // Ba mẫu "Giấy giới thiệu" theo TỪNG giáo dân (mẫu thứ tư — chuyển xứ — theo GIA ĐÌNH,
+        // xem GiaDinhEndpoints.cs). Bên nhận (giáo phận/giáo xứ khác, thường KHÔNG có trong CSDL
+        // vì không phải giáo xứ này) và linh mục ký tên là hai ô nhập tự do người dùng gõ ngay
+        // lúc in — đúng cơ chế `frmReport.cs` của bản desktop (xem ghi chú đầu khối "Giấy giới
+        // thiệu" ở InAnService.cs), KHÔNG lưu vào CSDL, chỉ dùng cho một lượt in. `giaoXu2` bắt
+        // buộc phải có (không có gì để giới thiệu nếu không biết giới thiệu đi đâu).
+        nhom.MapGet("/{id:guid}/in/gioi-thieu-rua-toi", async (InAnService dv, Guid id,
+            string? giaoPhan2, string? giaoXu2, string? tenLinhMuc, CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(giaoXu2))
+                return Results.BadRequest(new { thongBao = "Chưa nhập giáo xứ nhận giấy giới thiệu." });
+            return await dv.XuatGioiThieuRuaToi(id, giaoPhan2, giaoXu2, tenLinhMuc, ct) is { } ketQua
+                ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
+                : Results.NotFound();
+        });
+
+        nhom.MapGet("/{id:guid}/in/gioi-thieu-them-suc", async (InAnService dv, Guid id,
+            string? giaoPhan2, string? giaoXu2, string? tenLinhMuc, CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(giaoXu2))
+                return Results.BadRequest(new { thongBao = "Chưa nhập giáo xứ nhận giấy giới thiệu." });
+            return await dv.XuatGioiThieuThemSuc(id, giaoPhan2, giaoXu2, tenLinhMuc, ct) is { } ketQua
+                ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
+                : Results.NotFound();
+        });
+
+        nhom.MapGet("/{id:guid}/in/gioi-thieu-giao-ly-hon-phoi", async (InAnService dv, Guid id,
+            string? giaoPhan2, string? giaoXu2, string? tenLinhMuc, CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(giaoXu2))
+                return Results.BadRequest(new { thongBao = "Chưa nhập giáo xứ nhận giấy giới thiệu." });
+            return await dv.XuatGioiThieuGiaoLyHonPhoi(id, giaoPhan2, giaoXu2, tenLinhMuc, ct) is { } ketQua
+                ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
+                : Results.NotFound();
+        });
+
         // Ảnh đại diện (VIEC-TIEP-THEO.md mục 1.2, xem can-review-sau.md mục 36) — lưu nhị phân
         // trong CSDL, KHÔNG ghi đĩa cục bộ máy chủ. Ba route nằm trong `nhom` nên đã kế thừa
         // RequireAuthorization() + lọc GiaoXuId qua claim (AnhDaiDienService không nhận

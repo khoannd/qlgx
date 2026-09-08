@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
 import { api } from '../api/client'
 import type { GiaDinhListItem, GiaoHo } from '../api/types'
+import { GioiThieuModal } from '../components/GioiThieuModal'
 import { GxGiaDinhList, menuGiaDinhMacDinh } from '../components/GxGiaDinhList'
 import { GxToolbar } from '../components/GxToolbar'
 import { chuaHoTro } from '../lib/thongBao'
+import { useGioiThieuChuyenXu } from '../lib/useGioiThieuChuyenXu'
 
 /** Sentinel hiển thị cho "Ngoài xứ" — xem cùng hằng số ở GiaoDanList.tsx. */
 const NGOAI_XU = 'Ngoài xứ'
@@ -69,7 +71,11 @@ export function GiaDinhList({ rows, moGiaDinh, danhMucGiaoHo = [], onXoa, onTaiL
     [rows, giaoHo, chiKhongThongKe],
   )
 
-  const menu = useMemo(() => menuGiaDinhMacDinh((d) => moGiaDinh(d.id)), [moGiaDinh])
+  const gioiThieu = useGioiThieuChuyenXu()
+  const menu = useMemo(
+    () => menuGiaDinhMacDinh((d) => moGiaDinh(d.id), gioiThieu.mo),
+    [moGiaDinh, gioiThieu.mo],
+  )
 
   // "Xuất Excel" (thay CSV cũ) — cùng lý do/thiết kế với GiaoDanList.tsx: gọi thẳng máy chủ
   // (ClosedXML) với đúng hai tham số lọc đang áp dụng trên màn hình, thay vì đọc dữ liệu qua
@@ -167,6 +173,9 @@ export function GiaDinhList({ rows, moGiaDinh, danhMucGiaoHo = [], onXoa, onTaiL
       </div>
 
       <GxGiaDinhList rows={rowsLoc} onMo={(d) => moGiaDinh(d.id)} onChon={setDongChon} menuChuotPhai={menu} />
+      {gioiThieu.dangMo && (
+        <GioiThieuModal tieuDe={gioiThieu.tieuDe} onXuat={gioiThieu.xuat} onDong={gioiThieu.dong} />
+      )}
     </section>
   )
 }

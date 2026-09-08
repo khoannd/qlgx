@@ -5,7 +5,7 @@
 | Tệp nguồn tham khảo | `Source/DBAccess/WordEngine.cs` (~140 dòng, UTF-8 BOM), `Source/ExcelReport/Report*.cs` (14 mô-đun) |
 | Mẫu in gốc | `BIN/Template/Chung/*.doc`/`.xls` (14 mẫu dùng chung), `BIN/Template/BMT/` (mẫu riêng giáo phận Ban Mê Thuột, ghi đè `Chung`) |
 | Bảng dữ liệu đụng tới | `GiaoDan`, `GiaoXu`, `GiaoHat`, `GiaoPhan`, `GiaoHo`, `HonPhoi`, `GiaoDanHonPhoi` (tuỳ mẫu) |
-| Trạng thái migrate | một phần — hạ tầng dùng chung + 4/5 mẫu ưu tiên xong (Lý lịch cá nhân, Chứng nhận bí tích, Phiếu gia đình, Chứng nhận hôn phối); Giấy giới thiệu (4 mẫu, cần thêm màn hình nhập liệu người thứ hai) **chưa làm** — xem mục 8 |
+| Trạng thái migrate | **XONG** — hạ tầng dùng chung + 8 mẫu (Lý lịch cá nhân, Chứng nhận bí tích, Phiếu gia đình, Chứng nhận hôn phối, 4 mẫu Giấy giới thiệu). Còn lại các hạng mục khác (Rao hôn phối, Excel thật, biểu đồ…) — xem mục 8 |
 
 ## 1. Vì sao cần (bối cảnh)
 
@@ -190,6 +190,70 @@ song song hai cột thông tin (họ tên, ngày/nơi sinh, cha/mẹ, giáo họ
 "Nghi thức hôn phối" chung (số/ngày/nơi/chủ sự/cách thức/người chứng). Cũng CỐ Ý bỏ phần "gửi
 giáo xứ nhận" như mục 5b.
 
+## 5e. Bốn mẫu "Giấy giới thiệu" (đã làm ở lượt cuối cùng) — cả hai cài đặt gốc là mã CHẾT
+
+Dựng lại từ `Source/ExcelReport/ReportGioiThieuHP.cs` (mẫu cũ, KHÔNG dùng làm chuẩn) và
+`Source/GXControl/{ReportGioiThieuRuaToi,RpGioiThieuThemSuc,RpGioiThieuChuyenXu,RpGThieuGlyHPhoi,
+RpGioiThieuBase,frmReport}.cs` (mẫu chọn làm chuẩn) — bốn tệp `BIN/Template/Chung/GioiThieu*.doc`.
+
+**Phát hiện quan trọng trước khi migrate**: đối chiếu toàn bộ `Source/` không tìm thấy bất kỳ
+chỗ nào gọi `new frmReport(...)` hay `new frmReportGioiThieuHP(...)`, và không menu/nút nào
+(ngoài chính hai form đó) chứa chữ "Giới thiệu" — **cả bộ mã "Giấy giới thiệu" của bản desktop
+là mã CHẾT**, chưa từng chạy được từ giao diện thật. Không có "hành vi thật đang chạy" để đối
+chiếu tuyệt đối; quyết định dưới đây là suy luận hợp lý nhất từ mã nguồn (xem
+can-review-sau.md mục 65 để biết đầy đủ lý do).
+
+**Vấn đề "thông tin bên thứ hai"** (lý do hạng mục này bị hoãn ở lượt trước) được bản desktop
+giải quyết bằng MỘT MÀN HÌNH NHẬP TAY (`frmReport.cs`) — hai ô nhập tự do `txtGiaoPhan`/
+`txtGiaoXu` (giáo phận/giáo xứ NHẬN, KHÔNG tra danh mục Giáo xứ có sẵn vì thường thuộc giáo xứ
+khác) cộng một combobox `cbLinhMuc` chọn linh mục ký tên — **không** lấy dữ liệu từ bảng
+`RaoHonPhoi` như suy đoán ban đầu (bảng đó phục vụ nghiệp vụ "Rao hôn phối" khác, ngoài phạm vi
+4 mẫu này). Có MỘT cài đặt khác (`frmReportGioiThieuHP.cs`/`ReportGioiThieuHP.cs`, cũ hơn, cũng
+chết) tự **chèn một bản ghi `GiaoDan` MỚI** vào CSDL cho người phối ngẫu từ dữ liệu gõ tay
+(`AddGiaoDan()`) — **KHÔNG migrate side-effect này** (xem lý do ở can-review-sau.md mục 65).
+
+Endpoint (theo GIÁO DÂN, ba mẫu đầu — `InAnService.XuatGioiThieuRuaToi/ThemSuc/GiaoLyHonPhoi`):
+
+```
+GET /api/giao-dan/{id}/in/gioi-thieu-rua-toi?giaoPhan2=...&giaoXu2=...&tenLinhMuc=...
+GET /api/giao-dan/{id}/in/gioi-thieu-them-suc?giaoPhan2=...&giaoXu2=...&tenLinhMuc=...
+GET /api/giao-dan/{id}/in/gioi-thieu-giao-ly-hon-phoi?giaoPhan2=...&giaoXu2=...&tenLinhMuc=...
+```
+
+Endpoint (theo GIA ĐÌNH, mẫu chuyển xứ — `InAnService.XuatGioiThieuChuyenXu`, bảng thành viên
+co giãn theo số người thật cùng cách `XuatPhieuGiaDinh` đã dùng, khác bản desktop tính toán
+AddRow/DeleteRow cố định 7 dòng trên mẫu Word):
+
+```
+GET /api/gia-dinh/{id}/in/gioi-thieu-chuyen-xu?giaoPhan2=...&giaoXu2=...&tenLinhMuc=...
+```
+
+`giaoXu2` bắt buộc (400 nếu rỗng — không có gì để giới thiệu nếu không biết giới thiệu đi đâu),
+`giaoPhan2`/`tenLinhMuc` tuỳ chọn. Ba tham số này **KHÔNG lưu vào CSDL**, chỉ dùng cho một lượt
+in — nhập lại từ đầu mỗi lần in, đúng cơ chế `frmReport.cs` gốc.
+
+Sai khác có chủ đích với mã gốc (không phải "sửa cho đúng" âm thầm): dòng "Đã Rửa tội" của mẫu
+Thêm sức/Giáo lý hôn phối dùng `VanBanInAn.MoTaBiTich` (bỏ hẳn đoạn thiếu dữ liệu) thay vì
+literal `"..................."` mà `RpGioiThieuThemSuc.cs` in khi thiếu `NgayRuaToi` — nhiệm vụ
+này chỉ đạo rõ dùng lại cơ chế `VanBanInAn` cho MỌI mẫu mới để không tái diễn kiểu trình bày
+cẩu thả (xem mục 5a), và literal dấu chấm khi có `NoiRuaToi` nhưng thiếu `NgayRuaToi` sẽ tạo ra
+một dòng còn xấu hơn lỗi dấu phẩy lửng đã sửa.
+
+"Linh mục giới thiệu" ở bản web là Ô NHẬP TỰ DO (không phải danh mục `LinhMuc` như `cbLinhMuc`
+gốc) — bản web chưa có màn hình quản lý danh mục Linh mục (bảng `LinhMuc` có trong CSDL, chưa có
+API/UI), nhất quán với các trường "tên cha …" khác của `GiaoDan` (`ChaRuaToi`, `ChaThemSuc`…)
+vốn cũng là chuỗi tự do trong toàn hệ thống.
+
+Nối vào giao diện: `GioiThieuModal.tsx` (modal dùng CHUNG cho cả 4 mẫu — 3 ô nhập giáo phận/
+giáo xứ nhận + linh mục ký tên) mở từ menu chuột phải "In giấy giới thiệu chứng nhận rửa tội/
+giáo lý hôn phối/chứng nhận thêm sức" (`GxGiaoDanList.tsx`, dùng ở màn hình Danh sách giáo dân,
+Hồ sơ lưu trữ giáo dân, và lưới thành viên trong Chi tiết gia đình) và "In giới thiệu chuyển xứ"
+(`GxGiaDinhList.tsx`, dùng ở Danh sách gia đình và Hồ sơ lưu trữ gia đình) — state dùng chung
+qua hai hook `lib/useGioiThieuGiaoDan.ts`/`lib/useGioiThieuChuyenXu.ts` để tránh lặp lại ở 5 màn
+hình nhúng. Mục "In giới thiệu hôn phối" (`GxGiaoDanList.tsx`, toolbar Hồ sơ lưu trữ giáo dân)
+**KHÔNG thuộc 4 mẫu này** — đó là giấy RAO hôn phối (`ReportRaoHP.cs`), một hạng mục khác vẫn
+CHƯA làm (xem mục 8), giữ nguyên `chuaHoTro`.
+
 ## 6. Chọn mẫu theo giáo phận
 
 `BoDoMauIn.ChuanHoaTenGiaoPhan(tenGiaoPhan)` chuẩn hoá tên giáo phận (bỏ dấu, bỏ khoảng trắng —
@@ -204,37 +268,37 @@ với một cột giáo phận cụ thể trong dữ liệu — xem mục 9): b�
 
 ## 7. Kiểm thử
 
-- Backend: `WebApp/tests/Qlgx.Api.Tests/GiaoDanInAnTests.cs` (Lý lịch cá nhân) và
-  `InAnMauMoiTests.cs` (3 mẫu mới — Chứng nhận bí tích cả 4 biến thể `loai`, Phiếu gia đình,
-  Chứng nhận hôn phối, kể cả trường hợp không đủ dữ liệu bí tích vẫn phải in được và không nhầm
-  thành 404) — xuất PDF thành công (kiểm chữ ký tệp `%PDF-`), 404 khi không tìm thấy hoặc (riêng
-  Chứng nhận hôn phối) khi gia đình chưa có hôn phối nào, và KHÔNG in được bản ghi của giáo xứ
-  khác (cách ly dữ liệu — đúng ràng buộc "giao_xu_id luôn từ claim").
+- Backend: `WebApp/tests/Qlgx.Api.Tests/GiaoDanInAnTests.cs` (Lý lịch cá nhân),
+  `InAnMauMoiTests.cs` (Chứng nhận bí tích cả 4 biến thể `loai`, Phiếu gia đình, Chứng nhận hôn
+  phối, kể cả trường hợp không đủ dữ liệu bí tích vẫn phải in được và không nhầm thành 404), và
+  `GioiThieuInAnTests.cs` (4 mẫu Giấy giới thiệu — xuất PDF thành công, 400 khi thiếu `giaoXu2`,
+  404 khi không tìm thấy, mẫu Thêm sức vẫn in được khi thiếu dữ liệu Rửa tội) — xuất PDF thành
+  công (kiểm chữ ký tệp `%PDF-`), 404 khi không tìm thấy hoặc (riêng Chứng nhận hôn phối) khi
+  gia đình chưa có hôn phối nào, và KHÔNG in được bản ghi của giáo xứ khác (cách ly dữ liệu —
+  đúng ràng buộc "giao_xu_id luôn từ claim").
 - Frontend: `GiaoDanDetail.test.tsx` (nút In lý lịch cá nhân), `GxGiaoDanList.test.tsx` (menu 12
   mục, mọi mục đều có `chay`, 4 mục bí tích gọi đúng `api.giaoDan.inChungNhanBiTich` với đúng
-  `loai`), `GxGiaDinhList.test.tsx` (2 mục in mới gọi đúng `api.giaDinh.inChungNhanHonPhoi`/
-  `inPhieuGiaDinh`, 3 mục còn lại vẫn báo "chưa hỗ trợ"), `GiaDinhDetail.test.tsx` (nút "In phiếu
-  gia đình" gọi đúng api, vô hiệu hoá khi gia đình còn là bản nháp chưa lưu).
+  `loai`, 3 mục Giấy giới thiệu mở `GioiThieuModal` với đúng `loai`), `GxGiaDinhList.test.tsx`
+  (3 mục in gọi đúng `api.giaDinh.inChungNhanHonPhoi`/`inPhieuGiaDinh`/mở `GioiThieuModal` cho
+  "In giới thiệu chuyển xứ", 2 mục còn lại vẫn báo "chưa hỗ trợ"), `GiaDinhDetail.test.tsx` (nút
+  "In phiếu gia đình" gọi đúng api, vô hiệu hoá khi gia đình còn là bản nháp chưa lưu).
 - Chạy thật qua API thật (tài khoản tạm, JWT thật, gọi `curl`/`fetch` vào `Qlgx.Api` chạy trên
   `qlgx_thu`), in cho các bản ghi thật nhiều dữ liệu nhất tìm được, mở PDF kiểm tra — xem ảnh
-  chụp/PDF mẫu `WebApp/anh-chup-kiem-thu/` (đánh số theo báo cáo nhiệm vụ) và
-  can-review-sau.md mục 34e.
+  chụp/PDF mẫu `WebApp/anh-chup-kiem-thu/` (đánh số theo báo cáo nhiệm vụ, 4 mẫu Giấy giới thiệu
+  là `181`-`184`) và can-review-sau.md mục 34e/65.
 
-## 8. Phạm vi CHƯA làm ở lượt này (khác biệt cố ý với yêu cầu ban đầu)
+## 8. Phạm vi CHƯA làm (khác biệt cố ý với yêu cầu ban đầu)
 
 Yêu cầu ban đầu xếp thứ tự 5 mẫu: hạ tầng, Lý lịch cá nhân, Chứng nhận bí tích, Phiếu gia đình,
-Chứng nhận hôn phối. Hai lượt đã làm xong cả 5/5 phần đó (lượt 1: hạ tầng + Lý lịch cá nhân;
-lượt 2 — lượt này: Chứng nhận bí tích, Phiếu gia đình, Chứng nhận hôn phối, xem mục 5a-5d). Còn
-lại "Giấy giới thiệu" (4 mẫu) KHÔNG kịp làm — khác các mẫu trên ở chỗ cần dữ liệu của "người thứ
-hai" thường KHÔNG có bản ghi `GiaoDan` nào trong CSDL (ở giáo xứ khác), nghĩa là cần thêm MỘT
-MÀN HÌNH NHẬP LIỆU mới trước khi in được, không chỉ "thêm một `.html` + một `Xuat*`" như ba mẫu
-vừa làm — xem can-review-sau.md mục 34d.
+Chứng nhận hôn phối — xong đủ 5/5 phần đó qua hai lượt đầu (xem mục 5-5d). "Giấy giới thiệu" (4
+mẫu) bị hoãn ở lượt đó vì tưởng cần thêm màn hình nhập liệu người thứ hai phức tạp (dữ liệu của
+người thứ hai thường KHÔNG có bản ghi `GiaoDan` nào trong CSDL vì thuộc giáo xứ khác); lượt cuối
+cùng đã làm xong cả 4 mẫu — xem mục 5e (cơ chế thật đơn giản hơn tưởng: chỉ hai ô nhập tự do
+giáo phận/giáo xứ nhận + tên linh mục, không cần tra cứu người thứ hai trong CSDL nào cả).
 
 Còn lại, CHƯA làm (mọi mục menu tương ứng vẫn báo "chức năng này chưa được hỗ trợ trên web ở
 giai đoạn này" qua `chuaHoTro()`, không có mục nào bấm không phản hồi):
 
-- Giấy giới thiệu (chuyển xứ/rửa tội/thêm sức/giáo lý hôn phối — 4 mẫu, `ReportGioiThieuHP.cs`
-  và các `GxConstants.REPORT_GIOITHIEU_*`) — cần màn hình nhập liệu mới, xem trên.
 - Phiếu gia đình khổ lớn (`PhieuGiaDinh-A3.doc`) — xem mục 5c, cần thêm tham số khổ giấy xuyên
   suốt hạ tầng in (hiện `BoTrinhDuyet` cố định A4).
 - Rao hôn phối + danh sách rao (`RaoHonPhoi.doc`, `KQRaoHonPhoi.doc`,

@@ -17,6 +17,12 @@ vi.mock('../api/client', async () => {
       },
       giaoHo: { danhMuc: vi.fn().mockResolvedValue([]) },
       timKiem: { giaoDan: vi.fn() },
+      // Xem ghi chú cùng tên ở GiaDinhDetail.test.tsx.
+      giaoDan: {
+        inGioiThieuRuaToi: vi.fn(() => Promise.resolve()),
+        inGioiThieuThemSuc: vi.fn(() => Promise.resolve()),
+        inGioiThieuGiaoLyHonPhoi: vi.fn(() => Promise.resolve()),
+      },
     },
   }
 })

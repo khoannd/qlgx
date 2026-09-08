@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Times New Roman", "Liberation Serif", Georgia, serif;
+    font-size: 13pt;
+    color: #000;
+    margin: 0;
+    padding: 0;
+  }
+  .quoc-hieu { text-align: center; margin-bottom: 4mm; }
+  .quoc-hieu .dong1 { font-weight: bold; letter-spacing: 0.5px; }
+  .quoc-hieu .dong2 { font-style: italic; }
+  .dau-phan { text-align: center; margin: 1mm 0 6mm 0; }
+  .dau-phan hr { display: inline-block; width: 40mm; border: none; border-top: 1px solid #000; }
+
+  .giao-xu-info { text-align: center; margin-bottom: 6mm; line-height: 1.5; }
+  .giao-xu-info .ten-giao-xu { font-weight: bold; font-size: 14pt; text-transform: uppercase; }
+
+  .tieu-de { text-align: center; margin: 8mm 0; }
+  .tieu-de h1 { font-size: 18pt; margin: 0; letter-spacing: 1px; }
+
+  .kinh-gui { margin: 4mm 0; font-style: italic; }
+  .doan-mo-dau { margin: 6mm 0; text-align: justify; line-height: 1.7; }
+
+  table.thong-tin { width: 100%; border-collapse: collapse; margin-bottom: 4mm; }
+  table.thong-tin td { padding: 1.4mm 2mm; vertical-align: top; }
+  table.thong-tin td.nhan { width: 42mm; font-weight: bold; white-space: nowrap; }
+  table.thong-tin td.gia-tri { border-bottom: 1px dotted #666; }
+
+  .doan-noi-dung { margin: 5mm 0; text-align: justify; line-height: 1.7; }
+
+  .ky-ten { margin-top: 14mm; display: flex; justify-content: flex-end; }
+  .ky-ten .khoi-ky { text-align: center; width: 65mm; }
+  .ky-ten .ngay-thang { font-style: italic; margin-bottom: 3mm; display: block; }
+  .ky-ten .ten-linh-muc { font-weight: bold; margin-top: 16mm; display: block; }
+  .ky-ten .chuc-danh { font-weight: bold; }
+
+  .ghi-chu-cuoi { margin-top: 10mm; font-size: 10pt; font-style: italic; color: #333; }
+</style>
+</head>
+<body>
+  <div class="quoc-hieu">
+    <div class="dong1">CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+    <div class="dong2">Độc lập – Tự do – Hạnh phúc</div>
+  </div>
+  <div class="dau-phan"><hr /></div>
+
+  <div class="giao-xu-info">
+    <div>Giáo phận {{TenGiaoPhan}} — Giáo hạt {{TenGiaoHat}}</div>
+    <div class="ten-giao-xu">GIÁO XỨ {{TenGiaoXu}}</div>
+    <div>{{DiaChiGiaoXu}}{{DienThoaiGiaoXu}}{{EmailGiaoXu}}</div>
+  </div>
+
+  <div class="tieu-de">
+    <h1>GIẤY GIỚI THIỆU</h1>
+  </div>
+
+  <div class="kinh-gui">Kính gửi: Giáo xứ {{TenGiaoXu2}}, Giáo phận {{TenGiaoPhan2}}</div>
+
+  <div class="doan-mo-dau">
+    Linh mục chính xứ Giáo xứ {{TenGiaoXu}} trân trọng giới thiệu:
+  </div>
+
+  <table class="thong-tin">
+    <tr><td class="nhan">Họ và tên</td><td class="gia-tri">{{HoTen}}</td></tr>
+    <tr><td class="nhan">Ngày sinh</td><td class="gia-tri">{{NgaySinh}}</td></tr>
+    <tr><td class="nhan">Nơi sinh</td><td class="gia-tri">{{NoiSinh}}</td></tr>
+    <tr><td class="nhan">Họ tên cha</td><td class="gia-tri">{{TenCha}}</td></tr>
+    <tr><td class="nhan">Họ tên mẹ</td><td class="gia-tri">{{TenMe}}</td></tr>
+    <tr><td class="nhan">Địa chỉ</td><td class="gia-tri">{{DiaChiGiaoDan}}</td></tr>
+    <tr><td class="nhan">Điện thoại</td><td class="gia-tri">{{DienThoaiGiaoDan}}</td></tr>
+  </table>
+
+  <div class="doan-noi-dung">
+    Đến Quý giáo xứ để được cử hành Bí tích Rửa tội. Kính xin Quý giáo xứ vui lòng giúp đỡ và
+    tạo điều kiện thuận lợi.
+  </div>
+
+  <div class="ky-ten">
+    <div class="khoi-ky">
+      <span class="ngay-thang">{{TenGiaoXu}}, ngày {{NgayThangNamIn}}</span>
+      <span class="chuc-danh">Linh mục chính xứ</span>
+      <span class="ten-linh-muc">{{TenLinhMuc}}</span>
+    </div>
+  </div>
+
+  <div class="ghi-chu-cuoi">Giấy in trực tiếp từ hệ thống quản lý giáo xứ — không có giá trị khi có tẩy xoá, sửa chữa.</div>
+</body>
+</html>

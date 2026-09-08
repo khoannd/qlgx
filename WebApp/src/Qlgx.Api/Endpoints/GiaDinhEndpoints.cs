@@ -62,6 +62,19 @@ public static class GiaDinhEndpoints
                 ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
                 : Results.NotFound());
 
+        // "In giới thiệu chuyển xứ" — mẫu thứ tư trong bốn mẫu "Giấy giới thiệu", duy nhất theo
+        // GIA ĐÌNH (ba mẫu còn lại theo giáo dân, xem GiaoDanEndpoints.cs) — tương đương
+        // Source/GXControl/RpGioiThieuChuyenXu.cs. Cùng cơ chế "bên nhận nhập tự do lúc in".
+        nhom.MapGet("/{id:guid}/in/gioi-thieu-chuyen-xu", async (InAnService dv, Guid id,
+            string? giaoPhan2, string? giaoXu2, string? tenLinhMuc, CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(giaoXu2))
+                return Results.BadRequest(new { thongBao = "Chưa nhập giáo xứ nhận giấy giới thiệu." });
+            return await dv.XuatGioiThieuChuyenXu(id, giaoPhan2, giaoXu2, tenLinhMuc, ct) is { } ketQua
+                ? Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep)
+                : Results.NotFound();
+        });
+
         // Ảnh đại diện gia đình — cùng thiết kế/ràng buộc với ảnh giáo dân (xem
         // GiaoDanEndpoints.cs và AnhDaiDienService.cs).
         // Xem ghi chú DisableAntiforgery() ở GiaoDanEndpoints.cs — API xác thực bằng Bearer

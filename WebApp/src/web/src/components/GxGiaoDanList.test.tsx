@@ -156,7 +156,7 @@ describe('GxGiaoDanList', () => {
 
   describe('menuGiaoDanMacDinh', () => {
     it('co dung 12 muc, dung thu tu, va muc "In ly lich ca nhan" da co chay that', () => {
-      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn())
+      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn(), vi.fn())
 
       expect(menu.map((m) => m.nhan)).toEqual([
         'Xem chi tiết', 'In lý lịch cá nhân', 'In chứng nhận bí tích', 'In giới thiệu hôn phối',
@@ -171,7 +171,7 @@ describe('GxGiaoDanList', () => {
     })
 
     it('bam "In ly lich ca nhan" thi goi api.giaoDan.inLyLichCaNhan voi dung id', () => {
-      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn())
+      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn(), vi.fn())
       const muc = menu.find((m) => m.nhan === 'In lý lịch cá nhân')!
 
       muc.chay!(nguoi({ id: 'gd-xyz' }))
@@ -185,12 +185,29 @@ describe('GxGiaoDanList', () => {
       ['In chứng nhận xưng tội - rước lễ', 'RuocLe'],
       ['In chứng nhận thêm sức', 'ThemSuc'],
     ] as const)('bam "%s" thi goi api.giaoDan.inChungNhanBiTich dung loai', (nhan, loai) => {
-      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn())
+      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn(), vi.fn())
       const muc = menu.find((m) => m.nhan === nhan)!
 
       muc.chay!(nguoi({ id: 'gd-bt' }))
 
       expect(api.giaoDan.inChungNhanBiTich).toHaveBeenCalledWith('gd-bt', loai)
+    })
+
+    // --- Giay gioi thieu (4 mau — 3 mau theo giao dan o day, mau con lai theo gia dinh) ----
+
+    it.each([
+      ['In giấy giới thiệu chứng nhận rửa tội', 'RuaToi'],
+      ['In giấy giới thiệu giáo lý hôn phối', 'GiaoLyHonPhoi'],
+      ['In giấy giới thiệu chứng nhận thêm sức', 'ThemSuc'],
+    ] as const)('bam "%s" thi goi moGioiThieu dung loai va dung giao dan', (nhan, loai) => {
+      const moGioiThieu = vi.fn()
+      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn(), moGioiThieu)
+      const muc = menu.find((m) => m.nhan === nhan)!
+      const d = nguoi({ id: 'gd-gt' })
+
+      muc.chay!(d)
+
+      expect(moGioiThieu).toHaveBeenCalledWith(loai, d)
     })
   })
 })

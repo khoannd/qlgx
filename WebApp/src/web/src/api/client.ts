@@ -242,6 +242,20 @@ export type KetQuaLuuGiaoDan = { id: string | null; canhBao: string[] }
  * client quyết định thêm — xem `lib/canhBaoGiaDinh.ts` để phân biệt hai loại này. */
 export type KetQuaGhiGiaDinh = { giaoDanId: string | null; canhBao: string[] }
 
+/** Ba tham số "bên nhận" nhập tự do lúc in — dùng chung cho cả bốn mẫu "Giấy giới thiệu" (xem
+ * ghi chú ở đầu khối cùng tên trong InAnService.cs: bản desktop dùng một màn hình nhập tay
+ * (frmReport.cs) thay vì tra CSDL, vì giáo xứ/giáo phận nhận thường thuộc một giáo xứ KHÁC,
+ * không có trong CSDL của giáo xứ này). `giaoXu2` bắt buộc — máy chủ trả 400 nếu rỗng. */
+export type ThongTinBenNhanGioiThieu = { giaoPhan2: string; giaoXu2: string; tenLinhMuc: string }
+
+function thamSoBenNhan({ giaoPhan2, giaoXu2, tenLinhMuc }: ThongTinBenNhanGioiThieu): string {
+  const p = new URLSearchParams()
+  if (giaoPhan2) p.set('giaoPhan2', giaoPhan2)
+  if (giaoXu2) p.set('giaoXu2', giaoXu2)
+  if (tenLinhMuc) p.set('tenLinhMuc', tenLinhMuc)
+  return `?${p.toString()}`
+}
+
 export const api = {
   giaDinh: {
     danhSach: (giaoHoId?: string, chiKhongThongKe?: boolean) =>
@@ -274,6 +288,11 @@ export const api = {
     /** In "Chứng nhận hôn phối" — 404 khi gia đình chưa có hôn phối nào để chứng nhận. */
     inChungNhanHonPhoi: (id: string) =>
       taiTepIn(`/api/gia-dinh/${id}/in/chung-nhan-hon-phoi`, 'ChungNhanHonPhoi.pdf'),
+    /** "In giới thiệu chuyển xứ" — mẫu duy nhất theo GIA ĐÌNH trong bốn mẫu "Giấy giới thiệu"
+     * (ba mẫu còn lại theo giáo dân, xem `giaoDan` bên dưới). `benNhan` là thông tin bên nhận
+     * nhập tự do lúc in (xem `ThongTinBenNhanGioiThieu`). */
+    inGioiThieuChuyenXu: (id: string, benNhan: ThongTinBenNhanGioiThieu) =>
+      taiTepIn(`/api/gia-dinh/${id}/in/gioi-thieu-chuyen-xu${thamSoBenNhan(benNhan)}`, 'GioiThieuChuyenXu.pdf'),
     /** "Xuất Excel" (thay CSV cũ) — tải tệp .xlsx thật về máy, tôn trọng đúng bộ lọc đang áp
      * dụng trên màn hình "Danh sách gia đình" (giáo họ đã chọn/ô "chỉ xem không thống kê"),
      * dùng lại `thamSo()` giống `danhSach()` ở trên — cùng tham số, không viết lại logic lọc. */
@@ -334,6 +353,15 @@ export const api = {
      * (liệt kê cả ba); "RuaToi"/"RuocLe"/"ThemSuc" = mục riêng từng bí tích. */
     inChungNhanBiTich: (id: string, loai?: 'RuaToi' | 'RuocLe' | 'ThemSuc') =>
       taiTepIn(`/api/giao-dan/${id}/in/chung-nhan-bi-tich${loai ? `?loai=${loai}` : ''}`, 'ChungNhanBiTich.pdf'),
+    /** Ba mẫu "Giấy giới thiệu" theo giáo dân (mẫu thứ tư — chuyển xứ — theo gia đình, xem
+     * `giaDinh.inGioiThieuChuyenXu` ở trên). `benNhan` nhập tự do lúc in, xem
+     * `ThongTinBenNhanGioiThieu`. */
+    inGioiThieuRuaToi: (id: string, benNhan: ThongTinBenNhanGioiThieu) =>
+      taiTepIn(`/api/giao-dan/${id}/in/gioi-thieu-rua-toi${thamSoBenNhan(benNhan)}`, 'GioiThieuRuaToi.pdf'),
+    inGioiThieuThemSuc: (id: string, benNhan: ThongTinBenNhanGioiThieu) =>
+      taiTepIn(`/api/giao-dan/${id}/in/gioi-thieu-them-suc${thamSoBenNhan(benNhan)}`, 'GioiThieuThemSuc.pdf'),
+    inGioiThieuGiaoLyHonPhoi: (id: string, benNhan: ThongTinBenNhanGioiThieu) =>
+      taiTepIn(`/api/giao-dan/${id}/in/gioi-thieu-giao-ly-hon-phoi${thamSoBenNhan(benNhan)}`, 'GioiThieuGiaoLyHonPhoi.pdf'),
     /** Ảnh đại diện (Task 1.2 VIEC-TIEP-THEO.md, xem can-review-sau.md mục 36) — `layAnh` trả
      * object URL (hoặc `null` nếu chưa có ảnh/lỗi mạng, xem `layAnhBlobUrl`), `taiAnhLen` gửi
      * multipart, `xoaAnh` xoá hẳn. */

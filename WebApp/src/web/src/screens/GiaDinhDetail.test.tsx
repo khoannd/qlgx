@@ -9,6 +9,14 @@ vi.mock('../api/client', () => ({
   api: {
     timKiem: { giaoDan: vi.fn() },
     giaDinh: { inPhieuGiaDinh: vi.fn(() => Promise.resolve()) },
+    // Giấy giới thiệu (3 mẫu theo giáo dân) — menuThanhVien của GiaDinhDetail nhúng
+    // menuGiaoDanMacDinh nên cần các hàm này tồn tại dù không dùng trong các test hiện có
+    // (xem lib/useGioiThieuGiaoDan.ts, tra cứu ngay lúc import module).
+    giaoDan: {
+      inGioiThieuRuaToi: vi.fn(() => Promise.resolve()),
+      inGioiThieuThemSuc: vi.fn(() => Promise.resolve()),
+      inGioiThieuGiaoLyHonPhoi: vi.fn(() => Promise.resolve()),
+    },
   },
 }))
 

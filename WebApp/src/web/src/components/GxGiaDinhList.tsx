@@ -34,15 +34,17 @@ function inPhieuGiaDinh(d: GiaDinhListItem): void {
 
 /** Đúng 5 mục và đúng thứ tự trong constructor của GxGiaDinhList bản desktop. "In lý lịch cá
  * nhân" ở lưới GIA ĐÌNH vẫn báo "chưa hỗ trợ" — không rõ in cho thành viên nào (dùng menu
- * chuột phải trên lưới THÀNH VIÊN — GxGiaoDanList.inLyLichCaNhan — thay vì mục này); "In giới
- * thiệu chuyển xứ" và "Xem vị trí" cũng chưa làm ở lượt này. */
+ * chuột phải trên lưới THÀNH VIÊN — GxGiaoDanList.inLyLichCaNhan — thay vì mục này); "Xem vị
+ * trí" cũng chưa làm ở lượt này. "In giới thiệu chuyển xứ" mở GioiThieuModal để nhập bên nhận
+ * trước khi in (mẫu thứ tư của "Giấy giới thiệu" — theo GIA ĐÌNH, xem in-an.md mục 5e). */
 export const menuGiaDinhMacDinh = (
   _moChiTiet: (d: GiaDinhListItem) => void,
+  moGioiThieuChuyenXu: (d: GiaDinhListItem) => void,
 ): MucMenu<GiaDinhListItem>[] => [
   { nhan: 'In chứng nhận hôn phối', chay: inChungNhanHonPhoi },
   { nhan: 'In phiếu gia đình', chay: inPhieuGiaDinh },
   { nhan: 'In lý lịch cá nhân', chay: chuaHoTro },
-  { nhan: 'In giới thiệu chuyển xứ', chay: chuaHoTro },
+  { nhan: 'In giới thiệu chuyển xứ', chay: moGioiThieuChuyenXu },
   { nhan: 'Xem vị trí', chay: chuaHoTro },
 ]
 

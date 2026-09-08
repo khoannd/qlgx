@@ -91,7 +91,7 @@ describe('GxGiaDinhList', () => {
   it('menu In phieu gia dinh KHONG mo man hinh chi tiet, goi dung api voi id gia dinh', () => {
     const moChiTiet = vi.fn()
 
-    const menu = menuGiaDinhMacDinh(moChiTiet)
+    const menu = menuGiaDinhMacDinh(moChiTiet, vi.fn())
     const inPhieu = menu.find((m) => m.nhan === 'In phiếu gia đình')
     inPhieu?.chay?.(giaDinh({ id: 'gd-1' }))
 
@@ -100,23 +100,36 @@ describe('GxGiaDinhList', () => {
   })
 
   it('menu In chung nhan hon phoi goi dung api voi id gia dinh', () => {
-    const menu = menuGiaDinhMacDinh(vi.fn())
+    const menu = menuGiaDinhMacDinh(vi.fn(), vi.fn())
     const inHonPhoi = menu.find((m) => m.nhan === 'In chứng nhận hôn phối')
     inHonPhoi?.chay?.(giaDinh({ id: 'gd-2' }))
 
     expect(api.giaDinh.inChungNhanHonPhoi).toHaveBeenCalledWith('gd-2')
   })
 
-  it('cac muc con lai van bao "chua ho tro" (In ly lich ca nhan, gioi thieu chuyen xu, xem vi tri)', () => {
-    const alertGia = vi.spyOn(window, 'alert').mockImplementation(() => {})
-    const menu = menuGiaDinhMacDinh(vi.fn())
+  // "In giới thiệu chuyển xứ" (mẫu thứ tư của "Giấy giới thiệu" — theo gia đình) mở
+  // GioiThieuModal thay vì gọi thẳng api — xem in-an.md mục 5e.
+  it('menu In gioi thieu chuyen xu goi moGioiThieuChuyenXu voi dung gia dinh', () => {
+    const moGioiThieuChuyenXu = vi.fn()
+    const menu = menuGiaDinhMacDinh(vi.fn(), moGioiThieuChuyenXu)
+    const d = giaDinh({ id: 'gd-3' })
+    const muc = menu.find((m) => m.nhan === 'In giới thiệu chuyển xứ')
 
-    for (const nhan of ['In lý lịch cá nhân', 'In giới thiệu chuyển xứ', 'Xem vị trí']) {
+    muc?.chay?.(d)
+
+    expect(moGioiThieuChuyenXu).toHaveBeenCalledWith(d)
+  })
+
+  it('cac muc con lai van bao "chua ho tro" (In ly lich ca nhan, xem vi tri)', () => {
+    const alertGia = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    const menu = menuGiaDinhMacDinh(vi.fn(), vi.fn())
+
+    for (const nhan of ['In lý lịch cá nhân', 'Xem vị trí']) {
       const muc = menu.find((m) => m.nhan === nhan)
       muc?.chay?.(giaDinh())
     }
 
-    expect(alertGia).toHaveBeenCalledTimes(3)
+    expect(alertGia).toHaveBeenCalledTimes(2)
     alertGia.mockRestore()
   })
 })

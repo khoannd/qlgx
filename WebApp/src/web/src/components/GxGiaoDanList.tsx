@@ -30,6 +30,12 @@ function inChungNhanBiTich(loai?: 'RuaToi' | 'RuocLe' | 'ThemSuc') {
   }
 }
 
+/** Ba loại "Giấy giới thiệu" theo giáo dân (mẫu thứ tư — chuyển xứ — theo gia đình, xem
+ * GxGiaDinhList.tsx) — khác các mục in phía trên, cần MỞ MỘT MÀN HÌNH nhập tay thông tin bên
+ * nhận trước khi in được (xem GioiThieuModal.tsx), nên nơi gọi truyền vào một hàm mở modal
+ * thay vì gọi thẳng api. */
+export type LoaiGioiThieuGiaoDan = 'RuaToi' | 'ThemSuc' | 'GiaoLyHonPhoi'
+
 type Props = {
   rows: GiaoDanListItem[]
   /** Nhúng trong form gia đình: thêm cột Quan hệ GĐ, bỏ cột Điện thoại. */
@@ -46,23 +52,26 @@ type Props = {
 export const menuGiaoDanMacDinh = (
   moChiTiet: (d: GiaoDanListItem) => void,
   xemGiaDinh: (d: GiaoDanListItem) => void,
+  moGioiThieu: (loai: LoaiGioiThieuGiaoDan, d: GiaoDanListItem) => void,
 ): MucMenu<GiaoDanListItem>[] => [
   { nhan: 'Xem chi tiết', chay: moChiTiet },
   // "In lý lịch cá nhân": mẫu đầu tiên của hạ tầng in ấn thật (VIEC-TIEP-THEO.md mục 1.1, xem
   // docs/superpowers/specs/man-hinh/in-an.md) — tải PDF thật, không còn là mục chỉ có nhãn.
   { nhan: 'In lý lịch cá nhân', chay: inLyLichCaNhan },
-  // 4 mục "chứng nhận bí tích" nối vào lượt này (xem in-an.md) — dùng CHUNG một endpoint,
-  // khác nhau ở `loai`. 5 mục còn lại (giới thiệu hôn phối/rửa tội/thêm sức, xem vị trí) CHƯA
-  // làm — báo rõ "chưa hỗ trợ" bằng `chuaHoTro`, đúng yêu cầu "đừng để im lặng không phản hồi".
+  // 4 mục "chứng nhận bí tích" — dùng CHUNG một endpoint, khác nhau ở `loai`.
   { nhan: 'In chứng nhận bí tích', chay: inChungNhanBiTich() },
+  // "In giới thiệu hôn phối" KHÔNG thuộc 4 mẫu "Giấy giới thiệu" của lượt này — đây là giấy
+  // RAO hôn phối (ReportRaoHP.cs, xem in-an.md mục 8 "CHƯA làm"), vẫn báo "chưa hỗ trợ".
   { nhan: 'In giới thiệu hôn phối', chay: chuaHoTro },
   { nhan: 'In chứng nhận rửa tội', chay: inChungNhanBiTich('RuaToi') },
   { nhan: 'In chứng nhận xưng tội - rước lễ', chay: inChungNhanBiTich('RuocLe') },
   { nhan: 'In chứng nhận thêm sức', chay: inChungNhanBiTich('ThemSuc') },
   { nhan: 'Xem gia đình', chay: xemGiaDinh, an: (d) => !d.giaDinhId },
-  { nhan: 'In giấy giới thiệu chứng nhận rửa tội', chay: chuaHoTro },
-  { nhan: 'In giấy giới thiệu giáo lý hôn phối', chay: chuaHoTro },
-  { nhan: 'In giấy giới thiệu chứng nhận thêm sức', chay: chuaHoTro },
+  // Ba mẫu "Giấy giới thiệu" theo giáo dân (mẫu thứ tư — chuyển xứ — theo gia đình, xem
+  // GxGiaDinhList.tsx) — mở GioiThieuModal để nhập bên nhận trước khi in, xem in-an.md mục 5e.
+  { nhan: 'In giấy giới thiệu chứng nhận rửa tội', chay: (d) => moGioiThieu('RuaToi', d) },
+  { nhan: 'In giấy giới thiệu giáo lý hôn phối', chay: (d) => moGioiThieu('GiaoLyHonPhoi', d) },
+  { nhan: 'In giấy giới thiệu chứng nhận thêm sức', chay: (d) => moGioiThieu('ThemSuc', d) },
   { nhan: 'Xem vị trí', chay: chuaHoTro },
 ]
 

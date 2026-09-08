@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
 import { api } from '../api/client'
 import type { GiaoDanListItem, GiaoHo } from '../api/types'
+import { GioiThieuModal } from '../components/GioiThieuModal'
 import { GxGiaoDanList, menuGiaoDanMacDinh } from '../components/GxGiaoDanList'
 import { GxToolbar } from '../components/GxToolbar'
 import { chuaHoTro } from '../lib/thongBao'
+import { useGioiThieuGiaoDan } from '../lib/useGioiThieuGiaoDan'
 
 /** Sentinel hiển thị cho "Ngoài xứ" — cùng quy ước của GiaoDanList.tsx. */
 const NGOAI_XU = 'Ngoài xứ'
@@ -76,9 +78,10 @@ export function GiaoDanLuuTruList({
     [rows, giaoHo, chiKhongThongKe],
   )
 
+  const gioiThieu = useGioiThieuGiaoDan()
   const menu = useMemo(
-    () => menuGiaoDanMacDinh((d) => moGiaoDan(d.id), (d) => { if (d.giaDinhId) moGiaDinh?.(d.giaDinhId) }),
-    [moGiaoDan, moGiaDinh],
+    () => menuGiaoDanMacDinh((d) => moGiaoDan(d.id), (d) => { if (d.giaDinhId) moGiaDinh?.(d.giaDinhId) }, gioiThieu.mo),
+    [moGiaoDan, moGiaDinh, gioiThieu.mo],
   )
 
   async function xuatExcel() {
@@ -172,6 +175,9 @@ export function GiaoDanLuuTruList({
       </div>
 
       <GxGiaoDanList rows={rowsLoc} onMo={(d) => moGiaoDan(d.id)} onChon={setDongChon} menuChuotPhai={menu} />
+      {gioiThieu.dangMo && (
+        <GioiThieuModal tieuDe={gioiThieu.tieuDe} onXuat={gioiThieu.xuat} onDong={gioiThieu.dong} />
+      )}
     </section>
   )
 }

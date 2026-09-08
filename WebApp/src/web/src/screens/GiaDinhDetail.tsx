@@ -7,11 +7,13 @@ import { DANH_SACH_VAI_TRO_THANH_VIEN, tenVaiTro } from '../lib/vaiTroGiaDinh'
 import { AnhDaiDien } from '../components/AnhDaiDien'
 import { GxDate } from '../components/GxDate'
 import { GxField, GxInline } from '../components/GxField'
+import { GioiThieuModal } from '../components/GioiThieuModal'
 import { GxGiaoDanList, menuGiaoDanMacDinh } from '../components/GxGiaoDanList'
 import { GxGoiY } from '../components/GxGoiY'
 import { GxPicker } from '../components/GxPicker'
 import { useTuDongLuuBanNhap, xoaBanNhap } from '../lib/banNhap'
 import { chuaHoTro } from '../lib/thongBao'
+import { useGioiThieuGiaoDan } from '../lib/useGioiThieuGiaoDan'
 
 /** Sentinel hiển thị cho "Ngoài xứ" — ứng với `giaoHoId === null` (xem NGOAI_XU ở
  * GiaoDanDetail.tsx, cùng quy ước). */
@@ -202,9 +204,10 @@ export function GiaDinhDetail({
   // của GxGiaoDanList dùng ở màn hình danh sách, chỉ khác đích đến. Thêm mục "Xoá khỏi gia
   // đình" (xoá VĨNH VIỄN, can-review-sau.md mục 5) — cần tra lại vaiTro thô từ f.thanhVien vì
   // GiaoDanListItem hiển thị trên lưới chỉ mang nhãn (quanHe), không mang số vai trò.
+  const gioiThieu = useGioiThieuGiaoDan()
   const menuThanhVien = useMemo(
     () => [
-      ...menuGiaoDanMacDinh((d) => moGiaoDan?.(d.id), () => {}),
+      ...menuGiaoDanMacDinh((d) => moGiaoDan?.(d.id), () => {}, gioiThieu.mo),
       {
         nhan: 'Xoá khỏi gia đình',
         chay: (d: GiaoDanListItem) => {
@@ -213,7 +216,7 @@ export function GiaDinhDetail({
         },
       },
     ],
-    [moGiaoDan, onXoaThanhVien, f.thanhVien],
+    [moGiaoDan, onXoaThanhVien, f.thanhVien, gioiThieu.mo],
   )
 
   // Dựng payload từ form (chủ yếu là input không kiểm soát — defaultValue) — dùng chung cho
@@ -510,6 +513,9 @@ export function GiaDinhDetail({
           onMo={(d) => moGiaoDan?.(d.id)}
           menuChuotPhai={menuThanhVien}
         />
+        {gioiThieu.dangMo && (
+          <GioiThieuModal tieuDe={gioiThieu.tieuDe} onXuat={gioiThieu.xuat} onDong={gioiThieu.dong} />
+        )}
       </div>
 
       <div className="cmdbar">

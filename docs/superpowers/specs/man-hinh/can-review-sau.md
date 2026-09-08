@@ -3899,3 +3899,61 @@ Việc 3 (Giáo xứ, `giao-xu.md`), Việc 1 (Chuẩn hoá dữ liệu, `cong-c
 đã migrate, viết spec, viết test (backend + frontend), và chạy thật đối chiếu `psql` nơi áp
 dụng được. Dữ liệu `qlgx_thu` xác nhận về đúng nguyên trạng sau mọi lần chạy thử: 2050 giáo dân
 / 40 gia đình / 145 thành viên / 1 giáo họ / 1108 đợt bí tích / 6150 bí tích chi tiết.
+
+### 65. Task "4 mẫu Giấy giới thiệu" (2026-09-07/08) — cả HAI cài đặt desktop của mẫu hôn phối
+### là mã CHẾT, chọn mô hình `frmReport` làm chuẩn, đổi "dots" thành VanBanInAn có chủ đích
+
+Hạng mục cuối cùng của `in-an.md` (xem mục 8 cũ, nay là mục 5e). Bốn mẫu: `GioiThieuChuyenXu`,
+`GioiThieuRuaToi`, `GioiThieuThemSuc`, `GioiThieuGiaoLyHonPhoi`.
+
+1. **Phát hiện quan trọng nhất: cả bộ mã "Giấy giới thiệu" của bản desktop là MÃ CHẾT.** Đối
+   chiếu toàn bộ `Source/` không tìm thấy bất kỳ chỗ nào gọi `new frmReport(...)` hay
+   `new frmReportGioiThieuHP(...)`, và không có mục menu/nút nào (Designer, .resx) chứa chữ
+   "Giới thiệu" ngoài chính hai form đó — nghĩa là trên bản desktop THẬT, người dùng KHÔNG BAO
+   GIỜ mở được màn hình nào để in bốn giấy này, dù mã tồn tại đầy đủ và biên dịch được. Vì vậy
+   không có "hành vi thật đang chạy" nào để đối chiếu tuyệt đối — quyết định dưới đây là suy
+   luận hợp lý nhất từ mã, không phải xác nhận qua quan sát ứng dụng thật.
+2. **CÓ HAI cài đặt khác nhau cho riêng "giấy giới thiệu giáo lý hôn phối"**:
+   - `Source/GXControl/frmReportGioiThieuHP.cs` + `Source/ExcelReport/ReportGioiThieuHP.cs`
+     (cũ hơn) — màn hình nhập tay ĐẦY ĐỦ thông tin người phối ngẫu (họ tên, ngày sinh, cha mẹ,
+     giáo xứ/giáo phận) rồi **tự chèn một bản ghi `GiaoDan` MỚI** vào CSDL cho người đó
+     (`AddGiaoDan()`, dòng 112-126) chỉ để có dữ liệu in — một bản ghi "ma" tồn tại vĩnh viễn
+     sau khi in xong tờ giấy.
+   - `Source/GXControl/frmReport.cs` + `RpGThieuGlyHPhoi.cs` (nhất quán với 3 mẫu còn lại qua
+     `RpGioiThieuBase`) — chỉ hai ô nhập tự do `txtGiaoPhan`/`txtGiaoXu` (bên nhận) + một
+     combobox chọn linh mục ký tên, KHÔNG ghi gì vào CSDL.
+   - **Đã chọn mô hình `frmReport`** làm chuẩn để dựng lại (xem `InAnService.cs`, khối "Giấy
+     giới thiệu") — nhất quán với 3 mẫu kia, và vì đường `AddGiaoDan()` là side-effect ghi dữ
+     liệu chỉ để phục vụ một hành động IN (không có ý nghĩa nghiệp vụ lâu dài, không ai xoá lại
+     bản ghi "ma" đó), lại càng vô nghĩa khi chính đường code đó chưa từng chạy thật ngoài đời.
+     Không migrate `AddGiaoDan()`.
+3. **Bên nhận (giáo xứ/giáo phận khác) + linh mục ký tên là ô nhập tự do lúc in, KHÔNG lưu CSDL**
+   — tái hiện đúng `frmReport.cs` (`txtGiaoPhan`/`txtGiaoXu`/`cbLinhMuc`). "Linh mục giới thiệu"
+   ở bản web là ô nhập tự do (không phải danh mục `LinhMuc` như `cbLinhMuc` gốc) vì bản web CHƯA
+   có màn hình quản lý danh mục Linh mục nào (bảng `LinhMuc` tồn tại trong CSDL, không có
+   API/UI) — nhất quán với các trường "tên cha …" khác của `GiaoDan` (`ChaRuaToi`, `ChaThemSuc`…)
+   vốn cũng đều là chuỗi tự do trong toàn hệ thống.
+4. **Sai khác CÓ CHỦ ĐÍCH (không phải "sửa cho đúng" âm thầm) — dòng "Đã Rửa tội" của mẫu Thêm
+   sức**: `Source/GXControl/RpGioiThieuThemSuc.cs` in literal `"..................."` (chuỗi
+   chấm) khi thiếu `NgayRuaToi`, còn `NoiRuaToi` thì để trống nguyên văn không có xử lý gì — nếu
+   có `NoiRuaToi` mà thiếu `NgayRuaToi` sẽ ra một dòng dạng "đã Rửa tội ngày ................
+   tại Giáo xứ ABC" trên giấy tờ chính thức. Nhiệm vụ này CHỈ ĐẠO RÕ dùng lại
+   `VanBanInAn.MoTaBiTich` (cơ chế đã sửa lỗi dấu phẩy lửng ở mẫu Lý lịch cá nhân) cho MỌI mẫu
+   mới — bản web dùng `MoTaBiTich` thay vì literal dấu chấm, bỏ hẳn đoạn nào thiếu dữ liệu thay
+   vì để lại một dòng chấm chấm trông như lỗi hiển thị. Áp dụng luôn cho `GioiThieuGiaoLyHonPhoi`
+   (dòng Rửa tội + Thêm sức).
+5. **Xác nhận lại mục menu "In giới thiệu hôn phối"** (`GxGiaoDanList.tsx` dòng 58,
+   `GiaoDanLuuTruList.tsx` toolbar) KHÔNG thuộc phạm vi 4 mẫu này — đối chiếu tên tệp
+   `GxConstants.REPORT_*`/`ReportRaoHP.cs`, đây là giấy RAO hôn phối (`RaoHonPhoi.doc`), một
+   hạng mục khác đã ghi nhận CHƯA làm ở `in-an.md` mục 8. Vẫn giữ `chuaHoTro`.
+6. **`GxGiaDinhList.tsx` "In lý lịch cá nhân"** vẫn giữ `chuaHoTro` — không liên quan tới nhiệm
+   vụ này (mơ hồ vì không rõ in cho thành viên nào), không đụng tới.
+
+Đã kiểm chứng: 11 test backend (`GioiThieuInAnTests.cs` — xuất PDF cả 4 mẫu, 400 khi thiếu
+`giaoXu2`, 404 khi không tìm thấy, cách ly giáo xứ, và mẫu Thêm sức vẫn in được khi thiếu dữ
+liệu Rửa tội) + 4 test frontend (`GxGiaoDanList.test.tsx`/`GxGiaDinhList.test.tsx` — đúng 3+1
+mục mở `GioiThieuModal` với đúng `loai`/gia đình). Tổng test: backend 387 (376 + 11), frontend
+394 (390 + 4). Chạy thật trên `qlgx_thu`: in cho giáo dân "Tôma Hoàng Giáp" (mã 1052 — đủ Rửa
+tội/Thêm sức/cha mẹ) và gia đình "Paul Phạm Văn Bằng" (mã 32 — 7 thành viên), PDF mở kiểm tra
+bằng PyMuPDF, tiếng Việt có dấu đúng, không còn nhãn rỗng lửng. Ảnh
+`181-gioi-thieu-rua-toi.pdf`…`184-gioi-thieu-chuyen-xu.pdf` ở `WebApp/anh-chup-kiem-thu/`.
