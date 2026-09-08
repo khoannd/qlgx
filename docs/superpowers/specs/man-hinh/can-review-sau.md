@@ -3862,3 +3862,40 @@ tục 1109-1112 (đúng `SinhMaService`) → xoá thủ công 4 đợt mới + 6
 phải 1 trong 4 đợt mới, phải tìm riêng bằng `created_at`) → xác nhận lại `dot_bi_tich`=1108,
 `bi_tich_chi_tiet`=6150, khớp nguyên trạng ban đầu. Ảnh `178-taodotbitich-*.png` ở
 `WebApp/anh-chup-kiem-thu/`.
+
+### 64. Task "migrate Tìm và thay thế" (2026-09-08) — hoàn tất cả 4 việc của nhiệm vụ "4 màn hình cuối cùng"
+
+Việc 4 (cuối cùng) của nhiệm vụ — xem `tim-thay-the.md` (spec đầy đủ). Ghi lại quyết định phạm vi.
+
+1. **Đặt mục nav vào nhóm "Công cụ dữ liệu"** dù desktop đặt `itTimThayThe` trong menu "Tìm
+   kiếm" (cùng "Tìm giáo dân"/"Tìm gia đình") — quyết định tự đưa ra vì bản chất chức năng là
+   "công cụ sửa dữ liệu hàng loạt", cùng nhóm với Chuyển họ/Chuẩn hoá/Tạo ds bí tích, không phải
+   công cụ tìm kiếm thuần tuý như hai mục còn lại của nhóm "Tìm kiếm" desktop.
+2. **Không migrate bước tự động mở danh sách lọc theo bản ghi vừa đổi** sau khi ghi xong
+   (`frmMain.frmReplace_OnOK`, dòng 513-530, dùng `WhereSQL` tuỳ ý) — các màn hình danh sách web
+   hiện chưa có cơ chế nhận điều kiện lọc tuỳ ý từ nơi khác truyền vào; bỏ qua tiện ích điều
+   hướng này, người dùng có thể tự lọc lại trên danh sách sau khi thay thế.
+3. **Bốn nguyên tắc an toàn bắt buộc** — như mọi công cụ khác trong nhóm: xem trước đếm số khớp
+   thật, xác nhận nêu con số cụ thể, MỘT transaction (`ExecuteUpdateAsync`), không mở rộng danh
+   sách cột cho phép so với combo desktop (20 cột Giáo dân/4 cột Gia đình, kể cả `GhiChu` — khác
+   "Chuẩn hoá dữ liệu" luôn loại trừ `GhiChu`, ở đây desktop CHO PHÉP thay thế `GhiChu` nên bản
+   web giữ nguyên).
+4. **Dùng `ExecuteUpdateAsync` với ánh xạ cột tường minh qua `switch`** thay vì SQL động chèn
+   tên cột trực tiếp (như desktop `string.Format("UPDATE {0} SET {1}=...", bang, truong)`) — an
+   toàn hơn về tiêm SQL, đồng thời tự nhiên nằm trong whitelist vì switch chỉ có đúng các case
+   cho phép.
+
+Đã kiểm chứng: 8 test backend (gồm test cốt lõi "chỉ đổi bản ghi khớp CHÍNH XÁC, không đụng bản
+ghi gần giống" và test cách ly cột/bảng) + 4 test frontend, tất cả xanh. Chạy thật trên trình
+duyệt: mở màn hình, chọn bảng/trường, xem trước với giá trị không khớp dữ liệu thật → hiện đúng
+"Có 0 bản ghi khớp chính xác" và nút xác nhận tự động khoá (`disabled`) khi số khớp bằng 0 — xác
+nhận cơ chế an toàn hoạt động đúng trên dữ liệu thật mà không cần sửa dữ liệu sản xuất thật để
+kiểm chứng đường ghi (đường ghi đã có 8 test tích hop chạy trên Postgres thật ở trên). Ảnh
+`178-timthaythe-xemtruoc.png` ở `WebApp/anh-chup-kiem-thu/`.
+
+**Tổng kết nhiệm vụ "4 màn hình cuối cùng":** cả 4 việc đã hoàn tất trong phiên làm việc này —
+Việc 3 (Giáo xứ, `giao-xu.md`), Việc 1 (Chuẩn hoá dữ liệu, `cong-cu-du-lieu.md` mục 5.1), Việc 2
+(Tạo danh sách bí tích tự động, mục 5.2), Việc 4 (Tìm và thay thế, `tim-thay-the.md`). Toàn bộ
+đã migrate, viết spec, viết test (backend + frontend), và chạy thật đối chiếu `psql` nơi áp
+dụng được. Dữ liệu `qlgx_thu` xác nhận về đúng nguyên trạng sau mọi lần chạy thử: 2050 giáo dân
+/ 40 gia đình / 145 thành viên / 1 giáo họ / 1108 đợt bí tích / 6150 bí tích chi tiết.

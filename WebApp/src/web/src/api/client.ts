@@ -10,6 +10,7 @@ import type {
   KiemTraGiaoDanKetQua, KiemTraGiaoDanTuyChon, KiemTraGiaDinhKetQua, KiemTraGiaDinhTuyChon,
   ChuyenHoGiaoDanXemTruoc, ChuyenHoGiaoDanKetQua, ChuyenHoGiaDinhXemTruoc, ChuyenHoGiaDinhKetQua,
   ChuanHoaXemTruoc, ChuanHoaKetQua, TaoDotBiTichXemTruoc, TaoDotBiTichKetQua,
+  BangTimThayThe, TimThayTheXemTruoc, TimThayTheKetQua,
 } from './types'
 import { authStore } from './authStore'
 
@@ -510,6 +511,18 @@ export const api = {
     }) => goi<TaoDotBiTichKetQua>('/api/cong-cu-du-lieu/tao-dot-bi-tich', {
       method: 'POST', body: JSON.stringify(than),
     }),
+  },
+  // "Tìm và thay thế" (xem tim-thay-the.md) — CÔNG CỤ SỬA DỮ LIỆU HÀNG LOẠT thay thế CHÍNH XÁC
+  // (không phải LIKE một phần) giá trị một cột — luôn xem trước lấy số khớp thật trước khi ghi.
+  timThayThe: {
+    xemTruoc: (than: { bang: BangTimThayThe; truong: string; giaTriTim: string; giaTriThay: string }) =>
+      goi<TimThayTheXemTruoc>('/api/cong-cu-du-lieu/tim-thay-the/xem-truoc', {
+        method: 'POST', body: JSON.stringify(than),
+      }),
+    ghi: (than: { bang: BangTimThayThe; truong: string; giaTriTim: string; giaTriThay: string }) =>
+      goi<TimThayTheKetQua>('/api/cong-cu-du-lieu/tim-thay-the', {
+        method: 'POST', body: JSON.stringify(than),
+      }),
   },
   timKiem: {
     // Dùng cho GxPicker thật (gõ để tìm Tên Cha/Mẹ, Người nam/nữ…) — giới hạn kết quả, KHÔNG

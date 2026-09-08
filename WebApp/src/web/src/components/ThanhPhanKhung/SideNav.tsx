@@ -53,6 +53,10 @@ const DANH_SACH_DIEU_HUONG: NhomDieuHuong[] = [
       { id: 'chuyenHo', nhan: 'Chuyển họ hàng loạt' },
       { id: 'chuanHoaDuLieu', nhan: 'Chuẩn hoá dữ liệu' },
       { id: 'taoDotBiTichTuDong', nhan: 'Tạo danh sách bí tích tự động' },
+      // "Tìm và thay thế" (frmReplace.cs) — ở desktop nằm trong menu "Tìm kiếm" cùng "Tìm giáo
+      // dân"/"Tìm gia đình", KHÔNG cùng nhóm "Chuẩn hoá dữ liệu"/"Chuyển họ" — bản web CỐ Ý đặt
+      // vào đây vì cùng bản chất "công cụ sửa dữ liệu hàng loạt", xem tim-thay-the.md.
+      { id: 'timThayThe', nhan: 'Tìm và thay thế' },
     ],
   },
   {

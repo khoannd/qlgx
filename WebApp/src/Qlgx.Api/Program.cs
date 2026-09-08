@@ -76,6 +76,7 @@ builder.Services.AddScoped<ChuyenHoService>();
 builder.Services.AddScoped<GiaoXuService>();
 builder.Services.AddScoped<ChuanHoaDuLieuService>();
 builder.Services.AddScoped<TaoDotBiTichTuDongService>();
+builder.Services.AddScoped<TimThayTheService>();
 // Anh dai dien (Task 1.2 VIEC-TIEP-THEO.md) — xem AnhDaiDienService.cs.
 builder.Services.AddScoped<AnhDaiDienService>();
 // Xuat Excel that (ClosedXML, khong Office Interop) cho hai man hinh danh sach — xem
@@ -180,6 +181,7 @@ app.MapKiemTraDuLieu();
 app.MapChuyenHo();
 app.MapChuanHoaDuLieu();
 app.MapTaoDotBiTichTuDong();
+app.MapTimThayThe();
 app.MapGiaoHo();
 app.MapTaiKhoan();
 app.MapQuanLyGiaoXu();

@@ -487,6 +487,12 @@ export type TaiKhoanItem = {
   rowVersion: number
 }
 
+// --- "Tìm và thay thế" (xem tim-thay-the.md) — BangTimThayThe la enum phia backend, serialize
+// thanh so (0=GiaoDan, 1=GiaDinh), giong quy uoc cua LoaiBiTich. ---
+export type BangTimThayThe = 0 | 1
+export type TimThayTheXemTruoc = { soBanGhiKhop: number }
+export type TimThayTheKetQua = { soBanGhiDaThay: number }
+
 // --- "Tạo danh sách bí tích tự động" (nhóm Công cụ dữ liệu, xem cong-cu-du-lieu.md mục 5.2) ---
 export type DuKienDotMoi = { ngay: string; linhMuc: string | null; noiBiTich: string | null; soGiaoDan: number }
 export type TaoDotBiTichXemTruoc = {
