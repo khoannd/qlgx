@@ -47,13 +47,16 @@ type Props = {
    * "Giáo dân mới" này sau đó là việc của nơi gọi (`App.tsx`), không phải của trang này — xem
    * docs/superpowers/specs/man-hinh/can-review-sau.md. */
   onTaoXongChoPicker?: (gd: GiaoDanTimKiem) => void
+  /** Nút "+" của `GxPicker` "Tên Cha"/"Tên Mẹ" ở `GiaoDanDetail` — xem chú thích ở
+   * `GiaoDanDetail.Props.moGiaoDanMoiChoPicker`. */
+  moGiaoDanMoiChoPicker?: (onTaoXong: (gd: GiaoDanTimKiem) => void) => void
 }
 
 /** Container nối `GiaoDanDetail` với `GET`/`PUT /api/giao-dan/{id}` — cùng khuôn tải lại sau
  * khi lưu và xử lý xung đột RowVersion như `GiaDinhDetailPage`. */
 export function GiaoDanDetailPage({
   id, moGiaDinh, moDanhSachGiaoDan, moGiaoDan, onQuayVe, tenTaiKhoan = null, onTieuDe,
-  giaoXuId = null, onTaoXongChoPicker,
+  giaoXuId = null, onTaoXongChoPicker, moGiaoDanMoiChoPicker,
 }: Props) {
   // "Quay về"/"← Danh sách" của GiaoDanDetail gọi đúng MỘT prop `moDanhSachGiaoDan` — ghi đè
   // tại đây bằng `onQuayVe` khi có (mở từ ngữ cảnh gia đình) để không phải sửa GiaoDanDetail.
@@ -271,6 +274,7 @@ export function GiaoDanDetailPage({
           banNhap={banNhapApDung}
           giaoXuId={giaoXuId}
           danhMucTenThanh={danhMucTenThanh}
+          moGiaoDanMoiChoPicker={moGiaoDanMoiChoPicker}
         />
       </>
     )
@@ -388,6 +392,7 @@ export function GiaoDanDetailPage({
           onXoaAnh={api.giaoDan.xoaAnh}
           giaoXuId={giaoXuId}
           danhMucTenThanh={danhMucTenThanh}
+          moGiaoDanMoiChoPicker={moGiaoDanMoiChoPicker}
         />
       )}
     </TrangThaiTai>

@@ -16,6 +16,11 @@ type Props = {
   loaiBiTich: LoaiBiTich
   onTieuDe?: (ten: string) => void
   onDaLuu?: () => void
+  /** Nút "+" của `GxPicker` "Danh sách người nhận" — mở một thẻ "Giáo dân mới" TÁCH BIỆT, tạo
+   * xong tự đóng lại rồi thêm luôn người vừa tạo vào danh sách người nhận (giống hệt `onChon`
+   * khi chọn từ danh sách có sẵn) — cùng cơ chế đã dùng ở `GiaDinhDetail`, xem `GxPicker.tsx`,
+   * `App.moChiTietGiaoDan`, can-review-sau.md mục 19. */
+  moGiaoDanMoiChoPicker?: (onTaoXong: (gd: GiaoDanTimKiem) => void) => void
 }
 
 /**
@@ -23,7 +28,7 @@ type Props = {
  * đầu form, danh sách người nhận (lưới `gxBiTichChiTiet1`) bên dưới. Xem
  * docs/superpowers/specs/man-hinh/so-bi-tich.md.
  */
-export function DotBiTichDetail({ id, loaiBiTich, onTieuDe, onDaLuu }: Props) {
+export function DotBiTichDetail({ id, loaiBiTich, onTieuDe, onDaLuu, moGiaoDanMoiChoPicker }: Props) {
   const [dot, setDot] = useState<DotBiTichDetailType | null>(null)
   const [dangTai, setDangTai] = useState(!!id)
   const [loi, setLoi] = useState<string | null>(null)
@@ -184,7 +189,8 @@ export function DotBiTichDetail({ id, loaiBiTich, onTieuDe, onDaLuu }: Props) {
               <div className="cmdbar" style={{ marginBottom: 8 }}>
                 <b>Danh sách người nhận ({dot.nguoiNhan.length})</b>
                 <div className="spacer" />
-                <GxPicker onChon={(gd) => { void themNguoiNhan(gd) }} onBoChon={() => {}} />
+                <GxPicker onChon={(gd) => { void themNguoiNhan(gd) }} onBoChon={() => {}}
+                  onThemMoi={moGiaoDanMoiChoPicker ? () => moGiaoDanMoiChoPicker((gd) => { void themNguoiNhan(gd) }) : undefined} />
               </div>
               {loiNguoiNhan && <p className="hint" role="alert">{loiNguoiNhan}</p>}
               <div style={{ height: 420 }}>

@@ -16,6 +16,11 @@ type Props = {
    * can-review-sau.md). Lưu (thêm/sửa) KHÔNG điều hướng đi đâu — ở lại lớp để tiếp tục thêm
    * học viên/giáo lý viên, khác hội đoàn (nơi không có màn hình con cần ở lại). */
   onXoaThanhCong?: () => void
+  /** Nút "+" của `GxPicker` danh sách học viên/giáo lý viên — mở một thẻ "Giáo dân mới" TÁCH
+   * BIỆT, tạo xong tự đóng lại rồi thêm luôn người vừa tạo (giống hệt `onChon`) — cùng cơ chế
+   * đã dùng ở `GiaDinhDetail`, xem `GxPicker.tsx`, `App.moChiTietGiaoDan`, can-review-sau.md
+   * mục 19. */
+  moGiaoDanMoiChoPicker?: (onTaoXong: (gd: GiaoDanTimKiem) => void) => void
 }
 
 /**
@@ -26,7 +31,7 @@ type Props = {
  * KHÔNG migrate (thu hẹp phạm vi có chủ đích, xem mục 8 của spec): nút "Chuyển lớp"
  * (`frmChuyenLop.cs`), "Nhập từ Excel"/"Xem mẫu Excel" (`frmImportHocVien.cs`).
  */
-export function LopGiaoLyDetail({ id, khoiId, namMoi, onTieuDe, onXoaThanhCong }: Props) {
+export function LopGiaoLyDetail({ id, khoiId, namMoi, onTieuDe, onXoaThanhCong, moGiaoDanMoiChoPicker }: Props) {
   const [lop, setLop] = useState<LopGiaoLy | null>(null)
   const [dangTai, setDangTai] = useState(!!id)
   const [loi, setLoi] = useState<string | null>(null)
@@ -271,7 +276,8 @@ export function LopGiaoLyDetail({ id, khoiId, namMoi, onTieuDe, onXoaThanhCong }
               <div className="cmdbar" style={{ marginBottom: 8 }}>
                 <b>Danh sách học viên ({hocVien?.length ?? 0})</b>
                 <div className="spacer" />
-                <GxPicker onChon={(gd) => { void themHocVien(gd) }} onBoChon={() => {}} />
+                <GxPicker onChon={(gd) => { void themHocVien(gd) }} onBoChon={() => {}}
+                  onThemMoi={moGiaoDanMoiChoPicker ? () => moGiaoDanMoiChoPicker((gd) => { void themHocVien(gd) }) : undefined} />
               </div>
               {loiHV && <p className="hint" role="alert">{loiHV}</p>}
               {/* `.fixed-h-grid` (qlgx.css) — KHÔNG dùng inline `style={{ height }}` đơn thuần
@@ -322,7 +328,8 @@ export function LopGiaoLyDetail({ id, khoiId, namMoi, onTieuDe, onXoaThanhCong }
               <div className="cmdbar" style={{ marginBottom: 8 }}>
                 <b>Giáo lý viên ({giaoLyVien?.length ?? 0})</b>
                 <div className="spacer" />
-                <GxPicker onChon={(gd) => { void themGiaoLyVien(gd) }} onBoChon={() => {}} />
+                <GxPicker onChon={(gd) => { void themGiaoLyVien(gd) }} onBoChon={() => {}}
+                  onThemMoi={moGiaoDanMoiChoPicker ? () => moGiaoDanMoiChoPicker((gd) => { void themGiaoLyVien(gd) }) : undefined} />
               </div>
               {loiGLV && <p className="hint" role="alert">{loiGLV}</p>}
               <div className="fixed-h-grid" style={{ '--fixed-h-grid': '180px' } as CSSProperties}>

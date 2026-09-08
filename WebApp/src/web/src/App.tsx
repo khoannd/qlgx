@@ -133,6 +133,9 @@ function App() {
           onTaoXongChoPicker={onTaoXongChoPicker
             ? (gd) => { onTaoXongChoPicker(gd); dong(idThe) }
             : undefined}
+          // Nút "+" của GxPicker "Tên Cha"/"Tên Mẹ" — cùng cơ chế của moChiTietGiaDinh ở trên:
+          // mở một thẻ "Giáo dân mới" khác, tạo xong điền ngược rồi tự đóng lại.
+          moGiaoDanMoiChoPicker={(onTaoXong) => moChiTietGiaoDan(null, undefined, onTaoXong)}
         />
       ),
     })
@@ -199,6 +202,7 @@ function App() {
           loaiBiTich={loaiBiTich}
           onTieuDe={(ten) => suaTieuDe(idThe, ten)}
           onDaLuu={moDanhSachSoBiTich}
+          moGiaoDanMoiChoPicker={(onTaoXong) => moChiTietGiaoDan(null, undefined, onTaoXong)}
         />
       ),
     })
@@ -214,7 +218,8 @@ function App() {
       id: idThe,
       tieuDe: id ? 'Đôi rao' : 'Đôi rao mới',
       noiDung: (
-        <RaoHonPhoiDetail id={id} onTieuDe={(ten) => suaTieuDe(idThe, ten)} onDaLuu={moDanhSachRaoHonPhoi} />
+        <RaoHonPhoiDetail id={id} onTieuDe={(ten) => suaTieuDe(idThe, ten)} onDaLuu={moDanhSachRaoHonPhoi}
+          moGiaoDanMoiChoPicker={(onTaoXong) => moChiTietGiaoDan(null, undefined, onTaoXong)} />
       ),
     })
   }
@@ -237,7 +242,8 @@ function App() {
       id: idThe,
       tieuDe: id ? 'Hội đoàn' : 'Hội đoàn mới',
       noiDung: (
-        <HoiDoanDetail id={id} onTieuDe={(ten) => suaTieuDe(idThe, ten)} onDaLuu={moDanhSachHoiDoan} />
+        <HoiDoanDetail id={id} onTieuDe={(ten) => suaTieuDe(idThe, ten)} onDaLuu={moDanhSachHoiDoan}
+          moGiaoDanMoiChoPicker={(onTaoXong) => moChiTietGiaoDan(null, undefined, onTaoXong)} />
       ),
     })
   }
@@ -253,7 +259,8 @@ function App() {
       tieuDe: id ? 'Khối giáo lý' : 'Khối giáo lý mới',
       noiDung: (
         <KhoiGiaoLyDetail id={id} onTieuDe={(ten) => suaTieuDe(idThe, ten)} onDaLuu={moDanhSachKhoiGiaoLy}
-          moLop={moChiTietLopGiaoLy} />
+          moLop={moChiTietLopGiaoLy}
+          moGiaoDanMoiChoPicker={(onTaoXong) => moChiTietGiaoDan(null, undefined, onTaoXong)} />
       ),
     })
   }
@@ -266,7 +273,8 @@ function App() {
       noiDung: (
         <LopGiaoLyDetail id={id} khoiId={khoiId} namMoi={namMoi}
           onTieuDe={(ten) => suaTieuDe(idThe, ten)}
-          onXoaThanhCong={() => dong(idThe)} />
+          onXoaThanhCong={() => dong(idThe)}
+          moGiaoDanMoiChoPicker={(onTaoXong) => moChiTietGiaoDan(null, undefined, onTaoXong)} />
       ),
     })
   }

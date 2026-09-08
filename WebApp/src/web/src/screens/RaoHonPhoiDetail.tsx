@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, LoiXungDot } from '../api/client'
-import type { RaoHonPhoiDetail as RaoHonPhoiDetailType } from '../api/types'
+import type { GiaoDanTimKiem, RaoHonPhoiDetail as RaoHonPhoiDetailType } from '../api/types'
 import { GxDate } from '../components/GxDate'
 import { GxPicker } from '../components/GxPicker'
 import { TrangThaiTai } from '../components/TrangThaiTai'
@@ -9,6 +9,10 @@ type Props = {
   id: string | null
   onTieuDe?: (ten: string) => void
   onDaLuu?: () => void
+  /** Nút "+" của `GxPicker` "Người thứ nhất"/"Người thứ hai" — mở một thẻ "Giáo dân mới" TÁCH
+   * BIỆT, tạo xong tự đóng lại và điền ngược vào ô đang chọn — cùng cơ chế đã dùng ở
+   * `GiaDinhDetail`, xem `GxPicker.tsx`, `App.moChiTietGiaoDan`, can-review-sau.md mục 19. */
+  moGiaoDanMoiChoPicker?: (onTaoXong: (gd: GiaoDanTimKiem) => void) => void
 }
 
 type Nhap = {
@@ -50,7 +54,7 @@ function tuChiTiet(d: RaoHonPhoiDetailType): Nhap {
  * Chi tiết một đôi rao hôn phối — khớp `frmRaoHonPhoi.cs`. Không migrate "In điều tra hôn
  * phối"/"In kết quả rao hôn phối" (usePrint) ở lượt này — xem rao-hon-phoi.md mục 8.
  */
-export function RaoHonPhoiDetail({ id, onTieuDe, onDaLuu }: Props) {
+export function RaoHonPhoiDetail({ id, onTieuDe, onDaLuu, moGiaoDanMoiChoPicker }: Props) {
   const [rao, setRao] = useState<RaoHonPhoiDetailType | null>(null)
   const [nhap, setNhap] = useState<Nhap>(RONG)
   const [dangTai, setDangTai] = useState(!!id)
@@ -136,6 +140,9 @@ export function RaoHonPhoiDetail({ id, onTieuDe, onDaLuu }: Props) {
               <div className="field"><label>Giáo dân</label>
                 <GxPicker value={nhap.tenGiaoDan1}
                   onChon={(gd) => setNhap((n) => ({ ...n, giaoDan1Id: gd.id, tenGiaoDan1: (gd.tenThanh ? gd.tenThanh + ' ' : '') + gd.hoTen }))}
+                  onThemMoi={moGiaoDanMoiChoPicker
+                    ? () => moGiaoDanMoiChoPicker((gd) => setNhap((n) => ({ ...n, giaoDan1Id: gd.id, tenGiaoDan1: (gd.tenThanh ? gd.tenThanh + ' ' : '') + gd.hoTen })))
+                    : undefined}
                   onBoChon={() => setNhap((n) => ({ ...n, giaoDan1Id: null, tenGiaoDan1: '' }))} />
               </div>
               <div className="field"><label>Giáo xứ</label><input value={nhap.giaoXu1} onChange={(e) => d('giaoXu1', e.target.value)} /></div>
@@ -150,6 +157,9 @@ export function RaoHonPhoiDetail({ id, onTieuDe, onDaLuu }: Props) {
               <div className="field"><label>Giáo dân</label>
                 <GxPicker value={nhap.tenGiaoDan2}
                   onChon={(gd) => setNhap((n) => ({ ...n, giaoDan2Id: gd.id, tenGiaoDan2: (gd.tenThanh ? gd.tenThanh + ' ' : '') + gd.hoTen }))}
+                  onThemMoi={moGiaoDanMoiChoPicker
+                    ? () => moGiaoDanMoiChoPicker((gd) => setNhap((n) => ({ ...n, giaoDan2Id: gd.id, tenGiaoDan2: (gd.tenThanh ? gd.tenThanh + ' ' : '') + gd.hoTen })))
+                    : undefined}
                   onBoChon={() => setNhap((n) => ({ ...n, giaoDan2Id: null, tenGiaoDan2: '' }))} />
               </div>
               <div className="field"><label>Giáo xứ</label><input value={nhap.giaoXu2} onChange={(e) => d('giaoXu2', e.target.value)} /></div>

@@ -624,6 +624,11 @@ type Props = {
    * truyền = tắt phần lịch sử ở mọi ô `GxGoiY` trong form này (các bài test dựng component độc
    * lập không cần biết tới cơ chế này). */
   giaoXuId?: string | null
+  /** Nút "+" của `GxPicker` "Tên Cha"/"Tên Mẹ" — mở một thẻ "Giáo dân mới" TÁCH BIỆT, tạo xong
+   * tự đóng lại và điền ngược vào đúng ô đang chọn (`chonCha`/`chonMe`), cùng cơ chế đã dùng ở
+   * `GiaDinhDetail` (Người nam/Người nữ/"Thêm thành viên") — xem `GxPicker.tsx`,
+   * `App.moChiTietGiaoDan`, can-review-sau.md mục 19. Không truyền = nút "+" vô hiệu hoá. */
+  moGiaoDanMoiChoPicker?: (onTaoXong: (gd: GiaoDanTimKiem) => void) => void
   /** Danh mục "Tên thánh" tĩnh (GET /api/danh-muc/ten-thanh, bảng `du_lieu_chung`) — một trong
    * hai nguồn gợi ý của ô "Tên thánh", xem `GxGoiY`. */
   danhMucTenThanh?: string[]
@@ -672,7 +677,7 @@ export function GiaoDanDetail({
   danhMucHoiDoan = [], danhMucGiaoHo = [], khoaBanNhap = null, tenTaiKhoan = null, banNhap = null,
   onIn, dangIn = false,
   onLayAnh, onTaiAnhLen, onXoaAnh,
-  giaoXuId = null, danhMucTenThanh = [],
+  giaoXuId = null, danhMucTenThanh = [], moGiaoDanMoiChoPicker,
 }: Props) {
   // banNhap (nếu người dùng vừa bấm "Khôi phục" ở BanNhapBanner) đè lên dữ liệu gốc — xem chú
   // thích ở Props.banNhap. Container LUÔN đổi `key` khi truyền banNhap mới nên các state dưới
@@ -836,10 +841,12 @@ export function GiaoDanDetail({
             </GxField>
             <GxField label="Tên Cha" id="gd-tencha">
               <GxPicker id="gd-tencha" value={tenCha} onChon={chonCha}
+                onThemMoi={moGiaoDanMoiChoPicker ? () => moGiaoDanMoiChoPicker(chonCha) : undefined}
                 onBoChon={() => { setChaId(null); setTenCha(null) }} />
             </GxField>
             <GxField label="Tên Mẹ" id="gd-tenme">
               <GxPicker id="gd-tenme" value={tenMe} onChon={chonMe}
+                onThemMoi={moGiaoDanMoiChoPicker ? () => moGiaoDanMoiChoPicker(chonMe) : undefined}
                 onBoChon={() => { setMeId(null); setTenMe(null) }} />
             </GxField>
           </div>

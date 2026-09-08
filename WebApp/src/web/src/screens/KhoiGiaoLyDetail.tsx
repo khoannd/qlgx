@@ -11,6 +11,10 @@ type Props = {
   onTieuDe?: (ten: string) => void
   onDaLuu?: () => void
   moLop: (lopId: string | null, khoiId: string, namMoi?: number) => void
+  /** Nút "+" của `GxPicker` "Người quản lý" — mở một thẻ "Giáo dân mới" TÁCH BIỆT, tạo xong tự
+   * đóng lại và điền ngược vào ô đang chọn — cùng cơ chế đã dùng ở `GiaDinhDetail`, xem
+   * `GxPicker.tsx`, `App.moChiTietGiaoDan`, can-review-sau.md mục 19. */
+  moGiaoDanMoiChoPicker?: (onTaoXong: (gd: GiaoDanTimKiem) => void) => void
 }
 
 const NAM_HIEN_TAI = new Date().getFullYear()
@@ -24,7 +28,7 @@ const NAM_HIEN_TAI = new Date().getFullYear()
  * mỗi thao tác gọi API ngay; bấm "Thêm lớp"/mở một lớp mở một THẺ TÀI LIỆU riêng
  * (`LopGiaoLyDetail`) thay vì hộp thoại modal lồng nhau như bản gốc.
  */
-export function KhoiGiaoLyDetail({ id, onTieuDe, onDaLuu, moLop }: Props) {
+export function KhoiGiaoLyDetail({ id, onTieuDe, onDaLuu, moLop, moGiaoDanMoiChoPicker }: Props) {
   const [khoi, setKhoi] = useState<KhoiGiaoLy | null>(null)
   const [dangTai, setDangTai] = useState(!!id)
   const [loi, setLoi] = useState<string | null>(null)
@@ -144,6 +148,9 @@ export function KhoiGiaoLyDetail({ id, onTieuDe, onDaLuu, moLop }: Props) {
                 id="kgl-nguoiql"
                 value={nguoiQuanLy?.ten}
                 onChon={(gd: GiaoDanTimKiem) => setNguoiQuanLy({ id: gd.id, ten: (gd.tenThanh ? gd.tenThanh + ' ' : '') + gd.hoTen })}
+                onThemMoi={moGiaoDanMoiChoPicker
+                  ? () => moGiaoDanMoiChoPicker((gd) => setNguoiQuanLy({ id: gd.id, ten: (gd.tenThanh ? gd.tenThanh + ' ' : '') + gd.hoTen }))
+                  : undefined}
                 onBoChon={() => setNguoiQuanLy(null)}
               />
             </div>

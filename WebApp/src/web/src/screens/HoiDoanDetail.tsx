@@ -11,6 +11,10 @@ type Props = {
   id: string | null
   onTieuDe?: (ten: string) => void
   onDaLuu?: () => void
+  /** Nút "+" của `GxPicker` danh sách hội viên — mở một thẻ "Giáo dân mới" TÁCH BIỆT, tạo xong
+   * tự đóng lại rồi thêm luôn người vừa tạo làm hội viên (giống hệt `onChon`) — cùng cơ chế đã
+   * dùng ở `GiaDinhDetail`, xem `GxPicker.tsx`, `App.moChiTietGiaoDan`, can-review-sau.md mục 19. */
+  moGiaoDanMoiChoPicker?: (onTaoXong: (gd: GiaoDanTimKiem) => void) => void
 }
 
 /**
@@ -25,7 +29,7 @@ type Props = {
  * chừng. Không migrate y hệt các hộp thoại Yes/No/Cancel phức tạp (kiểm tra hội trưởng duy
  * nhất, ngày không được ở tương lai, trùng tên hội đoàn...) — xem can-review-sau.md.
  */
-export function HoiDoanDetail({ id, onTieuDe, onDaLuu }: Props) {
+export function HoiDoanDetail({ id, onTieuDe, onDaLuu, moGiaoDanMoiChoPicker }: Props) {
   const [hd, setHd] = useState<HoiDoanQuanLy | null>(null)
   const [dangTai, setDangTai] = useState(!!id)
   const [loi, setLoi] = useState<string | null>(null)
@@ -267,7 +271,8 @@ export function HoiDoanDetail({ id, onTieuDe, onDaLuu }: Props) {
                   Hiện cả người đã ra khỏi hội đoàn
                 </label>
                 <div className="spacer" />
-                <GxPicker onChon={(gd) => { void themThanhVien(gd) }} onBoChon={() => {}} />
+                <GxPicker onChon={(gd) => { void themThanhVien(gd) }} onBoChon={() => {}}
+                  onThemMoi={moGiaoDanMoiChoPicker ? () => moGiaoDanMoiChoPicker((gd) => { void themThanhVien(gd) }) : undefined} />
               </div>
               {loiTV && <p className="hint" role="alert">{loiTV}</p>}
               {/* `.fixed-h-grid` (qlgx.css) — KHÔNG đổi lại thành inline `style={{ height }}`
