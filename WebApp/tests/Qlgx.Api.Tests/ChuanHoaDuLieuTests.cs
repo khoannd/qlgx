@@ -13,6 +13,90 @@ namespace Qlgx.Api.Tests;
 /// </summary>
 public class ChuanHoaDuLieuTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
 {
+    // Bản SAO độc lập của đúng danh sách cột CotGiaoDan/CotGiaDinh trong ChuanHoaDuLieuService
+    // (private, không đọc được từ test qua InternalsVisibleTo) — dùng để dựng dữ liệu chạm ĐỦ
+    // từng cột rồi khoá cứng số lượng/tên cột PHẢI khớp trong kết quả xem trước. Nếu ai vô tình
+    // xoá một cột (ví dụ DiaChi) khỏi danh sách thật trong service, test dưới đây phải ĐỎ vì
+    // dòng vừa dựng vẫn có DiaChi bị đổi giá trị thật nhưng service không còn báo cáo nó nữa.
+    private static readonly string[] TenCotGiaoDan =
+    [
+        "HoTen", "TenThanh", "Phai", "NoiSinh", "CMND", "DanToc", "ThuocGiaoXu", "ThuocGiaoPhan",
+        "DiaChi", "DienThoai", "Email", "HoTenCha", "HoTenMe", "NoiRuaToi", "ChaRuaToi",
+        "NguoiDoDauRuaToi", "NoiRuocLe", "ChaRuocLe", "NoiThemSuc", "ChaThemSuc",
+        "NguoiDoDauThemSuc", "NguoiXucDau", "TinhTrangXucDau", "GhiChuXucDau", "NoiBD1", "NoiBD2",
+        "NoiTHVaoDoi", "NoiGLHN", "NguoiChungNhanGLHN", "XepLoaiGLHN", "TrinhDoVanHoa",
+        "TrinhDoChuyenMon", "BietNgoaiNgu", "NgheNghiep", "NoiQuaDoi", "NoiAnTang",
+    ];
+
+    private static readonly string[] TenCotGiaDinh =
+        ["MaGiaDinhRieng", "TenGiaDinh", "DienThoai", "DiaChi", "DienGiaDinh"];
+
+    /// <summary>
+    /// LỖ HỔNG TEST 2 (review-toan-nhanh-test.md mục 1c) — trước bản sửa này, 7/7 test đều xanh
+    /// dù đột biến xoá hẳn cột DiaChi khỏi CotGiaoDan: không test nào lặp qua toàn bộ danh sách
+    /// cột hay khẳng định riêng DiaChi. Dựng MỘT giáo dân có ĐỦ 36 cột trong TenCotGiaoDan bị
+    /// đặt giá trị chưa chuẩn hoá (chữ thường), rồi khoá cứng: tập TÊN CỘT trả về trong xem
+    /// trước phải khớp CHÍNH XÁC danh sách 36 cột — thiếu một cột nào (kể cả DiaChi) là ĐỎ.
+    ///
+    /// BẰNG CHỨNG ĐỎ→XANH (task-sua-review-backend-2.md): xoá dòng ("DiaChi", ...) khỏi
+    /// CotGiaoDan trong ChuanHoaDuLieuService.cs (đúng đột biến của review-toan-nhanh-test.md)
+    /// làm test này ĐỎ (tập tên cột trả về chỉ còn 35, thiếu "DiaChi") — đã chạy thật để xác
+    /// nhận, rồi khôi phục nguyên văn.
+    /// </summary>
+    [Fact]
+    public async Task Xem_truoc_giao_dan_khoa_cung_du_36_cot_bao_gom_dia_chi()
+    {
+        await using var db = app.TaoContextThuan();
+        var gd = new GiaoDan { GiaoXuId = app.GiaoXuId, MaGiaoDanCu = 94060, HoTen = "" };
+        var kieu = typeof(GiaoDan);
+        foreach (var ten in TenCotGiaoDan)
+            kieu.GetProperty(ten)!.SetValue(gd, "gia tri chua chuan hoa");
+        db.GiaoDan.Add(gd);
+        await db.SaveChangesAsync();
+
+        var client = app.CreateAuthClient();
+        var res = await client.PostAsync("/api/cong-cu-du-lieu/chuan-hoa/giao-dan/xem-truoc", null);
+        res.EnsureSuccessStatusCode();
+        var kq = await res.Content.ReadFromJsonAsync<ChuanHoaXemTruocKetQua>();
+
+        var dong = kq!.MauThayDoi.Should().ContainSingle(d => d.Id == gd.Id).Subject;
+        dong.Truong.Select(t => t.TenTruong).Should().BeEquivalentTo(TenCotGiaoDan,
+            "khoa cung DUNG danh sach cot duoc chuan hoa - ai vo tinh xoa mot cot (vi du DiaChi) " +
+            "khoi CotGiaoDan trong service phai bi test nay bat duoc, khong duoc am tham lot qua");
+        dong.Truong.Should().Contain(t => t.TenTruong == "DiaChi" && t.GiaTriMoi == "Gia Tri Chua Chuan Hoa",
+            "DiaChi phai nam trong pham vi cot duoc chuan hoa, dung nhu tai lieu lop cam ket");
+
+        // Don dep: ghi that de chuan hoa lai dong vua tao - CSDL dung chung giua cac [Fact] trong
+        // CUNG mot lop (IClassFixture), de lai dong CHUA chuan hoa se lam sai SoBanGhiSeDoi cua
+        // cac test khac (dem TOAN BO giao dan cua giao xu, khong loc rieng theo dong vua tao).
+        (await client.PostAsync("/api/cong-cu-du-lieu/chuan-hoa/giao-dan", null)).EnsureSuccessStatusCode();
+    }
+
+    /// <summary>Cùng dạng khoá cứng như trên nhưng cho CotGiaDinh (5 cột) — bao gồm DiaChi.</summary>
+    [Fact]
+    public async Task Xem_truoc_gia_dinh_khoa_cung_du_5_cot_bao_gom_dia_chi()
+    {
+        await using var db = app.TaoContextThuan();
+        var gdinh = new GiaDinh { GiaoXuId = app.GiaoXuId, MaGiaDinhCu = 94061, TenGiaDinh = "" };
+        var kieu = typeof(GiaDinh);
+        foreach (var ten in TenCotGiaDinh)
+            kieu.GetProperty(ten)!.SetValue(gdinh, "gia tri chua chuan hoa");
+        db.GiaDinh.Add(gdinh);
+        await db.SaveChangesAsync();
+
+        var client = app.CreateAuthClient();
+        var res = await client.PostAsync("/api/cong-cu-du-lieu/chuan-hoa/gia-dinh/xem-truoc", null);
+        res.EnsureSuccessStatusCode();
+        var kq = await res.Content.ReadFromJsonAsync<ChuanHoaXemTruocKetQua>();
+
+        var dong = kq!.MauThayDoi.Should().ContainSingle(d => d.Id == gdinh.Id).Subject;
+        dong.Truong.Select(t => t.TenTruong).Should().BeEquivalentTo(TenCotGiaDinh,
+            "khoa cung DUNG danh sach cot duoc chuan hoa cua gia dinh, bao gom DiaChi");
+
+        // Don dep: xem chu thich o test GiaoDan tuong ung o tren.
+        (await client.PostAsync("/api/cong-cu-du-lieu/chuan-hoa/gia-dinh", null)).EnsureSuccessStatusCode();
+    }
+
     [Fact]
     public async Task Xem_truoc_giao_dan_dem_dung_so_ban_ghi_se_doi_khong_ghi_gi()
     {

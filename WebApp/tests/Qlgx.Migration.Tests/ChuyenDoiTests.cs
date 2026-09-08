@@ -845,4 +845,47 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
             .Should().Be(1);
         BaoCaoDoiChieu.TimBangLech(kq).Should().BeEmpty();
     }
+
+    /// <summary>
+    /// Sửa review-toan-nhanh-dulieu.md mục T2: 24 lệnh Ghi* trước đây không nằm trong MỘT
+    /// transaction bao trọn — lỗi ở một bảng giữa chừng để lại giáo xứ mới nhập DỞ DANG (bảng
+    /// ghi TRƯỚC lỗi đã commit thật, bảng SAU thì không). Test này ép lỗi thật ở GhiGiaoHo (bảng
+    /// thứ 4 trong 24 bảng — GiaoPhan/GiaoHat/GiaoXu ghi TRƯỚC nó, GiaDinh/GiaoDan/... ghi SAU
+    /// nó): một giáo họ tham chiếu GiaoHoChaId (mã cũ 99999) KHÔNG tồn tại trong tập dữ liệu
+    /// nguồn của lần chạy này — GhiGiaoHo không có bước lọc mồ côi cho khoá tự tham chiếu này
+    /// (khác BiTichChiTiet/ChuyenXu/...), nên ANH() vẫn sinh một UUID không khớp bản ghi nào,
+    /// PostgreSQL từ chối bằng lỗi khoá ngoại (FK Restrict, GiaoHoConfig.cs) khi SaveChangesAsync
+    /// chạy. TRƯỚC bản sửa: GiaoPhan/GiaoHat/GiaoXu (ghi ở 3 bước trước đó, mỗi bước tự
+    /// SaveChangesAsync + không transaction bao ngoài) đã COMMIT XONG dù cả lượt Chay() sau đó
+    /// ném ngoại lệ — giáo xứ nửa vời. SAU bản sửa: một transaction DUY NHẤT bao cả 24 bước, nên
+    /// GiaoXu (và mọi thứ ghi trước GiaoHo) PHẢI biến mất cùng với GiaoHo khi rollback.
+    /// </summary>
+    [Fact]
+    public async Task Loi_giua_chung_lam_rollback_sach_ca_nhung_bang_da_ghi_truoc_do()
+    {
+        var mau = NguonMau(24);
+        // Giáo họ thứ hai tham chiếu MaGiaoHoCha=99999 - mã KHÔNG tồn tại trong tập GiaoHo của
+        // lần chạy này -> vi phạm khoá ngoại tự tham chiếu khi ghi thật (không có orphan-skip
+        // cho trường hợp này, khác BiTichChiTiet/ChuyenXu).
+        mau.Nguon.GiaoHo.Add(new DongGiaoHo(MaGiaoHo: 240, TenGiaoHo: "Giao ho mo coi cha",
+            MaGiaoHoCha: 99999, DaXoa: false, MaNhanDang: "GH-240", UpdateDate: null));
+        var giaoXuId = Guid.NewGuid();
+        await using var ctx = db.TaoContext();
+        ctx.GiaoXu.Add(new GiaoXu { Id = giaoXuId, TenGiaoXu = "Giao xu se bi rollback", MaGiaoXuCu = 996 });
+        await ctx.SaveChangesAsync();
+
+        var hanhDong = async () => await new ChuyenDoiDuLieu(ctx, giaoXuId, new BangAnhXaId())
+            .Chay(mau.Nguon, chayThu: false, CancellationToken.None);
+
+        await hanhDong.Should().ThrowAsync<DbUpdateException>();
+
+        // Dùng MỘT context KHÁC để đọc lại CSDL thật (không phải bộ nhớ đệm của context vừa
+        // ném lỗi) - phải thấy TOÀN BỘ dữ liệu của lần chạy này đã biến mất, kể cả 3 bảng
+        // (GiaoPhan/GiaoHat/GiaoXu) ghi TRƯỚC bảng lỗi và đã tự SaveChangesAsync xong.
+        await using var kiemTra = db.TaoContext();
+        (await kiemTra.GiaoXu.CountAsync(x => x.Id == giaoXuId && x.MaGiaoXuCu == 1)).Should().Be(0,
+            "GiaoXu duoc ghi o buoc 3, TRUOC buoc GiaoHo bi loi - phai rollback theo");
+        (await kiemTra.GiaoHo.CountAsync(x => x.MaGiaoHoCu == mau.MaGiaoHo && x.GiaoXuId == giaoXuId)).Should().Be(0,
+            "giao ho hop le trong CUNG mot lan ghi cung phai rollback vi chung mot SaveChangesAsync voi dong loi");
+    }
 }

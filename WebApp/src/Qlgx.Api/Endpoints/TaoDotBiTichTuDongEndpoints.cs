@@ -22,7 +22,11 @@ public static class TaoDotBiTichTuDongEndpoints
         {
             var loi = KiemTraYeuCau(yc);
             if (loi is not null) return Results.BadRequest(new { thongBao = loi });
-            return Results.Ok(await dv.TaoTuDong(yc, ct));
+            var (ketQua, loiGhi) = await dv.TaoTuDong(yc, ct);
+            // Vi phạm ràng buộc duy nhất cấp CSDL (race condition hai request đồng thời, xem
+            // TaoDotBiTichTuDongService.TaoTuDong) — trả 409 kèm thông báo tiếng Việt thay vì để
+            // lộ 500 thô.
+            return loiGhi is not null ? Results.Conflict(new { thongBao = loiGhi }) : Results.Ok(ketQua);
         });
     }
 

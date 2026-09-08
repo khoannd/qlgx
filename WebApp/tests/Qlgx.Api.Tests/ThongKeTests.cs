@@ -120,6 +120,59 @@ public class ThongKeTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
         res!.GiaoDan.Should().BeEmpty("Extract.cs tính fromYear/toYear đảo ngược khi Từ tuổi < Đến tuổi — bug gốc, migrate y hệt");
     }
 
+    /// <summary>
+    /// LỖ HỔNG TEST 1 (review-toan-nhanh-test.md mục 1a) — trước bản sửa này, đột biến hoán đổi
+    /// vai trò Chồng ↔ Vợ ở ThongKeService.cs:238-239 không có test nào bắt được: test
+    /// <see cref="Gia_truong_voi_khoang_tuoi_that_luon_ra_danh_sach_rong_bug_can_dao_nguoc"/> luôn
+    /// kỳ vọng danh sách RỖNG (cố ý rơi vào bug cận tuổi đảo ngược để khoá bug gốc lại) nên không
+    /// phân biệt được điều kiện lọc VaiTro đúng hay sai — bất kỳ điều kiện nào cũng cho cùng kết
+    /// quả rỗng. "Hiền mẫu" không có test nào cả trong toàn bộ 50 commit trước đó.
+    ///
+    /// Test này NÉ bug cận tuổi đảo ngược bằng cách chọn tuTuoi=40 > denTuoi=20 (fromYear =
+    /// nay-40 &lt;= toYear = nay-20 — khoảng NĂM SINH hợp lệ, không rỗng do BETWEEN đảo chiều),
+    /// dựng MỘT gia đình có cả Chồng lẫn Vợ cùng nằm trong khoảng năm sinh đó, rồi khẳng định
+    /// GiaTruong CHỈ trả về người Chồng và HienMau CHỈ trả về người Vợ — phân biệt thật được hai
+    /// vai trò, độc lập với bug tuổi (không sửa bug đó — xem can-review-sau.md mục 59).
+    ///
+    /// BẰNG CHỨNG ĐỎ→XANH (task-sua-review-backend-2.md): hoán đổi VaiTro.Vo ↔ VaiTro.Chong ở
+    /// ThongKeService.cs:238-239 (đúng đột biến của review-toan-nhanh-test.md) làm 2 assert dưới
+    /// đây ĐỎ (GiaTruong trả về Vợ thay vì Chồng, HienMau trả về Chồng thay vì Vợ) — đã chạy thật
+    /// để xác nhận, rồi khôi phục nguyên văn.
+    /// </summary>
+    [Fact]
+    public async Task Gia_truong_chi_ra_chong_va_hien_mau_chi_ra_vo_khong_lan_vai_tro()
+    {
+        var nay = DateTime.Now.Year;
+        // tuTuoi=40, denTuoi=20 (Từ tuổi > Đến tuổi) -> fromYear=nay-40 <= toYear=nay-20, tránh
+        // đúng bug cận tuổi đảo ngược của mục 4.3 (khác test bên trên cố tình rơi vào bug đó).
+        var giaDinh = new GiaDinh { GiaoXuId = app.GiaoXuId, MaGiaDinhCu = 30002, TenGiaDinh = "GD Chong Vo" };
+        var chongId = await TaoGiaoDan(20031, "Ong Chong That", new DateOnly(nay - 30, 1, 1), phai: "Nam");
+        var voId = await TaoGiaoDan(20032, "Ba Vo That", new DateOnly(nay - 28, 1, 1), phai: "Nữ");
+        await using (var db = app.TaoContextThuan())
+        {
+            db.GiaDinh.Add(giaDinh);
+            await db.SaveChangesAsync();
+            db.ThanhVienGiaDinh.AddRange(
+                new ThanhVienGiaDinh { GiaoXuId = app.GiaoXuId, GiaDinhId = giaDinh.Id, GiaoDanId = chongId, VaiTro = VaiTroGiaDinh.Chong, ChuHo = true },
+                new ThanhVienGiaDinh { GiaoXuId = app.GiaoXuId, GiaDinhId = giaDinh.Id, GiaoDanId = voId, VaiTro = VaiTroGiaDinh.Vo, ChuHo = false });
+            await db.SaveChangesAsync();
+        }
+
+        var client = app.CreateAuthClient();
+        var giaTruong = await client.GetFromJsonAsync<ThongKeChungKetQua>(
+            "/api/thong-ke/chung?dieuKien=GiaTruong&tuTuoi=40&denTuoi=20");
+        var hienMau = await client.GetFromJsonAsync<ThongKeChungKetQua>(
+            "/api/thong-ke/chung?dieuKien=HienMau&tuTuoi=40&denTuoi=20");
+
+        giaTruong!.GiaoDan.Should().Contain(x => x.MaGiaoDanCu == 20031, "gia truong phai la CHONG")
+            .And.NotContain(x => x.MaGiaoDanCu == 20032, "gia truong KHONG duoc lan sang vo");
+        giaTruong.Nhan.Should().Be(" gia trưởng");
+
+        hienMau!.GiaoDan.Should().Contain(x => x.MaGiaoDanCu == 20032, "hien mau phai la VO")
+            .And.NotContain(x => x.MaGiaoDanCu == 20031, "hien mau KHONG duoc lan sang chong");
+        hienMau.Nhan.Should().Be(" hiền mẫu");
+    }
+
     [Fact]
     public async Task Gioi_tre_18_30_tuoi_luon_ra_danh_sach_rong_bug_can_dao_nguoc()
     {

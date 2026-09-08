@@ -112,6 +112,21 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         if (chayThu)
             return new KetQuaChuyenDoi(soNguon, new Dictionary<string, int>(), _canhBao);
 
+        // SỬA (review-toan-nhanh-dulieu.md mục T2): 24 lệnh Ghi* bên dưới trước đây mỗi hàm tự
+        // SaveChangesAsync riêng, KHÔNG có transaction bao trọn cả Chay() — lỗi giữa chừng (mất
+        // kết nối, dữ liệu Access xấu ở bảng thứ 15, tiến trình API bị restart giữa chừng) để
+        // lại giáo xứ mới nhập DỞ DANG (một số bảng đã commit thật, một số thì không), không rõ
+        // ghi tới đâu. Bọc TOÀN BỘ phần ghi trong đúng MỘT transaction — hỏng ở bất kỳ đâu thì
+        // quay lui sạch toàn bộ, khớp nguyên tắc "một transaction" đã áp dụng nhất quán ở các
+        // service khác (ChuyenHoService, GiaoLyService, ChuanHoaDuLieuService...). Có hiệu lực
+        // cho CẢ HAI đường gọi công cụ này (Qlgx.Migration dòng lệnh lẫn NhapDuLieuService từ
+        // giao diện web) vì cả hai đều gọi thẳng ChuyenDoiDuLieu.Chay(db, ...) với CÙNG một
+        // QlgxDbContext — bọc ở đây là bọc chung một lần cho cả hai, không cần sửa hai nơi.
+        // "Chạy lại nhiều lần không tạo bản ghi trùng" (idempotent, xem tài liệu lớp) không đổi:
+        // BangAnhXaId vẫn sinh cùng UUID theo (bảng, mã cũ), transaction chỉ đổi chỗ commit từ
+        // "sau mỗi bảng" thành "sau khi ghi hết" — không đổi khoá tìm-thấy-thì-sửa.
+        await using var giaoTac = await db.Database.BeginTransactionAsync(ct);
+
         // Thứ tự bắt buộc theo chiều phụ thuộc khoá ngoại: GiaoPhan → GiaoHat → GiaoXu → ...
         await GhiGiaoPhan(giaoPhan, ct);
         await GhiGiaoHat(giaoHat, ct);
@@ -190,6 +205,7 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             ["chi_tiet_hoi_doan"] = await db.ChiTietHoiDoan.CountAsync(x => x.GiaoXuId == giaoXuId, ct)
         };
 
+        await giaoTac.CommitAsync(ct);
         return new KetQuaChuyenDoi(soNguon, soDich, _canhBao);
     }
 

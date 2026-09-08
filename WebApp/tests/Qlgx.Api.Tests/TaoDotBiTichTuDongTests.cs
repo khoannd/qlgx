@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Qlgx.Api.Dtos;
 using Qlgx.Domain;
 using Qlgx.Domain.Entities;
@@ -119,6 +120,86 @@ public class TaoDotBiTichTuDongTests(QlgxApiFactory app) : IClassFixture<QlgxApi
             new TaoDotBiTichTuDongRequest(LoaiBiTich.RuaToi, null, null, new DateOnly(2021, 2, 1), new DateOnly(2021, 1, 1)));
 
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    /// <summary>
+    /// Lưới an toàn CSDL cuối cho race condition (review-toan-nhanh-dulieu.md mục C1): kể cả
+    /// khi hai đợt được tạo qua hai <c>QlgxDbContext</c> KHÁC NHAU (không đi qua
+    /// TaoTuDong/TinhToan — mô phỏng đúng tình huống 2 transaction song song, mỗi bên không
+    /// thấy commit của bên kia), ràng buộc UNIQUE cấp CSDL vẫn phải chặn — không được chỉ dựa
+    /// vào SELECT-rồi-INSERT ở tầng ứng dụng. Cũng chứng minh chỉ mục BIỂU THỨC bắt đúng cả
+    /// khác biệt hoa/thường và khoảng trắng đầu/cuối của LinhMuc (đúng khoá nhóm mà
+    /// TaoDotBiTichTuDongService.TinhToan dùng).
+    /// </summary>
+    [Fact]
+    public async Task Rang_buoc_CSDL_chan_hai_dot_trung_nhom_du_tao_qua_hai_context_rieng()
+    {
+        var ngay = new DateOnly(2023, 7, 1);
+        await using (var ctx1 = app.TaoContextThuan())
+        {
+            ctx1.DotBiTich.Add(new DotBiTich
+            {
+                GiaoXuId = app.GiaoXuId, LoaiBiTich = LoaiBiTich.RuaToi, NgayBiTich = ngay,
+                LinhMuc = "Cha Rang Buoc", MaDotBiTichCu = 900001,
+            });
+            await ctx1.SaveChangesAsync();
+        }
+
+        await using var ctx2 = app.TaoContextThuan();
+        ctx2.DotBiTich.Add(new DotBiTich
+        {
+            // Khác hoa/thường + có khoảng trắng đầu/cuối - vẫn phải bị coi là CÙNG nhóm.
+            GiaoXuId = app.GiaoXuId, LoaiBiTich = LoaiBiTich.RuaToi, NgayBiTich = ngay,
+            LinhMuc = "  cha rang buoc  ", MaDotBiTichCu = 900002,
+        });
+
+        var hanhDong = async () => await ctx2.SaveChangesAsync();
+
+        (await hanhDong.Should().ThrowAsync<DbUpdateException>())
+            .Which.InnerException.Should().BeOfType<PostgresException>()
+            .Which.SqlState.Should().Be(PostgresErrorCodes.UniqueViolation);
+    }
+
+    /// <summary>
+    /// Kịch bản thật của mục C1: người dùng bấm "Xác nhận tạo" nhiều lần liên tiếp (tưởng bị
+    /// treo) khiến nhiều request chạy chồng lấn. Dù có request nào "thua cuộc đua" hay không
+    /// (phụ thuộc lịch chạy của hệ điều hành/DB, không đảm bảo lúc nào cũng xảy ra), khẳng định
+    /// PHẢI đúng luôn: CSDL không bao giờ có 2 đợt trùng nhóm, và request thua cuộc (nếu có)
+    /// nhận đúng 409 kèm thông báo tiếng Việt — không phải 500 thô lộ chi tiết ngoại lệ .NET.
+    /// </summary>
+    [Fact]
+    public async Task Nhieu_yeu_cau_dong_thoi_khong_bao_gio_tao_trung_dot_va_khong_lo_loi_500_tho()
+    {
+        await using var db = app.TaoContextThuan();
+        db.GiaoDan.AddRange(
+            new GiaoDan { GiaoXuId = app.GiaoXuId, MaGiaoDanCu = 95040, HoTen = "GD1", NgayRuaToi = new DateOnly(2022, 4, 10), ChaRuaToi = "Cha Dong Thoi" },
+            new GiaoDan { GiaoXuId = app.GiaoXuId, MaGiaoDanCu = 95041, HoTen = "GD2", NgayRuaToi = new DateOnly(2022, 4, 10), ChaRuaToi = "Cha Dong Thoi" });
+        await db.SaveChangesAsync();
+
+        var yc = new TaoDotBiTichTuDongRequest(LoaiBiTich.RuaToi, null, null, new DateOnly(2022, 4, 1), new DateOnly(2022, 4, 30));
+
+        const int soLuong = 8;
+        var tasks = Enumerable.Range(0, soLuong)
+            .Select(_ => app.CreateAuthClient().PostAsJsonAsync("/api/cong-cu-du-lieu/tao-dot-bi-tich", yc))
+            .ToArray();
+        var responses = await Task.WhenAll(tasks);
+
+        foreach (var res in responses)
+            res.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.Conflict);
+
+        foreach (var res in responses.Where(r => r.StatusCode == HttpStatusCode.Conflict))
+        {
+            var noiDung = await res.Content.ReadAsStringAsync();
+            noiDung.Should().Contain("thongBao");
+            noiDung.Should().NotContain("PostgresException").And.NotContain("23505")
+                .And.NotContain("Exception");
+        }
+
+        await using var kiemTra = app.TaoContextThuan();
+        (await kiemTra.DotBiTich.CountAsync(d => d.LinhMuc == "Cha Dong Thoi")).Should().Be(1,
+            "khong duoc phep co 2 dot trung linh muc/ngay du bao nhieu request chay dong thoi");
+        (await kiemTra.BiTichChiTiet.CountAsync(c => c.DotBiTich!.LinhMuc == "Cha Dong Thoi"))
+            .Should().Be(2, "ca 2 giao dan khop dieu kien deu phai duoc them, khong thieu khong trung");
     }
 
     [Fact]

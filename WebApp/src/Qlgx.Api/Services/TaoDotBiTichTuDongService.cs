@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
 using Qlgx.Domain;
@@ -65,7 +66,18 @@ public class TaoDotBiTichTuDongService(QlgxDbContext db, SinhMaService sinhMa, I
         return new TaoDotBiTichXemTruocKetQua(kq.TongGiaoDanKhop, kq.DotMoi.Count, soGiaoDanMoi, mau);
     }
 
-    public async Task<TaoDotBiTichTuDongKetQua> TaoTuDong(TaoDotBiTichTuDongRequest yc, CancellationToken ct)
+    /// <summary>
+    /// Trả về (KetQua, Loi) thay vì chỉ KetQua: chống trùng ở TinhToan chỉ nằm ở tầng ứng dụng
+    /// (SELECT rồi INSERT trong cùng transaction, mức cô lập mặc định READ COMMITTED) — hai
+    /// request "Xác nhận tạo" chạy đồng thời (ví dụ người dùng bấm lại vì tưởng bị treo) đều có
+    /// thể SELECT thấy "chưa có đợt khớp" trước khi bên kia commit, rồi cùng INSERT một
+    /// <see cref="DotBiTich"/> trùng nhóm — xem review-toan-nhanh-dulieu.md mục C1. Ràng buộc
+    /// UNIQUE cấp CSDL "ux_dot_bi_tich_nhom_trung" (migration ThemRangBuocDotBiTichTrung) là lưới
+    /// an toàn CUỐI: request thua trong cuộc đua nhận PostgresException 23505 bọc trong
+    /// DbUpdateException — bắt riêng để trả thông báo tiếng Việt rõ ràng thay vì lộ lỗi 500 thô,
+    /// và để người dùng biết cần tải lại trang xem đợt bí tích thay vì bấm lại mù quáng.
+    /// </summary>
+    public async Task<(TaoDotBiTichTuDongKetQua? KetQua, string? Loi)> TaoTuDong(TaoDotBiTichTuDongRequest yc, CancellationToken ct)
     {
         var giaoXuId = boiCanh.GiaoXuId;
         await using var giaoTac = await db.Database.BeginTransactionAsync(ct);
@@ -105,10 +117,24 @@ public class TaoDotBiTichTuDongService(QlgxDbContext db, SinhMaService sinhMa, I
             }
         }
 
-        await db.SaveChangesAsync(ct);
-        await giaoTac.CommitAsync(ct);
-        return new TaoDotBiTichTuDongKetQua(soDotDaTao, soGiaoDanDaThem);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            await giaoTac.CommitAsync(ct);
+        }
+        catch (DbUpdateException ex) when (LaViPhamRangBuocNhomTrung(ex))
+        {
+            await giaoTac.RollbackAsync(ct);
+            return (null, "Không tạo được: một yêu cầu khác vừa tạo đợt bí tích trùng cùng linh mục/ngày " +
+                "trong lúc thao tác này đang chạy (có thể do bấm \"Xác nhận tạo\" nhiều lần). " +
+                "Hãy tải lại trang để xem đợt bí tích hiện có trước khi thử lại.");
+        }
+        return (new TaoDotBiTichTuDongKetQua(soDotDaTao, soGiaoDanDaThem), null);
     }
+
+    private static bool LaViPhamRangBuocNhomTrung(DbUpdateException ex) =>
+        ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg
+        && pg.ConstraintName == "ux_dot_bi_tich_nhom_trung";
 
     private static string TaoMoTa(DateOnly ngay) =>
         string.Format("Đợt bí tích ngày {0} tháng {1} năm {2}", ngay.Day, ngay.Month, ngay.Year);

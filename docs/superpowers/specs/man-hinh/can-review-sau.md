@@ -4555,3 +4555,90 @@ cảnh báo bundle-size cũ, không phải lỗi mới).
 (backend), 8 phát hiện mức Thấp của báo cáo gốc (Th1-Th8, không nằm trong yêu cầu người dùng) —
 riêng "Cao #2" của chính báo cáo gốc (nút "Tải mẫu Excel" nuốt lỗi ở `LopGiaoLyDetail.tsx`) đã
 tiện tay sửa vì cùng file, ghi rõ ở trên.
+
+### 72. Task "sửa review toàn nhánh backend + lỗ hổng test" (2026-09-08) — 1 Cao, 2 Trung bình,
+### 2 lỗ hổng test — sửa hết theo `review-toan-nhanh-dulieu.md` + `review-toan-nhanh-test.md`
+
+Sửa toàn bộ phát hiện backend của hai đợt review độc lập toàn nhánh (an toàn dữ liệu + chất
+lượng test), người dùng duyệt "ok, sửa hết". Không đụng `WebApp/src/web/` (đã sửa xong ở
+commit `06537b6`). Báo cáo chi tiết với đầy đủ bằng chứng đỏ→xanh ở
+`.superpowers/sdd/2026-09-06-qlgx-web-phase-1/task-sua-review-backend-2.md`.
+
+**Cao — Tạo danh sách bí tích tự động: race condition tạo trùng đợt bí tích**: thêm ràng buộc
+UNIQUE cấp CSDL trên `dot_bi_tich` — CHỈ MỤC BIỂU THỨC (không phải chỉ mục cột thường) trên
+`(giao_xu_id, loai_bi_tich, lower(trim(coalesce(linh_muc, ''))), ngay_bi_tich)` (migration
+`ThemRangBuocDotBiTichTrung`, tên chỉ mục `ux_dot_bi_tich_nhom_trung`) — khớp CHÍNH XÁC khoá
+nhóm mà `TaoDotBiTichTuDongService.TinhToan` dùng để gộp (không phân biệt hoa/thường, cắt
+khoảng trắng đầu/cuối), nên bắt được cả trường hợp hai request đua nhau tạo cùng nhóm nhưng
+gõ khác hoa/thường. Đã kiểm dữ liệu thật `qlgx_thu` TRƯỚC khi thêm (bắt buộc theo yêu cầu, xem
+số liệu đầy đủ ở báo cáo task): 0 nhóm trùng trong số các đợt CÓ `ngay_bi_tich` (chỉ 3 nhóm/42
+dòng trùng theo cách nhóm không phân biệt hoa/thường, nhưng TẤT CẢ đều có `ngay_bi_tich IS
+NULL` — NULL vốn không bao giờ đụng ràng buộc UNIQUE ở PostgreSQL, không cần mệnh đề `WHERE`
+loại trừ). Migration áp được lên `qlgx_thu` không lỗi, xác nhận dữ liệu nguyên trạng sau đó
+(2050/40/145/1/1108/6150).
+
+`TaoDotBiTichTuDongService.TaoTuDong` đổi chữ ký trả về `(KetQua?, Loi?)` thay vì ném lỗi 500
+thô: bắt riêng `DbUpdateException` có `InnerException` là `PostgresException` mã `23505` khớp
+đúng tên ràng buộc `ux_dot_bi_tich_nhom_trung`, rollback transaction, trả thông báo tiếng Việt
+rõ ràng ("một yêu cầu khác vừa tạo đợt bí tích trùng... hãy tải lại trang"). Endpoint
+`POST /api/cong-cu-du-lieu/tao-dot-bi-tich` trả 409 kèm `{ thongBao }` — front-end (client.ts)
+đã sẵn đọc `thongBao` từ mọi thân lỗi non-2xx nên KHÔNG cần sửa gì ở `WebApp/src/web/`.
+
+**Trung bình #1 — Nhập dữ liệu Access không có transaction bao trọn**: bọc toàn bộ 24 lệnh
+`Ghi*` trong `ChuyenDoiDuLieu.Chay()` bằng đúng MỘT `BeginTransactionAsync`/`CommitAsync` — sửa
+NGAY TẠI LỚP DÙNG CHUNG nên có hiệu lực cho CẢ HAI đường gọi (`Qlgx.Migration` dòng lệnh lẫn
+`NhapDuLieuService` từ giao diện web), không cần sửa hai nơi. Tính chất "chạy lại nhiều lần
+không tạo bản ghi trùng" (idempotent, dựa vào `BangAnhXaId` sinh UUID ổn định theo bảng+mã cũ)
+không đổi — transaction chỉ đổi thời điểm commit, không đổi khoá tìm-thấy-thì-sửa. Test tái
+hiện: ép lỗi khoá ngoại thật ở bảng thứ 4/24 (`GiaoHo` tự tham chiếu `GiaoHoChaId` tới một mã
+không tồn tại) rồi xác nhận CẢ những bảng ghi TRƯỚC đó (`GiaoXu`, bảng thứ 3) cũng bị rollback
+theo — không chỉ bảng gây lỗi.
+
+**Trung bình #2 — Chuyển lớp giáo lý: bước ghi lỏng hơn bước xem trước**: thêm đúng phép kiểm
+`lopNguonIds.Count == 1` vào đầu `GiaoLyService.ChuyenLop` (tính từ chính danh sách
+`ChiTietLopGiaoLy` vừa truy vấn, không phải tham số riêng) — y hệt phép kiểm đã có sẵn ở
+`XemTruocChuyenLop`. Endpoint đã sẵn ánh xạ `null` → 404 cho cả hai bước, không cần sửa
+endpoint. Test tái hiện: gọi cả `xem-truoc` lẫn ghi thật với `chiTietIds` trộn từ hai lớp khác
+nhau, khẳng định CẢ HAI đều 404 giống nhau.
+
+**Lỗ hổng test 1 (đáng lo nhất) — Hoán đổi Chồng/Vợ mà 14/14 test vẫn xanh**: thêm
+`ThongKeTests.Gia_truong_chi_ra_chong_va_hien_mau_chi_ra_vo_khong_lan_vai_tro` — NÉ bug cận
+tuổi đảo ngược của bản gốc (giữ nguyên, không sửa, đúng mục 59) bằng cách chọn `tuTuoi=40 >
+denTuoi=20` (khiến `fromYear <= toYear`, khoảng năm sinh hợp lệ thay vì luôn rỗng), dựng một
+gia đình có cả Chồng lẫn Vợ cùng lọt khoảng đó, khẳng định `GiaTruong` CHỈ ra Chồng và
+`HienMau` CHỈ ra Vợ. Bằng chứng đỏ→xanh: hoán đổi `VaiTroGiaDinh.Chong`/`VaiTroGiaDinh.Vo` ở
+`ThongKeService.cs:238-239` (đúng đột biến của báo cáo review) → test mới ĐỎ (`GiaTruong` trả
+về Vợ, không chứa Chồng) → khôi phục nguyên văn → XANH lại.
+
+**Lỗ hổng test 2 — Xoá cột DiaChi khỏi phạm vi chuẩn hoá mà 7/7 test vẫn xanh**: thêm hai test
+khoá cứng danh sách cột (`Xem_truoc_giao_dan_khoa_cung_du_36_cot_bao_gom_dia_chi`,
+`..._gia_dinh_khoa_cung_du_5_cot...`) — dựng một dòng có ĐỦ mọi cột trong bản sao độc lập của
+`CotGiaoDan`/`CotGiaDinh` (36/5 cột, không đọc được list `private` thật qua `InternalsVisibleTo`
+nên test tự giữ một bản sao tên cột, đóng vai "khoá cứng" giống mẫu `LocTheoGiaoXuTests`) bị đặt
+giá trị chưa chuẩn hoá, rồi khẳng định tập TÊN CỘT trả về ở xem trước khớp CHÍNH XÁC danh sách
+đó (không chỉ đếm số lượng thay đổi). Bằng chứng đỏ→xanh: xoá dòng `("DiaChi", ...)` khỏi
+`CotGiaoDan` trong `ChuanHoaDuLieuService.cs` (đúng đột biến của báo cáo review) → test ĐỎ (tập
+tên cột trả về thiếu đúng "DiaChi", còn 35/36) → khôi phục nguyên văn → XANH lại. Hai test này
+tự dọn dẹp (gọi "ghi thật" ở cuối) để không để lại dòng chưa chuẩn hoá làm sai số liệu tổng
+của các test khác dùng chung CSDL trong cùng lớp (`IClassFixture`).
+
+**Test mới**: `TaoDotBiTichTuDongTests` (+2: ràng buộc CSDL cấp thấp + race condition nhiều
+request đồng thời), `GiaoLyTests` (+1), `ChuyenDoiTests` (Qlgx.Migration.Tests, +1: rollback
+giữa chừng), `ThongKeTests` (+1), `ChuanHoaDuLieuTests` (+2) — tổng backend từ 417 lên
+**424/424** (`dotnet test WebApp/Qlgx.sln`). Front-end không đụng, vẫn 432/432 (không chạy lại
+trong lượt này vì không sửa gì ở `WebApp/src/web/`).
+
+**Migration mới `ThemRangBuocDotBiTichTrung`** áp lên `qlgx_thu` bằng `dotnet ef database
+update` — xác nhận thành công, dữ liệu nguyên trạng (2050 giáo dân/40 gia đình/145 thành viên/
+1 giáo họ/1108 đợt bí tích/6150 bí tích chi tiết, khớp trước/sau). API cổng 5096 đã tắt để
+build/test, sau đó khởi động lại đúng cấu hình ban đầu (cùng 3 biến môi trường,
+`--no-launch-profile`), xác nhận sống lại bằng `GET /api/auth/toi` → 401. Vite (cổng 5173)
+không bị đụng tới.
+
+**Không sửa/không đụng**: mọi thứ thuộc `WebApp/src/web/` (đúng phạm vi "chỉ backend"); ba phát
+hiện mức Thấp của `review-toan-nhanh-dulieu.md` (Th1-Th3, không nằm trong 5 mục CAO/TRUNG BÌNH
+được liệt kê thẳng trong yêu cầu); T3 của cùng báo cáo (bảng "Đích" luôn trống ở bước "Chạy
+thử" Nhập dữ liệu Access) — không nằm trong yêu cầu, và lớp chặn an toàn chính (`DemGiaoDanHienCo`)
+không phụ thuộc bảng đối chiếu này nên không phải lỗ hổng an toàn dữ liệu; phát hiện `ngay.ts`
+mục 1b của `review-toan-nhanh-test.md` — thuộc phạm vi front-end, đã xử lý ở mục 71 (kết luận là
+mutant tương đương, không phải lỗ hổng test thật).

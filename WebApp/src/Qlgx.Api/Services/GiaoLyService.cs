@@ -308,16 +308,28 @@ public class GiaoLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoX
     /// đích, đúng biến <c>soThuTuNext</c> gốc (dòng 172-179). Không kiểm tra "đã thuộc lớp khác
     /// trong cùng khối" như <see cref="ThemHocVien"/> — bản gốc không kiểm tra gì ở đường ghi
     /// hàng loạt này (khác đường thêm-từng-người addGiaoDan), cố tình KHÔNG mở rộng phạm vi theo
-    /// đúng chỉ đạo nhiệm vụ.</summary>
+    /// đúng chỉ đạo nhiệm vụ.
+    ///
+    /// SỬA (review-toan-nhanh-dulieu.md mục T1): bản gốc trước bản sửa này thiếu đúng phép kiểm
+    /// "chiTietIds phải cùng thuộc MỘT lớp nguồn duy nhất" mà <see cref="XemTruocChuyenLop"/> đã
+    /// có (dòng ~283-284) — gọi thẳng endpoint (không qua giao diện, vốn chỉ cho chọn trong một
+    /// lớp) có thể trộn học viên từ nhiều lớp/khối khác nhau vào một lần ghi mà không qua đúng
+    /// bước xác nhận số liệu đã xem trước. Thêm đúng cùng phép kiểm, tính từ chính danh sách vừa
+    /// truy vấn (không phải từ tham số riêng) — khác lớp nguồn thì coi như yêu cầu không hợp lệ
+    /// (null, ánh xạ 404 ở endpoint, giống XemTruocChuyenLop).</summary>
     public async Task<ChuyenLopKetQua?> ChuyenLop(List<Guid> chiTietIds, Guid lopDichId, CancellationToken ct)
     {
         await using var giaoTac = await db.Database.BeginTransactionAsync(ct);
 
         if (!await db.LopGiaoLy.AnyAsync(l => l.Id == lopDichId, ct)) return null;
 
-        var chon = await db.ChiTietLopGiaoLy.Where(c => chiTietIds.Contains(c.Id))
-            .Select(c => c.GiaoDanId).Distinct().ToListAsync(ct);
-        if (chon.Count == 0) return new ChuyenLopKetQua(0);
+        var chiTietChon = await db.ChiTietLopGiaoLy.Where(c => chiTietIds.Contains(c.Id))
+            .Select(c => new { c.LopGiaoLyId, c.GiaoDanId }).ToListAsync(ct);
+        if (chiTietChon.Count == 0) return new ChuyenLopKetQua(0);
+        var lopNguonIds = chiTietChon.Select(c => c.LopGiaoLyId).Distinct().ToList();
+        if (lopNguonIds.Count != 1) return null;
+
+        var chon = chiTietChon.Select(c => c.GiaoDanId).Distinct().ToList();
 
         var daCoODich = await db.ChiTietLopGiaoLy
             .Where(c => c.LopGiaoLyId == lopDichId && chon.Contains(c.GiaoDanId))

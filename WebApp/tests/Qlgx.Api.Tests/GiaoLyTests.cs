@@ -429,6 +429,49 @@ public class GiaoLyTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    /// <summary>
+    /// Sửa lỗ hổng review-toan-nhanh-dulieu.md mục T1: bước GHI THẬT phải kiểm đúng "một lớp
+    /// nguồn duy nhất" mà bước XEM TRƯỚC đã kiểm — trước bản sửa, gọi thẳng endpoint ghi thật
+    /// (bỏ qua xem trước, vốn đã đúng chặn từ trước) với chiTietIds TRỘN từ hai lớp khác nhau
+    /// vẫn ghi được, làm số liệu ghi không còn khớp với số liệu người dùng đã xác nhận ở xem
+    /// trước (vì xem trước luôn từ chối trường hợp này). Test cả hai bước cùng một kịch bản
+    /// trộn lớp — PHẢI cùng từ chối (404), không được lệch nhau.
+    /// </summary>
+    [Fact]
+    public async Task Chuyen_lop_tron_hoc_vien_tu_nhieu_lop_nguon_bi_tu_choi_ca_xem_truoc_lan_ghi_that()
+    {
+        var client = app.CreateAuthClient();
+        var nguoiQuanLyId = await TaoGiaoDan("Quan ly tron lop");
+        var khoiId = await TaoKhoi(client, "Khối trộn lớp", nguoiQuanLyId);
+        var lopNguon1Id = await TaoLop(client, khoiId, "Lớp nguồn 1");
+        var lopNguon2Id = await TaoLop(client, khoiId, "Lớp nguồn 2");
+        var khoiDichId = await TaoKhoi(client, "Khối trộn lớp - đích", nguoiQuanLyId);
+        var lopDichId = await TaoLop(client, khoiDichId, "Lớp đích trộn");
+
+        var hv1 = await TaoGiaoDan("Hoc vien lop nguon 1");
+        var hv2 = await TaoGiaoDan("Hoc vien lop nguon 2");
+        (await client.PostAsJsonAsync($"/api/giao-ly/lop/{lopNguon1Id}/hoc-vien", new { giaoDanId = hv1 }))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await client.PostAsJsonAsync($"/api/giao-ly/lop/{lopNguon2Id}/hoc-vien", new { giaoDanId = hv2 }))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var chiTiet1 = (await client.GetFromJsonAsync<List<HocVienDto>>($"/api/giao-ly/lop/{lopNguon1Id}/hoc-vien"))!.Single().ChiTietId;
+        var chiTiet2 = (await client.GetFromJsonAsync<List<HocVienDto>>($"/api/giao-ly/lop/{lopNguon2Id}/hoc-vien"))!.Single().ChiTietId;
+        var chiTietIds = new[] { chiTiet1, chiTiet2 };
+
+        var xemTruocRes = await client.PostAsJsonAsync("/api/giao-ly/chuyen-lop/xem-truoc",
+            new { chiTietIds, lopDichId });
+        xemTruocRes.StatusCode.Should().Be(HttpStatusCode.NotFound, "xem truoc da tu choi dung tu truoc");
+
+        var ghiRes = await client.PostAsJsonAsync("/api/giao-ly/chuyen-lop", new { chiTietIds, lopDichId });
+        ghiRes.StatusCode.Should().Be(HttpStatusCode.NotFound,
+            "ghi that phai tu choi GIONG HET xem truoc - khong duoc long hon, khong duoc chuyen hoc vien tu nhieu lop nguon");
+
+        // Không có gì bị ghi vào lớp đích.
+        (await client.GetFromJsonAsync<List<HocVienDto>>($"/api/giao-ly/lop/{lopDichId}/hoc-vien"))
+            .Should().BeEmpty();
+    }
+
     // --- "Nhập học viên hàng loạt" từ Excel (frmImportHocVien.cs) -----------------------
 
     private sealed record DongNhapDto(int SoDong, string? MaGD, string? TenThanh, string HoTen,
