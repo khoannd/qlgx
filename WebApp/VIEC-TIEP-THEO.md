@@ -22,6 +22,12 @@ Chốt ngày 2026-09-07, sau khi hoàn tất phần cài đặt giai đoạn 1 v
 >
 > Mục 3.1 ("hơn 60 màn hình phụ") nay **đã xong** — xem mục "Màn hình đã migrate" bên dưới.
 
+> **Cập nhật 2026-09-08 (chiều)**: đã **hoàn tất toàn bộ giai đoạn**. Không còn thao tác nào
+> báo "chưa hỗ trợ" trên giao diện. Test: **417 backend + 412 front-end**, `npm run build`
+> chạy được. Nhánh đã push lên GitHub.
+>
+> Mục 1.1 (in ấn) nay **đủ 13 mẫu**; mục 3.1 (màn hình phụ) và mục 3.3 (quy tắc 11) **đã xong**.
+
 Xếp theo thứ tự nên làm. Lý do xếp hạng ghi ngay dưới mỗi mục — đừng đảo thứ tự nếu chưa
 đọc lý do.
 
@@ -29,7 +35,7 @@ Xếp theo thứ tự nên làm. Lý do xếp hạng ghi ngay dưới mỗi mụ
 
 ## Mức 1 — Chặn việc giáo xứ bỏ hẳn bản desktop
 
-### 1.1 In ấn và chứng nhận  ← ✅ HẠ TẦNG + 4/5 MẪU ĐÃ XONG
+### 1.1 In ấn và chứng nhận  ← ✅ ĐÃ XONG (13 mẫu)
 
 Kế hoạch gốc xếp in ấn vào **giai đoạn 3**, nhưng thực tế đây là nghiệp vụ **hằng ngày**:
 giấy chứng nhận rửa tội, rước lễ, thêm sức, hôn phối, giấy giới thiệu chuyển xứ, sổ gia đình,
@@ -60,7 +66,13 @@ người nhận (không tra bảng nào, vì bên kia thuộc giáo xứ khác),
 Bản web làm theo đúng cách đó. Đáng chú ý: cả hai bản cài đặt Giấy giới thiệu trong desktop
 đều là **mã chết**, chưa từng được gọi từ menu nào.
 
-**Còn lại**: `PhieuGiaDinh-A3` (hạ tầng đang cố định khổ A4) — việc nhỏ, không chặn.
+**✅ Toàn bộ đã xong.** Ngoài các mẫu trên còn có: In danh sách (khổ ngang), In lý lịch cá
+nhân cho cả gia đình, In sổ gia đình, In giới thiệu hôn phối / kết quả rao hôn phối, và
+**Phiếu gia đình khổ A3** (hạ tầng nay chọn được khổ giấy A4/A3). Tổng **13 mẫu** in được thật,
+mỗi mẫu đều đã mở PDF ra kiểm bằng `PyMuPDF` — tiếng Việt có dấu đúng, đúng khổ giấy.
+
+Cũng đã có **xuất Excel thật** (ClosedXML) cho danh sách giáo dân, gia đình, sổ bí tích và
+rao hôn phối — thay cho CSV, theo yêu cầu của người dùng.
 
 ### 1.2 Ảnh đại diện  ← ✅ ĐÃ XONG
 
@@ -199,9 +211,10 @@ số học tuổi bị đảo trong `Extract.cs` khiến nhóm "Giới trẻ"/"T
 Hiện chỉ giảm nhẹ bằng thời hạn 8 tiếng. Đuổi một người dùng ra khỏi hệ thống ngay lập tức
 thì chưa làm được.
 
-### 3.3 Quy tắc 11 — trùng ngày chuyển xứ
+### 3.3 Quy tắc 11 — trùng ngày chuyển xứ  ← ✅ ĐÃ XONG
 
-Xem mục 19 trong `can-review-sau.md`.
+Xem mục 19 trong `can-review-sau.md` (đã cập nhật). Đã kiểm chứng thật trên trình duyệt:
+lưu bản ghi chuyển xứ thứ hai trùng ngày trả HTTP 400 kèm thông báo tiếng Việt đúng.
 
 ### 3.4 Kiểm chứng HA thật
 
