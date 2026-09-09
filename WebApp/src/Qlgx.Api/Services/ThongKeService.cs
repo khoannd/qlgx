@@ -146,7 +146,8 @@ public class ThongKeService(QlgxDbContext db, GiaDinhService giaDinhService)
 
         var nguon = truyVan.OrderBy(g => g.MaGiaoDanCu).Select(g => new GiaoDanService.NguonDong(g, null,
             g.GiaDinhThamGia.OrderBy(tv => tv.VaiTro).Select(tv => (Guid?)tv.GiaDinhId).FirstOrDefault(),
-            g.GiaDinhThamGia.Any(tv => tv.GiaDinh!.DaChuyenXu)));
+            g.GiaDinhThamGia.Any(tv => tv.GiaDinh!.DaChuyenXu),
+            g.GiaoHo == null ? "Ngoài xứ" : g.GiaoHo.TenGiaoHo));
         var ds = await GiaoDanService.DungDanhSach(nguon).ToListAsync(ct);
         return new ThongKeChungKetQua(ds.Count, nhan, ds, null, null);
     }
@@ -253,7 +254,8 @@ public class ThongKeService(QlgxDbContext db, GiaDinhService giaDinhService)
         };
         var nguon = truyVan.OrderBy(g => g.MaGiaoDanCu).Select(g => new GiaoDanService.NguonDong(g, null,
             g.GiaDinhThamGia.OrderBy(tv => tv.VaiTro).Select(tv => (Guid?)tv.GiaDinhId).FirstOrDefault(),
-            g.GiaDinhThamGia.Any(tv => tv.GiaDinh!.DaChuyenXu)));
+            g.GiaDinhThamGia.Any(tv => tv.GiaDinh!.DaChuyenXu),
+            g.GiaoHo == null ? "Ngoài xứ" : g.GiaoHo.TenGiaoHo));
         var ds = await GiaoDanService.DungDanhSach(nguon).ToListAsync(ct);
         return new ThongKeChungKetQua(ds.Count, nhan, ds, null, null);
     }
@@ -302,7 +304,8 @@ public class ThongKeService(QlgxDbContext db, GiaDinhService giaDinhService)
 
         var nguon = truyVan.OrderBy(g => g.MaGiaoDanCu).Select(g => new GiaoDanService.NguonDong(g, null,
             g.GiaDinhThamGia.OrderBy(tv => tv.VaiTro).Select(tv => (Guid?)tv.GiaDinhId).FirstOrDefault(),
-            g.GiaDinhThamGia.Any(tv => tv.GiaDinh!.DaChuyenXu)));
+            g.GiaDinhThamGia.Any(tv => tv.GiaDinh!.DaChuyenXu),
+            g.GiaoHo == null ? "Ngoài xứ" : g.GiaoHo.TenGiaoHo));
         var ds = await GiaoDanService.DungDanhSach(nguon).ToListAsync(ct);
         return new ThongKeChungKetQua(ds.Count, nhan, ds, null, null);
     }

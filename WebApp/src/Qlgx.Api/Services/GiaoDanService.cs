@@ -39,12 +39,20 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
     /// trước đó, dù đọc thuộc tính vô hướng (n.Gd.HoTen, n.Gd.NgaySinh...) ở Select thứ hai
     /// vẫn dịch bình thường. Đã đo thấy lỗi "could not be translated" khi thử để nguyên ở
     /// DungDanhSach.
+    ///
+    /// CÙNG LÝ DO, TenGiaoHo cũng PHẢI tính ở đây: khác subquery collection (báo lỗi rõ ràng
+    /// "could not be translated" nên dễ phát hiện), đọc một navigation THAM CHIẾU ĐƠN
+    /// (`Gd.GiaoHo`, kiểu `GiaoHo?`) ở Select thứ hai (trong DungDanhSach) KHÔNG báo lỗi gì —
+    /// EF Core âm thầm dịch ra NULL cho mọi dòng, khiến cột "Giáo họ" luôn hiện "Ngoài xứ" dù
+    /// giáo dân có giáo họ thật (phát hiện 2026-09-09 khi kiểm thử lưu "Chuyển họ hàng loạt"
+    /// thật trên `qlgx_thu` — 2016/2050 giáo dân có `GiaoHoId` hợp lệ nhưng API luôn trả
+    /// "Ngoài xứ". Xem `Danh_sach_hien_dung_ten_giao_ho_khong_phai_luon_Ngoai_xu`).
     /// </summary>
     // internal (không private) — ThongKeService (Task "Thống kê chung & Biểu đồ") dùng lại
     // ĐÚNG khuôn dựng GiaoDanListItemDto này cho các điều kiện thống kê dựa trên GiaoDan
     // (Sinh ra/Rửa tội/XTRL/Thêm sức/Qua đời/Tổng số giáo dân/Tân tòng/Chủ hộ/Gia trưởng/Hiền
     // mẫu/Cao niên/Giới trẻ/Thiếu nhi) — tránh chép lại 15 dòng ánh xạ DTO ở nơi thứ hai.
-    internal record NguonDong(GiaoDan Gd, string? QuanHe, Guid? GiaDinhId, bool DaChuyenDi);
+    internal record NguonDong(GiaoDan Gd, string? QuanHe, Guid? GiaDinhId, bool DaChuyenDi, string TenGiaoHo);
 
     /// <summary>
     /// `hienCaDaMat=false` (mặc định) tái hiện đúng nền lọc mặc định của
@@ -76,7 +84,8 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
                 // bằng == Con.
                 g.GiaDinhThamGia.OrderBy(tv => tv.VaiTro)
                     .Select(tv => (Guid?)tv.GiaDinhId).FirstOrDefault(),
-                g.GiaDinhThamGia.Any(tv => tv.GiaDinh!.DaChuyenXu)))).ToListAsync(ct);
+                g.GiaDinhThamGia.Any(tv => tv.GiaDinh!.DaChuyenXu),
+                g.GiaoHo == null ? "Ngoài xứ" : g.GiaoHo.TenGiaoHo))).ToListAsync(ct);
     }
 
     /// <summary>
@@ -109,7 +118,8 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
             .Select(g => new NguonDong(g, null,
                 g.GiaDinhThamGia.OrderBy(tv => tv.VaiTro)
                     .Select(tv => (Guid?)tv.GiaDinhId).FirstOrDefault(),
-                g.GiaDinhThamGia.Any(tv => tv.GiaDinh!.DaChuyenXu)))).ToListAsync(ct);
+                g.GiaDinhThamGia.Any(tv => tv.GiaDinh!.DaChuyenXu),
+                g.GiaoHo == null ? "Ngoài xứ" : g.GiaoHo.TenGiaoHo))).ToListAsync(ct);
     }
 
     /// <summary>Thành viên của một gia đình — cùng bộ cột với danh sách giáo dân. GiaDinhId ở
@@ -131,7 +141,8 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
                 tv.VaiTro == VaiTroGiaDinh.Chong ? "Chồng"
                     : tv.VaiTro == VaiTroGiaDinh.Vo ? "Vợ" : "Con",
                 giaDinhId,
-                tv.GiaoDan!.GiaDinhThamGia.Any(x => x.GiaDinh!.DaChuyenXu)))).ToListAsync(ct);
+                tv.GiaoDan!.GiaDinhThamGia.Any(x => x.GiaDinh!.DaChuyenXu),
+                tv.GiaoDan!.GiaoHo == null ? "Ngoài xứ" : tv.GiaoDan!.GiaoHo.TenGiaoHo))).ToListAsync(ct);
 
     internal static IQueryable<GiaoDanListItemDto> DungDanhSach(IQueryable<NguonDong> nguon) =>
         nguon.Select(n => new GiaoDanListItemDto(
@@ -142,7 +153,7 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
             n.Gd.NgayRuaToi, n.Gd.NgayRuocLe, n.Gd.NgayThemSuc,
             n.Gd.DaCoGiaDinh, n.Gd.HoTenCha, n.Gd.HoTenMe, n.Gd.TanTong, n.Gd.ConHoc,
             n.Gd.NgheNghiep, n.Gd.GhiChu, n.Gd.DienThoai, n.Gd.DiaChi,
-            n.Gd.GiaoHo == null ? "Ngoài xứ" : n.Gd.GiaoHo.TenGiaoHo,
+            n.TenGiaoHo,
             n.DaChuyenDi,
             n.Gd.TrinhDoVanHoa, n.Gd.TrinhDoChuyenMon, n.Gd.BietNgoaiNgu,
             n.Gd.QuaDoi, n.Gd.NgayQuaDoi, n.Gd.NoiAnTang,

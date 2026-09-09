@@ -113,7 +113,8 @@ public class KiemTraDuLieuService(QlgxDbContext db, GiaDinhService giaDinhServic
                 .Select(g => new GiaoDanService.NguonDong(g, null,
                     g.GiaDinhThamGia.OrderBy(tv => tv.VaiTro)
                         .Select(tv => (Guid?)tv.GiaDinhId).FirstOrDefault(),
-                    g.GiaDinhThamGia.Any(tv => tv.GiaDinh!.DaChuyenXu))))
+                    g.GiaDinhThamGia.Any(tv => tv.GiaDinh!.DaChuyenXu),
+                    g.GiaoHo == null ? "Ngoài xứ" : g.GiaoHo.TenGiaoHo)))
             .ToListAsync(ct);
 
         var ketQua = new List<KiemTraGiaoDanKetQuaDto>(dsDto.Count);

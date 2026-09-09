@@ -60,6 +60,49 @@ public class GiaoDanTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
         ds!.Single(x => x.MaGiaoDanCu == 8002).NamSinh.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Rà lại theo yêu cầu người dùng 2026-09-09 (kiểm thử lưu công cụ sửa dữ liệu hàng loạt,
+    /// tình cờ phát hiện khi kiểm "Chuyển họ hàng loạt" thật trên `qlgx_thu`): CỘT "Giáo họ" của
+    /// TOÀN BỘ danh sách giáo dân luôn hiện "Ngoài xứ" bất kể `GiaoHoId` có trỏ đúng một giáo họ
+    /// thật hay không — xác nhận bằng psql trên dữ liệu thật (2016/2050 giáo dân có `giao_ho_id`
+    /// hợp lệ nhưng API trả `tenGiaoHo="Ngoài xứ"` cho cả 2039 bản ghi hoạt động). Nguyên nhân:
+    /// `DungDanhSach` (GiaoDanService.cs) đọc `n.Gd.GiaoHo` — một NAVIGATION PROPERTY — trên một
+    /// bản ghi `NguonDong` đã được dựng ở một `.Select()` TRƯỚC ĐÓ. Đúng như chú thích đã có sẵn
+    /// trên `NguonDong` (dòng 35-41): EF Core không dịch được truy cập qua navigation khi nguồn
+    /// là kết quả của Select trước — nhưng chú thích đó chỉ nói tới subquery COLLECTION (throw
+    /// lỗi "could not be translated" nên dễ phát hiện); đọc một navigation THAM CHIẾU ĐƠN
+    /// (`GiaoHo`, kiểu `GiaoHo?`) lại IM LẶNG trả về null thay vì báo lỗi — không ai phát hiện
+    /// qua build/test cũ vì không test nào so khớp `TenGiaoHo` với một giáo họ thật đã gán.
+    /// So sánh: `GiaDinhService` KHÔNG có lớp Select trung gian này (đọc `g.GiaoHo` thẳng trên
+    /// truy vấn gốc) nên bên gia đình không dính lỗi — xác nhận bằng gọi API thật.
+    /// </summary>
+    [Fact]
+    public async Task Danh_sach_hien_dung_ten_giao_ho_khong_phai_luon_Ngoai_xu()
+    {
+        Guid giaoHoId;
+        await using (var db = app.TaoContextThuan())
+        {
+            var gh = new GiaoHo { GiaoXuId = app.GiaoXuId, MaGiaoHoCu = 8005, TenGiaoHo = "Giao ho Kiem Tra Hien Thi" };
+            db.GiaoHo.Add(gh);
+            await db.SaveChangesAsync();
+            giaoHoId = gh.Id;
+        }
+        await using (var db = app.TaoContextThuan())
+        {
+            var gd = new GiaoDan
+            {
+                GiaoXuId = app.GiaoXuId, MaGiaoDanCu = 8005, HoTen = "Nguoi Co Giao Ho That",
+                TenThanh = "Giuse", Phai = "Nam", GiaoHoId = giaoHoId,
+            };
+            db.GiaoDan.Add(gd);
+            await db.SaveChangesAsync();
+        }
+
+        var ds = await app.CreateAuthClient().GetFromJsonAsync<List<Item>>("/api/giao-dan");
+
+        ds!.Single(x => x.MaGiaoDanCu == 8005).TenGiaoHo.Should().Be("Giao ho Kiem Tra Hien Thi");
+    }
+
     [Fact]
     public async Task Chi_tiet_tra_ve_gia_dinh_va_vai_tro_cua_nguoi_do()
     {
