@@ -156,7 +156,29 @@ function errorResponse(err: unknown): Response {
   return new Response(message, { status: 502 });
 }
 
+/**
+ * TẠM DỪNG THÔNG BÁO CÓ BẢN MỚI — bật ngày 2026-09-09, xem lý do đầy đủ ở chú
+ * thích tại `versionTextResponse()` ngay dưới. XOÁ cờ này (đặt lại `false`)
+ * khi đã sửa xong `<downloadpath>` để không ép máy đời cũ dùng `https`.
+ */
+const TAM_DUNG_THONG_BAO_CAP_NHAT = true;
+
 export async function versionTextResponse(): Promise<Response> {
+  // Máy chạy bản 3.3.7 trở về trước và 4.0.0–4.0.1 dùng .NET Framework 2.0 /
+  // 4.0 trên Windows XP–7, không nói được TLS 1.2. VersionConfig.xml hiện trả
+  // NGUYÊN VĂN cùng một <downloadpath> cho MỌI nhóm đường dẫn (mới lẫn cũ) —
+  // https://quanlygiaoxu.net/capnhat/. Máy đời cũ vẫn nhận đúng version.txt
+  // mới hơn (qua http:// thuần, không lỗi gì) nên báo "có bản mới" đúng ý
+  // hợp đồng, nhưng bước tải sau đó ghép ra một địa chỉ https:// mà runtime cũ
+  // không kết nối được — người dùng thấy báo có bản mới nhưng bấm cập nhật
+  // luôn thất bại. Trả version.txt RỖNG để mọi máy (kể cả máy mới) tạm coi
+  // như "không có bản mới" cho tới khi sửa được downloadpath theo từng nhóm
+  // đường dẫn (kế hoạch: /capnhat/* trả https, /,/4.0/ trả một địa chỉ http
+  // riêng — xem HOP_DONG_MAY_CHU_CAP_NHAT.md).
+  if (TAM_DUNG_THONG_BAO_CAP_NHAT) {
+    return new Response("", { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  }
+
   try {
     const version = await getVersionText();
     return new Response(version, {
