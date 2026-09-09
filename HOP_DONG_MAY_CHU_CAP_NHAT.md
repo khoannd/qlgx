@@ -7,6 +7,39 @@ sẽ gọi, và những gì máy chủ phải trả về.
 Phần mềm là ứng dụng Windows đã phát hành, **không sửa được nữa** trên các máy đang
 chạy. Vì vậy đây là hợp đồng một chiều: backend phải chiều theo phần mềm, không ngược lại.
 
+> ## ĐANG TẠM DỪNG (từ 2026-09-09)
+>
+> `version.txt` (cả `/capnhat/`, gốc, `/4.0/`) đang cố ý trả **chuỗi rỗng** —
+> mọi máy tạm coi như không có bản mới. Bật/tắt bằng hằng số
+> `TAM_DUNG_THONG_BAO_CAP_NHAT` trong `landing/src/lib/update-server.ts`.
+>
+> **Lý do (phát hiện thật từ báo cáo người dùng):** máy chạy bản 3.3.7 trở về
+> trước và 4.0.0–4.0.1 dùng .NET Framework cũ trên Windows XP–7, không nói
+> được TLS 1.2. Các máy này vẫn nhận đúng `version.txt` mới hơn qua `http://`
+> thuần (không lỗi gì — đúng như hợp đồng mục 3.1 yêu cầu), nên báo "có bản
+> mới" đúng. Nhưng `VersionConfig.xml` hiện trả **nguyên văn cùng một**
+> `<downloadpath>` cho MỌI nhóm đường dẫn: `https://quanlygiaoxu.net/capnhat/`.
+> Máy đời cũ không kết nối `https` được, nên bấm "Cập nhật" luôn thất bại dù
+> vừa được báo đúng là có bản mới — đúng kiểu lỗi mục 3.1 đã cảnh báo trước,
+> chỉ là ở lớp `<downloadpath>` chứ không phải ở lớp kết nối tới chính
+> `version.txt`/`VersionConfig.xml`.
+>
+> **Hướng sửa thật (chưa làm):** `<downloadpath>` phải khác nhau theo NHÓM
+> đường dẫn đang được gọi, không phải một giá trị chung:
+> - `/capnhat/VersionConfig.xml` (máy từ 4.0.2, TLS 1.2 tốt) → giữ nguyên
+>   `https://quanlygiaoxu.net/capnhat/`.
+> - `VersionConfig.xml` phục vụ ở nhóm gốc (`/`) và `/4.0/` (máy đời cũ) →
+>   phải trả một địa chỉ **`http://`** — hợp lý nhất là trỏ về lại đúng nhóm
+>   đường dẫn mà máy đó đang gọi (`http://quanlygiaoxu.net/` hoặc
+>   `http://quanlygiaoxu.net/4.0/`), để máy cũ tự cập nhật vòng qua HTTP chứ
+>   không nhảy sang `https` giữa chừng. Cần sửa `versionConfigXmlResponse()`
+>   nhận thêm tham số nhóm gọi (giống `downloadUpdateResponse(request, kenh)`
+>   đã làm) rồi dựng `<downloadpath>` khác nhau tương ứng, thay vì chỉ chép
+>   nguyên xi một bản duy nhất.
+> - Sau khi sửa xong, nhớ nghĩ lại mục 3 (Các địa chỉ cũ) và bảng "địa chỉ gốc
+>   nằm trên máy" — có thể cần thêm một hàng mới nếu quyết định tạo nhóm
+>   đường dẫn HTTP lâu dài riêng cho việc này thay vì tái dùng nhóm cũ.
+
 ---
 
 ## 1. Địa chỉ gốc
