@@ -152,7 +152,7 @@ public class GiaoDanTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     [Fact]
     public async Task Cap_nhat_giao_dan_kiem_tra_phien_ban()
     {
-        var id = await TaoGiaoDan(8005, "Nguoi se duoc sua");
+        var id = await TaoGiaoDan(8006, "Nguoi se duoc sua");
         var client = app.CreateAuthClient();
         var truoc = await client.GetFromJsonAsync<ChiTiet>($"/api/giao-dan/{id}");
 
