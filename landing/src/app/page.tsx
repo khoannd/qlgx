@@ -465,22 +465,44 @@ export default async function HomePage() {
               </ol>
             </div>
 
-            <div className="rounded-2xl border-l-4 border-l-amber bg-amber/8 p-6">
-              <h3 className="font-sans text-[0.98rem] font-bold text-amber-ink">
-                Trước khi cập nhật, hãy sao lưu dữ liệu
-              </h3>
-              <p className="mt-3 text-[0.95rem] leading-relaxed text-ink">
-                Vào menu <em>Hệ thống › Sao lưu dữ liệu</em> và cất tệp sao lưu ra USB hoặc ổ đĩa
-                ngoài. Cài đè lên bản cũ không đụng tới dữ liệu (dữ liệu nằm trong một tệp cơ sở
-                dữ liệu riêng), nhưng sao lưu vẫn luôn là thói quen nên có.
-              </p>
-              <Link
-                href="/tin-tuc/sao-luu-du-lieu-dung-cach"
-                className="link-underline mt-4 inline-flex items-center gap-2 py-1 text-[0.92rem] font-semibold text-brand-ink"
-              >
-                Đọc hướng dẫn sao lưu
-                <ChevronIcon className="h-4 w-4" />
-              </Link>
+            <div className="flex flex-col gap-6">
+              <div className="rounded-2xl border-l-4 border-l-sky bg-sky/8 p-6">
+                <h3 className="font-sans text-[0.98rem] font-bold text-brand-ink">
+                  Trình duyệt báo &quot;không rõ nhà phát hành&quot;?
+                </h3>
+                <p className="mt-3 text-[0.95rem] leading-relaxed text-ink">
+                  Đây không phải virus — phần mềm mới cập nhật nên trình duyệt (nhất là Edge)
+                  chưa &quot;quen mặt&quot; tệp này, giống hệt phần mềm mới ra mắt của ai cũng gặp.
+                  Trong hộp báo hiện ra ở góc màn hình, bấm mũi tên nhỏ cạnh nút{" "}
+                  <strong>Xoá</strong> (Delete) rồi chọn <strong>Vẫn giữ</strong> (Keep anyway).
+                  Sau đó chạy tệp như bình thường.
+                </p>
+                <Link
+                  href="/tin-tuc/trinh-duyet-bao-khong-ro-nha-phat-hanh"
+                  className="link-underline mt-4 inline-flex items-center gap-2 py-1 text-[0.92rem] font-semibold text-brand-ink"
+                >
+                  Xem ảnh minh hoạ từng bước
+                  <ChevronIcon className="h-4 w-4" />
+                </Link>
+              </div>
+
+              <div className="rounded-2xl border-l-4 border-l-amber bg-amber/8 p-6">
+                <h3 className="font-sans text-[0.98rem] font-bold text-amber-ink">
+                  Trước khi cập nhật, hãy sao lưu dữ liệu
+                </h3>
+                <p className="mt-3 text-[0.95rem] leading-relaxed text-ink">
+                  Vào menu <em>Hệ thống › Sao lưu dữ liệu</em> và cất tệp sao lưu ra USB hoặc ổ đĩa
+                  ngoài. Cài đè lên bản cũ không đụng tới dữ liệu (dữ liệu nằm trong một tệp cơ sở
+                  dữ liệu riêng), nhưng sao lưu vẫn luôn là thói quen nên có.
+                </p>
+                <Link
+                  href="/tin-tuc/sao-luu-du-lieu-dung-cach"
+                  className="link-underline mt-4 inline-flex items-center gap-2 py-1 text-[0.92rem] font-semibold text-brand-ink"
+                >
+                  Đọc hướng dẫn sao lưu
+                  <ChevronIcon className="h-4 w-4" />
+                </Link>
+              </div>
             </div>
           </Reveal>
         </section>

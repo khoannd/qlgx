@@ -419,6 +419,48 @@ const articles: Article[] = [
     ],
   },
   {
+    slug: "trinh-duyet-bao-khong-ro-nha-phat-hanh",
+    title: "Trình duyệt báo \"không rõ nhà phát hành\"? Không phải virus",
+    excerpt:
+      "Sau khi tải bộ cài, một số trình duyệt — nhất là Edge — hiện hộp báo màu vàng/xám nói chưa xác minh được tệp. Đây là điều bình thường với phần mềm mới, không phải dấu hiệu có virus.",
+    category: categories["huong-dan"],
+    publishedAt: "2026-09-11",
+    readingMinutes: 3,
+    author: "Ban phát triển",
+    body: [
+      {
+        type: "paragraph",
+        text: "Mỗi lần phần mềm có bản cập nhật mới, tệp cài đặt là một tệp hoàn toàn mới mà trình duyệt và Windows chưa từng \"gặp\" trước đó. Vì phần mềm chưa được hàng chục nghìn người tải như các phần mềm lớn, hệ thống chấm điểm uy tín của trình duyệt (Microsoft SmartScreen ở Edge, Safe Browsing ở Chrome) tạm thời xếp tệp vào diện \"chưa rõ\" và cảnh báo cho chắc — đúng như quy trình bình thường, không phải trình duyệt phát hiện ra virus thật.",
+      },
+      {
+        type: "note",
+        text: "Nếu vẫn còn nghi ngờ, quý vị có thể tự kiểm chứng bằng cách quét lại tệp vừa tải bằng Windows Defender (chuột phải vào tệp → \"Scan with Microsoft Defender\") hoặc tải lên virustotal.com để hàng chục hãng antivirus khác cùng kiểm tra.",
+      },
+      { type: "heading", text: "Nếu dùng Microsoft Edge" },
+      {
+        type: "paragraph",
+        text: "Edge hiện hộp \"Make sure you trust [tên tệp] before you open it\" (Hãy chắc chắn bạn tin tưởng tệp này) ở góc cửa sổ, kèm hai nút \"Delete\" (Xoá) và một mũi tên nhỏ bên cạnh.",
+      },
+      {
+        type: "list",
+        items: [
+          "Bấm vào mũi tên nhỏ cạnh nút \"Delete\".",
+          "Chọn \"Keep anyway\" (Vẫn giữ) trong danh sách hiện ra.",
+          "Mở lại thư mục Downloads và chạy tệp như bình thường.",
+        ],
+      },
+      { type: "heading", text: "Nếu dùng Google Chrome" },
+      {
+        type: "paragraph",
+        text: "Chrome thường tải thẳng được. Nếu có cảnh báo, bấm mũi tên cạnh tên tệp trong thanh tải xuống ở cuối trình duyệt, chọn \"Giữ\" (Keep) hoặc \"Vẫn tải xuống\" (Keep dangerous file / Download anyway).",
+      },
+      {
+        type: "paragraph",
+        text: "Khi mở tệp cài đặt lên, Windows có thể hỏi thêm một lần nữa (\"Windows đã bảo vệ máy tính của bạn\"). Bấm \"Thông tin khác\" (More info) rồi bấm \"Vẫn chạy\" (Run anyway) để tiếp tục — đây là bước hỏi lại lần hai, tách biệt với cảnh báo của trình duyệt ở trên, cũng vì cùng một lý do: tệp còn mới.",
+      },
+    ],
+  },
+  {
     slug: "sao-luu-du-lieu-dung-cach",
     title: "Sao lưu dữ liệu đúng cách",
     excerpt:
