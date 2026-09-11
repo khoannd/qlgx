@@ -49,19 +49,31 @@ $nguon = $ThuMucNguon.TrimEnd('\') + '\'
 $sed = Join-Path ([IO.Path]::GetTempPath()) 'qlgx_gop.sed'
 
 # Ghi chu ve cac tuy chon quan trong:
-#   ShowInstallProgramWindow=0  an cua so dong lenh khi chay setup.exe
-#   HideExtractAnimation=1      an hoat anh giai nen cho gon
+#   ShowInstallProgramWindow=1  HIEN cua so khi chay setup.exe (xem vi sao ben duoi)
+#   HideExtractAnimation=0      HIEN hoat anh giai nen (xem vi sao ben duoi)
 #   InsideCompressed=0          nen noi dung lai cho nho
 #   AppLaunched=setup.exe       file duoc chay sau khi giai nen xong
 #   PostInstallCmd=<None>       khong chay gi them sau do
+#
+# 2026-09-11: truoc day ShowInstallProgramWindow=0 va HideExtractAnimation=1 (an
+# het moi thu, giai nen va chay setup.exe hoan toan im lang). Da xac nhan that:
+# ban 4.0.2 dong goi voi cau hinh an nay bi Windows Defender xoa mat vi bi coi
+# la Trojan:Win32/Wacatac.B!ml/.C!ml (detection theo ML, hau to "!ml"), trong
+# khi rieng setup.exe va file .msi ben trong quet rieng deu sach. Nguyen nhan
+# hop ly nhat: giai nen am tham roi tu dong chay chuong trinh khac ma khong
+# hien gi ca dung y het khuon mau hanh vi cua trojan dropper - doi voi mot file
+# .exe moi build, chua ky so, chua ai tung thay (zero reputation), ML de nhay
+# cam voi khuon mau nay. Doi sang hien ca hai buoc de giam nghi ngo, dong thoi
+# cung la trai nghiem binh thuong hon cho nguoi dung (thay duoc dang cai dat
+# thay vi khong thay gi trong luc cho).
 $noiDung = @"
 [Version]
 Class=IEXPRESS
 SEDVersion=3
 [Options]
 PackagePurpose=InstallApp
-ShowInstallProgramWindow=0
-HideExtractAnimation=1
+ShowInstallProgramWindow=1
+HideExtractAnimation=0
 UseLongFileName=1
 InsideCompressed=0
 CAB_FixedSize=0
