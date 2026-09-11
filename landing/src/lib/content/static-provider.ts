@@ -439,15 +439,35 @@ const articles: Article[] = [
       { type: "heading", text: "Nếu dùng Microsoft Edge" },
       {
         type: "paragraph",
-        text: "Edge hiện hộp \"Make sure you trust [tên tệp] before you open it\" (Hãy chắc chắn bạn tin tưởng tệp này) ở góc cửa sổ, kèm hai nút \"Delete\" (Xoá) và một mũi tên nhỏ bên cạnh.",
+        text: "Edge hỏi lại tới HAI lần liên tiếp — cứ bấm đúng theo thứ tự bên dưới là xong, đừng bấm nhầm vào \"Delete\" ở cả hai bước.",
       },
       {
-        type: "list",
-        items: [
-          "Bấm vào mũi tên nhỏ cạnh nút \"Delete\".",
-          "Chọn \"Keep anyway\" (Vẫn giữ) trong danh sách hiện ra.",
-          "Mở lại thư mục Downloads và chạy tệp như bình thường.",
-        ],
+        type: "paragraph",
+        text: "Bước 1: ngay dưới thanh địa chỉ hiện một dòng thông báo nhỏ \"...isn't commonly downloaded. Make sure you trust ... before you open it\", có biểu tượng thùng rác ở bên phải. Bấm vào biểu tượng đó, một danh sách nhỏ hiện ra — chọn dòng \"Keep\" (Giữ).",
+      },
+      {
+        type: "image",
+        src: "/images/edge-canh-bao-buoc-1.png",
+        alt: "Bước 1: bấm biểu tượng thùng rác rồi chọn Keep trong danh sách hiện ra",
+        width: 511,
+        height: 327,
+        caption: "Bước 1 — bấm biểu tượng thùng rác, chọn \"Keep\" (Giữ)",
+      },
+      {
+        type: "paragraph",
+        text: "Bước 2: một hộp thoại lớn hơn hiện tiếp \"Make sure you trust ... before you open it\" — lần này bấm mũi tên nhỏ cạnh nút \"Delete\" (không bấm thẳng vào Delete), rồi chọn \"Keep anyway\" (Vẫn giữ).",
+      },
+      {
+        type: "image",
+        src: "/images/edge-canh-bao-buoc-2.png",
+        alt: "Bước 2: bấm mũi tên cạnh nút Delete rồi chọn Keep anyway",
+        width: 374,
+        height: 519,
+        caption: "Bước 2 — bấm mũi tên cạnh \"Delete\", chọn \"Keep anyway\" (Vẫn giữ)",
+      },
+      {
+        type: "paragraph",
+        text: "Xong cả hai bước, mở lại thư mục Downloads và chạy tệp như bình thường.",
       },
       { type: "heading", text: "Nếu dùng Google Chrome" },
       {

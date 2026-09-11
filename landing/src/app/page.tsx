@@ -473,9 +473,9 @@ export default async function HomePage() {
                 <p className="mt-3 text-[0.95rem] leading-relaxed text-ink">
                   Đây không phải virus — phần mềm mới cập nhật nên trình duyệt (nhất là Edge)
                   chưa &quot;quen mặt&quot; tệp này, giống hệt phần mềm mới ra mắt của ai cũng gặp.
-                  Trong hộp báo hiện ra ở góc màn hình, bấm mũi tên nhỏ cạnh nút{" "}
-                  <strong>Xoá</strong> (Delete) rồi chọn <strong>Vẫn giữ</strong> (Keep anyway).
-                  Sau đó chạy tệp như bình thường.
+                  Edge thường hỏi lại hai lần liên tiếp: lần nào cũng chọn{" "}
+                  <strong>Giữ</strong> (Keep) hoặc <strong>Vẫn giữ</strong> (Keep anyway) —
+                  đừng bấm <strong>Xoá</strong> (Delete). Xem ảnh minh hoạ từng bước bên dưới.
                 </p>
                 <Link
                   href="/tin-tuc/trinh-duyet-bao-khong-ro-nha-phat-hanh"
