@@ -33,3 +33,6 @@ desktop.ini
 /Source/packages/
 /Source/GXInstaller/Debug/
 /Source/GXInstaller/Release/
+
+# Thu muc nhap tam (anh chup man hinh, file dung mot lan...), khong dua vao repo.
+/WebApp/temp/
