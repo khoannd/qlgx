@@ -12,6 +12,8 @@ public class GiaoHatConfig : IEntityTypeConfiguration<GiaoHat>
         b.Property(x => x.TenGiaoHat).IsRequired();
         // Trên cấp giáo xứ: KHÔNG có GiaoXuId, KHÔNG có bộ lọc tenant (xem GiaoHat.cs).
         b.HasOne(x => x.GiaoPhan).WithMany().HasForeignKey(x => x.GiaoPhanId).OnDelete(DeleteBehavior.Restrict);
-        b.HasIndex(x => x.MaGiaoHatCu).IsUnique();
+        // MaGiaoHatCu KHÔNG được ép duy nhất — cùng lý do ở GiaoPhanConfig: mã cũ chỉ có ý nghĩa
+        // cục bộ trong một file .mdb, hai giáo hạt THẬT khác nhau của hai giáo xứ có thể trùng.
+        b.HasIndex(x => x.MaGiaoHatCu);
     }
 }

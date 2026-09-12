@@ -46,6 +46,31 @@ public class DocAccess(string duongDanFile, string? matKhau = null, string nguoi
         while (doc.Read()) yield return doc;
     }
 
+    // Bản desktop tự thêm cột mới vào bảng bằng ALTER TABLE mỗi khi nâng cấp lên phiên bản mới
+    // (xem Source/ChuongTrinh/UpdateProcess.cs). File .mdb của một giáo xứ có thể chưa từng mở
+    // bằng bản desktop mới nhất nên thiếu vài cột đó. Thay vì sập, coi cột thiếu là NULL — giữ
+    // đúng thứ tự cột mong muốn để các Doc*() bên dưới đọc theo chỉ số vị trí (r[i]) không đổi.
+    private readonly Dictionary<string, HashSet<string>> _cacheCot = new(StringComparer.OrdinalIgnoreCase);
+
+    private HashSet<string> LayCotThat(string bang)
+    {
+        if (_cacheCot.TryGetValue(bang, out var cot)) return cot;
+        var schema = _ketNoi.GetSchema("Columns");
+        cot = schema.Rows.Cast<System.Data.DataRow>()
+            .Where(r => string.Equals((string)r["TABLE_NAME"], bang, StringComparison.OrdinalIgnoreCase))
+            .Select(r => (string)r["COLUMN_NAME"])
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _cacheCot[bang] = cot;
+        return cot;
+    }
+
+    private string ChonCot(string bang, params string[] cotMongMuon)
+    {
+        var cotThat = LayCotThat(bang);
+        return string.Join(", ",
+            cotMongMuon.Select(c => cotThat.Contains(c) ? c : $"NULL AS {c}"));
+    }
+
     private static bool Bool(object giaTri) =>
         giaTri is not DBNull && Convert.ToInt32(giaTri) != 0;   // Access dùng -1/0
 
@@ -59,8 +84,8 @@ public class DocAccess(string duongDanFile, string? matKhau = null, string nguoi
         giaTri is DBNull ? null : Convert.ToDateTime(giaTri);
 
     public IEnumerable<DongGiaoXu> DocGiaoXu() =>
-        Doc(@"SELECT MaGiaoXu, MaGiaoHat, TenGiaoXu, DiaChi, DienThoai, Email, Website, Hinh,
-                     GhiChu, MaGiaoXuRieng, LastUpload
+        Doc($@"SELECT {ChonCot("GiaoXu", "MaGiaoXu", "MaGiaoHat", "TenGiaoXu", "DiaChi", "DienThoai",
+                     "Email", "Website", "Hinh", "GhiChu", "MaGiaoXuRieng", "LastUpload")}
               FROM GiaoXu")
             .Select(r => new DongGiaoXu(r.GetInt32(0), SoNull(r[1]), Chuoi(r[2]) ?? "", Chuoi(r[3]),
                 Chuoi(r[4]), Chuoi(r[5]), Chuoi(r[6]), Chuoi(r[7]), Chuoi(r[8]), SoNull(r[9]),
@@ -68,15 +93,15 @@ public class DocAccess(string duongDanFile, string? matKhau = null, string nguoi
             .ToList();
 
     public IEnumerable<DongGiaoHo> DocGiaoHo() =>
-        Doc("SELECT MaGiaoHo, TenGiaoHo, MaGiaoHoCha, DaXoa, MaNhanDang, UpdateDate FROM GiaoHo")
+        Doc($"SELECT {ChonCot("GiaoHo", "MaGiaoHo", "TenGiaoHo", "MaGiaoHoCha", "DaXoa", "MaNhanDang", "UpdateDate")} FROM GiaoHo")
             .Select(r => new DongGiaoHo(r.GetInt32(0), Chuoi(r[1]) ?? "", SoNull(r[2]), Bool(r[3]),
                 Chuoi(r[4]), NgayGio(r[5])))
             .ToList();
 
     public IEnumerable<DongGiaDinh> DocGiaDinh() =>
-        Doc(@"SELECT MaGiaDinh, MaGiaoHo, TenGiaDinh, GhiChu, DiaChi, DienThoai, SoHoKhau,
-                     DienGiaDinh, DaXoa, DaChuyenXu, NgayChuyen, NoiChuyen, GiaDinhAo, MaNhanDang,
-                     MaGiaDinhRieng, AnhDaiDien, UpdateDate
+        Doc($@"SELECT {ChonCot("GiaDinh", "MaGiaDinh", "MaGiaoHo", "TenGiaDinh", "GhiChu", "DiaChi",
+                     "DienThoai", "SoHoKhau", "DienGiaDinh", "DaXoa", "DaChuyenXu", "NgayChuyen",
+                     "NoiChuyen", "GiaDinhAo", "MaNhanDang", "MaGiaDinhRieng", "AnhDaiDien", "UpdateDate")}
               FROM GiaDinh")
             .Select(r => new DongGiaDinh(r.GetInt32(0), SoNull(r[1]), Chuoi(r[2]), Chuoi(r[3]),
                 Chuoi(r[4]), Chuoi(r[5]), Chuoi(r[6]), Chuoi(r[7]), Bool(r[8]), Bool(r[9]),
@@ -85,16 +110,17 @@ public class DocAccess(string duongDanFile, string? matKhau = null, string nguoi
             .ToList();
 
     public IEnumerable<DongGiaoDan> DocGiaoDan() =>
-        Doc(@"SELECT MaGiaoDan, HoTen, MaGiaoHo, Phai, TenThanh, NgaySinh, NoiSinh, SoRuaToi,
-                     NgayRuaToi, NoiRuaToi, ChaRuaToi, NguoiDoDauRuaToi, NgayRuocLe, NoiRuocLe,
-                     ChaRuocLe, SoThemSuc, NgayThemSuc, NoiThemSuc, ChaThemSuc, NguoiDoDauThemSuc,
-                     TrinhDoVanHoa, NgheNghiep, ConHoc, QuaDoi, NgayQuaDoi, DienThoai, Email,
-                     DaXoa, GhiChu, UpdateDate, SoRuocLe, HoTenCha, HoTenMe, DaCoGiaDinh,
-                     GiaoDanAo, TanTong, MaNhanDang, ThuocGiaoXu, ThuocGiaoPhan, DiaChi, DanToc,
-                     NoiQuaDoi, SoAnTang, NoiAnTang, AnhDaiDien, CMND, TrinhDoChuyenMon,
-                     BietNgoaiNgu, NgayXucDau, NguoiXucDau, TinhTrangXucDau, GhiChuXucDau,
-                     NgayBD1, NoiBD1, NgayBD2, NoiBD2, NgayTHVaoDoi, NoiTHVaoDoi, NgayGLHN1,
-                     NgayGLHN2, NoiGLHN, NguoiChungNhanGLHN, XepLoaiGLHN
+        Doc($@"SELECT {ChonCot("GiaoDan",
+                     "MaGiaoDan", "HoTen", "MaGiaoHo", "Phai", "TenThanh", "NgaySinh", "NoiSinh", "SoRuaToi",
+                     "NgayRuaToi", "NoiRuaToi", "ChaRuaToi", "NguoiDoDauRuaToi", "NgayRuocLe", "NoiRuocLe",
+                     "ChaRuocLe", "SoThemSuc", "NgayThemSuc", "NoiThemSuc", "ChaThemSuc", "NguoiDoDauThemSuc",
+                     "TrinhDoVanHoa", "NgheNghiep", "ConHoc", "QuaDoi", "NgayQuaDoi", "DienThoai", "Email",
+                     "DaXoa", "GhiChu", "UpdateDate", "SoRuocLe", "HoTenCha", "HoTenMe", "DaCoGiaDinh",
+                     "GiaoDanAo", "TanTong", "MaNhanDang", "ThuocGiaoXu", "ThuocGiaoPhan", "DiaChi", "DanToc",
+                     "NoiQuaDoi", "SoAnTang", "NoiAnTang", "AnhDaiDien", "CMND", "TrinhDoChuyenMon",
+                     "BietNgoaiNgu", "NgayXucDau", "NguoiXucDau", "TinhTrangXucDau", "GhiChuXucDau",
+                     "NgayBD1", "NoiBD1", "NgayBD2", "NoiBD2", "NgayTHVaoDoi", "NoiTHVaoDoi", "NgayGLHN1",
+                     "NgayGLHN2", "NoiGLHN", "NguoiChungNhanGLHN", "XepLoaiGLHN")}
               FROM GiaoDan")
             .Select(r => new DongGiaoDan(
                 MaGiaoDan: r.GetInt32(0), HoTen: Chuoi(r[1]) ?? "", MaGiaoHo: SoNull(r[2]),
@@ -127,17 +153,19 @@ public class DocAccess(string duongDanFile, string? matKhau = null, string nguoi
             .ToList();
 
     public IEnumerable<DongHonPhoi> DocHonPhoi() =>
-        Doc(@"SELECT MaHonPhoi, TenHonPhoi, SoHonPhoi, NoiHonPhoi, NgayHonPhoi, LinhMucChung,
-                     NguoiChung1, NguoiChung2, CachThucHonPhoi, GhiChu, MaNhanDang, UpdateDate
+        Doc($@"SELECT {ChonCot("HonPhoi", "MaHonPhoi", "TenHonPhoi", "SoHonPhoi", "NoiHonPhoi", "NgayHonPhoi",
+                     "LinhMucChung", "NguoiChung1", "NguoiChung2", "CachThucHonPhoi", "GhiChu", "MaNhanDang", "UpdateDate")}
               FROM HonPhoi")
             .Select(r => new DongHonPhoi(r.GetInt32(0), Chuoi(r[1]), Chuoi(r[2]), Chuoi(r[3]),
                 Chuoi(r[4]), Chuoi(r[5]), Chuoi(r[6]), Chuoi(r[7]), Chuoi(r[8]), Chuoi(r[9]),
                 Chuoi(r[10]), NgayGio(r[11])))
             .ToList();
 
+    // SoThuTu bị NULL trên vài dòng dữ liệu thật cũ (lỗi nhập liệu trong Access, không phải
+    // lệch schema) — coi như 0 thay vì sập, không suy đoán thứ tự thật.
     public IEnumerable<DongGiaoDanHonPhoi> DocGiaoDanHonPhoi() =>
         Doc("SELECT MaGiaoDan, MaHonPhoi, SoThuTu FROM GiaoDanHonPhoi")
-            .Select(r => new DongGiaoDanHonPhoi(r.GetInt32(0), r.GetInt32(1), r.GetInt32(2)))
+            .Select(r => new DongGiaoDanHonPhoi(r.GetInt32(0), r.GetInt32(1), SoNull(r[2]) ?? 0))
             .ToList();
 
     public IEnumerable<DongGiaoPhan> DocGiaoPhan() =>
@@ -182,7 +210,7 @@ public class DocAccess(string duongDanFile, string? matKhau = null, string nguoi
             .ToList();
 
     public IEnumerable<DongDotBiTich> DocDotBiTich() =>
-        Doc("SELECT MaDotBiTich, NgayBiTich, MoTa, LinhMuc, LoaiBiTich, NoiBiTich, UpdateDate FROM DotBiTich")
+        Doc($"SELECT {ChonCot("DotBiTich", "MaDotBiTich", "NgayBiTich", "MoTa", "LinhMuc", "LoaiBiTich", "NoiBiTich", "UpdateDate")} FROM DotBiTich")
             .Select(r => new DongDotBiTich(r.GetInt32(0), Chuoi(r[1]), Chuoi(r[2]), Chuoi(r[3]),
                 SoNull(r[4]) ?? 0, Chuoi(r[5]), NgayGio(r[6])))
             .ToList();
@@ -193,17 +221,18 @@ public class DocAccess(string duongDanFile, string? matKhau = null, string nguoi
             .ToList();
 
     public IEnumerable<DongChuyenXu> DocChuyenXu() =>
-        Doc(@"SELECT MaChuyenXu, MaGiaoDan, NgayChuyen, NoiChuyen, LoaiChuyen, GhiChuChuyen, UpdateDate
+        Doc($@"SELECT {ChonCot("ChuyenXu", "MaChuyenXu", "MaGiaoDan", "NgayChuyen", "NoiChuyen", "LoaiChuyen", "GhiChuChuyen", "UpdateDate")}
               FROM ChuyenXu")
             .Select(r => new DongChuyenXu(r.GetInt32(0), r.GetInt32(1), Chuoi(r[2]), Chuoi(r[3]),
                 SoNull(r[4]) ?? 0, Chuoi(r[5]), NgayGio(r[6])))
             .ToList();
 
     public IEnumerable<DongRaoHonPhoi> DocRaoHonPhoi() =>
-        Doc(@"SELECT MaRaoHonPhoi, TenRaoHonPhoi, MaGiaoDan1, MaGiaoDan2, NgayRaoLan1, NgayRaoLan2,
-                     NgayRaoLan3, GiaoXu1, GiaoPhan1, GiaoXuTruoc1, GiaoPhanTruoc1, GiaoXu2, GiaoPhan2,
-                     GiaoXuTruoc2, GiaoPhanTruoc2, LinhMucNhan, GiaoXuNhan, GhiChu, Tam1, Tam2, Tam3,
-                     UpdateDate, GiaoXuNQ1, GiaoPhanNQ1, GiaoXuNQ2, GiaoPhanNQ2
+        Doc($@"SELECT {ChonCot("RaoHonPhoi",
+                     "MaRaoHonPhoi", "TenRaoHonPhoi", "MaGiaoDan1", "MaGiaoDan2", "NgayRaoLan1", "NgayRaoLan2",
+                     "NgayRaoLan3", "GiaoXu1", "GiaoPhan1", "GiaoXuTruoc1", "GiaoPhanTruoc1", "GiaoXu2", "GiaoPhan2",
+                     "GiaoXuTruoc2", "GiaoPhanTruoc2", "LinhMucNhan", "GiaoXuNhan", "GhiChu", "Tam1", "Tam2", "Tam3",
+                     "UpdateDate", "GiaoXuNQ1", "GiaoPhanNQ1", "GiaoXuNQ2", "GiaoPhanNQ2")}
               FROM RaoHonPhoi")
             .Select(r => new DongRaoHonPhoi(r.GetInt32(0), Chuoi(r[1]), SoNull(r[2]), SoNull(r[3]),
                 Chuoi(r[4]), Chuoi(r[5]), Chuoi(r[6]), Chuoi(r[7]), Chuoi(r[8]), Chuoi(r[9]),
@@ -213,10 +242,11 @@ public class DocAccess(string duongDanFile, string? matKhau = null, string nguoi
             .ToList();
 
     public IEnumerable<DongTanHien> DocTanHien() =>
-        Doc(@"SELECT MaTanHien, MaGiaoDan, NgayBatDau, ChucVu, NoiTu, DongTu, NoiPhucVu, DiaChiPhucVu,
-                     DienThoaiPhucVu, EmailPhucVu, GhiChu, DaHoiTuc, NgayVaoDCV, NgayVaoNhaThu,
-                     NgayVaoNhaTap, NgayVaoKhanLanDau, NgayVaoKhanTronDoi, NgayPhoTe, NgayThuPhongLM,
-                     NgayBonMang
+        Doc($@"SELECT {ChonCot("TanHien",
+                     "MaTanHien", "MaGiaoDan", "NgayBatDau", "ChucVu", "NoiTu", "DongTu", "NoiPhucVu", "DiaChiPhucVu",
+                     "DienThoaiPhucVu", "EmailPhucVu", "GhiChu", "DaHoiTuc", "NgayVaoDCV", "NgayVaoNhaThu",
+                     "NgayVaoNhaTap", "NgayVaoKhanLanDau", "NgayVaoKhanTronDoi", "NgayPhoTe", "NgayThuPhongLM",
+                     "NgayBonMang")}
               FROM TanHien")
             .Select(r => new DongTanHien(r.GetInt32(0), r.GetInt32(1), Chuoi(r[2]), Chuoi(r[3]),
                 Chuoi(r[4]), Chuoi(r[5]), Chuoi(r[6]), Chuoi(r[7]), Chuoi(r[8]), Chuoi(r[9]),
@@ -225,8 +255,8 @@ public class DocAccess(string duongDanFile, string? matKhau = null, string nguoi
             .ToList();
 
     public IEnumerable<DongLinhMuc> DocLinhMuc() =>
-        Doc(@"SELECT MaLinhMuc, TenThanh, HoTen, NgaySinh, ChucVu, TuNgay, DenNgay, GhiChu, DienThoai,
-                     Email, DaXoa, UpdateDate
+        Doc($@"SELECT {ChonCot("LinhMuc", "MaLinhMuc", "TenThanh", "HoTen", "NgaySinh", "ChucVu", "TuNgay",
+                     "DenNgay", "GhiChu", "DienThoai", "Email", "DaXoa", "UpdateDate")}
               FROM LinhMuc")
             .Select(r => new DongLinhMuc(r.GetInt32(0), Chuoi(r[1]), Chuoi(r[2]) ?? "", Chuoi(r[3]),
                 Chuoi(r[4]), Chuoi(r[5]), Chuoi(r[6]), Chuoi(r[7]), Chuoi(r[8]), Chuoi(r[9]),

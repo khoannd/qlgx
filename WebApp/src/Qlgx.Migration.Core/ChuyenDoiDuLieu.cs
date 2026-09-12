@@ -42,10 +42,36 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
     private const string Nguon = "access";
     private readonly List<string> _canhBao = [];
 
+    // GiaoPhan/GiaoHat được CHIA SẺ có chủ đích giữa các giáo xứ (không có giao_xu_id) khi chúng
+    // thật sự là CÙNG một giáo phận/giáo hạt ngoài đời — nhưng "mã cũ" (MaGiaoPhan/MaGiaoHat)
+    // chỉ có ý nghĩa CỤC BỘ trong một file .mdb: giáo xứ nào cũng đánh số bắt đầu từ 1. Sự cố
+    // thật đã xảy ra: nhập giáo xứ "An Phú" (giáo phận Sài Gòn, giáo hạt Tân Định, MaGiaoHat=1)
+    // sau "Vô Nhiễm" (giáo phận Phan Thiết, giáo hạt Đức Tánh, cũng MaGiaoHat=1) đã ÂM THẦM GHI
+    // ĐÈ "Đức Tánh" thành "Tân Định" vì cùng mã cũ 1 → cùng UUID theo cách tính cũ (chỉ theo
+    // (bảng, mã cũ), không phân biệt file nguồn) — y hệt lớp lỗi "đánh cắp dữ liệu" đã tìm thấy
+    // và sửa cho các bảng theo giáo xứ, nhưng chưa từng nghĩ tới cho hai bảng "dùng chung" này vì
+    // trước đó chưa có phép thử với hai giáo xứ thuộc hai giáo phận/giáo hạt THẬT SỰ khác nhau.
+    // Sửa bằng cách khoá GiaoPhan theo TÊN đã chuẩn hoá (ý nghĩa thật xuyên giáo xứ — hai giáo xứ
+    // cùng "Giáo hạt Đức Tánh" thì tên trùng nhau THẬT, nên cố ý chia sẻ) và khoá GiaoHat theo
+    // (GiaoPhanId thật, tên đã chuẩn hoá) để "Tân Định" của Sài Gòn không lẫn với một "Tân Định"
+    // giả định nào đó thuộc giáo phận khác. Hai dictionary dưới đây ánh xạ mã cũ CỦA LẦN CHẠY NÀY
+    // sang Id thật đã giải theo tên — GhiGiaoPhan/GhiGiaoHat populate chúng, các nơi khác (kể cả
+    // GhiGiaoXu) tra qua Anh() như cũ, không cần sửa.
+    private readonly Dictionary<int, Guid> _giaoPhanTheoMaCu = [];
+    private readonly Dictionary<int, Guid> _giaoHatTheoMaCu = [];
+
+    private static string ChuanHoaTen(string ten) => ten.Trim().ToLowerInvariant();
+
     /// <summary>Khoá ổn định CÓ TÁCH GIÁO XỨ — xem ghi chú "QUAN TRỌNG" ở đầu lớp này. GiaoPhan/
-    /// GiaoHat KHÔNG tách vì cố ý dùng chung giữa các giáo xứ (không có giao_xu_id).</summary>
-    private Guid Anh(string bang, int maCu) =>
-        anhXa.Lay(bang is "giao_phan" or "giao_hat" ? bang : $"{giaoXuId}:{bang}", maCu);
+    /// GiaoHat KHÔNG tách vì cố ý dùng chung giữa các giáo xứ, nhưng giải theo TÊN qua
+    /// _giaoPhanTheoMaCu/_giaoHatTheoMaCu (xem ghi chú ở khai báo hai dictionary đó), không
+    /// theo mã cũ trực tiếp.</summary>
+    private Guid Anh(string bang, int maCu) => bang switch
+    {
+        "giao_phan" => _giaoPhanTheoMaCu[maCu],
+        "giao_hat" => _giaoHatTheoMaCu[maCu],
+        _ => anhXa.Lay($"{giaoXuId}:{bang}", maCu)
+    };
 
     private Guid Anh(string bang, string maCu) =>
         anhXa.Lay(bang is "giao_phan" or "giao_hat" ? bang : $"{giaoXuId}:{bang}", maCu);
@@ -134,22 +160,28 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         await GhiGiaoHo(giaoHo, ct);
         await GhiGiaDinh(giaDinh, ct);
         await GhiGiaoDan(giaoDan, ct);
-        await GhiThanhVien(thanhVien, ct);
+
+        // ThanhVienGiaDinh và GiaoDanHonPhoi phụ thuộc GiaDinh/GiaoDan/HonPhoi (đã ghi ở trên) —
+        // kiểm tra khoá ngoại mồ côi dựa trên chính tập dữ liệu nguồn của lần chạy này, không
+        // phải truy vấn CSDL. Dữ liệu Access thật không ép ràng buộc khoá ngoại nên CÓ THỂ có
+        // dòng tham chiếu tới một MaGiaoDan/MaGiaDinh đã bị xoá khỏi bảng gốc từ lâu — bỏ qua
+        // dòng đó thay vì để cả lượt nhập sập vì một FK violation ở PostgreSQL.
+        var maGiaoDanHopLe = giaoDan.Select(d => d.MaGiaoDan).ToHashSet();
+        var maGiaDinhHopLe = giaDinh.Select(d => d.MaGiaDinh).ToHashSet();
+        var maHonPhoiHopLe = honPhoi.Select(d => d.MaHonPhoi).ToHashSet();
+
+        await GhiThanhVien(thanhVien, maGiaDinhHopLe, maGiaoDanHopLe, ct);
         await GhiHonPhoi(honPhoi, ct);
-        await GhiGiaoDanHonPhoi(giaoDanHonPhoi, ct);
+        await GhiGiaoDanHonPhoi(giaoDanHonPhoi, maGiaoDanHopLe, maHonPhoiHopLe, ct);
         await GhiCauHinh(cauHinh, ct);
         await GhiDuLieuChung(duLieuChung, ct);
         await GhiVaiTro(vaiTro, ct);
         await GhiTenLoaiTaiKhoan(tenLoaiTaiKhoan, ct);
         await GhiTaiKhoan(taiKhoan, ct);
 
-        // Bí tích và di chuyển đều phụ thuộc GiaoDan (đã ghi ở trên) — kiểm tra khoá ngoại mồ
-        // côi dựa trên chính tập dữ liệu nguồn của lần chạy này, không phải truy vấn CSDL.
-        var maGiaoDanHopLe = giaoDan.Select(d => d.MaGiaoDan).ToHashSet();
-        var maDotBiTichHopLe = dotBiTich.Select(d => d.MaDotBiTich).ToHashSet();
-
-        await GhiDotBiTich(dotBiTich, ct);
-        await GhiBiTichChiTiet(biTichChiTiet, maGiaoDanHopLe, maDotBiTichHopLe, ct);
+        var maDotBiTichCanon = await GhiDotBiTich(dotBiTich, ct);
+        var maDotBiTichHopLe = maDotBiTichCanon.Values.ToHashSet();
+        await GhiBiTichChiTiet(biTichChiTiet, maGiaoDanHopLe, maDotBiTichHopLe, maDotBiTichCanon, ct);
         await GhiChuyenXu(chuyenXu, maGiaoDanHopLe, ct);
         await GhiRaoHonPhoi(raoHonPhoi, maGiaoDanHopLe, ct);
         await GhiTanHien(tanHien, maGiaoDanHopLe, ct);
@@ -213,7 +245,8 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
     {
         foreach (var d in dong)
         {
-            var id = Anh("giao_phan", d.MaGiaoPhan);
+            var id = anhXa.Lay("giao_phan", ChuanHoaTen(d.TenGiaoPhan));
+            _giaoPhanTheoMaCu[d.MaGiaoPhan] = id;
             var e = await db.GiaoPhan.FindAsync([id], ct) ?? Them(new GiaoPhan { Id = id });
             e.MaGiaoPhanCu = d.MaGiaoPhan;
             e.TenGiaoPhan = d.TenGiaoPhan;
@@ -227,10 +260,12 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
     {
         foreach (var d in dong)
         {
-            var id = Anh("giao_hat", d.MaGiaoHat);
+            var giaoPhanId = Anh("giao_phan", d.MaGiaoPhan);
+            var id = anhXa.Lay("giao_hat", $"{giaoPhanId}:{ChuanHoaTen(d.TenGiaoHat)}");
+            _giaoHatTheoMaCu[d.MaGiaoHat] = id;
             var e = await db.GiaoHat.FindAsync([id], ct) ?? Them(new GiaoHat { Id = id });
             e.MaGiaoHatCu = d.MaGiaoHat;
-            e.GiaoPhanId = Anh("giao_phan", d.MaGiaoPhan);
+            e.GiaoPhanId = giaoPhanId;
             e.TenGiaoHat = d.TenGiaoHat;
             e.GhiChu = d.GhiChu;
             e.MaGiaoHatRieng = d.MaGiaoHatRieng;
@@ -429,10 +464,18 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             await DatLaiUpdatedAt(db.GiaoDan, Anh("giao_dan", d.MaGiaoDan), d.UpdateDate!.Value, ct);
     }
 
-    private async Task GhiThanhVien(List<DongThanhVien> dong, CancellationToken ct)
+    private async Task GhiThanhVien(List<DongThanhVien> dong, HashSet<int> maGiaDinhHopLe,
+        HashSet<int> maGiaoDanHopLe, CancellationToken ct)
     {
         foreach (var d in dong)
         {
+            if (!maGiaDinhHopLe.Contains(d.MaGiaDinh) || !maGiaoDanHopLe.Contains(d.MaGiaoDan))
+            {
+                _canhBao.Add($"thanh_vien_gia_dinh: bỏ qua dòng mồ côi MaGiaDinh={d.MaGiaDinh}, " +
+                    $"MaGiaoDan={d.MaGiaoDan} (khoá ngoại không tồn tại)");
+                continue;
+            }
+
             var maGiaDinh = Anh("gia_dinh", d.MaGiaDinh);
             var maGiaoDan = Anh("giao_dan", d.MaGiaoDan);
             // GIỮ NGUYÊN giá trị VaiTro, không chuẩn hoá: dữ liệu thật có bảy giá trị khác
@@ -482,10 +525,18 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             await DatLaiUpdatedAt(db.HonPhoi, Anh("hon_phoi", d.MaHonPhoi), d.UpdateDate!.Value, ct);
     }
 
-    private async Task GhiGiaoDanHonPhoi(List<DongGiaoDanHonPhoi> dong, CancellationToken ct)
+    private async Task GhiGiaoDanHonPhoi(List<DongGiaoDanHonPhoi> dong, HashSet<int> maGiaoDanHopLe,
+        HashSet<int> maHonPhoiHopLe, CancellationToken ct)
     {
         foreach (var d in dong)
         {
+            if (!maGiaoDanHopLe.Contains(d.MaGiaoDan) || !maHonPhoiHopLe.Contains(d.MaHonPhoi))
+            {
+                _canhBao.Add($"giao_dan_hon_phoi: bỏ qua dòng mồ côi MaGiaoDan={d.MaGiaoDan}, " +
+                    $"MaHonPhoi={d.MaHonPhoi} (khoá ngoại không tồn tại)");
+                continue;
+            }
+
             var giaoDanId = Anh("giao_dan", d.MaGiaoDan);
             var honPhoiId = Anh("hon_phoi", d.MaHonPhoi);
 
@@ -594,12 +645,40 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
     /// Dictionary bằng MỘT câu truy vấn, thay vì FindAsync riêng cho từng dòng — tránh 1108 lượt
     /// round-trip DB, cùng cách áp dụng cho BiTichChiTiet (6150 dòng, xem GhiBiTichChiTiet).
     /// </summary>
-    private async Task GhiDotBiTich(List<DongDotBiTich> dong, CancellationToken ct)
+    /// <summary>
+    /// Trả về ánh xạ MaDotBiTich cũ → MaDotBiTich đại diện. CSDL đích có ràng buộc duy nhất chống
+    /// trùng đợt bí tích (loại + linh mục + ngày) mà Access không hề ép — dữ liệu thật CÓ THỂ có
+    /// hai đợt trùng hệt nhau do nhập liệu hai lần. Gộp các dòng trùng vào MỘT bản ghi đích (dòng
+    /// đầu tiên làm đại diện) thay vì để INSERT thứ hai vi phạm ràng buộc, sập cả lượt nhập.
+    /// </summary>
+    private async Task<Dictionary<int, int>> GhiDotBiTich(List<DongDotBiTich> dong, CancellationToken ct)
     {
-        var ids = dong.Select(d => Anh("dot_bi_tich", d.MaDotBiTich)).ToHashSet();
-        var hienCo = await db.DotBiTich.Where(x => ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
+        var canonCu = new Dictionary<int, int>();
+        var daiDien = new List<DongDotBiTich>();
+        var theoKhoa = new Dictionary<(int, string, DateOnly?), int>();
 
         foreach (var d in dong)
+        {
+            var ngay = DocNgay(d.NgayBiTich, nameof(d.NgayBiTich), new Dictionary<string, string>());
+            var khoa = (d.LoaiBiTich, (d.LinhMuc ?? "").Trim().ToLowerInvariant(), ngay);
+
+            if (theoKhoa.TryGetValue(khoa, out var maDaiDien))
+            {
+                canonCu[d.MaDotBiTich] = maDaiDien;
+                _canhBao.Add($"dot_bi_tich: gộp MaDotBiTich={d.MaDotBiTich} vào MaDotBiTich={maDaiDien} " +
+                    "(trùng loại/linh mục/ngày — Access không chặn trùng, CSDL đích thì có)");
+                continue;
+            }
+
+            theoKhoa[khoa] = d.MaDotBiTich;
+            canonCu[d.MaDotBiTich] = d.MaDotBiTich;
+            daiDien.Add(d);
+        }
+
+        var ids = daiDien.Select(d => Anh("dot_bi_tich", d.MaDotBiTich)).ToHashSet();
+        var hienCo = await db.DotBiTich.Where(x => ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
+
+        foreach (var d in daiDien)
         {
             var id = Anh("dot_bi_tich", d.MaDotBiTich);
             if (!hienCo.TryGetValue(id, out var e))
@@ -622,8 +701,10 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
         }
         await db.SaveChangesAsync(ct);
 
-        foreach (var d in dong.Where(d => d.UpdateDate is not null))
+        foreach (var d in daiDien.Where(d => d.UpdateDate is not null))
             await DatLaiUpdatedAt(db.DotBiTich, Anh("dot_bi_tich", d.MaDotBiTich), d.UpdateDate!.Value, ct);
+
+        return canonCu;
     }
 
     /// <summary>
@@ -635,24 +716,36 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
     /// ý nghĩa rõ rệt.
     /// </summary>
     private async Task GhiBiTichChiTiet(List<DongBiTichChiTiet> dong, HashSet<int> maGiaoDanHopLe,
-        HashSet<int> maDotBiTichHopLe, CancellationToken ct)
+        HashSet<int> maDotBiTichHopLe, Dictionary<int, int> maDotBiTichCanon, CancellationToken ct)
     {
-        var hopLe = new List<DongBiTichChiTiet>(dong.Count);
+        // Ràng buộc duy nhất đích là (giao_xu_id, dot_bi_tich_id, giao_dan_id) — sau khi gộp các
+        // đợt bí tích trùng (xem GhiDotBiTich), hai dòng BiTichChiTiet gốc thuộc hai đợt khác
+        // nhau nhưng CÙNG giáo dân có thể quy về cùng một đợt đại diện, đụng ràng buộc đó. Gộp
+        // luôn ở đây, giữ dòng đầu tiên làm đại diện.
+        var daGap = new HashSet<(int, int)>();
+        var hopLe = new List<(DongBiTichChiTiet Dong, int MaDotBiTich)>(dong.Count);
         foreach (var d in dong)
         {
-            if (!maDotBiTichHopLe.Contains(d.MaDotBiTich) || !maGiaoDanHopLe.Contains(d.MaGiaoDan))
+            var maDotBiTich = maDotBiTichCanon.GetValueOrDefault(d.MaDotBiTich, d.MaDotBiTich);
+            if (!maDotBiTichHopLe.Contains(maDotBiTich) || !maGiaoDanHopLe.Contains(d.MaGiaoDan))
             {
                 _canhBao.Add($"bi_tich_chi_tiet: bỏ qua dòng mồ côi MaDotBiTich={d.MaDotBiTich}, " +
                     $"MaGiaoDan={d.MaGiaoDan} (khoá ngoại không tồn tại)");
                 continue;
             }
-            hopLe.Add(d);
+            if (!daGap.Add((maDotBiTich, d.MaGiaoDan)))
+            {
+                _canhBao.Add($"bi_tich_chi_tiet: bỏ qua dòng trùng MaDotBiTich={d.MaDotBiTich}, " +
+                    $"MaGiaoDan={d.MaGiaoDan} (đợt bí tích đã gộp khiến trùng giáo dân)");
+                continue;
+            }
+            hopLe.Add((d, maDotBiTich));
         }
 
-        var ids = hopLe.Select(d => Anh("bi_tich_chi_tiet", $"{d.MaDotBiTich}:{d.MaGiaoDan}")).ToHashSet();
+        var ids = hopLe.Select(x => Anh("bi_tich_chi_tiet", $"{x.Dong.MaDotBiTich}:{x.Dong.MaGiaoDan}")).ToHashSet();
         var hienCo = await db.BiTichChiTiet.Where(x => ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
 
-        foreach (var d in hopLe)
+        foreach (var (d, maDotBiTich) in hopLe)
         {
             var id = Anh("bi_tich_chi_tiet", $"{d.MaDotBiTich}:{d.MaGiaoDan}");
             if (!hienCo.TryGetValue(id, out var e))
@@ -662,14 +755,14 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
                 hienCo[id] = e;
             }
             e.GiaoXuId = giaoXuId;
-            e.DotBiTichId = Anh("dot_bi_tich", d.MaDotBiTich);
+            e.DotBiTichId = Anh("dot_bi_tich", maDotBiTich);
             e.GiaoDanId = Anh("giao_dan", d.MaGiaoDan);
             e.GhiChu = d.GhiChu;
             e.SourceSystem = Nguon;
         }
         await db.SaveChangesAsync(ct);
 
-        foreach (var d in hopLe.Where(d => d.UpdateDate is not null))
+        foreach (var (d, _) in hopLe.Where(x => x.Dong.UpdateDate is not null))
             await DatLaiUpdatedAt(db.BiTichChiTiet,
                 Anh("bi_tich_chi_tiet", $"{d.MaDotBiTich}:{d.MaGiaoDan}"), d.UpdateDate!.Value, ct);
     }

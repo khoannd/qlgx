@@ -888,4 +888,117 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         (await kiemTra.GiaoHo.CountAsync(x => x.MaGiaoHoCu == mau.MaGiaoHo && x.GiaoXuId == giaoXuId)).Should().Be(0,
             "giao ho hop le trong CUNG mot lan ghi cung phai rollback vi chung mot SaveChangesAsync voi dong loi");
     }
+
+    /// <summary>
+    /// Sự cố thật phát hiện khi nhập file .mdb của giáo xứ An Phú: GhiThanhVien và
+    /// GhiGiaoDanHonPhoi trước đây KHÔNG lọc khoá ngoại mồ côi (khác mọi hàm Ghi* khác), nên một
+    /// dòng ThanhVienGiaDinh/GiaoDanHonPhoi tham chiếu tới MaGiaDinh/MaGiaoDan/MaHonPhoi đã bị
+    /// xoá khỏi Access từ lâu (Access không ép ràng buộc khoá ngoại) làm PostgreSQL từ chối bằng
+    /// lỗi khoá ngoại, sập cả lượt nhập 4074 giáo dân.
+    /// </summary>
+    [Fact]
+    public async Task ThanhVien_va_GiaoDanHonPhoi_bo_qua_dong_mo_coi_thay_vi_lam_sap()
+    {
+        var mau = NguonMau(25);
+        // Dòng mồ côi về MaGiaDinh - phải bị bỏ qua.
+        mau.Nguon.ThanhVien.Add(new DongThanhVien(999999, mau.MaGiaoDan, 0, false));
+        // Dòng mồ côi về MaGiaoDan - phải bị bỏ qua.
+        mau.Nguon.GiaoDanHonPhoi.Add(new DongGiaoDanHonPhoi(999999, mau.MaHonPhoi, 1));
+        await using var ctx = db.TaoContext();
+
+        var kq = await new ChuyenDoiDuLieu(ctx, db.GiaoXuId, new BangAnhXaId())
+            .Chay(mau.Nguon, chayThu: false, CancellationToken.None);
+
+        kq.CanhBao.Should().Contain(c => c.Contains("thanh_vien_gia_dinh") && c.Contains("999999"));
+        kq.CanhBao.Should().Contain(c => c.Contains("giao_dan_hon_phoi") && c.Contains("999999"));
+        // Dòng hợp lệ của cùng lần chạy vẫn phải được ghi bình thường (không bị cuốn theo).
+        (await ctx.ThanhVienGiaDinh.CountAsync(x => x.GiaoDan!.MaGiaoDanCu == mau.MaGiaoDan))
+            .Should().Be(1);
+    }
+
+    /// <summary>
+    /// Sự cố thật: file .mdb có thể có hai "đợt bí tích" trùng hệt nhau (cùng loại, cùng linh
+    /// mục, cùng ngày) do nhập liệu hai lần — Access không chặn trùng nhưng CSDL đích có ràng
+    /// buộc duy nhất (ux_dot_bi_tich_nhom_trung), khiến INSERT dòng thứ hai vi phạm ràng buộc và
+    /// sập cả lượt nhập. Phải gộp hai đợt trùng thành một, không phải báo lỗi.
+    /// </summary>
+    [Fact]
+    public async Task Dot_bi_tich_trung_loai_linh_muc_ngay_duoc_gop_thay_vi_vi_pham_rang_buoc()
+    {
+        var mau = NguonMau(26);
+        var capNhat = new DateTime(2026, 9, 4, 21, 10, 17, DateTimeKind.Unspecified);
+        mau.Nguon.DotBiTich.Add(new DongDotBiTich(MaDotBiTich: 10, NgayBiTich: "01/01/1996",
+            MoTa: "Dot 1", LinhMuc: null, LoaiBiTich: 0, NoiBiTich: null, UpdateDate: capNhat));
+        mau.Nguon.DotBiTich.Add(new DongDotBiTich(MaDotBiTich: 11, NgayBiTich: "01/01/1996",
+            MoTa: "Dot 2 (trung voi dot 1)", LinhMuc: null, LoaiBiTich: 0, NoiBiTich: null,
+            UpdateDate: capNhat));
+        mau.Nguon.BiTichChiTiet.Add(new DongBiTichChiTiet(MaDotBiTich: 10, MaGiaoDan: mau.MaGiaoDan,
+            GhiChu: "Ghi tu dot 1", UpdateDate: capNhat));
+        mau.Nguon.BiTichChiTiet.Add(new DongBiTichChiTiet(MaDotBiTich: 11, MaGiaoDan: mau.MaGiaoDan,
+            GhiChu: "Ghi tu dot 2", UpdateDate: capNhat));
+        await using var ctx = db.TaoContext();
+
+        var kq = await new ChuyenDoiDuLieu(ctx, db.GiaoXuId, new BangAnhXaId())
+            .Chay(mau.Nguon, chayThu: false, CancellationToken.None);
+
+        (await ctx.DotBiTich.CountAsync(x => x.GiaoXuId == db.GiaoXuId
+            && (x.MaDotBiTichCu == 10 || x.MaDotBiTichCu == 11))).Should().Be(1);
+        (await ctx.BiTichChiTiet.CountAsync(x => x.GiaoDan!.MaGiaoDanCu == mau.MaGiaoDan
+            && x.DotBiTich!.NgayBiTich == new DateOnly(1996, 1, 1))).Should().Be(1);
+        kq.CanhBao.Should().Contain(c => c.Contains("dot_bi_tich") && c.Contains("gộp"));
+    }
+
+    /// <summary>
+    /// Sự cố thật, nghiêm trọng nhất trong đợt kiểm thử An Phú: GiaoPhan/GiaoHat được chia sẻ
+    /// có chủ đích giữa các giáo xứ (không có GiaoXuId), nhưng trước bản sửa này khoá ổn định lại
+    /// dựa THẲNG vào mã cũ (MaGiaoPhan/MaGiaoHat) — mã này chỉ có ý nghĩa CỤC BỘ trong một file
+    /// .mdb, mọi giáo xứ đều đánh số bắt đầu từ 1. Nhập giáo xứ "An Phú" (giáo phận Sài Gòn,
+    /// giáo hạt Tân Định, cũng MaGiaoHat=1) sau "Vô Nhiễm" (giáo phận Phan Thiết, giáo hạt Đức
+    /// Tánh, MaGiaoHat=1) đã ÂM THẦM ghi đè tên "Đức Tánh" thành "Tân Định" vì cùng mã cũ → cùng
+    /// UUID. Test này mô phỏng đúng kịch bản đó bằng hai giáo xứ dùng CÙNG mã cũ giáo phận/giáo
+    /// hạt nhưng THẬT SỰ khác nhau.
+    /// </summary>
+    [Fact]
+    public async Task Giao_phan_giao_hat_trung_ma_cu_giua_hai_giao_xu_khac_khong_bi_ghi_de()
+    {
+        var giaoXuA = Guid.NewGuid();
+        var giaoXuB = Guid.NewGuid();
+
+        var nguonA = new NguonGia();
+        nguonA.GiaoPhan.Add(new DongGiaoPhan(MaGiaoPhan: 501, TenGiaoPhan: "Phan Thiet rieng",
+            GhiChu: null, MaGiaoPhanRieng: null));
+        nguonA.GiaoHat.Add(new DongGiaoHat(MaGiaoHat: 502, MaGiaoPhan: 501, TenGiaoHat: "Duc Tanh rieng",
+            GhiChu: null, MaGiaoHatRieng: null));
+        nguonA.GiaoXu.Add(new DongGiaoXu(MaGiaoXu: 1, MaGiaoHat: 502, TenGiaoXu: "Giao xu A",
+            DiaChi: null, DienThoai: null, Email: null, Website: null, Hinh: null, GhiChu: null,
+            MaGiaoXuRieng: null, LastUpload: null));
+
+        // CÙNG mã cũ 501/502 như A (giống hệt cách hai file .mdb độc lập đều đánh số từ 1), nhưng
+        // là một giáo phận/giáo hạt THẬT SỰ khác.
+        var nguonB = new NguonGia();
+        nguonB.GiaoPhan.Add(new DongGiaoPhan(MaGiaoPhan: 501, TenGiaoPhan: "Sai Gon rieng",
+            GhiChu: null, MaGiaoPhanRieng: null));
+        nguonB.GiaoHat.Add(new DongGiaoHat(MaGiaoHat: 502, MaGiaoPhan: 501, TenGiaoHat: "Tan Dinh rieng",
+            GhiChu: null, MaGiaoHatRieng: null));
+        nguonB.GiaoXu.Add(new DongGiaoXu(MaGiaoXu: 1, MaGiaoHat: 502, TenGiaoXu: "Giao xu B",
+            DiaChi: null, DienThoai: null, Email: null, Website: null, Hinh: null, GhiChu: null,
+            MaGiaoXuRieng: null, LastUpload: null));
+
+        await using var ctx = db.TaoContext();
+        await new ChuyenDoiDuLieu(ctx, giaoXuA, new BangAnhXaId())
+            .Chay(nguonA, chayThu: false, CancellationToken.None);
+        await new ChuyenDoiDuLieu(ctx, giaoXuB, new BangAnhXaId())
+            .Chay(nguonB, chayThu: false, CancellationToken.None);
+
+        var xuA = await ctx.GiaoXu.Include(x => x.GiaoHat).ThenInclude(h => h!.GiaoPhan)
+            .SingleAsync(x => x.Id == giaoXuA);
+        var xuB = await ctx.GiaoXu.Include(x => x.GiaoHat).ThenInclude(h => h!.GiaoPhan)
+            .SingleAsync(x => x.Id == giaoXuB);
+
+        xuA.GiaoHat!.TenGiaoHat.Should().Be("Duc Tanh rieng");
+        xuA.GiaoHat.GiaoPhan!.TenGiaoPhan.Should().Be("Phan Thiet rieng");
+        xuB.GiaoHat!.TenGiaoHat.Should().Be("Tan Dinh rieng");
+        xuB.GiaoHat.GiaoPhan!.TenGiaoPhan.Should().Be("Sai Gon rieng");
+        xuA.GiaoHat.Id.Should().NotBe(xuB.GiaoHat.Id, "hai giao hat that su khac nhau, du trung ma cu");
+    }
 }
