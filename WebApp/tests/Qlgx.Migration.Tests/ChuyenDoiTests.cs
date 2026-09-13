@@ -267,21 +267,17 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
     [Fact]
     public async Task Vai_tro_la_gia_gan_khong_chuan_hoa_va_khong_dung_khoa()
     {
-        // Dữ liệu thật của bản Access có các giá trị VaiTro ngoài 0/1/2 (vd 3, 8, 18, 100) —
-        // vẫn giữ nguyên, KHÔNG chuẩn hoá.
-        //
-        // Từ task 3b, thanh_vien_gia_dinh có chỉ mục DUY NHẤT trên cặp (GiaDinhId, GiaoDanId):
-        // một giáo dân chỉ có mặt MỘT lần trong một gia đình, bất kể vai trò. File nguồn lặp
-        // lại cùng một cặp với vai trò khác (bản Access cũ cho phép, vì khoá cũ của nó gồm cả
-        // VaiTro) thì chỉ dòng ĐẦU TIÊN được giữ — và phải có CẢNH BÁO, vì đây là sổ sách thật,
-        // không được mất im lặng. Đã đối chiếu dữ liệu thật đang có (qlgx_thu: 8.539 dòng,
-        // qlgx_thu2: 145 dòng): không file nào có cặp lặp, nên đường đi này chỉ là lưới an toàn.
+        // Dữ liệu thật của bản Access có các giá trị VaiTro ngoài 0/1/2 (vd 3, 8, 18, 100).
+        // Ràng buộc duy nhất là bộ ba (GiaDinhId, GiaoDanId, VaiTro) — từ task 3b nó là CHỈ MỤC
+        // duy nhất chứ không còn là khoá chính, nhưng phạm vi giữ nguyên đúng ba cột đó — nên
+        // hai dòng khác vai trò của cùng một cặp (gia đình, giáo dân) phải tồn tại song song,
+        // không được gộp lại. Siết xuống bộ đôi sẽ làm lượt nhập bỏ mất dòng sổ sách thật.
         var mau = NguonMau(7);
         mau.Nguon.ThanhVien.Add(new DongThanhVien(mau.MaGiaDinh, mau.MaGiaoDan, 3, false));
         mau.Nguon.ThanhVien.Add(new DongThanhVien(mau.MaGiaDinh, mau.MaGiaoDan, 100, false));
         await using var ctx = db.TaoContext();
 
-        var kq = await new ChuyenDoiDuLieu(ctx, db.GiaoXuId, new BangAnhXaId())
+        await new ChuyenDoiDuLieu(ctx, db.GiaoXuId, new BangAnhXaId())
             .Chay(mau.Nguon, false, CancellationToken.None);
 
         var giaDinhId = (await ctx.GiaDinh.SingleAsync(x => x.MaGiaDinhCu == mau.MaGiaDinh)).Id;
@@ -290,10 +286,7 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
             .Select(x => (int)x.VaiTro)
             .ToListAsync();
 
-        vaiTros.Should().BeEquivalentTo([0],
-            "chi mot dong duoc giu cho moi cap (gia dinh, giao dan) va do la dong dau tien");
-        kq.CanhBao.Should().Contain(c => c.Contains("thanh_vien_gia_dinh") && c.Contains("dòng trùng"),
-            "bo dong so sach nao cung phai bao cho quy cha quy so biet, khong duoc im lang");
+        vaiTros.Should().BeEquivalentTo([0, 3, 100]);
     }
 
     [Fact]

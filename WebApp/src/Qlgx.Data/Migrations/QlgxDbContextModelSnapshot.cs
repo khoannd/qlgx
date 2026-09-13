@@ -2447,9 +2447,9 @@ namespace Qlgx.Data.Migrations
                     b.HasIndex("GiaoDanId")
                         .HasDatabaseName("ix_thanh_vien_gia_dinh_giao_dan_id");
 
-                    b.HasIndex("GiaDinhId", "GiaoDanId")
+                    b.HasIndex("GiaDinhId", "GiaoDanId", "VaiTro")
                         .IsUnique()
-                        .HasDatabaseName("ix_thanh_vien_gia_dinh_gia_dinh_id_giao_dan_id");
+                        .HasDatabaseName("ix_thanh_vien_gia_dinh_gia_dinh_id_giao_dan_id_vai_tro");
 
                     b.HasIndex("GiaDinhId", "VaiTro")
                         .IsUnique()

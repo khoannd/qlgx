@@ -467,12 +467,14 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
     private async Task GhiThanhVien(List<DongThanhVien> dong, HashSet<int> maGiaDinhHopLe,
         HashSet<int> maGiaoDanHopLe, CancellationToken ct)
     {
-        // Các cặp (GiaDinhId, GiaoDanId) đã thêm trong CHÍNH lượt này. Cần bộ nhớ đệm riêng vì
-        // FirstOrDefaultAsync chỉ nhìn thấy dữ liệu ĐÃ ghi xuống CSDL, trong khi cả vòng lặp này
-        // chỉ SaveChanges một lần ở cuối. Không có nó, một file Access có cùng cặp hai lần với
-        // hai VaiTro khác nhau sẽ sinh hai dòng rồi vi phạm chỉ mục duy nhất và làm hỏng CẢ lượt
-        // nhập — dữ liệu đã nhập được vẫn mất sạch vì mọi thứ nằm trong một giao dịch.
-        var daThemLuotNay = new HashSet<(Guid, Guid)>();
+        // Các bộ ba (GiaDinhId, GiaoDanId, VaiTro) đã thêm trong CHÍNH lượt này — đúng các cột
+        // của chỉ mục duy nhất. Cần bộ nhớ đệm riêng vì FirstOrDefaultAsync chỉ nhìn thấy dữ
+        // liệu ĐÃ ghi xuống CSDL, trong khi cả vòng lặp này chỉ SaveChanges một lần ở cuối; nếu
+        // file nguồn có hai dòng hệt nhau thì không có nó sẽ sinh hai bản ghi rồi đụng ràng buộc
+        // và làm hỏng CẢ lượt nhập (mọi thứ nằm trong một giao dịch). Trước đây FindAsync tự lo
+        // việc này vì nó tra bộ theo dõi thay đổi trước, nhưng khoá chính nay là Guid tự sinh
+        // nên không dùng FindAsync được nữa.
+        var daThemLuotNay = new Dictionary<(Guid, Guid, VaiTroGiaDinh), ThanhVienGiaDinh>();
 
         foreach (var d in dong)
         {
@@ -490,31 +492,23 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             // an toàn dù giá trị không có tên gọi tương ứng.
             var vaiTro = (VaiTroGiaDinh)d.VaiTro;
 
-            // Cùng một cặp xuất hiện lần thứ hai TRONG CÙNG file nguồn: bản Access cũ cho phép
-            // (khoá cũ của nó gồm cả VaiTro), chỉ mục duy nhất mới thì không. GIỮ dòng đầu tiên
-            // và BÁO CẢNH BÁO — không được bỏ im lặng, vì đây là dòng sổ sách thật của giáo xứ;
-            // quý cha quý sơ phải thấy được là bản nhập thiếu gì so với file gốc.
-            if (!daThemLuotNay.Add((maGiaDinh, maGiaoDan)))
-            {
-                _canhBao.Add($"thanh_vien_gia_dinh: bỏ qua dòng trùng MaGiaDinh={d.MaGiaDinh}, " +
-                    $"MaGiaoDan={d.MaGiaoDan}, VaiTro={d.VaiTro} — cặp (gia đình, giáo dân) này " +
-                    "đã có trong file nguồn với vai trò khác, chỉ giữ dòng đầu tiên");
-                continue;
-            }
+            // Tra theo BỘ BA (GiaDinhId, GiaoDanId, VaiTro) — đúng các cột của chỉ mục duy nhất,
+            // không phải theo khoá chính nữa: từ task 3b khoá chính là Guid tự sinh nên
+            // FindAsync không dùng được ở đây. Chạy lại công cụ nhập trên cùng file Access phải
+            // cập nhật đúng dòng cũ thay vì thêm dòng mới rồi đụng ràng buộc duy nhất.
+            var da = daThemLuotNay.GetValueOrDefault((maGiaDinh, maGiaoDan, vaiTro))
+                ?? await db.ThanhVienGiaDinh.FirstOrDefaultAsync(
+                    x => x.GiaDinhId == maGiaDinh && x.GiaoDanId == maGiaoDan
+                         && x.VaiTro == vaiTro, ct);
+            if (da is not null) { da.ChuHo = d.ChuHo; continue; }
 
-            // Tra theo CẶP (GiaDinhId, GiaoDanId) — đúng chỉ mục duy nhất hiện hành, không phải
-            // theo khoá chính nữa: từ task 3b khoá chính là Guid tự sinh nên FindAsync không
-            // dùng được ở đây. Chạy lại công cụ nhập trên cùng file Access phải cập nhật đúng
-            // dòng cũ thay vì thêm dòng mới rồi đụng ràng buộc duy nhất.
-            var da = await db.ThanhVienGiaDinh.FirstOrDefaultAsync(
-                x => x.GiaDinhId == maGiaDinh && x.GiaoDanId == maGiaoDan, ct);
-            if (da is not null) { da.VaiTro = vaiTro; da.ChuHo = d.ChuHo; continue; }
-
-            db.ThanhVienGiaDinh.Add(new ThanhVienGiaDinh
+            var moi = new ThanhVienGiaDinh
             {
                 GiaoXuId = giaoXuId, GiaDinhId = maGiaDinh, GiaoDanId = maGiaoDan,
                 VaiTro = vaiTro, ChuHo = d.ChuHo
-            });
+            };
+            db.ThanhVienGiaDinh.Add(moi);
+            daThemLuotNay[(maGiaDinh, maGiaoDan, vaiTro)] = moi;
         }
         await db.SaveChangesAsync(ct);
     }
@@ -551,9 +545,9 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
     private async Task GhiGiaoDanHonPhoi(List<DongGiaoDanHonPhoi> dong, HashSet<int> maGiaoDanHopLe,
         HashSet<int> maHonPhoiHopLe, CancellationToken ct)
     {
-        // Xem ghi chú cùng loại ở GhiThanhVien: cần đệm các cặp đã thêm trong lượt này vì
+        // Xem ghi chú cùng loại ở GhiThanhVien: cần đệm các dòng đã thêm trong lượt này vì
         // FirstOrDefaultAsync không thấy chúng trước lần SaveChanges duy nhất ở cuối.
-        var daThemLuotNay = new HashSet<(Guid, Guid)>();
+        var daThemLuotNay = new Dictionary<(Guid, Guid), GiaoDanHonPhoi>();
 
         foreach (var d in dong)
         {
@@ -567,26 +561,19 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             var giaoDanId = Anh("giao_dan", d.MaGiaoDan);
             var honPhoiId = Anh("hon_phoi", d.MaHonPhoi);
 
-            // Cặp lặp lại trong cùng file nguồn — xem ghi chú ở GhiThanhVien. Ở bảng này khoá
-            // cũ của Access ĐÃ là đúng cặp (giao_dan, hon_phoi) nên trường hợp này chỉ xảy ra
-            // với file nguồn hỏng; vẫn báo cảnh báo thay vì bỏ im lặng.
-            if (!daThemLuotNay.Add((giaoDanId, honPhoiId)))
-            {
-                _canhBao.Add($"giao_dan_hon_phoi: bỏ qua dòng trùng MaGiaoDan={d.MaGiaoDan}, " +
-                    $"MaHonPhoi={d.MaHonPhoi} — cặp này đã có trong file nguồn");
-                continue;
-            }
-
             // Tra theo CẶP, không phải khoá chính — từ task 3b khoá chính là Guid tự sinh.
-            var da = await db.GiaoDanHonPhoi.FirstOrDefaultAsync(
-                x => x.GiaoDanId == giaoDanId && x.HonPhoiId == honPhoiId, ct);
+            var da = daThemLuotNay.GetValueOrDefault((giaoDanId, honPhoiId))
+                ?? await db.GiaoDanHonPhoi.FirstOrDefaultAsync(
+                    x => x.GiaoDanId == giaoDanId && x.HonPhoiId == honPhoiId, ct);
             if (da is not null) { da.SoThuTu = d.SoThuTu; continue; }
 
-            db.GiaoDanHonPhoi.Add(new GiaoDanHonPhoi
+            var moi = new GiaoDanHonPhoi
             {
                 GiaoXuId = giaoXuId, GiaoDanId = giaoDanId, HonPhoiId = honPhoiId,
                 SoThuTu = d.SoThuTu
-            });
+            };
+            db.GiaoDanHonPhoi.Add(moi);
+            daThemLuotNay[(giaoDanId, honPhoiId)] = moi;
         }
         await db.SaveChangesAsync(ct);
     }

@@ -13,11 +13,17 @@ public class ThanhVienGiaDinhConfig : IEntityTypeConfiguration<ThanhVienGiaDinh>
         b.Property(x => x.DuLieuLoi).HasColumnType("jsonb");
 
         // Khoá phức cũ trở thành ràng buộc duy nhất, KHÔNG được bỏ: nó là thứ giữ cho một giáo
-        // dân không bị ghi hai lần vào cùng một gia đình. Thêm khoá chính Guid chỉ để nhật ký
-        // đánh địa chỉ được từng dòng — không phải để nới lỏng ràng buộc nghiệp vụ. Một giáo dân
-        // vẫn thuộc được NHIỀU gia đình (con ở nhà cha mẹ, đồng thời có gia đình riêng) vì
-        // GiaDinhId khác nhau; chỉ cấm lặp lại trong CÙNG một gia đình.
-        b.HasIndex(x => new { x.GiaDinhId, x.GiaoDanId }).IsUnique();
+        // dân không bị ghi hai lần vào cùng một gia đình với cùng một vai trò. Thêm khoá chính
+        // Guid chỉ để nhật ký đánh địa chỉ được từng dòng — không phải để đổi ràng buộc nghiệp vụ.
+        //
+        // GIỮ ĐÚNG BỘ BA của khoá chính cũ, không siết xuống bộ đôi (GiaDinhId, GiaoDanId) dù
+        // bộ đôi "đẹp" hơn về nghiệp vụ. Đổi phạm vi ràng buộc là đổi LUẬT, không phải việc của
+        // task thêm khoá thay thế: siết xuống bộ đôi tạo ra một đường MẤT DÒNG mới ở luồng nhập
+        // dữ liệu Access (bản Access cho phép cùng cặp với vai trò khác, vì khoá cũ của nó gồm
+        // cả VaiTro), mà luồng nhập chính là luồng đã từng sinh ra dữ liệu bẩn thật. Ba CSDL đã
+        // nhập hiện có không có cặp lặp, nhưng "chưa thấy" không bằng "không thể" với sổ sách
+        // nhiều năm của giáo xứ tiếp theo.
+        b.HasIndex(x => new { x.GiaDinhId, x.GiaoDanId, x.VaiTro }).IsUnique();
 
         b.Property(x => x.VaiTro).HasConversion<int>();
         b.HasOne(x => x.GiaDinh).WithMany(g => g.ThanhVien).HasForeignKey(x => x.GiaDinhId);

@@ -31,14 +31,13 @@ namespace Qlgx.Data.Migrations
     /// phối). Thêm khoá chính uuid chỉ để nhật ký đánh địa chỉ được từng dòng, không phải để
     /// nới lỏng ràng buộc nghiệp vụ.
     ///
-    /// Lưu ý về thu hẹp ràng buộc ở thanh_vien_gia_dinh: khoá chính cũ là BỘ BA
-    /// (gia_dinh_id, giao_dan_id, vai_tro), chỉ mục duy nhất mới là BỘ ĐÔI
-    /// (gia_dinh_id, giao_dan_id) — chặt hơn một bậc, đúng ý nghĩa nghiệp vụ "một người chỉ có
-    /// mặt một lần trong một gia đình" (một người vẫn thuộc được NHIỀU gia đình vì gia_dinh_id
-    /// khác nhau). Đã đối chiếu dữ liệu thật đang có (qlgx_thu: 8.539 dòng, qlgx_thu2: 145
-    /// dòng): số cặp (gia_dinh_id, giao_dan_id) phân biệt BẰNG ĐÚNG tổng số dòng, không dòng
-    /// nào bị mất khi siết. Nếu một giáo xứ khác có dữ liệu vi phạm, CREATE UNIQUE INDEX sẽ
-    /// dừng lại và báo lỗi rõ ràng ngay tại migration — chủ ý là ồn ào, không âm thầm gộp dòng.
+    /// Chỉ mục duy nhất giữ ĐÚNG các cột của khoá chính cũ, không nhiều không ít:
+    /// thanh_vien_gia_dinh là BỘ BA (gia_dinh_id, giao_dan_id, vai_tro), giao_dan_hon_phoi là
+    /// BỘ ĐÔI (giao_dan_id, hon_phoi_id). Đã cân nhắc siết bộ ba xuống bộ đôi cho "đẹp" hơn về
+    /// nghiệp vụ rồi BỎ: đổi phạm vi ràng buộc là đổi luật, không phải việc của một migration
+    /// thêm khoá thay thế, và nó tạo ra một đường MẤT DÒNG mới ở luồng nhập dữ liệu Access
+    /// (bản Access cho phép cùng cặp với vai trò khác nhau). Dữ liệu giáo xứ mất là không lấy
+    /// lại được — không đánh đổi lấy một ràng buộc gọn hơn mà không ai yêu cầu.
     /// </summary>
     public partial class ThemKhoaChinhChoBangNoi : Migration
     {
@@ -69,9 +68,9 @@ namespace Qlgx.Data.Migrations
             // Bước 3: chỉ mục duy nhất thay cho khoá chính cũ — TẠO TRƯỚC khi bỏ khoá chính cũ
             // để không có khoảnh khắc nào bảng chạy mà thiếu ràng buộc chống trùng.
             migrationBuilder.CreateIndex(
-                name: "ix_thanh_vien_gia_dinh_gia_dinh_id_giao_dan_id",
+                name: "ix_thanh_vien_gia_dinh_gia_dinh_id_giao_dan_id_vai_tro",
                 table: "thanh_vien_gia_dinh",
-                columns: new[] { "gia_dinh_id", "giao_dan_id" },
+                columns: new[] { "gia_dinh_id", "giao_dan_id", "vai_tro" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -124,7 +123,7 @@ namespace Qlgx.Data.Migrations
                 columns: new[] { "giao_dan_id", "hon_phoi_id" });
 
             migrationBuilder.DropIndex(
-                name: "ix_thanh_vien_gia_dinh_gia_dinh_id_giao_dan_id",
+                name: "ix_thanh_vien_gia_dinh_gia_dinh_id_giao_dan_id_vai_tro",
                 table: "thanh_vien_gia_dinh");
 
             migrationBuilder.DropIndex(
