@@ -240,6 +240,16 @@ Hai chỗ phải xử lý riêng:
 - **`GiaoDanHonPhoi` không có `Id`** (`GiaoDanHonPhoiConfig.cs:12`). Bảng khoá phức cần một quy
   ước `ban_ghi_id` dẫn xuất tất định từ khoá phức, ghi rõ trong kế hoạch thi công.
 
+**Đã thi công khác đi (kế hoạch `2026-09-13-nhat-ky-thay-doi.md`):** dẫn xuất `ban_ghi_id` từ khoá
+phức bị loại bỏ — dẫn xuất là một chiều, không khôi phục được một dòng `sua`/`xoa` trỏ tới hai bản
+ghi nào. Thay bằng thêm hẳn cột `Id` kiểu `Guid` cho cả `ThanhVienGiaDinh` lẫn `GiaoDanHonPhoi`,
+giữ nguyên khoá phức cũ làm chỉ mục duy nhất. **Phát hiện mới sau khi Đợt 1 xong (final review):**
+ngay cả với `Id` thật, nhật ký cho hai bảng này vẫn "nửa vời" — có ở đúng 3 chỗ xoá cứng bản ghi
+cha kéo theo (qua `GhiNhatKyXoaCung`), không có ở 14+ chỗ `Remove()` khác trên cùng bảng đó
+(`XoaThanhVien`, `GanVoChong`, chuyển lớp giáo lý...), và một số bảng liên quan bị xoá bằng
+**cascade khoá ngoại ở tầng CSDL** (`ChiTietLopGiaoLy`, `GiaoLyVien`) mà EF không bao giờ thấy
+được. Kế hoạch xoá mềm toàn diện phải rà cả hai loại đường, không chỉ đổi `Remove()` thành đặt cờ.
+
 ### 4.5 `epoch` — danh tính của chuỗi số
 
 Con trỏ `so_thu_tu` trần sẽ mồ côi trong hai tình huống thật:
@@ -256,6 +266,15 @@ giữa "phát hiện được" và "im lặng sai".
 
 **Chính sách lưu giữ phải ghi thành con số** trong kế hoạch thi công, và mục 11 phải nói rõ: "nhật
 ký giữ lịch sử nên khôi phục được" chỉ đúng trong thời hạn lưu giữ.
+
+**Đã thi công (Đợt 1):** `BoDemHieuLuc.Epoch` đã tồn tại trong CSDL (sinh một lần bằng
+`gen_random_uuid()` lúc tạo dòng đếm), nhưng **chưa có đường nào đổi nó** — con số lưu giữ cũng
+chưa được chốt. Đây là điều kiện tiên quyết bắt buộc của đầu nhận-về ở Đợt 2, và việc xoay `epoch`
+phải móc vào đường phục hồi sao lưu (một tính năng nằm ở nhánh công việc khác) — cần thiết kế
+phối hợp riêng, không tự làm được trong nội bộ kế hoạch nhật ký. Cùng nhóm vấn đề: công cụ nhập
+Access (`ChuyenDoiDuLieu`) không đụng tới `bo_dem_hieu_luc`/`epoch` khi ghi hàng nghìn dòng — một
+lần nhập đè lên giáo xứ đang chạy web sẽ làm mọi máy con không bao giờ biết có dữ liệu mới, không
+một dấu hiệu nào báo trước.
 
 ### 4.6 Định danh bản ghi
 

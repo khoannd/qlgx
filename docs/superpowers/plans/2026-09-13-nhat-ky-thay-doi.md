@@ -865,6 +865,184 @@ git commit -m "Them bo sinh dong nhat ky muc truong va danh sach cot loai tru"
 
 ---
 
+## Task 3b: Khoá chính `Guid` cho hai bảng nối, để chúng vào được nhật ký
+
+**Bối cảnh — vì sao task này được chèn thêm sau khi kế hoạch đã viết:** review Task 3 phát hiện
+`ThanhVienGiaDinh` và `GiaoDanHonPhoi` **không kế thừa `ThucTheCoSo`** nên bộ sinh dòng nhật ký
+(duyệt `ChangeTracker.Entries<ThucTheCoSo>()`) không bao giờ chạm tới chúng.
+
+Kịch bản hỏng: sơ ở máy con offline chuyển một giáo dân sang gia đình khác và đặt lại chủ hộ. Thao
+tác đó chỉ sinh `INSERT`/`DELETE` trên `thanh_vien_gia_dinh` — **không dòng nhật ký nào**. Khi máy
+đó đồng bộ, máy chủ và các máy khác vẫn thấy giáo dân ở gia đình cũ, **không báo lỗi gì**. Sổ gia
+đình phân kỳ vĩnh viễn giữa các máy.
+
+Thiết kế (mục 4.4) đã lường trước bảng khoá phức nhưng đề xuất "dẫn xuất `ban_ghi_id` tất định từ
+khoá phức". **Không dùng cách đó:** dẫn xuất là một chiều — khi áp một dòng `sua`/`xoa`, không
+khôi phục được nó trỏ tới hai bản ghi nào. Thay bằng khoá chính `Guid` thật.
+
+**Files:**
+- Modify: `src/Qlgx.Domain/Entities/ThanhVienGiaDinh.cs`, `GiaoDanHonPhoi.cs`
+- Modify: `src/Qlgx.Data/Configurations/ThanhVienGiaDinhConfig.cs`, `GiaoDanHonPhoiConfig.cs`
+- Create: `src/Qlgx.Data/Migrations/*_ThemKhoaChinhChoBangNoi.cs`
+- Modify: danh sách phân loại nhật ký trong `src/Qlgx.Data/NhatKy/`
+- Test: `tests/Qlgx.Data.Tests/NhatKyBangNoiTests.cs`
+
+**Interfaces:**
+- Consumes: danh sách phân loại và `SinhDongNhatKy.Tu` từ Task 3.
+- Produces: `ThanhVienGiaDinh` và `GiaoDanHonPhoi` kế thừa `ThucTheCoSo` (có `Id`, `GiaoXuId`,
+  `CreatedAt`, `UpdatedAt`, `RowVersion`), khoá phức cũ trở thành **chỉ mục duy nhất**.
+
+- [ ] **Step 1: Viết test — chạy để thấy fail**
+
+`tests/Qlgx.Data.Tests/NhatKyBangNoiTests.cs`:
+
+```csharp
+using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using Qlgx.Data.NhatKy;
+using Qlgx.Domain.Entities;
+
+namespace Qlgx.Data.Tests;
+
+public class NhatKyBangNoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixture>
+{
+    [Fact]
+    public async Task Them_thanh_vien_vao_gia_dinh_sinh_dong_nhat_ky()
+    {
+        Guid giaDinhId, giaoDanId;
+        await using (var ctx = db.TaoContext())
+        {
+            var gd = new GiaDinh { GiaoXuId = db.GiaoXuId, MaGiaDinhCu = 9601, TenGiaDinh = "Ho Nguyen" };
+            var nguoi = new GiaoDan { GiaoXuId = db.GiaoXuId, MaGiaoDanCu = 9601, HoTen = "Nguyen Van A" };
+            ctx.GiaDinh.Add(gd);
+            ctx.GiaoDan.Add(nguoi);
+            await ctx.SaveChangesAsync();
+            giaDinhId = gd.Id;
+            giaoDanId = nguoi.Id;
+        }
+
+        await using var ctx2 = db.TaoContext();
+        ctx2.ThanhVienGiaDinh.Add(new ThanhVienGiaDinh
+        {
+            GiaoXuId = db.GiaoXuId, GiaDinhId = giaDinhId, GiaoDanId = giaoDanId, ChuHo = true,
+        });
+
+        var dong = SinhDongNhatKy.Tu(ctx2.ChangeTracker, null, DateTimeOffset.UtcNow, Guid.NewGuid());
+
+        dong.Should().ContainSingle(d => d.Bang == "ThanhVienGiaDinh",
+            "chuyen gia dinh ma khong sinh nhat ky thi so gia dinh phan ky vinh vien giua cac may");
+        dong.Single(d => d.Bang == "ThanhVienGiaDinh").Loai.Should().Be("tao");
+    }
+
+    [Fact]
+    public async Task Khoa_phuc_cu_van_con_la_rang_buoc_duy_nhat()
+    {
+        Guid giaDinhId, giaoDanId;
+        await using (var ctx = db.TaoContext())
+        {
+            var gd = new GiaDinh { GiaoXuId = db.GiaoXuId, MaGiaDinhCu = 9602, TenGiaDinh = "Ho Tran" };
+            var nguoi = new GiaoDan { GiaoXuId = db.GiaoXuId, MaGiaoDanCu = 9602, HoTen = "Tran Thi B" };
+            ctx.GiaDinh.Add(gd);
+            ctx.GiaoDan.Add(nguoi);
+            await ctx.SaveChangesAsync();
+            giaDinhId = gd.Id;
+            giaoDanId = nguoi.Id;
+
+            ctx.ThanhVienGiaDinh.Add(new ThanhVienGiaDinh
+            {
+                GiaoXuId = db.GiaoXuId, GiaDinhId = giaDinhId, GiaoDanId = giaoDanId,
+            });
+            await ctx.SaveChangesAsync();
+        }
+
+        await using var ctx3 = db.TaoContext();
+        ctx3.ThanhVienGiaDinh.Add(new ThanhVienGiaDinh
+        {
+            GiaoXuId = db.GiaoXuId, GiaDinhId = giaDinhId, GiaoDanId = giaoDanId,
+        });
+
+        var hanhDong = async () => await ctx3.SaveChangesAsync();
+        await hanhDong.Should().ThrowAsync<DbUpdateException>(
+            "them khoa chinh Guid khong duoc lam mat rang buoc mot nguoi chi thuoc mot gia dinh mot lan");
+    }
+}
+```
+
+Run: `dotnet test WebApp/tests/Qlgx.Data.Tests --filter NhatKyBangNoiTests`
+Expected: FAIL — `ThanhVienGiaDinh` chưa có `Id`, chưa vào nhật ký.
+
+- [ ] **Step 2: Cho hai thực thể kế thừa `ThucTheCoSo`**
+
+Trong `ThanhVienGiaDinh.cs` và `GiaoDanHonPhoi.cs`, đổi khai báo lớp thành kế thừa `ThucTheCoSo`
+và **xoá thuộc tính `GiaoXuId` đang khai báo riêng** (lớp cơ sở đã có). Giữ nguyên mọi thuộc tính
+nghiệp vụ khác.
+
+- [ ] **Step 3: Đổi cấu hình — khoá chính `Id`, khoá phức cũ thành chỉ mục duy nhất**
+
+Trong `ThanhVienGiaDinhConfig.cs`:
+
+```csharp
+        b.HasKey(x => x.Id);
+
+        // Khoá phức cũ trở thành ràng buộc duy nhất, KHÔNG được bỏ: nó là thứ giữ cho một giáo
+        // dân không bị ghi hai lần vào cùng một gia đình. Thêm khoá chính Guid chỉ để nhật ký
+        // đánh địa chỉ được từng dòng — không phải để nới lỏng ràng buộc nghiệp vụ.
+        b.HasIndex(x => new { x.GiaDinhId, x.GiaoDanId }).IsUnique();
+```
+
+Trong `GiaoDanHonPhoiConfig.cs`, tương tự với `new { x.GiaoDanId, x.HonPhoiId }`.
+
+- [ ] **Step 4: Migration có backfill**
+
+```bash
+cd WebApp/src/Qlgx.Data
+dotnet ef migrations add ThemKhoaChinhChoBangNoi --startup-project ../Qlgx.Api
+```
+
+Mở file sinh ra và **kiểm tra kỹ thứ tự**: cột `id` phải được thêm và **điền giá trị cho mọi dòng
+sẵn có** trước khi đặt làm khoá chính. EF thường sinh `AddColumn` với giá trị mặc định
+`Guid.Empty` — điều đó làm mọi dòng cũ trùng khoá. Sửa tay thành:
+
+```csharp
+            migrationBuilder.Sql("ALTER TABLE thanh_vien_gia_dinh ADD COLUMN id uuid;");
+            migrationBuilder.Sql("UPDATE thanh_vien_gia_dinh SET id = gen_random_uuid();");
+            migrationBuilder.Sql("ALTER TABLE thanh_vien_gia_dinh ALTER COLUMN id SET NOT NULL;");
+```
+
+rồi mới bỏ khoá chính cũ và đặt khoá chính mới. Làm tương tự cho `giao_dan_hon_phoi`. Hai bảng này
+cũng cần các cột của `ThucTheCoSo` (`created_at`, `updated_at`, `source_system`, `du_lieu_loi`) —
+kiểm tra migration có thêm đủ, và `created_at`/`updated_at` phải có giá trị cho dòng cũ
+(`SET created_at = now()` thay vì để NULL).
+
+- [ ] **Step 5: Đưa hai bảng vào nhóm được ghi nhật ký**
+
+Thêm `ThanhVienGiaDinh` và `GiaoDanHonPhoi` vào danh sách phân loại "được ghi nhật ký" tạo ở Task 3.
+Test bắt buộc phân loại của Task 3 sẽ đỏ cho tới khi làm việc này.
+
+- [ ] **Step 6: Chạy test**
+
+Run: `dotnet test WebApp/tests/Qlgx.Data.Tests`
+Expected: PASS toàn bộ, kể cả `SinhDongNhatKyTests` và test phân loại của Task 3.
+
+Rồi: `dotnet test WebApp/tests/Qlgx.Api.Tests`
+Expected: PASS. Hai bảng này được dùng nhiều ở `GiaDinhService` và `GiaoDanService`; đổi khoá chính
+có thể làm lộ chỗ nào đó dựa vào khoá phức. Sửa những chỗ đó cho khớp.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add WebApp/src/Qlgx.Domain/Entities/ThanhVienGiaDinh.cs \
+        WebApp/src/Qlgx.Domain/Entities/GiaoDanHonPhoi.cs \
+        WebApp/src/Qlgx.Data/Configurations/ThanhVienGiaDinhConfig.cs \
+        WebApp/src/Qlgx.Data/Configurations/GiaoDanHonPhoiConfig.cs \
+        WebApp/src/Qlgx.Data/Migrations/ \
+        WebApp/src/Qlgx.Data/NhatKy/ \
+        WebApp/tests/Qlgx.Data.Tests/NhatKyBangNoiTests.cs
+git commit -m "Them khoa chinh Guid cho hai bang noi de chung vao duoc nhat ky"
+```
+
+---
+
 ## Task 4: Nối vào `SaveChanges` bằng giao dịch tường minh
 
 **Files:**
@@ -1241,6 +1419,15 @@ git commit -m "Tim va thay the hang loat sinh nhat ky muc truong theo lo"
 
 ## Task 6: Ghi nhật ký cho chuyển giáo họ và các chỗ hàng loạt còn lại
 
+**Ràng buộc bắt buộc, phát hiện từ review Task 4 (tránh deadlock):** `GiaDinhService.Xoa:322` và
+`GiaoDanService.Xoa:617` hiện gọi `ExecuteDeleteAsync` **trước** khi vào `LuuCoNhatKy`. Hôm nay vô
+hại vì `SinhDongNhatKy` bỏ qua `EntityState.Deleted` nên không dòng nào được ghi. Nhưng khi task
+này cho chúng ghi nhật ký, thứ tự khoá sẽ đảo ngược: khoá dòng nghiệp vụ (`ExecuteDelete`) **trước**
+khoá dòng đếm — ngược với mọi đường khác trong hệ thống (khoá dòng đếm trước, ghi dữ liệu sau) —
+và PostgreSQL sẽ deadlock thật khi hai giao dịch giành khoá theo hai thứ tự khác nhau. **Ở hai chỗ
+này, phải giành khoá dòng đếm (gọi `CapSoHieuLuc.LayDaiSo` hoặc mở giao dịch qua `LuuCoNhatKy`)
+NGAY SAU khi mở giao dịch, trước bất kỳ `ExecuteDelete`/`ExecuteUpdate` nào.**
+
 **Files:**
 - Modify: `src/Qlgx.Api/Services/ChuyenHoService.cs`
 - Modify: `src/Qlgx.Api/Services/GiaoDanService.cs:617-618`, `GiaDinhService.cs:322`, `DotBiTichService.cs:159`
@@ -1574,10 +1761,39 @@ Những thứ sau thuộc thiết kế nhưng **không** làm ở đây, để m
 
 | Việc | Kế hoạch |
 |---|---|
-| Xoá mềm cho 17 chỗ xoá cứng, xoá tầng con, `da_xoa` là ô chịu luật gộp | 2 |
+| **Ghi nhật ký cho thao tác XOÁ** — `SinhDongNhatKy` cố ý bỏ qua `EntityState.Deleted`, vì theo thiết kế mục 4.4 xoá là một **ô** `DaXoa` chịu luật gộp chứ không phải một loại dòng riêng. Cho tới khi 17 chỗ xoá cứng thành xoá mềm và hai bảng nối có cột `DaXoa`, **nhật ký còn thiếu thao tác xoá**: chuyển một giáo dân sang gia đình khác sẽ làm các máy khác thấy người đó ở **cả hai** gia đình | 2 (điều kiện tiên quyết) |
+| Xoá mềm cho 17 chỗ xoá cứng, xoá tầng con, `da_xoa` là ô chịu luật gộp. **Bổ sung sau final review:** nhật ký hiện "nửa vời" cho xoá — có ở 3 chỗ (`GhiNhatKyXoaCung`), không có ở 14+ chỗ `Remove()` khác trên **cùng những bảng đó** (`GiaDinhService.XoaThanhVien`, `GiaDinhService.GanVoChong`, `GiaoLyService`...), và một số bảng bị xoá bằng **cascade khoá ngoại ở tầng CSDL** (`ChiTietLopGiaoLy`, `GiaoLyVien` khi xoá lớp/khối) mà EF không bao giờ thấy được dù có bật `EntityState.Deleted`. Kế hoạch xoá mềm phải rà **cả** đường `Remove()` qua ChangeTracker **lẫn** các ràng buộc `OnDelete(DeleteBehavior.Cascade)` trong `ChiTietLopGiaoLyConfig`, `GiaoLyVienConfig`, `BiTichChiTietConfig` — đổi `da_xoa` thành cờ không đủ nếu cascade vẫn xoá cứng dưới gầm | 2 |
 | Bảng `thiet_bi`, vé dài hạn, sửa `AuthContext.tsx`, cờ offline | 3 |
 | Hiệu chỉnh đồng hồ thật, đoạn đồng hồ, HLC (ở đây `DongHoLogic` luôn 0, mốc là giờ máy chủ) | 4 |
 | `thao_tac_da_nhan`, đầu vào nhận-về/gửi-lên, luật gộp, hộp cần xem lại | 4 |
-| Đơn vị gộp và bộ kiểm bất biến | 4 |
+| Đơn vị gộp và bộ kiểm bất biến. **Bổ sung sau final review:** hiện `SinhDongNhatKy` ghi mỗi thuộc tính một dòng rời, kể cả các nhóm phải nhất quán với nhau (`GiaoDan.QuaDoi` + `GiaoDan.NgayQuaDoi`) — trái với `GhiNhatKyXoaCung` (Task 6) vốn đã cố ý ghi `DaXoa` theo đúng hình dạng "một ô" của thiết kế tương lai. Khi kế hoạch này cài "đơn vị gộp", nó sẽ phải **di trú** toàn bộ nhật ký lịch sử đã tích luỹ từ Đợt 1 (các dòng rời của `QuaDoi`/`NgayQuaDoi` sinh ra hôm nay), hoặc chấp nhận đổi `epoch` và bắt máy con tải lại toàn bộ — quyết định này nên chốt sớm trong kế hoạch 4, không để tới lúc cài mới phát hiện | 4 |
+| **Mới — xoay `epoch` khi khôi phục sao lưu hoặc dọn nhật ký (điều kiện tiên quyết của đầu nhận-về).** `BoDemHieuLuc.Epoch` (Task 1) được sinh một lần lúc tạo dòng đếm và **không có đường nào đổi nó** — thiết kế mục 4.5 yêu cầu đổi khi khôi phục máy chủ hoặc dọn nhật ký, để con trỏ cũ của máy con bị từ chối tường minh (410) thay vì âm thầm nhận rỗng mãi mãi. Việc này phải **móc vào đường phục hồi sao lưu** (tính năng của một nhánh công việc khác, không thuộc kế hoạch nhật ký này) — cần thiết kế phối hợp riêng trước khi đầu nhận-về của Đợt 2 lên sóng. Cùng vấn đề: `Qlgx.Migration.Core/ChuyenDoiDuLieu` (nhập Access) ghi hàng nghìn dòng qua `SaveChangesAsync` trần, không đụng `bo_dem_hieu_luc`/`epoch` — một lần nhập đè lên giáo xứ đang chạy web sẽ làm mọi máy con không bao giờ biết có dữ liệu mới, không có dấu hiệu gì. Thiết kế mục 4.5 cũng yêu cầu "chính sách lưu giữ phải ghi thành con số" — chưa có con số nào được chốt | 4 |
 | Kho IndexedDB, hàng chờ, thanh trạng thái, file dự phòng | 5 |
 | Nhập từ desktop | phase sau |
+
+### Đã đổi so với bản kế hoạch ban đầu
+
+Trong lúc thi công, người điều phối đã ra một số ruling ghi đè nội dung brief gốc của từng task (chi
+tiết đầy đủ nằm trong `.superpowers/sdd/2026-09-13-nhat-ky-thay-doi/progress.md`, xoá sau khi đóng kế
+hoạch — bản tóm tắt dưới đây là bản lưu lâu dài):
+
+- **Task 1:** `CapSoHieuLuc.LayDaiSo` phải **ném lỗi** nếu gọi ngoài giao dịch, không chỉ ghi chú
+  — mã mẫu gốc của brief thiếu rào chắn này. Test đồng thời ban đầu chỉ chứng minh "không trùng,
+  không hở" chứ chưa chứng minh "thứ tự commit = thứ tự số"; đã thêm test quan sát sự chặn.
+- **Task 3:** `TaiKhoan` (mật khẩu, câu hỏi gợi nhớ) bị loại khỏi nhật ký bằng một danh sách phân
+  loại tường minh (`PhanLoaiThucThe`) thay vì giả định "kế thừa `ThucTheCoSo`" = "cần nhật ký" —
+  giả định đó sai cả hai chiều (kéo cả mật khẩu vào, đồng thời bỏ sót hai bảng nối).
+- **Task 3b (chèn thêm, không có trong bản kế hoạch gốc):** thêm khoá chính `Guid` cho
+  `ThanhVienGiaDinh`/`GiaoDanHonPhoi`. Chỉ mục duy nhất giữ nguyên **bộ ba** cũ
+  `(GiaDinhId, GiaoDanId, VaiTro)`, không siết xuống bộ đôi như đề xuất đầu — siết sẽ mở một đường
+  mất dòng mới ở luồng nhập Access.
+- **Task 4:** phát hiện hai đường ghi tương tác (`ChuanHoaDuLieuService`, `NhapHocVienGiaoLyService`)
+  giữ khoá dòng đếm quá lâu, gây thắt cổ chai toàn giáo xứ — phải chia lô ngay trong task này thay vì
+  để tới sau.
+- **Task 5, 6:** lặp lại đúng loại lỗi Task 4 vừa sửa (giữ khoá quá lâu) ở "Tìm và thay thế" và
+  "Chuyển giáo họ hàng loạt" — cả hai đều phải chia lô, chọn đúng kiểu `Take` hay `Skip/Take` tuỳ
+  tập hợp có co lại sau xử lý hay không. Task 5 còn có một hồi quy Critical (vòng lặp vô hạn khi
+  giá trị tìm bằng giá trị thay) do chính việc chia lô sinh ra, đã sửa.
+- **Sau final review (đợt sửa cuối, 7 việc):** chia lô nốt `TaoDotBiTichTuDongService`; mở rộng
+  kiểm thử kiến trúc ra cả `src/Qlgx.Api` với danh sách miễn trừ tường minh; `giao_dich_id` cho
+  thao tác xoá nay do người gọi truyền vào một lần thay vì tự sinh nhiều lần trong cùng giao dịch.
