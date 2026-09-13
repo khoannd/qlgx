@@ -23,6 +23,13 @@ public static class CapSoHieuLuc
     {
         if (soLuong <= 0) throw new ArgumentOutOfRangeException(nameof(soLuong));
 
+        // Ngoài giao dịch, FOR UPDATE nhả khoá ngay cuối câu lệnh nên hai lời gọi đồng thời
+        // cùng đọc một giá trị rồi cùng cấp trùng số — và lỗi đó chỉ lộ khi có tải. Thà đổ vỡ
+        // ngay lúc gọi sai còn hơn để trùng số âm thầm.
+        if (db.Database.CurrentTransaction is null)
+            throw new InvalidOperationException(
+                "LayDaiSo phai chay trong chinh giao dich se ghi hieu_luc. Mo BeginTransactionAsync truoc khi goi.");
+
         // Tạo dòng đếm nếu chưa có. ON CONFLICT DO NOTHING để hai tiến trình cùng tạo không
         // đổ vỡ; dòng SELECT ... FOR UPDATE ngay dưới mới là chỗ giành quyền cấp số.
         await db.Database.ExecuteSqlInterpolatedAsync($"""
