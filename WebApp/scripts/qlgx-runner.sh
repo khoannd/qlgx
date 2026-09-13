@@ -10,6 +10,13 @@ set -euo pipefail
 THU_MUC_CAU_HINH="${THU_MUC_CAU_HINH:-/etc/qlgx}"
 TEP_BACKUP_ENV="${TEP_BACKUP_ENV:-$THU_MUC_CAU_HINH/backup.env}"
 GIU_LAI_MAC_DINH="--keep-last 8 --keep-daily 30 --keep-weekly 12 --keep-monthly 24"
+# Khoa NOI BO cua chinh qlgx-runner.sh -- KHONG dua vao flock o tang systemd unit (Task 15 co
+# du dinh dat mot cai, nhung do CHI bao ve cac lan goi QUA systemd). qlgx-runner.sh duoc goi tu
+# nhieu noi khac nhau: systemd timer, install.sh's cap_nhat/quay_lui goi THANG (khi admin bam
+# cap nhat/quay lui), admin go tay, va sau nay hang doi cong viec cua Task 15 -- chi mot khoa NAM
+# TRONG CHINH SCRIPT nay moi bao ve dong deu duoc TAT CA duong goi do. Cho phep ghi de qua bien
+# moi truong de kiem chung tren may khong co /var/lock that (vd Windows qua Git Bash).
+KHOA_RUNNER="${KHOA_RUNNER:-/var/lock/qlgx-runner.lock}"
 
 nap_thu_vien_runner() {
   local d; d="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -310,13 +317,38 @@ lenh_don_spool() {
   find "$THU_MUC_SPOOL" -mindepth 1 -maxdepth 1 -type d -mmin +1440 -exec rm -rf {} + 2>/dev/null || true
 }
 
+# Gianh khoa file KHONG CHO (flock -n) truoc khi chay mot lenh thay doi trang thai dung chung
+# (kho restic, bang ban_sao_luu/trang_thai_sao_luu, va rieng sao-luu con ghi truc tiep vao he
+# thong tep cua container postgres qua duong dan /tmp/qlgx-dump-*). Neu KHONG gianh duoc khoa --
+# tuc la dang co mot luot khac chay -- THOAT NGAY VOI MA 0 (day la hanh vi MONG DOI khi hai lan
+# goi trung thoi diem, KHONG PHAI loi): vi du cron dem dang chay sao-luu dung luc admin bam "cap
+# nhat" (install.sh's cap_nhat goi lenh_sao_luu truc tiep, khong qua systemd) -- neu khong co
+# khoa nay, ca hai se cung dung wildcard `/tmp/qlgx-dump-*` va ghi de/xoa dump cua nhau giua
+# chung (da tung la mot hong that phat hien o vong review truoc, ngay sau khi them buoc don rac
+# wildcard de sua Loi 2). `exec 9>"$KHOA_RUNNER"` mo/giu file descriptor 9 SUOT DOI tien trinh --
+# flock tu nha khi tien trinh thoat (fd dong), khong can don tay o duong thanh cong lan duong loi.
+#
+# tai-ve/don-spool KHONG khoa: tai-ve thao tac tren thu muc RIENG theo ma job (khong dung chung
+# duong dan voi bat ky lenh nao khac), don-spool chi xoa thu muc da qua 24 gio (khong dung nam
+# giua mot lan tai-ve dang chay vi thu muc do luon con "tre" hon 24 gio) -- ca hai it rui ro
+# giam dap hon nhieu so voi sao-luu/kiem-tra/dong-bo-danh-sach nen khong can them khoa.
+gianh_khoa_hoac_bo_qua() {
+  local ten_lenh="$1"
+  mkdir -p "$(dirname "$KHOA_RUNNER")" 2>/dev/null || true
+  exec 9>"$KHOA_RUNNER" || bao_loi_va_thoat "Khong mo duoc tep khoa $KHOA_RUNNER."
+  if ! flock -n 9; then
+    ghi_log canh-bao "Dang co mot luot '$ten_lenh' khac chay (giu khoa $KHOA_RUNNER) -- bo qua luot nay (khong phai loi)."
+    exit 0
+  fi
+}
+
 main_runner() {
   nap_cau_hinh
   local lenh="${1:-}"; shift || true
   case "$lenh" in
-    sao-luu)           lenh_sao_luu "$@" ;;
-    kiem-tra)          lenh_kiem_tra ;;
-    dong-bo-danh-sach) lenh_dong_bo_danh_sach ;;
+    sao-luu)           gianh_khoa_hoac_bo_qua "$lenh"; lenh_sao_luu "$@" ;;
+    kiem-tra)          gianh_khoa_hoac_bo_qua "$lenh"; lenh_kiem_tra ;;
+    dong-bo-danh-sach) gianh_khoa_hoac_bo_qua "$lenh"; lenh_dong_bo_danh_sach ;;
     tai-ve)            lenh_tai_ve "$@" ;;
     don-spool)         lenh_don_spool ;;
     *) bao_loi_va_thoat "Lenh khong hieu: '$lenh'. Dung: sao-luu|kiem-tra|dong-bo-danh-sach|tai-ve|don-spool" ;;
