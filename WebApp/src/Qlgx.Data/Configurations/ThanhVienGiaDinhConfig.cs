@@ -8,9 +8,17 @@ public class ThanhVienGiaDinhConfig : IEntityTypeConfiguration<ThanhVienGiaDinh>
 {
     public void Configure(EntityTypeBuilder<ThanhVienGiaDinh> b)
     {
-        // Khoá bộ ba, không phải cặp: một giáo dân có thể vừa là Con ở nhà cha mẹ
-        // vừa là Vợ trong gia đình riêng.
-        b.HasKey(x => new { x.GiaDinhId, x.GiaoDanId, x.VaiTro });
+        b.HasKey(x => x.Id);
+        b.Property(x => x.RowVersion).IsRowVersion().HasColumnName("xmin").HasColumnType("xid");
+        b.Property(x => x.DuLieuLoi).HasColumnType("jsonb");
+
+        // Khoá phức cũ trở thành ràng buộc duy nhất, KHÔNG được bỏ: nó là thứ giữ cho một giáo
+        // dân không bị ghi hai lần vào cùng một gia đình. Thêm khoá chính Guid chỉ để nhật ký
+        // đánh địa chỉ được từng dòng — không phải để nới lỏng ràng buộc nghiệp vụ. Một giáo dân
+        // vẫn thuộc được NHIỀU gia đình (con ở nhà cha mẹ, đồng thời có gia đình riêng) vì
+        // GiaDinhId khác nhau; chỉ cấm lặp lại trong CÙNG một gia đình.
+        b.HasIndex(x => new { x.GiaDinhId, x.GiaoDanId }).IsUnique();
+
         b.Property(x => x.VaiTro).HasConversion<int>();
         b.HasOne(x => x.GiaDinh).WithMany(g => g.ThanhVien).HasForeignKey(x => x.GiaDinhId);
         b.HasOne(x => x.GiaoDan).WithMany(g => g.GiaDinhThamGia).HasForeignKey(x => x.GiaoDanId);

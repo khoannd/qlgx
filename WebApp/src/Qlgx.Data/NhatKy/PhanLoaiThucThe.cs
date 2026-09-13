@@ -22,6 +22,10 @@ public static class PhanLoaiThucThe
     public static readonly HashSet<string> DuocGhi = new(StringComparer.Ordinal)
     {
         "GiaoHo", "GiaDinh", "GiaoDan", "HonPhoi",
+        // Hai bảng nối. Chúng mang chính cái sự kiện "ai thuộc gia đình nào", "ai cưới ai" —
+        // bỏ ra ngoài nhật ký thì việc chuyển một giáo dân sang gia đình khác không sinh dòng
+        // nào và sổ gia đình phân kỳ vĩnh viễn giữa các máy (lý do task 3b tồn tại).
+        "ThanhVienGiaDinh", "GiaoDanHonPhoi",
         "CauHinh", "DuLieuChung", "VaiTro", "TenLoaiTaiKhoan",
         "DotBiTich", "BiTichChiTiet", "ChuyenXu", "RaoHonPhoi", "TanHien", "LinhMuc",
         "KhoiGiaoLy", "LopGiaoLy", "ChiTietLopGiaoLy", "GiaoLyVien", "HoiDoan", "ChiTietHoiDoan",
