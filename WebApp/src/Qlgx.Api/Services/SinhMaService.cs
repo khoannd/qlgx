@@ -47,6 +47,10 @@ namespace Qlgx.Api.Services;
 /// không thấy giao dịch chưa commit (read-committed) — đây là biên cố hữu của mọi thiết kế
 /// "tính lại rồi tự sửa", chỉ xảy ra khi công cụ chuyển dữ liệu và người dùng web ghi ĐỒNG THỜI
 /// vào đúng cùng một khoảnh khắc, thực tế công cụ chạy trong cửa sổ bảo trì riêng.
+///
+/// THỨ TỰ KHOÁ: trong một giao dịch cần cả mã cũ lẫn số hiệu lực, phải gọi hàm này (khoá dòng
+/// bo_dem_ma) TRƯỚC khi khoá bo_dem_hieu_luc qua CapSoHieuLuc.LayDaiSo — xem chú thích đầy đủ
+/// ở CapSoHieuLuc. Gọi ngược thứ tự sẽ deadlock khi hai giáo dân được tạo đồng thời.
 /// </summary>
 public class SinhMaService(QlgxDbContext db)
 {

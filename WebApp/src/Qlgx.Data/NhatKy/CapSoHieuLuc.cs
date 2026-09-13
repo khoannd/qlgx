@@ -21,6 +21,16 @@ public static class CapSoHieuLuc
     ///    (vai trò THẬT lúc chạy sản phẩm), một phiên chỉ mang được ĐÚNG MỘT app.giao_xu_id tại
     ///    một thời điểm, nên một giao dịch không thể hợp lệ khoá dòng đếm của hai giáo xứ khác
     ///    nhau trong cùng một phiên — lời khuyên đó không còn khả thi trong mô hình RLS này.
+    ///
+    /// THỨ TỰ KHOÁ GIỮA HAI BỘ ĐẾM — quy ước phải giữ: nếu một giao dịch cần khoá CẢ
+    /// bo_dem_ma (SinhMaService.LayMaTiepTheo, cấp MaGiaoDanCu / MaGiaDinhCu ...) LẪN
+    /// bo_dem_hieu_luc (hàm này), thì phải khoá bo_dem_ma TRƯỚC, rồi mới tới bo_dem_hieu_luc.
+    /// Hiện mọi chỗ gọi đều theo đúng thứ tự đó (sinh mã xong mới LuuCoNhatKy), nên chưa từng
+    /// deadlock. Nhưng KHÔNG có gì cưỡng chế bằng máy: một người viết code sau này gọi
+    /// LuuCoNhatKy trước rồi mới sinh mã sẽ tạo ra một giao dịch khoá ngược chiều, và hai giáo
+    /// dân được tạo đồng thời ở hai máy sẽ deadlock thật — kiểu lỗi chỉ lộ khi có tải, đúng lúc
+    /// giáo xứ đang nhập liệu nhiều nhất. Đây là ghi chú phòng ngừa: nếu buộc phải đổi thứ tự,
+    /// hãy đổi ở MỌI chỗ gọi cùng lúc, đừng đổi lẻ một chỗ.
     /// </summary>
     public static async Task<(long SoDau, Guid Epoch)> LayDaiSo(
         QlgxDbContext db, Guid giaoXuId, int soLuong, CancellationToken ct)
