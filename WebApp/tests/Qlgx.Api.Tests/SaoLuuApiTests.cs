@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Qlgx.Api.Services;
 using Qlgx.Domain.Entities;
 
 namespace Qlgx.Api.Tests;
@@ -9,6 +10,17 @@ namespace Qlgx.Api.Tests;
 public class SaoLuuApiTests(QlgxApiFactory factory) : IClassFixture<QlgxApiFactory>
 {
     private HttpClient ClientHeThong() => factory.CreateAuthClient(loaiTaiKhoan: 9);
+
+    /// <summary>Xoá sạch hàng đợi TRƯỚC khi test tự tạo công việc — mỗi test tự bảo đảm tiền đề
+    /// của chính nó ở bước Arrange, không dựa vào việc test khác (chạy trước nó) đã dọn dẹp.
+    /// xUnit KHÔNG bảo đảm thứ tự chạy [Fact] trong cùng lớp, và guard "không xếp hàng hai công
+    /// việc ghi cùng lúc" trong SaoLuuService.TaoCongViec sẽ chặn vĩnh viễn nếu có dòng "cho"
+    /// sót lại từ một test khác chạy trước.</summary>
+    private async Task XoaSachHangDoiCongViec()
+    {
+        await using var db = factory.TaoContextThuan();
+        await db.CongViecSaoLuu.ExecuteDeleteAsync();
+    }
 
     [Fact]
     public async Task Tai_khoan_thuong_bi_tu_choi_moi_route_sao_luu()
@@ -25,6 +37,8 @@ public class SaoLuuApiTests(QlgxApiFactory factory) : IClassFixture<QlgxApiFacto
     [Fact]
     public async Task Tao_cong_viec_sao_luu_chi_ghi_mot_dong_trang_thai_cho()
     {
+        await XoaSachHangDoiCongViec();
+
         var res = await ClientHeThong().PostAsJsonAsync("/api/sao-luu/cong-viec", new { loai = "sao_luu" });
 
         res.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -33,12 +47,7 @@ public class SaoLuuApiTests(QlgxApiFactory factory) : IClassFixture<QlgxApiFacto
         var cv = await db.CongViecSaoLuu.SingleAsync(x => x.Id == than!.Id);
         cv.TrangThai.Should().Be("cho");
         cv.BatDauLuc.Should().BeNull("API chi tao cong viec, bo chay tren host moi thuc thi");
-
-        // Don dep: cac test khac dung chung mot database (IClassFixture). Neu de nguyen dong
-        // "cho" nay lai, no se chan vinh vien nhung test tao cong viec khac qua bao ve
-        // "khong xep hang hai cong viec ghi cung luc" trong SaoLuuService.TaoCongViec.
-        db.CongViecSaoLuu.Remove(cv);
-        await db.SaveChangesAsync();
+        cv.NguoiTaoId.Should().NotBeNull("nguoi bam nut phai duoc ghi lai, khong duoc de trong");
     }
 
     [Fact]
@@ -80,6 +89,8 @@ public class SaoLuuApiTests(QlgxApiFactory factory) : IClassFixture<QlgxApiFacto
     [Fact]
     public async Task Phuc_hoi_du_dieu_kien_thi_tao_duoc_cong_viec()
     {
+        await XoaSachHangDoiCongViec();
+
         var res = await ClientHeThong().PostAsJsonAsync("/api/sao-luu/cong-viec",
             new { loai = "phuc_hoi", snapshotId = "ab12cd34", xacNhan = "PHUC HOI TOAN BO" });
 
@@ -138,6 +149,25 @@ public class SaoLuuApiTests(QlgxApiFactory factory) : IClassFixture<QlgxApiFacto
         var than = await ClientHeThong().GetFromJsonAsync<TinhTrangKetQua>("/api/sao-luu/tinh-trang");
 
         than!.Den.Should().Be("xanh");
+    }
+
+    /// <summary>Goi thang ham thuan SaoLuuService.TinhDen — khong can DB, khong dinh chuyen thu
+    /// tu test o Loi 1. Phu nhanh do con thieu: dien tap phuc hoi gan nhat THAT BAI. Bai
+    /// "Den_xanh_khi_vua_sao_luu_xong_va_khong_loi" di qua cung dong DienTapGanNhat != null
+    /// nhung voi DienTapDat = true, nen khong bat duoc loi neu ai go nham "!tt.DienTapDat"
+    /// thanh "tt.DienTapDat".</summary>
+    [Fact]
+    public void Den_do_khi_dien_tap_phuc_hoi_gan_nhat_that_bai()
+    {
+        var tt = new TrangThaiSaoLuu
+        {
+            SaoLuuGanNhat = DateTimeOffset.UtcNow.AddHours(-1), // moi, khong phai ly do do o day
+            LoiGanNhat = null,                                  // khong phai ly do do o day
+            DienTapGanNhat = DateTimeOffset.UtcNow.AddDays(-2),
+            DienTapDat = false,
+        };
+
+        SaoLuuService.TinhDen(tt, DateTimeOffset.UtcNow).Should().Be("do");
     }
 
     [Fact]
