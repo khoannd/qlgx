@@ -564,3 +564,106 @@ container dùng một lần, **không bao giờ chạy trên máy người dùng
   các tab, biểu đồ trống lúc mở, các điểm bất nhất định dạng ngày và kiểu lưới). Chúng được ghi
   nhận riêng và xử lý trong một đợt khác; thiết kế này chỉ cam kết **không lặp lại** chúng ở màn
   hình mới.
+
+## 13. Ngưỡng mở rộng và đường nâng cấp
+
+Thiết kế trên nhắm một máy chủ phục vụ vài chục tới vài trăm giáo xứ. Mục này ghi rõ **nó hết
+dùng được ở đâu** và **đường ra là gì**, để những quyết định hôm nay không dồn hệ thống vào chân
+tường.
+
+### 13.1 Ngưỡng thật nằm ở kích thước dữ liệu, không phải số giáo xứ
+
+Ước tính (chưa đo trên dữ liệu thật quy mô lớn): với 3 triệu giáo dân, toàn bộ dữ liệu **chữ**
+(giáo dân, gia đình, ~9 triệu bí tích chi tiết) chỉ khoảng **5–10 GB**. Nhưng **ảnh đại diện lưu
+trong `bytea`**, nếu một nửa số giáo dân có ảnh, chiếm **90–180 GB** — tức khoảng 95% khối lượng
+sao lưu là thứ gần như không bao giờ thay đổi.
+
+Hệ quả theo từng thành phần:
+
+| Thành phần | Ngưỡng | Chuyện gì xảy ra khi vượt |
+|---|---|---|
+| `pg_dump`/`pg_restore` một lượt | vài chục GB | RTO 1 giờ vỡ; bước nạp mất nhiều giờ (bước hoán đổi tên vẫn tức thời) |
+| RPO 6 giờ | vài chục giáo xứ | 1000 giáo xứ mất 6 giờ nhập liệu là hàng nghìn bản ghi |
+| `ALTER DATABASE … RENAME` | khi có nhiều bản API sau bộ cân bằng tải, hoặc PostgreSQL managed | Cần không còn kết nối nào; với PgBouncer + N container thì phải phối hợp, và dịch vụ managed có thể không cho đổi tên |
+| `restic prune` / `check` | kho vài trăm GB | Khoá kho, chạy hàng giờ |
+| **Phục hồi toàn máy chủ** | **vài chục giáo xứ** | **Điểm gãy nặng nhất, và là gãy về nghiệp vụ**: sửa một lần nhập sai của giáo xứ A bằng cách xoá công việc của 999 giáo xứ khác. Nút này trở thành nút không ai được phép bấm |
+
+Những phần **không** gãy khi mở rộng: hàng đợi công việc với `FOR UPDATE SKIP LOCKED` (vốn đã
+đúng cho N tiến trình — nhiều bản API cùng ghi và nhiều bộ chạy cùng lấy đều an toàn); ranh giới
+"API không giữ khoá R2" (càng nhiều container càng đúng); mã hoá phía máy chủ; bốn lớp rào phục
+hồi.
+
+### 13.2 Đường nâng cấp — bốn bước độc lập, làm được từng bước một
+
+**Bước 1 — Ảnh ra object storage (R2).** Đòn bẩy lớn nhất: bỏ ảnh khỏi `bytea` thì CSDL trở lại
+5–10 GB và **toàn bộ thiết kế hiện tại vẫn chạy tốt ở quy mô cả nước**. Ảnh được bảo vệ bằng
+versioning của R2 vì ảnh gần như bất biến. Giá phải trả: mất tính chất "sao lưu CSDL = sao lưu
+tất cả", và phải xử lý trạng thái mồ côi giữa CSDL và kho ảnh. **Có chủ đích chưa làm bây giờ** —
+tính đơn giản đó đang có giá trị hơn. Làm khi CSDL vượt ~20 GB hoặc khi có nhiều giáo xứ thật.
+
+**Bước 2 — Đồng bộ PWA làm nguồn phục hồi bổ sung.** Một phiên làm việc khác đang xây chức năng
+**chạy offline và đồng bộ trên PWA**. Điều đó đổi bản chất bài toán RPO: dữ liệu vừa nhập **vẫn
+còn trên máy người dùng**, nên khoảng trống giữa bản sao lưu gần nhất và thời điểm sự cố không
+nhất thiết là dữ liệu mất hẳn. Hai năng lực mở ra:
+
+- Sau khi phục hồi, máy chủ **phát tín hiệu** để các máy trạm PWA đẩy lại phần dữ liệu cục bộ mới
+  hơn mốc phục hồi, lấp đúng khoảng bị mất.
+- Trong lúc sao lưu/phục hồi, các giáo xứ **vẫn làm việc offline trên PWA** được, thay vì nhìn
+  màn hình chặn.
+
+Việc này **chỉ triển khai sau khi chức năng offline/đồng bộ PWA hoàn tất**; nó phụ thuộc hoàn
+toàn vào mô hình đồng bộ mà phiên đó chọn (cách đánh dấu phiên bản, cách giải quyết xung đột).
+Ghi lại ở đây để không quên, không phải để làm ngay. Khi làm, hai điều phải làm rõ trước: máy
+trạm phân biệt "bản ghi chưa từng đồng bộ" với "bản ghi đã đồng bộ rồi nhưng máy chủ vừa lùi lại"
+bằng cách nào, và ai thắng khi cùng một bản ghi bị sửa ở hai nơi.
+
+**Bước 3 — PITR thay cho RPO 6 giờ.** pgBackRest hoặc wal-g cho cơ sở dữ liệu (giữ restic cho
+tệp cấu hình). Đưa RPO về cỡ phút. Cần khi số giáo xứ khiến 6 giờ dữ liệu trở thành tổn thất
+không chấp nhận được — và có thể được đẩy lùi đáng kể nếu Bước 2 đã xong.
+
+**Bước 4 — Phục hồi theo từng giáo xứ.** Đổi đơn vị phục hồi từ máy chủ sang giáo xứ: xuất/nhập
+logic theo `giao_xu_id` (mô hình RLS sẵn có đã cho đúng ranh giới cần thiết). Sau bước này, phục
+hồi toàn máy chủ chỉ còn dùng cho thảm hoạ hạ tầng, không còn dùng để sửa lỗi thao tác.
+
+### 13.3 Làm ngay bây giờ để không dồn vào chân tường
+
+Ba việc rẻ, đúng ngay cả ở quy mô hiện tại:
+
+1. **`pg_dump -Fd -Z0 -j4` thay cho `-Fc`.** `-Fc` nén sẵn, mà một byte đổi ở đầu làm toàn bộ
+   luồng nén đổi theo — restic không khử trùng lặp được gì và mỗi snapshot lưu gần như một bản
+   đầy đủ mới. Định dạng thư mục không nén để restic tự nén và khử trùng lặp theo khối, đồng thời
+   cho phép dump/restore song song.
+2. **Giảm dung lượng mỗi ảnh.** Xem mục 13.4.
+3. **Ghi ngưỡng vào tài liệu vận hành** để người quản trị biết khi nào phải gọi người nâng cấp.
+
+### 13.4 Ảnh đại diện: giữ trong `bytea`, nhưng tối ưu ngay
+
+Quyết định: **giữ ảnh trong PostgreSQL** ở giai đoạn này, chuyển sang R2 sau khi đã có nhiều giáo
+xứ dùng thật (Bước 1 ở trên).
+
+Việc nén và chuẩn hoá **đã có sẵn** trong `Qlgx.Api/Anh/XuLyAnh.cs`: chặn 8 MB trước khi giải mã,
+giải mã thật bằng SkiaSharp (không tin phần mở rộng tệp hay Content-Type), chỉ chấp nhận
+JPEG/PNG/WebP, thu nhỏ về cạnh dài 640px, làm phẳng nền trắng, ép JPEG chất lượng 85. Không lưu
+ảnh gốc ở bất cứ đâu.
+
+**Không hạ độ phân giải xuống dưới 640px.** Con số này có căn cứ: ảnh 3×4 in ở 300dpi cần
+354×472px. Hạ xuống 480px sẽ xuống dưới ngưỡng in và làm hỏng chất lượng của 13 mẫu in.
+
+**Đổi định dạng lưu trữ từ JPEG sang WebP** ở cùng độ phân giải: giảm khoảng 25–35% dung lượng mà
+không đụng tới chất lượng in. Ở quy mô 1,5 triệu ảnh, đó là vài chục GB. Ba điều kiện phải kiểm
+chứng bằng đo đạc chứ không giả định:
+
+- Bộ mã hoá WebP của SkiaSharp chạy đúng trên build này — mã hiện tại **đã từng vấp** một lỗi
+  tương tự với JPEG (`SKColorType.Rgb888x` khiến `Encode` trả `null`), nên phải thử thật.
+- Chromium trong đường in PDF đọc được WebP nhúng dạng data URI.
+- Dung lượng đầu ra thật sự giảm trên ảnh chân dung tiêu biểu, không chỉ trên lý thuyết.
+
+Không đạt điều kiện nào thì lùi về JPEG chất lượng 80 (giảm ~15–20%, gần như không rủi ro).
+
+Thêm một **test ngân sách dung lượng**: khẳng định ảnh đầu ra của một ảnh chân dung mẫu không
+vượt quá một ngưỡng KB định trước. Không có test này thì một thay đổi vô tình ở tham số nén sẽ
+nhân đôi dung lượng CSDL mà không ai phát hiện cho tới lúc quá muộn.
+
+Lưu ý phối hợp: PWA chạy offline sẽ **tải ảnh về máy người dùng** để dùng khi mất mạng, nên dung
+lượng mỗi ảnh còn ảnh hưởng tới băng thông và bộ nhớ máy trạm — thêm một lý do làm việc này sớm
+thay vì đợi tới lúc chuyển sang R2.

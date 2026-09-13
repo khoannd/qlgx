@@ -699,6 +699,198 @@ git commit -m "Them Chromium/Playwright vao image Docker de in PDF chay duoc tre
 
 ---
 
+## Task 4B: Giảm dung lượng ảnh đại diện và chốt ngân sách bằng test
+
+Ảnh `bytea` chiếm ~95% khối lượng sao lưu ở quy mô lớn (xem thiết kế mục 13.1). Quyết định là
+**giữ ảnh trong PostgreSQL** ở giai đoạn này, nhưng giảm dung lượng mỗi ảnh ngay bây giờ.
+
+Việc nén và chuẩn hoá **đã có sẵn** trong `XuLyAnh.cs` (chặn 8 MB trước giải mã, giải mã thật
+bằng SkiaSharp, chỉ nhận JPEG/PNG/WebP, thu nhỏ về cạnh dài 640px, nền trắng, JPEG 85). Task này
+**không viết lại** phần đó — chỉ đổi định dạng đầu ra và thêm hàng rào chống thoái lui.
+
+> **KHÔNG hạ độ phân giải xuống dưới 640px.** Con số này có căn cứ ghi ngay trong mã: ảnh 3×4 in
+> ở 300dpi cần 354×472px. Hạ xuống 480px sẽ xuống dưới ngưỡng in và làm hỏng 13 mẫu in.
+
+**Files:**
+- Modify: `WebApp/src/Qlgx.Api/Anh/XuLyAnh.cs:34-36,97-102`
+- Test: `WebApp/tests/Qlgx.Api.Tests/XuLyAnhNganSachTests.cs`
+- Modify: `WebApp/tests/Qlgx.Api.Tests/AnhDaiDienTests.cs` (nếu có khẳng định `image/jpeg` cứng)
+
+**Interfaces:**
+- Produces: `XuLyAnh.XuLy` trả `LoaiNoiDung = "image/webp"` (hoặc giữ `"image/jpeg"` nếu WebP
+  không đạt — xem Step 4); hằng mới `XuLyAnh.NganSachByteMoiAnh = 60 * 1024`.
+- Không đổi chữ ký hàm, không đổi lược đồ CSDL: `AnhDaiDienLoaiNoiDung` vốn đã lưu kiểu nội dung
+  theo từng bản ghi, nên ảnh cũ dạng JPEG vẫn đọc và in bình thường.
+
+- [ ] **Step 1: Viết test ngân sách thất bại**
+
+Tạo `WebApp/tests/Qlgx.Api.Tests/XuLyAnhNganSachTests.cs`:
+
+```csharp
+using FluentAssertions;
+using Qlgx.Api.Anh;
+using SkiaSharp;
+
+namespace Qlgx.Api.Tests;
+
+/// <summary>
+/// Hàng rào chống thoái lui về DUNG LƯỢNG. Không có test này thì một thay đổi vô tình ở tham số
+/// nén sẽ nhân đôi kích thước cơ sở dữ liệu mà không ai phát hiện cho tới lúc quá muộn — ảnh
+/// chiếm khoảng 95% khối lượng sao lưu ở quy mô lớn (xem thiết kế mục 13.1).
+/// </summary>
+public class XuLyAnhNganSachTests
+{
+    /// <summary>Ảnh chân dung tổng hợp có độ phức tạp gần với ảnh chụp thật: chuyển sắc cộng
+    /// nhiễu giả. Ảnh một màu phẳng nén xuống vài trăm byte và sẽ làm test vô nghĩa.</summary>
+    private static byte[] AnhChanDungMau(int rong = 1200, int cao = 1600)
+    {
+        using var bm = new SKBitmap(rong, cao);
+        var ngau = new Random(20260913);
+        for (var y = 0; y < cao; y++)
+        for (var x = 0; x < rong; x++)
+            bm.SetPixel(x, y, new SKColor(
+                (byte)((x * 255 / rong + ngau.Next(24)) % 256),
+                (byte)((y * 255 / cao + ngau.Next(24)) % 256),
+                (byte)((x + y) % 256)));
+        using var anh = SKImage.FromBitmap(bm);
+        using var duLieu = anh.Encode(SKEncodedImageFormat.Jpeg, 95);
+        return duLieu.ToArray();
+    }
+
+    [Fact]
+    public void Anh_chan_dung_sau_xu_ly_khong_vuot_ngan_sach()
+    {
+        var (ketQua, loi) = XuLyAnh.XuLy(AnhChanDungMau());
+
+        loi.Should().BeNull();
+        ketQua!.DuLieu.Length.Should().BeLessThanOrEqualTo(XuLyAnh.NganSachByteMoiAnh,
+            "anh chiem ~95% khoi luong sao luu o quy mo lon — vuot ngan sach la loi that");
+    }
+
+    [Fact]
+    public void Van_giu_du_do_phan_giai_de_in_3x4_o_300dpi()
+    {
+        var (ketQua, _) = XuLyAnh.XuLy(AnhChanDungMau());
+
+        using var daGiaiMa = SKBitmap.Decode(ketQua!.DuLieu);
+        // 3x4cm o 300dpi = 354x472px. Canh dai phai >= 472 thi in moi khong bi ro net.
+        Math.Max(daGiaiMa.Width, daGiaiMa.Height).Should().BeGreaterThanOrEqualTo(472);
+    }
+
+    [Fact]
+    public void Loai_noi_dung_tra_ve_khop_dinh_dang_thuc_te_cua_du_lieu()
+    {
+        var (ketQua, _) = XuLyAnh.XuLy(AnhChanDungMau());
+
+        using var luong = new SKMemoryStream(ketQua!.DuLieu);
+        using var codec = SKCodec.Create(luong);
+        var mongDoi = codec!.EncodedFormat switch
+        {
+            SKEncodedImageFormat.Webp => "image/webp",
+            SKEncodedImageFormat.Jpeg => "image/jpeg",
+            _ => "khong-mong-doi",
+        };
+        ketQua.LoaiNoiDung.Should().Be(mongDoi);
+    }
+
+    [Fact]
+    public void Anh_nho_hon_khung_khong_bi_phong_to_len()
+    {
+        var (ketQua, _) = XuLyAnh.XuLy(AnhChanDungMau(300, 400));
+
+        using var daGiaiMa = SKBitmap.Decode(ketQua!.DuLieu);
+        daGiaiMa.Width.Should().Be(300);
+        daGiaiMa.Height.Should().Be(400);
+    }
+}
+```
+
+- [ ] **Step 2: Chạy test để chắc chắn nó thất bại**
+
+Run: `dotnet test WebApp/Qlgx.sln --filter XuLyAnhNganSachTests`
+Expected: FAIL — `XuLyAnh.NganSachByteMoiAnh` chưa tồn tại.
+
+- [ ] **Step 3: Đo trước, chọn sau**
+
+Trước khi sửa gì, **đo dung lượng thật** của cả hai phương án trên cùng ảnh mẫu. Viết một test
+tạm in ra số byte của: JPEG 85 (hiện tại), JPEG 80, WebP 80, WebP 85. Chạy và ghi lại kết quả
+vào phần mô tả commit.
+
+Lý do phải đo chứ không giả định: bộ mã hoá của SkiaSharp **đã từng vấp** một lỗi tương tự —
+comment ở dòng 86-89 của `XuLyAnh.cs` ghi lại việc `SKColorType.Rgb888x` khiến `Encode(Jpeg,…)`
+trả `null` dù dữ liệu ảnh hợp lệ. WebP có thể trả `null` theo cùng kiểu trên build này.
+
+- [ ] **Step 4: Sửa `XuLyAnh.cs` theo kết quả đo**
+
+Nếu WebP chạy và nhỏ hơn rõ rệt, thay khối mã hoá (dòng 97-102):
+
+```csharp
+        // WebP thay cho JPEG: nho hon khoang 25-35% o cung chat luong thi giac va cung do phan
+        // giai, khong dung toi nguong in 472px. O quy mo 1,5 trieu anh, do la vai chuc GB — anh
+        // chiem khoang 95% khoi luong sao luu (xem thiet ke muc 13.1). Con so nen thuc te da do
+        // duoc ghi trong commit gioi thieu thay doi nay.
+        //
+        // KHONG doi anh cu da luu: cot AnhDaiDienLoaiNoiDung von luu kieu noi dung theo TUNG ban
+        // ghi, nen anh JPEG cu van doc va in binh thuong ben canh anh WebP moi.
+        using var anhMaHoa = SKImage.FromBitmap(mat);
+        using var duLieuNen = anhMaHoa.Encode(SKEncodedImageFormat.Webp, ChatLuongWebp);
+        if (duLieuNen is null)
+            return (null, new LoiXuLyAnh("Không nén được ảnh sau khi xử lý — vui lòng thử một ảnh khác."));
+
+        return (new AnhDaXuLy(duLieuNen.ToArray(), "image/webp"), null);
+```
+
+và thay hằng chất lượng:
+
+```csharp
+    private const int ChatLuongWebp = 80;
+
+    /// <summary>Ngân sách dung lượng cho MỘT ảnh sau xử lý. Có test giữ ngưỡng này
+    /// (XuLyAnhNganSachTests) — ảnh chiếm khoảng 95% khối lượng sao lưu ở quy mô lớn, nên một
+    /// thay đổi vô tình ở tham số nén sẽ nhân đôi kích thước CSDL mà không ai thấy.</summary>
+    public const int NganSachByteMoiAnh = 60 * 1024;
+```
+
+Nếu WebP **không** chạy hoặc không nhỏ hơn đáng kể: giữ JPEG, chỉ hạ `ChatLuongJpeg` từ 85 xuống
+80, vẫn thêm `NganSachByteMoiAnh`. Ghi rõ lựa chọn và số đo bằng một comment tại chỗ.
+
+- [ ] **Step 5: Kiểm chứng đường in PDF vẫn đọc được định dạng mới**
+
+Đây là rủi ro thật nếu chọn WebP: mẫu in nhúng ảnh dạng data URI rồi để Chromium vẽ ra PDF.
+
+Run: tải một ảnh lên cho một giáo dân qua API, rồi in lý lịch cá nhân của chính người đó, mở PDF
+và **nhìn** xem ảnh có hiện không.
+```bash
+curl -fsS -H "Authorization: Bearer <token>" \
+  "http://localhost:5096/api/giao-dan/<id>/in-ly-lich" -o /tmp/thu-anh.pdf
+```
+Expected: PDF mở được và **ảnh hiện đúng**, không phải ô trống. Ảnh không hiện thì lùi về JPEG —
+tiết kiệm dung lượng không đáng đánh đổi bằng việc hỏng ảnh trên giấy tờ giáo xứ.
+
+- [ ] **Step 6: Chạy test để xác nhận nó đạt**
+
+Run: `dotnet test WebApp/Qlgx.sln --filter "XuLyAnhNganSachTests|AnhDaiDien"`
+Expected: PASS. Nếu `AnhDaiDienTests` có khẳng định cứng `"image/jpeg"`, sửa thành khẳng định
+khớp với hằng định dạng thay vì chuỗi viết cứng.
+
+- [ ] **Step 7: Chạy toàn bộ bộ test backend**
+
+Run: `dotnet test WebApp/Qlgx.sln`
+Expected: PASS toàn bộ.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add WebApp/src/Qlgx.Api/Anh/XuLyAnh.cs \
+        WebApp/tests/Qlgx.Api.Tests/XuLyAnhNganSachTests.cs \
+        WebApp/tests/Qlgx.Api.Tests/AnhDaiDienTests.cs
+git commit -m "Giam dung luong anh dai dien va chot ngan sach bang test
+
+<ghi so byte da do duoc cho tung phuong an o day>"
+```
+
+---
+
 # Giai đoạn B — Bảng công việc và API
 
 ## Task 5: Ba bảng nền cho sao lưu
@@ -1529,7 +1721,7 @@ Sửa khai báo lớp thành `public class SaoLuuService(QlgxDbContext db, IConf
 
         var thuMuc = Path.Combine(ThuMucSpool, maCongViec.ToString());
         var tep = Directory.Exists(thuMuc)
-            ? Directory.EnumerateFiles(thuMuc, "*.dump").FirstOrDefault()
+            ? Directory.EnumerateFiles(thuMuc, "*.dump.tar.gz").FirstOrDefault()
             : null;
         if (tep is null)
             return (null, "Tệp tải về đã bị dọn (tệp trong spool chỉ giữ 24 giờ). " +
@@ -3034,9 +3226,17 @@ lenh_sao_luu() {
   trap 'rm -rf "$tam"' EXIT
 
   ghi_log thong-tin "Dump CSDL"
-  dc exec -T postgres pg_dump -Fc -U "$(env_ung_dung POSTGRES_USER)" \
-      -d "$(env_ung_dung POSTGRES_DB)" > "$tam/qlgx.dump"
-  [ -s "$tam/qlgx.dump" ] || bao_loi_va_thoat "pg_dump tao ra tep rong — DUNG, khong sao luu."
+  # -Fd -Z0 (thu muc, KHONG tu nen) chu KHONG phai -Fc: -Fc nen san, ma mot byte doi o dau lam
+  # toan bo luong nen doi theo — restic khong khu trung lap duoc gi va moi snapshot luu gan nhu
+  # mot ban day du moi. Anh dai dien nam trong bytea va gan nhu khong bao gio doi, nen day la
+  # khac biet lon: de restic tu nen va khu trung lap theo khoi. -j4 dump song song 4 bang mot
+  # luc. Xem thiet ke muc 13.3.
+  dc exec -T postgres pg_dump -Fd -Z0 -j4 -U "$(env_ung_dung POSTGRES_USER)" \
+      -d "$(env_ung_dung POSTGRES_DB)" -f /tmp/qlgx-dump
+  dc exec -T postgres tar -cf - -C /tmp qlgx-dump | tar -xf - -C "$tam"
+  dc exec -T postgres rm -rf /tmp/qlgx-dump
+  [ -s "$tam/qlgx-dump/toc.dat" ] \
+    || bao_loi_va_thoat "pg_dump khong tao ra muc luc (toc.dat) — DUNG, khong sao luu."
 
   ghi_log thong-tin "Dump vai tro va quyen toan cuc"
   dc exec -T postgres pg_dumpall --globals-only -U "$(env_ung_dung POSTGRES_USER)" \
@@ -3109,12 +3309,15 @@ lenh_tai_ve() {
   local snapshot="$1" ma_job="$2"
   local dich="$THU_MUC_SPOOL/$ma_job"
   mkdir -p "$dich"; chmod 755 "$dich"
-  restic restore "$snapshot" --target "$dich" --include '*/qlgx.dump'
-  local tim; tim=$(find "$dich" -name qlgx.dump | head -1)
-  [ -n "$tim" ] || bao_loi_va_thoat "Khong tim thay qlgx.dump trong snapshot $snapshot."
-  mv "$tim" "$dich/qlgx-$snapshot-$(date +%Y%m%d-%H%M).dump"
-  find "$dich" -mindepth 1 -type d -exec rm -rf {} + 2>/dev/null || true
-  chmod 644 "$dich"/*.dump
+  restic restore "$snapshot" --target "$dich" --include '*/qlgx-dump'
+  local thu_muc; thu_muc=$(find "$dich" -type d -name qlgx-dump | head -1)
+  [ -n "$thu_muc" ] || bao_loi_va_thoat "Khong tim thay thu muc qlgx-dump trong snapshot $snapshot."
+  # Dump la mot THU MUC (-Fd) — dong goi thanh MOT tep de trinh duyet tai ve duoc. Nen bang gzip
+  # o day (khac voi luc sao luu, noi ta co y KHONG nen de restic khu trung lap).
+  local tep="$dich/qlgx-$snapshot-$(date +%Y%m%d-%H%M).dump.tar.gz"
+  tar -czf "$tep" -C "$(dirname "$thu_muc")" qlgx-dump
+  rm -rf "$thu_muc"
+  chmod 644 "$tep"
   ghi_log thong-tin "Da chuan bi tep tai ve tai $dich"
 }
 
@@ -3154,7 +3357,7 @@ sudo QLGX_GOC_UNG_DUNG=/opt/qlgx/WebApp \
      bash -c 'restic init 2>/dev/null; /opt/qlgx/WebApp/scripts/qlgx-runner.sh sao-luu --nhan thu-cong'
 sudo RESTIC_REPOSITORY=/var/tmp/kho-thu RESTIC_PASSWORD=thu restic snapshots
 ```
-Expected: một snapshot có đủ ba thành phần (`qlgx.dump`, `globals.sql`, `cau-hinh/`) và các tag `giao_dan=`, `gia_dinh=`.
+Expected: một snapshot có đủ ba thành phần (thư mục `qlgx-dump/` có `toc.dat`, `globals.sql`, `cau-hinh/`) và các tag `giao_dan=`, `gia_dinh=`.
 
 Sau đó kiểm chứng ràng buộc "snapshot thiếu thành phần thì không được tạo": tạm đổi tên container postgres cho `pg_dump` thất bại, chạy lại, xác nhận **không có snapshot mới nào** xuất hiện.
 
@@ -3457,16 +3660,21 @@ phuc_hoi_that() {
   trap 'rm -rf "$tam"' EXIT
   restic restore "$SNAPSHOT" --target "$tam" \
     || bao_loi_va_thoat "Khong lay duoc snapshot '$SNAPSHOT' — he thong hien tai KHONG bi dong toi."
-  local tep_dump; tep_dump=$(find "$tam" -name qlgx.dump | head -1)
-  [ -n "$tep_dump" ] || bao_loi_va_thoat "Snapshot khong chua qlgx.dump."
+  # Dump o dinh dang THU MUC (-Fd, xem qlgx-runner.sh) — nap lai bang cach chep ca thu muc vao
+  # container postgres roi pg_restore -j4 song song, khong the truyen qua stdin nhu -Fc.
+  local thu_muc_dump; thu_muc_dump=$(find "$tam" -type d -name qlgx-dump | head -1)
+  [ -n "$thu_muc_dump" ] || bao_loi_va_thoat "Snapshot khong chua thu muc qlgx-dump."
 
   pg -d postgres -c "CREATE DATABASE \"$db_moi\";"
-  if ! dc exec -T postgres pg_restore --no-owner --role="$(env_ung_dung QLGX_ADMIN_DB_USER)" \
-        -U "$(env_ung_dung POSTGRES_USER)" -d "$db_moi" < "$tep_dump"; then
+  tar -cf - -C "$(dirname "$thu_muc_dump")" qlgx-dump | dc exec -T postgres tar -xf - -C /tmp
+  if ! dc exec -T postgres pg_restore -j4 --no-owner --role="$(env_ung_dung QLGX_ADMIN_DB_USER)" \
+        -U "$(env_ung_dung POSTGRES_USER)" -d "$db_moi" /tmp/qlgx-dump; then
+    dc exec -T postgres rm -rf /tmp/qlgx-dump
     ghi_log loi "pg_restore that bai — xoa CSDL tam, he thong hien tai VAN NGUYEN VEN."
     pg -d postgres -c "DROP DATABASE IF EXISTS \"$db_moi\" WITH (FORCE);"
     return 1
   fi
+  dc exec -T postgres rm -rf /tmp/qlgx-dump
 
   ghi_log thong-tin "[3/6] Kiem chung CSDL moi"
   if ! kiem_chung_csdl_moi "$db_moi"; then

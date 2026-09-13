@@ -4642,3 +4642,40 @@ thử" Nhập dữ liệu Access) — không nằm trong yêu cầu, và lớp c
 không phụ thuộc bảng đối chiếu này nên không phải lỗ hổng an toàn dữ liệu; phát hiện `ngay.ts`
 mục 1b của `review-toan-nhanh-test.md` — thuộc phạm vi front-end, đã xử lý ở mục 71 (kết luận là
 mutant tương đương, không phải lỗ hổng test thật).
+
+---
+
+## Đồng bộ PWA làm nguồn phục hồi bổ sung — CHỜ chức năng offline/sync hoàn tất
+
+Ghi ngày 13-09-2026, trong lúc thiết kế cơ chế sao lưu/phục hồi
+(`docs/superpowers/specs/2026-09-13-qlgx-trien-khai-sao-luu-design.md` mục 13.2, Bước 2).
+
+**Bối cảnh**: một phiên làm việc khác đang xây chức năng **chạy offline và đồng bộ trên PWA**.
+Điều đó đổi bản chất bài toán RPO của cơ chế sao lưu: dữ liệu vừa nhập **vẫn còn trên máy người
+dùng**, nên khoảng trống giữa bản sao lưu gần nhất (nhịp 6 giờ) và thời điểm sự cố **không nhất
+thiết là dữ liệu mất hẳn**.
+
+**Hai năng lực mở ra khi PWA offline/sync xong**:
+
+1. Sau khi phục hồi, máy chủ **phát tín hiệu** để các máy trạm PWA đẩy lại phần dữ liệu cục bộ
+   mới hơn mốc phục hồi — lấp đúng khoảng bị mất, thay vì chấp nhận mất tới 6 giờ.
+2. Trong lúc sao lưu/phục hồi, các giáo xứ **vẫn làm việc offline trên PWA** được, thay vì nhìn
+   màn hình chặn toàn trang như thiết kế hiện tại (mục 7.2).
+
+**KHÔNG làm bây giờ.** Nó phụ thuộc hoàn toàn vào mô hình đồng bộ mà phiên kia chọn: cách đánh
+dấu phiên bản bản ghi, cách phát hiện xung đột, cách giải quyết xung đột. Bắt tay vào trước khi
+mô hình đó chốt là chắc chắn phải làm lại.
+
+**Hai câu hỏi phải trả lời trước khi triển khai**, cả hai đều thuộc về mô hình đồng bộ chứ không
+thuộc về cơ chế sao lưu:
+
+- Máy trạm phân biệt **"bản ghi chưa từng đồng bộ lên máy chủ"** với **"bản ghi đã đồng bộ rồi
+  nhưng máy chủ vừa lùi lại"** bằng cách nào? Hai trường hợp này trông giống hệt nhau từ phía
+  máy trạm nếu chỉ so mốc thời gian, nhưng cách xử lý đúng thì khác nhau.
+- Khi cùng một bản ghi bị sửa ở hai nơi (một máy trạm offline, và một người khác sửa trên máy
+  chủ sau khi phục hồi), ai thắng? Với sổ sách giáo xứ, "âm thầm chọn một bên" là lựa chọn tồi —
+  nhiều khả năng phải giữ cả hai và để người dùng quyết.
+
+**Cảnh báo phối hợp**: đừng sửa mã đồng bộ/PWA từ phía công việc sao lưu. Theo `CLAUDE.md`, có
+thể có phiên Claude khác làm việc song song trên cùng thư mục ở nhánh khác — kiểm
+`git branch --show-current` trước khi làm, không `git checkout`, dùng `git worktree` khi cần.
