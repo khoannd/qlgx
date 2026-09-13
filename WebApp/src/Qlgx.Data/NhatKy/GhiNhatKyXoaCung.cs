@@ -37,6 +37,11 @@ public static class GhiNhatKyXoaCung
     /// nằm chung một giao dịch với chính lệnh xoá — chia lô ở đây không rút ngắn được thời gian
     /// giữ khoá.
     /// </summary>
+    /// <paramref name="boiCanh"/> hiện luôn để trống ở cả ba chỗ gọi — cùng một khoảng trống ĐÃ
+    /// BIẾT với <see cref="QlgxDbContextNhatKyExtensions.LuuCoNhatKy"/>: chưa có chỗ nào dựng
+    /// IBoiCanhGhiNhatKy từ claim của người đăng nhập, nên cột tai_khoan_id còn rỗng. Giữ tham số
+    /// để khi nối danh tính thì không phải đổi chữ ký.
+    ///
     /// <returns>Số dòng nhật ký đã xếp — cũng chính là số bản ghi sắp bị xoá.</returns>
     public static async Task<int> GhiNhatKyXoaSapToi<T>(
         this QlgxDbContext db, IQueryable<T> truyVan, CancellationToken ct,

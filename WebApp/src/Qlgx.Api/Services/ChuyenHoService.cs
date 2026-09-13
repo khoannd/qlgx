@@ -18,10 +18,27 @@ namespace Qlgx.Api.Services;
 ///    trong hộp thoại xác nhận TRƯỚC khi gọi endpoint ghi thật.
 /// 2. Client hiện hộp thoại xác nhận có con số cụ thể lấy từ bước xem trước — không tự bịa số
 ///    ở phía trình duyệt.
-/// 3. Toàn bộ thao tác ghi bọc trong MỘT transaction (`BeginTransactionAsync`) — desktop dùng
+/// 3. MỖI GIA ĐÌNH CÙNG TOÀN BỘ THÀNH VIÊN CỦA NÓ đổi họ trong MỘT transaction — desktop dùng
 ///    `Memory.UpdateDataSet` (DataAdapter.Update từng dòng, không có transaction rõ ràng, có
 ///    thể dở dang nếu lỗi giữa chừng) — CỐ Ý làm khác desktop ở đây vì đây là yêu cầu an toàn
 ///    dữ liệu tuyệt đối của nhiệm vụ, không phải một quy tắc nghiệp vụ cần tái hiện y hệt.
+///
+///    Nguyên tắc này TRƯỚC ĐÂY viết là "toàn bộ thao tác ghi bọc trong MỘT transaction". Đã thu
+///    hẹp lại đúng bất biến nghiệp vụ THẬT khi việc ghi phải sinh nhật ký mức ô: bao trọn cả
+///    lượt nghĩa là giữ khoá dòng đếm hiệu lực của giáo xứ suốt thời gian đó (xem CapSoHieuLuc),
+///    xếp hàng mọi người khác đang thao tác — cha xứ chọn 2.000 gia đình là cả giáo xứ đứng im.
+///    Danh sách gia đình là các bản ghi ĐỘC LẬP với nhau, nên cắt theo biên gia đình không phá
+///    bất biến nào: thứ không được phép dở dang chỉ là "một gia đình một họ mà thành viên của nó
+///    lại họ khác". Đổi lại, lỗi giữa chừng để lại một phần lô đã chuyển, một phần chưa — chấp
+///    nhận được vì gán GiaoHoId là thao tác BẤT BIẾN KHI CHẠY LẠI (gán cùng một giá trị lần thứ
+///    hai không đổi gì), người dùng chỉ cần chọn lại và bấm lại. Cùng đánh đổi, cùng lý do với
+///    ChuanHoaDuLieuService.ChuanHoaTheoLo (Task 4).
+///
+///    KHÔNG bao giờ được quay lại cấu trúc HAI PHA cũ (đổi hết thành viên của cả lượt trước,
+///    rồi mới đổi hết gia đình) dù có hay không transaction bao ngoài: nếu bỏ transaction bao
+///    ngoài mà giữ hai pha, một lỗi ở pha gia đình để lại HÀNG NGHÌN thành viên đã đổi họ trong
+///    khi gia đình họ thuộc về thì chưa — đúng trạng thái mà nguyên tắc này tồn tại để chặn, chỉ
+///    khác là hỏng ở quy mô cả lượt.
 /// 4. CHỈ đổi đúng cột `GiaoHoId` của `GiaoDan`/`GiaDinh` — không đụng cột nào khác, đúng phạm
 ///    vi desktop (`row[GiaDinhConst.MaGiaoHo] = maGiaoHo` / `row[GiaoDanConst.MaGiaoHo] =
 ///    maGiaoHo`, không có dòng nào khác gán giá trị).
@@ -50,10 +67,12 @@ public class ChuyenHoService(QlgxDbContext db)
         var conTonTai = await db.GiaoHo.AnyAsync(g => g.Id == giaoHoDichId, ct);
         if (!conTonTai) return null;
 
-        await using var giaoTac = await db.Database.BeginTransactionAsync(ct);
+        // KHÔNG có giao dịch bao trọn ở đây — mỗi lô tự mở giao dịch riêng qua LuuCoNhatKy,
+        // đúng khuôn TimThayTheService. Nhánh này chỉ đổi MỘT cột độc lập trên N bản ghi rời
+        // nhau: không có quan hệ cha-con, không có bất biến chéo nào cần bảo toàn, nên giao dịch
+        // bao trọn không mua được gì mà vẫn trả giá bằng thời gian giữ khoá dòng đếm.
         var soLuong = await ChuyenTheoLo(
             db.GiaoDan.Where(g => giaoDanIds.Contains(g.Id)), g => g.GiaoHoId = giaoHoDichId, ct);
-        await giaoTac.CommitAsync(ct);
         return new ChuyenHoGiaoDanKetQua(soLuong);
     }
 
@@ -71,40 +90,69 @@ public class ChuyenHoService(QlgxDbContext db)
         return new ChuyenHoGiaDinhXemTruoc(soLuongGiaDinh, soLuongThanhVien, giaoHoDich);
     }
 
-    /// <summary>Ghi thật — MỘT transaction cho cả hai bước: (1) GiaoHoId của các gia đình trong
-    /// <paramref name="giaDinhIds"/>, (2) GiaoHoId của MỌI giáo dân là thành viên (bất kỳ VaiTro
-    /// nào) của các gia đình đó — đúng UpdateProcess.chuyenHoThanhVienGiaDinh dòng 273-300 (đọc
-    /// TOÀN BỘ ThanhVienGiaDinh của gia đình, không chỉ chồng/vợ, rồi đổi GiaoHoId từng người).
-    /// Hỏng bước nào (ví dụ giaoHoDichId bị xoá giữa chừng — không thể vì đã kiểm ở trên trong
-    /// cùng transaction) thì quay lui hết, không để gia đình đổi họ mà thành viên thì không.
+    /// <summary>Ghi thật — đổi <c>GiaoHoId</c> của các gia đình trong <paramref name="giaDinhIds"/>
+    /// VÀ của MỌI giáo dân là thành viên (bất kỳ VaiTro nào) của các gia đình đó — đúng
+    /// UpdateProcess.chuyenHoThanhVienGiaDinh dòng 273-300 (đọc TOÀN BỘ ThanhVienGiaDinh của gia
+    /// đình, không chỉ chồng/vợ, rồi đổi GiaoHoId từng người).
+    ///
+    /// CHIA LÔ THEO BIÊN GIA ĐÌNH — mỗi lô ~<see cref="CoLo"/> gia đình là MỘT giao dịch riêng,
+    /// trong đó gia đình của lô và thành viên CỦA CHÍNH LÔ ĐÓ cùng đổi hoặc cùng không. Đây là
+    /// nguyên tắc 3 ở đầu lớp sau khi đã thu hẹp về đúng bất biến nghiệp vụ thật; đọc phần đó
+    /// trước khi sửa hàm này, đặc biệt là đoạn cấm quay lại cấu trúc hai pha.
+    ///
+    /// Danh sách thành viên phải tra RIÊNG cho từng lô, không tra một lần cho cả lượt: tra trước
+    /// rồi chia lô riêng cho thành viên chính là cấu trúc hai pha, và nó cắt ngang biên gia đình.
     /// </summary>
     public async Task<ChuyenHoGiaDinhKetQua?> ChuyenHoGiaDinh(
         List<Guid> giaDinhIds, Guid giaoHoDichId, CancellationToken ct)
     {
-        await using var giaoTac = await db.Database.BeginTransactionAsync(ct);
-
         var conTonTai = await db.GiaoHo.AnyAsync(g => g.Id == giaoHoDichId, ct);
         if (!conTonTai) return null;
 
-        var idThanhVien = await db.ThanhVienGiaDinh
-            .Where(tv => giaDinhIds.Contains(tv.GiaDinhId))
-            .Select(tv => tv.GiaoDanId).Distinct().ToListAsync(ct);
+        var soLuongGiaDinh = 0;
+        // Một giáo dân có thể là thành viên của HAI gia đình (con ở nhà cha mẹ, đồng thời có gia
+        // đình riêng — xem ThanhVienGiaDinh). Nếu hai gia đình đó rơi vào hai lô khác nhau, người
+        // đó được nạp hai lần; tập này để không đếm trùng, giữ đúng ngữ nghĩa "số giáo dân đã
+        // chuyển" mà bước Xem trước (Distinct) báo cho người dùng.
+        var daDemThanhVien = new HashSet<Guid>();
 
-        var soLuongThanhVien = idThanhVien.Count == 0 ? 0 : await ChuyenTheoLo(
-            db.GiaoDan.Where(g => idThanhVien.Contains(g.Id)), g => g.GiaoHoId = giaoHoDichId, ct);
+        for (var viTri = 0; viTri < giaDinhIds.Count; viTri += CoLo)
+        {
+            var loId = giaDinhIds.GetRange(viTri, Math.Min(CoLo, giaDinhIds.Count - viTri));
 
-        var soLuongGiaDinh = await ChuyenTheoLo(
-            db.GiaDinh.Where(g => giaDinhIds.Contains(g.Id)), g => g.GiaoHoId = giaoHoDichId, ct);
+            await using var giaoTac = await db.Database.BeginTransactionAsync(ct);
 
-        await giaoTac.CommitAsync(ct);
-        return new ChuyenHoGiaDinhKetQua(soLuongGiaDinh, soLuongThanhVien);
+            var giaDinh = await db.GiaDinh.Where(g => loId.Contains(g.Id)).ToListAsync(ct);
+            var idThanhVien = await db.ThanhVienGiaDinh
+                .Where(tv => loId.Contains(tv.GiaDinhId))
+                .Select(tv => tv.GiaoDanId).Distinct().ToListAsync(ct);
+            List<Qlgx.Domain.Entities.GiaoDan> thanhVien = idThanhVien.Count == 0
+                ? []
+                : await db.GiaoDan.Where(g => idThanhVien.Contains(g.Id)).ToListAsync(ct);
+
+            foreach (var g in giaDinh) g.GiaoHoId = giaoHoDichId;
+            foreach (var g in thanhVien) g.GiaoHoId = giaoHoDichId;
+
+            await db.LuuCoNhatKy(ct);
+            await giaoTac.CommitAsync(ct);
+            db.ChangeTracker.Clear();
+
+            soLuongGiaDinh += giaDinh.Count;
+            foreach (var g in thanhVien) daDemThanhVien.Add(g.Id);
+        }
+
+        return new ChuyenHoGiaDinhKetQua(soLuongGiaDinh, daDemThanhVien.Count);
     }
 
-    /// <summary>Số bản ghi nạp lên mỗi lô — cùng cỡ với TimThayTheService.CoLo.</summary>
+    /// <summary>Cỡ lô — cùng cỡ với TimThayTheService.CoLo. Với ChuyenHoGiaDinh đây là số GIA
+    /// ĐÌNH mỗi lô (số bản ghi thật mỗi lô lớn hơn vì kéo theo thành viên), với ChuyenTheoLo là
+    /// số bản ghi mỗi lô.</summary>
     internal const int CoLo = 200;
 
     /// <summary>
-    /// Nạp theo lô rồi sửa qua ChangeTracker thay vì <c>ExecuteUpdateAsync</c>.
+    /// Nạp theo lô rồi sửa qua ChangeTracker thay vì <c>ExecuteUpdateAsync</c>. CHỈ dùng cho
+    /// nhánh giáo dân (<see cref="ChuyenHoGiaoDan"/>) — nhánh gia đình phải chia lô theo biên gia
+    /// đình nên tự có vòng lặp riêng.
     ///
     /// <c>ExecuteUpdateAsync</c> nhanh hơn (một câu SQL) nhưng ĐI VÒNG QUA SaveChanges nên không
     /// sinh nhật ký, không đóng dấu UpdatedAt, không đụng xmin. "Chuyển họ hàng loạt" là công cụ
@@ -117,11 +165,12 @@ public class ChuyenHoService(QlgxDbContext db)
     /// bị sửa, nên tập hợp KHÔNG đổi kích thước — bỏ Skip sẽ nạp lại mãi cùng 200 bản ghi đầu và
     /// lặp vô hạn. OrderBy(Id) để phân trang có thứ tự ổn định giữa các lô.
     ///
-    /// Chia lô ở đây KHÔNG rút ngắn thời gian giữ khoá dòng đếm (cả hai bước vẫn nằm trong MỘT
-    /// giao dịch — nguyên tắc 3 ở đầu lớp: gia đình và thành viên phải cùng đổi hoặc cùng không).
-    /// Nó chỉ giữ ChangeTracker khỏi phình ra hàng nghìn thực thể trong một lần lưu. Đây là khác
-    /// biệt CÓ CHỦ Ý so với "Tìm và thay thế", nơi mỗi lô tự commit vì thao tác đó chạy lại được
-    /// còn "chuyển họ" nửa chừng thì để lại gia đình một họ, thành viên một họ.
+    /// Mỗi lô tự mở giao dịch riêng qua LuuCoNhatKy — không có giao dịch bao trọn. Nhờ vậy khoá
+    /// dòng đếm hiệu lực của giáo xứ chỉ bị giữ trong từng lô ngắn, không xếp hàng cả giáo xứ khi
+    /// người dùng chọn hàng nghìn giáo dân. Lỗi giữa chừng để lại một phần đã chuyển, một phần
+    /// chưa — chấp nhận được vì gán GiaoHoId là thao tác BẤT BIẾN KHI CHẠY LẠI: chọn lại đúng
+    /// những người đó và bấm lại cho ra đúng cùng kết quả, không như "Tìm và thay thế" nơi chạy
+    /// lại còn phải để ý giá trị tìm có còn đúng không.
     /// </summary>
     private async Task<int> ChuyenTheoLo<T>(
         IQueryable<T> truyVan, Action<T> sua, CancellationToken ct) where T : Qlgx.Domain.Entities.ThucTheCoSo

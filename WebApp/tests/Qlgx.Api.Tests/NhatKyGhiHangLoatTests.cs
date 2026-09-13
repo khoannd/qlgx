@@ -161,6 +161,62 @@ public class NhatKyGhiHangLoatTests(QlgxApiFactory f) : IClassFixture<QlgxApiFac
     }
 
     /// <summary>
+    /// Phủ chính điểm chia-lô của nhánh chuyển họ gia đình: tạo CoLo + 50 gia đình để buộc vòng
+    /// lặp đi qua lô thứ hai. Nếu ai đó "thống nhất" vòng lặp này với ThayTheTheoLo của Task 5 và
+    /// lỡ bỏ mất bước tiến vị trí, lô thứ hai trở đi sẽ lặp lại mãi cùng một lô — endpoint treo vô
+    /// hạn, giữ một kết nối và một luồng bận, mà mọi test khác vẫn xanh. Đặt hạn 15 giây để test
+    /// THẤT BẠI NHANH (HttpClient huỷ token → RequestAborted → ToListAsync ném) thay vì treo cả
+    /// bộ test suite.
+    /// </summary>
+    [Fact]
+    public async Task Chuyen_giao_ho_nhieu_lo_khong_bo_sot_gia_dinh_nao()
+    {
+        var soGiaDinh = ChuyenHoService.CoLo + 50;
+        Guid hoDich;
+        var giaDinhIds = new List<Guid>();
+
+        await using (var db = f.TaoContextThuan())
+        {
+            var dich = new Domain.Entities.GiaoHo
+            {
+                GiaoXuId = f.GiaoXuId, MaGiaoHoCu = 97001, TenGiaoHo = "Ho dich nhieu lo",
+            };
+            db.GiaoHo.Add(dich);
+            await db.SaveChangesAsync();
+            hoDich = dich.Id;
+
+            for (var i = 0; i < soGiaDinh; i++)
+            {
+                var gd = new Domain.Entities.GiaDinh
+                {
+                    GiaoXuId = f.GiaoXuId, MaGiaDinhCu = 97000 + i,
+                    TenGiaDinh = $"Gia dinh nhieu lo {i}",
+                };
+                db.GiaDinh.Add(gd);
+                giaDinhIds.Add(gd.Id);
+            }
+            await db.SaveChangesAsync();
+        }
+
+        using var hetHan = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var client = f.CreateAuthClient();
+        var phanHoi = await client.PostAsJsonAsync("/api/cong-cu-du-lieu/chuyen-ho/gia-dinh",
+            new ChuyenHoGiaDinhRequest(giaDinhIds, hoDich), hetHan.Token);
+        phanHoi.EnsureSuccessStatusCode();
+
+        var kq = await phanHoi.Content.ReadFromJsonAsync<ChuyenHoGiaDinhKetQua>(hetHan.Token);
+        kq!.SoLuongGiaDinhDaChuyen.Should().Be(soGiaDinh,
+            "phai chuyen het, khong duoc bo sot gia dinh o lo thu hai tro di");
+
+        await using var doc = f.TaoContextThuan();
+        var dong = await doc.HieuLuc
+            .Where(x => x.Truong == "GiaoHoId" && giaDinhIds.Contains(x.BanGhiId))
+            .ToListAsync();
+        dong.Should().HaveCount(soGiaDinh,
+            "moi gia dinh bi chuyen phai co dung mot dong nhat ky, ke ca o lo thu hai");
+    }
+
+    /// <summary>
     /// Xoá cứng bản ghi con đi qua ExecuteDeleteAsync — không qua ChangeTracker, và SinhDongNhatKy
     /// cố ý bỏ qua EntityState.Deleted — nên nếu không ghi tường minh thì việc xoá biến mất khỏi
     /// nhật ký hoàn toàn. Test này giữ đúng hình dạng dòng đã chốt: một dòng "sua" trên ô DaXoa.
