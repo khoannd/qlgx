@@ -507,9 +507,11 @@ export type ChuanHoaXemTruoc = { tongSoBanGhiKiemTra: number; soBanGhiSeDoi: num
 export type ChuanHoaKetQua = { soBanGhiDaDoi: number }
 
 // --- Màn hình "Giáo xứ" tự sửa thông tin xứ mình (xem
-// docs/superpowers/specs/man-hinh/giao-xu.md) — ánh xạ 1-1 GiaoXuHienTaiResponse. Không có
-// giaoHatId/tenGiaoHat/tenGiaoPhan: màn hình này CỐ Ý không cho tự đổi giáo hạt/giáo phận (xem
-// spec mục "Chỗ chưa chắc" — đổi khác desktop vì ảnh hưởng chéo giáo xứ khác cùng giáo hạt). ---
+// docs/superpowers/specs/man-hinh/giao-xu.md) — ánh xạ 1-1 GiaoXuHienTaiResponse.
+// tenGiaoPhan/tenGiaoHat CHỈ ĐỌC (không có ô sửa tương ứng ở CapNhatGiaoXuHienTaiRequest) —
+// màn hình này CỐ Ý không cho tự đổi giáo hạt/giáo phận (xem spec mục 3.1 — đổi khác desktop
+// vì ảnh hưởng chéo giáo xứ khác cùng giáo hạt). Cả hai null khi chưa được "Quản lý giáo xứ"
+// gán giáo hạt. ---
 export type GiaoXuHienTai = {
   id: string
   tenGiaoXu: string
@@ -518,6 +520,24 @@ export type GiaoXuHienTai = {
   email: string | null
   website: string | null
   ghiChu: string | null
+  tenGiaoPhan: string | null
+  tenGiaoHat: string | null
+}
+
+// --- "Danh sách các cha quản xứ" của màn hình "Giáo xứ" (xem spec mục 3.2) — ánh xạ 1-1
+// LinhMucDto. LUÔN trong phạm vi giáo xứ đang đăng nhập (RLS bảo vệ, khác GiaoXuHienTai). ---
+export type LinhMuc = {
+  id: string
+  maLinhMucCu: number
+  tenThanh: string | null
+  hoTen: string
+  ngaySinh: string | null
+  chucVu: string | null
+  tuNgay: string | null
+  denNgay: string | null
+  ghiChu: string | null
+  dienThoai: string | null
+  email: string | null
 }
 
 // --- Màn hình "Quản lý giáo phận/giáo hạt/giáo xứ" (policy "QuanTriHeThong", xem
@@ -754,6 +774,29 @@ export type BieuDoDoTuoi = {
   tu26Den30: number
   tu31Den50: number
   tren50: number
+}
+
+// --- "Quản lý mẫu in" (năng lực MỚI, xem quan-ly-mau-in.md) -------------------------------
+
+/** Ánh xạ 1-1 với ChoTrongMauIn phía máy chủ — một chỗ trống {{Key}} khả dụng trên một mẫu. */
+export type ChoTrongMauIn = { key: string; nhan: string }
+
+/** Ánh xạ 1-1 với MauInDanhSachItemDto — một dòng danh sách 13 mẫu in. */
+export type MauInDanhSachItem = {
+  tenMau: string
+  tenHienThi: string
+  capDangDung: 'MacDinh' | 'TuyChinhHeThong' | 'TuyChinhGiaoXu'
+  choTrong: ChoTrongMauIn[]
+}
+
+/** Ánh xạ 1-1 với MauInChiTietDto. */
+export type MauInChiTiet = {
+  tenMau: string
+  tenHienThi: string
+  daTuyChinh: boolean
+  noiDungHtml: string
+  rowVersion: number
+  choTrong: ChoTrongMauIn[]
 }
 
 export type BieuDoGiaoHo = { tenGiaoHo: string; soLuong: number }

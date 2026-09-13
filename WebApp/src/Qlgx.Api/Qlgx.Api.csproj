@@ -12,6 +12,12 @@
     <!-- Xac thuc JWT (Task 14). PasswordHasher<T> (Microsoft.Extensions.Identity.Core) da co
          san qua Microsoft.NET.Sdk.Web nen khong can khai bao rieng. -->
     <PackageReference Include="ClosedXML" Version="0.105.1" />
+    <!-- Khu trung HTML mau in tuy chinh o tang may chu (xem Printing/MauInHtmlSanitizer.cs va
+         quan-ly-mau-in.md muc bao mat) — TRUOC KHI luu, khong chi tin trinh soan thao phia
+         trinh duyet. HtmlSanitizer (mganss/HtmlSanitizer) — giay phep MIT (tu do), da kiem
+         truoc khi them (khong co CVE dang mo o ban 9.2.1039, xem canh bao NU1902 bien mat sau
+         khi nang tu 9.0.884). -->
+    <PackageReference Include="HtmlSanitizer" Version="9.2.1039" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
     <PackageReference Include="Microsoft.Playwright" Version="1.55.0" />
     <!-- Xử lý ảnh đại diện (Task 1.2 VIEC-TIEP-THEO.md): giải mã + kiểm chữ ký thật + thu nhỏ

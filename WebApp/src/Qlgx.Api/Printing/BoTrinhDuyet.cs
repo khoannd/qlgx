@@ -62,7 +62,24 @@ public sealed class BoTrinhDuyet : IAsyncDisposable
     public async Task<byte[]> XuatPdfAsync(string html, CancellationToken ct, bool landscape = false, string khoGiay = "A4")
     {
         var trinhDuyet = await LayTrinhDuyet(ct);
-        var trang = await trinhDuyet.NewPageAsync();
+        // Tắt JavaScript VÀ chặn mọi yêu cầu mạng — bắt buộc kể từ khi mẫu in có thể do
+        // giáo xứ/quản trị hệ thống tự nhập (xem quan-ly-mau-in.md mục "Lỗ hổng bảo mật"): một
+        // quản trị viên giáo xứ (vô tình hay cố ý) chèn <script> hoặc <img src="http://...">
+        // vào nội dung mẫu KHÔNG được phép chạy mã hay gọi ra mạng nội bộ máy chủ (SSRF) trong
+        // lúc Playwright vẽ PDF. Áp dụng cho MỌI lần vẽ (không chỉ mẫu tuỳ chỉnh) — phòng thủ
+        // theo chiều sâu, không có tác dụng phụ vì mẫu chỉ cần HTML/CSS tĩnh để vẽ PDF, không
+        // dùng JS/tải mạng cho 13 mẫu gốc lẫn ảnh đại diện (đã là data: URI nhúng sẵn).
+        var trang = await trinhDuyet.NewPageAsync(new BrowserNewPageOptions { JavaScriptEnabled = false });
+        await trang.RouteAsync("**/*", route =>
+        {
+            // Cho qua data: URI (ảnh đại diện nhúng base64 — xem InAnService.KhoiAnhDaiDien)
+            // và about:blank (trang trắng ban đầu của Playwright); chặn tuyệt đối http(s) và
+            // mọi lược đồ khác để không có đường ra mạng nào lọt qua.
+            if (route.Request.Url.StartsWith("data:", StringComparison.Ordinal) ||
+                route.Request.Url.StartsWith("about:", StringComparison.Ordinal))
+                return route.ContinueAsync();
+            return route.AbortAsync();
+        });
         try
         {
             await trang.SetContentAsync(html, new PageSetContentOptions { WaitUntil = WaitUntilState.NetworkIdle });

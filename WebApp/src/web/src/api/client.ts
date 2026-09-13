@@ -1,7 +1,7 @@
 import type {
   GiaDinhDetail, GiaDinhListItem, GiaoDanDetail, GiaoDanListItem, GiaoDanTimKiem, GiaoHo,
   HoiDoanCuaGiaoDan, HoiDoanDanhMuc, HoiDoanQuanLy, ThanhVienHoiDoan, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
-  TaiKhoanItem, DangNhapKetQua, GiaoXuLuaChon, SucKhoe,
+  TaiKhoanItem, DangNhapKetQua, GiaoXuLuaChon, SucKhoe, LinhMuc,
   GiaoPhan, GiaoHatQuanLy, GiaoXuQuanLy, GiaoXuHienTai, BaoCaoXemTruoc, TrangThaiNhapDuLieu,
   DotBiTichListItem, DotBiTichDetail, LoaiBiTich, RaoHonPhoiListItem, RaoHonPhoiDetail,
   KhoiGiaoLy, LopGiaoLy, HocVienLopGiaoLy, GiaoLyVienLop,
@@ -12,6 +12,7 @@ import type {
   ChuyenHoGiaoDanXemTruoc, ChuyenHoGiaoDanKetQua, ChuyenHoGiaDinhXemTruoc, ChuyenHoGiaDinhKetQua,
   ChuanHoaXemTruoc, ChuanHoaKetQua, TaoDotBiTichXemTruoc, TaoDotBiTichKetQua,
   BangTimThayThe, TimThayTheXemTruoc, TimThayTheKetQua,
+  MauInDanhSachItem, MauInChiTiet,
 } from './types'
 import { authStore } from './authStore'
 
@@ -68,10 +69,13 @@ async function goi<T>(duong: string, tuyChon?: RequestInit): Promise<T> {
     // và thử lại được — khác với máy chủ chưa chạy lúc phát triển.
     console.error(`Lỗi mạng khi gọi ${duong}`, loiMang)
     const dangMatMang = typeof navigator !== 'undefined' && navigator.onLine === false
+    // Câu hiển thị cho người dùng KHÔNG được nhắc tới đường dẫn API hay "Qlgx.Api" — người
+    // trực văn phòng giáo xứ không biết đó là gì (xem UX-REVIEW-2026-09-08.md mục 2). Đường
+    // dẫn thật vẫn còn trong console.error phía trên để lập trình viên gỡ lỗi.
     throw new Error(
       dangMatMang
         ? 'Mất kết nối mạng. Dữ liệu bạn đã nhập vẫn được giữ nguyên trên máy — hãy thử lại khi có mạng.'
-        : `Không kết nối được máy chủ khi gọi ${duong}. Kiểm tra Qlgx.Api đã chạy chưa.`,
+        : 'Không kết nối được máy chủ. Vui lòng thử lại sau ít phút hoặc báo cho người quản trị.',
     )
   }
 
@@ -88,9 +92,17 @@ async function goi<T>(duong: string, tuyChon?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     const thongBao = await docThongBaoLoi(res)
-    const loi = new Error(thongBao ?? `Máy chủ trả lỗi ${res.status} khi gọi ${duong}`)
+    // Thông báo hiện lên MÀN HÌNH không được lộ đường dẫn API/mã trạng thái kỹ thuật — người
+    // dùng là quý cha, quý sơ, người trực văn phòng giáo xứ, không phải dân kỹ thuật (xem
+    // UX-REVIEW-2026-09-08.md mục 2). Chi tiết đầy đủ (đường dẫn, mã trạng thái) vẫn ghi vào
+    // console để hỗ trợ/gỡ lỗi, chỉ không đưa nguyên văn vào chuỗi lỗi hiển thị cho người dùng.
+    const thongBaoNguoiDung =
+      thongBao ??
+      (res.status >= 500
+        ? 'Máy chủ đang gặp sự cố, chưa xử lý được yêu cầu này. Vui lòng thử lại sau ít phút hoặc báo cho người quản trị.'
+        : 'Yêu cầu không thực hiện được. Vui lòng thử lại, hoặc báo cho người quản trị nếu vẫn còn lỗi.')
     console.error(`Lỗi ${res.status} khi gọi ${duong}`, thongBao)
-    throw loi
+    throw new Error(thongBaoNguoiDung)
   }
 
   // KHÔNG chỉ dựa vào status 204: `Results.Ok()` không kèm giá trị (PUT thành công của cả
@@ -113,7 +125,7 @@ async function taiTepIn(duong: string, tenTepMacDinh: string): Promise<void> {
     res = await fetch(duong, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
   } catch (loiMang) {
     console.error(`Lỗi mạng khi in ${duong}`, loiMang)
-    throw new Error('Không kết nối được máy chủ để in. Kiểm tra Qlgx.Api đã chạy chưa.')
+    throw new Error('Không kết nối được máy chủ để in. Vui lòng thử lại sau ít phút hoặc báo cho người quản trị.')
   }
   if (res.status === 401) {
     authStore.baoHet401()
@@ -140,6 +152,40 @@ async function taiTepIn(duong: string, tenTepMacDinh: string): Promise<void> {
   } finally {
     URL.revokeObjectURL(url)
   }
+}
+
+/** "Xem thử" mẫu in (POST kèm thân JSON, trả về PDF) — mở NGAY trong một tab mới thay vì kích
+ * tải về máy như `taiTepIn`: người dùng cần THẤY kết quả tức thì để biết mẫu đang gõ có in
+ * được hay không (phần lớn không rành máy tính, xem quan-ly-mau-in.md), không phải lưu tệp.
+ * KHÔNG revoke object URL ngay — tab mới cần URL đó còn sống để hiển thị PDF; trình duyệt tự
+ * dọn khi tab đó đóng. */
+async function xemThuPdfMoTab(duong: string, than: unknown): Promise<void> {
+  const token = authStore.layToken()
+  let res: Response
+  try {
+    res = await fetch(duong, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(than),
+    })
+  } catch (loiMang) {
+    console.error(`Lỗi mạng khi xem thử ${duong}`, loiMang)
+    throw new Error('Không kết nối được máy chủ để xem thử. Vui lòng thử lại sau ít phút hoặc báo cho người quản trị.')
+  }
+  if (res.status === 401) {
+    authStore.baoHet401()
+    throw new ChuaDangNhap('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+  }
+  if (!res.ok) {
+    const thongBao = await docThongBaoLoi(res)
+    throw new Error(thongBao ?? `Máy chủ trả lỗi ${res.status} khi xem thử.`)
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank')
 }
 
 /** Tải ảnh đại diện (Task 1.2 VIEC-TIEP-THEO.md) về DẠNG BLOB rồi dựng object URL — KHÔNG
@@ -179,7 +225,7 @@ async function taiAnhLen(duong: string, tep: File): Promise<void> {
     })
   } catch (loiMang) {
     console.error(`Lỗi mạng khi tải ảnh lên ${duong}`, loiMang)
-    throw new Error('Không kết nối được máy chủ để tải ảnh lên. Kiểm tra Qlgx.Api đã chạy chưa.')
+    throw new Error('Không kết nối được máy chủ để tải ảnh lên. Vui lòng thử lại sau ít phút hoặc báo cho người quản trị.')
   }
   if (res.status === 401) {
     authStore.baoHet401()
@@ -209,7 +255,7 @@ async function taiTepLenVaDoc<T>(duong: string, tep: File): Promise<T> {
     })
   } catch (loiMang) {
     console.error(`Lỗi mạng khi tải tệp lên ${duong}`, loiMang)
-    throw new Error('Không kết nối được máy chủ để tải tệp lên. Kiểm tra Qlgx.Api đã chạy chưa.')
+    throw new Error('Không kết nối được máy chủ để tải tệp lên. Vui lòng thử lại sau ít phút hoặc báo cho người quản trị.')
   }
   if (res.status === 401) {
     authStore.baoHet401()
@@ -676,6 +722,22 @@ export const api = {
       dienThoai: string | null; email: string | null; website: string | null; ghiChu: string | null
     }) => goi<void>('/api/giao-xu', { method: 'PUT', body: JSON.stringify(than) }),
   },
+  /** "Danh sách các cha quản xứ" của màn hình "Giáo xứ" — LUÔN trong phạm vi giáo xứ của người
+   * gọi (RLS bảo vệ, khác nhóm `giaoXu` phía trên vốn không có RLS), xem giao-xu.md mục 3.2. */
+  linhMuc: {
+    danhSach: () => goi<LinhMuc[]>('/api/linh-muc'),
+    them: (than: {
+      tenThanh: string | null; hoTen: string; ngaySinh: string | null; chucVu: string | null
+      tuNgay: string | null; denNgay: string | null; ghiChu: string | null
+      dienThoai: string | null; email: string | null
+    }) => goi<void>('/api/linh-muc', { method: 'POST', body: JSON.stringify(than) }),
+    sua: (id: string, than: {
+      tenThanh: string | null; hoTen: string; ngaySinh: string | null; chucVu: string | null
+      tuNgay: string | null; denNgay: string | null; ghiChu: string | null
+      dienThoai: string | null; email: string | null
+    }) => goi<void>(`/api/linh-muc/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoa: (id: string) => goi<void>(`/api/linh-muc/${id}`, { method: 'DELETE' }),
+  },
   /** Màn hình "Quản lý giáo phận/giáo hạt/giáo xứ" (policy "QuanTriHeThong", LoaiTaiKhoan=9 —
    * xem docs/superpowers/specs/man-hinh/quan-ly-giao-xu.md). CỐ Ý xuyên giáo xứ: chỉ tài
    * khoản "Quản trị hệ thống" gọi được, quản trị viên thường của một giáo xứ nhận 403. */
@@ -773,6 +835,27 @@ export const api = {
         goi<BieuDoBiTichNam[]>(`/api/thong-ke/bieu-do/bi-tich?tuNam=${tuNam}&denNam=${denNam}`),
       doTuoi: () => goi<BieuDoDoTuoi>('/api/thong-ke/bieu-do/do-tuoi'),
       giaoHo: () => goi<BieuDoGiaoHo[]>('/api/thong-ke/bieu-do/giao-ho'),
+    },
+  },
+  /** Màn hình "Quản lý mẫu in" — năng lực MỚI (xem quan-ly-mau-in.md), không có ở bản desktop.
+   * "rieng" (policy "QuanTri", giáo xứ tự sửa mẫu CỦA MÌNH) và "heThong" (policy
+   * "QuanTriHeThong") gọi cùng một nhóm route phía sau, khác nhau đúng đường dẫn — máy chủ tự
+   * lấy GiaoXuId từ claim cho "rieng", KHÔNG bao giờ nhận qua tham số ở đây. */
+  mauIn: {
+    danhSach: () => goi<MauInDanhSachItem[]>('/api/mau-in'),
+    xemThu: (tenMau: string, noiDungHtml: string) =>
+      xemThuPdfMoTab(`/api/mau-in/${tenMau}/xem-thu`, { noiDungHtml }),
+    rieng: {
+      layChiTiet: (tenMau: string) => goi<MauInChiTiet>(`/api/mau-in/${tenMau}/rieng`),
+      luu: (tenMau: string, noiDungHtml: string, rowVersion: number) =>
+        goi<void>(`/api/mau-in/${tenMau}/rieng`, { method: 'PUT', body: JSON.stringify({ noiDungHtml, rowVersion }) }),
+      khoiPhuc: (tenMau: string) => goi<void>(`/api/mau-in/${tenMau}/rieng`, { method: 'DELETE' }),
+    },
+    heThong: {
+      layChiTiet: (tenMau: string) => goi<MauInChiTiet>(`/api/mau-in/${tenMau}/he-thong`),
+      luu: (tenMau: string, noiDungHtml: string, rowVersion: number) =>
+        goi<void>(`/api/mau-in/${tenMau}/he-thong`, { method: 'PUT', body: JSON.stringify({ noiDungHtml, rowVersion }) }),
+      khoiPhuc: (tenMau: string) => goi<void>(`/api/mau-in/${tenMau}/he-thong`, { method: 'DELETE' }),
     },
   },
 }

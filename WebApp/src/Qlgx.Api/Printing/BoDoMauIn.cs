@@ -79,7 +79,17 @@ public sealed class BoDoMauIn
         IReadOnlyDictionary<string, string?>? khoiHtmlAnToan = null)
     {
         var mau = DocMauGoc(giaoPhanDaChuanHoa, tenMau);
-        return System.Text.RegularExpressions.Regex.Replace(mau, @"\{\{(\w+)\}\}", m =>
+        return ApDung(mau, duLieu, khoiHtmlAnToan);
+    }
+
+    /// <summary>Cùng phép thay thế <c>{{Key}}</c> của <see cref="Dung"/> nhưng nhận thẳng chuỗi
+    /// HTML mẫu (KHÔNG đọc từ EmbeddedResource) — tách riêng để dùng cho "Xem thử" mẫu in tuỳ
+    /// chỉnh (MauInService), nơi HTML mẫu là nội dung NHÁP người dùng đang gõ, chưa lưu, không
+    /// tồn tại trong assembly. Tách hàm này ra thay vì lặp lại logic Regex.Replace ở hai nơi.</summary>
+    public string ApDung(string mauHtml, IReadOnlyDictionary<string, string?> duLieu,
+        IReadOnlyDictionary<string, string?>? khoiHtmlAnToan = null)
+    {
+        return System.Text.RegularExpressions.Regex.Replace(mauHtml, @"\{\{(\w+)\}\}", m =>
         {
             var key = m.Groups[1].Value;
             if (khoiHtmlAnToan is not null && khoiHtmlAnToan.TryGetValue(key, out var khoi))
@@ -88,4 +98,10 @@ public sealed class BoDoMauIn
             return gia is null ? "" : HtmlEncoder.Default.Encode(gia);
         });
     }
+
+    /// <summary>Đọc mẫu GỐC nhúng cứng (bỏ qua mọi tuỳ chỉnh CSDL) — dùng cho "Khôi phục về mặc
+    /// định" hiển thị nội dung gốc trong trình soạn thảo trước khi người dùng bấm lưu đè, và
+    /// cho endpoint danh mục biết mẫu gốc trông thế nào. Public hoá riêng (khác
+    /// <see cref="DocMauGoc"/> private) để MauInService gọi được từ ngoài lớp này.</summary>
+    public string DocMauGocCongKhai(string giaoPhanDaChuanHoa, string tenMau) => DocMauGoc(giaoPhanDaChuanHoa, tenMau);
 }

@@ -37,6 +37,14 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
     public DbSet<GiaoDanHonPhoi> GiaoDanHonPhoi => Set<GiaoDanHonPhoi>();
     public DbSet<BoDemMa> BoDemMa => Set<BoDemMa>();
 
+    /// <summary>Mẫu in tuỳ chỉnh (xem quan-ly-mau-in.md) — CỐ Ý không có bộ lọc toàn cục theo
+    /// GiaoXuId bên dưới (giống GiaoPhan/GiaoHat/NhapDuLieuJob): cột GiaoXuId ở bảng này cho
+    /// phép NULL với ý nghĩa nghiệp vụ riêng ("mẫu hệ thống"), khác hẳn ý nghĩa "không giáo xứ
+    /// nào lọc" mà bộ lọc toàn cục dùng NULL để đại diện — trộn hai ý nghĩa vào cùng một bộ lọc
+    /// sẽ làm giáo xứ A vô tình thấy được mọi mẫu hệ thống lẫn dữ liệu không nên thấy. Mọi truy
+    /// vấn lọc tường minh trong MauInService.</summary>
+    public DbSet<MauInTuyChinh> MauInTuyChinh => Set<MauInTuyChinh>();
+
     // --- Trên cấp giáo xứ, không có GiaoXuId (xem GiaoPhan.cs, GiaoHat.cs) ---
     public DbSet<GiaoPhan> GiaoPhan => Set<GiaoPhan>();
     public DbSet<GiaoHat> GiaoHat => Set<GiaoHat>();

@@ -36,6 +36,10 @@ const DANH_SACH_DIEU_HUONG: NhomDieuHuong[] = [
       { id: 'giaoXu', nhan: 'Giáo xứ' },
       { id: 'giaoHoList', nhan: 'Giáo họ' },
       { id: 'khoiGiaoLyList', nhan: 'Quản lý giáo lý' },
+      // "Quản lý mẫu in" (năng lực MỚI, xem quan-ly-mau-in.md) — mọi tài khoản đã đăng nhập
+      // đều thấy (kể cả tài khoản nhập liệu thường), chỉ khác chỗ sửa được gì; KHÔNG đặt vào
+      // nhóm "Hệ thống" bên dưới vì mục đó CHỈ hiện cho laQuanTri/laQuanTriHeThong.
+      { id: 'mauInList', nhan: 'Quản lý mẫu in' },
     ],
   },
   {

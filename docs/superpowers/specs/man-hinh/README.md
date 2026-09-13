@@ -102,5 +102,6 @@ Cập nhật bảng này mỗi khi thêm spec.
 | Tìm và thay thế | `GXControl/frmReplace.cs` | 145 | xong (`tim-thay-the.md`) | xong |
 | Giáo xứ (tự sửa thông tin xứ mình) | `ChuongTrinh/frmGiaoXu.cs` | 280 | xong (`giao-xu.md`) | một phần (tên/địa chỉ/điện thoại/email/website/ghi chú xong; cố ý bỏ sửa giáo phận/giáo hạt, danh sách Linh mục, ảnh đại diện — xem `giao-xu.md` mục 3) |
 | Thống kê chung & Biểu đồ | `ChuongTrinh/frmThongKeChung.cs`+`GXControl/GxThongKeChung.cs`+`GxThongKeOnGoi.cs`+`GXControl/Extract.cs` / `ChuongTrinh/frmBieuDo.cs`+5 mô-đun `ExcelReport/Chart*.cs` | 28+848+195+168 / 400+5×~100 | xong (`thong-ke-bieu-do.md`) | một phần (xem mục 10) |
+| Quản lý mẫu in | — (không có màn hình desktop tương ứng) | — | xong (`quan-ly-mau-in.md`) | không áp dụng — NĂNG LỰC MỚI, xem mục 8 của spec |
 
 Còn khoảng 60 màn hình nhỏ hơn — bổ sung dần theo thứ tự migrate.

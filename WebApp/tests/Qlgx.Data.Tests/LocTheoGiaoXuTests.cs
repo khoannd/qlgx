@@ -69,12 +69,23 @@ public class LocTheoGiaoXuTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieu
             ["GiaoHo", "GiaDinh", "GiaoDan", "ThanhVienGiaDinh", "HonPhoi", "GiaoDanHonPhoi", "BoDemMa",
              "CauHinh", "DuLieuChung", "VaiTro", "TenLoaiTaiKhoan", "TaiKhoan",
              "DotBiTich", "BiTichChiTiet", "ChuyenXu", "RaoHonPhoi", "TanHien", "LinhMuc",
-             "KhoiGiaoLy", "LopGiaoLy", "ChiTietLopGiaoLy", "GiaoLyVien", "HoiDoan", "ChiTietHoiDoan"],
+             "KhoiGiaoLy", "LopGiaoLy", "ChiTietLopGiaoLy", "GiaoLyVien", "HoiDoan", "ChiTietHoiDoan",
+             "MauInTuyChinh"],
             "danh sach bang co GiaoXuId phai duoc ra soat co y thuc moi khi thay doi, khong duoc troi qua im lang");
 
+        // MauInTuyChinh la NGOAI LE CO CHU DICH DUY NHAT: cot GiaoXuId cua no cho phep NULL voi
+        // NGHIA NGHIEP VU RIENG ("mau tuy chinh cap he thong"), khac han y nghia "khong loc gi
+        // ca" ma bo loc toan cuc dung NULL de dai dien (xem MauInTuyChinh.cs) — neu gan bo loc
+        // toan cuc binh thuong ("BoiCanhGiaoXuId == null || GiaoXuId == BoiCanhGiaoXuId") thi
+        // giao xu A se VO TINH thay duoc moi mau he thong ma khong can loc gi (dung y muon, do
+        // la mau ap dung chung), NHUNG boi canh "khong co giao xu" (cong cu chuyen doi du lieu)
+        // cung se thay ca hai loai lan lon voi nhau. MauInService tu loc tuong minh
+        // (GiaoXuId == boiCanh.GiaoXuId hoac GiaoXuId == null tuy endpoint), khong dua vao bo
+        // loc tu dong — day la ngoai le duy nhat duoc rao soat co y thuc, khong phai bo sot.
         var thieuBoLoc = ungVien
             .Where(t => t.GetDeclaredQueryFilters().Count == 0)
             .Select(t => t.ClrType.Name)
+            .Where(ten => ten != "MauInTuyChinh")
             .ToList();
 
         thieuBoLoc.Should().BeEmpty(

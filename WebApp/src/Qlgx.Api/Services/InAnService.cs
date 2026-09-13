@@ -40,6 +40,38 @@ public class InAnService(
         return $"<div class=\"anh-dai-dien\"><img src=\"data:{loaiNoiDung};base64,{b64}\" alt=\"Ảnh đại diện\" /></div>";
     }
 
+    /// <summary>Nạp nội dung mẫu ĐÃ ĐIỀN DỮ LIỆU theo đúng thứ tự phân giải "giáo xứ → hệ thống
+    /// → mẫu gốc nhúng cứng" (xem quan-ly-mau-in.md mục "Lưu trữ và thứ tự phân giải"): mẫu
+    /// riêng của giáo xứ ĐANG ĐĂNG NHẬP nếu có, rồi mới tới mẫu tuỳ chỉnh cấp hệ thống (do Quản
+    /// trị hệ thống đặt, GiaoXuId NULL), cuối cùng mới rơi về mẫu gốc nhúng cứng (phao cứu sinh
+    /// vĩnh viễn, không phụ thuộc CSDL — xem BoDoMauIn.Dung). Đặt Ở ĐÂY (InAnService, có sẵn
+    /// db/boiCanh scoped theo request) thay vì đưa DbContext vào BoDoMauIn — BoDoMauIn đăng ký
+    /// Singleton (dùng chung một trình đọc mẫu cho toàn tiến trình, xem Program.cs), không tiêm
+    /// được QlgxDbContext (Scoped) vào thẳng một Singleton.
+    ///
+    /// KHÔNG ai không có tuỳ chỉnh nào bị ảnh hưởng: hai bước tra CSDL trả null (không có dòng)
+    /// thì rơi thẳng về mau.Dung (đúng đường đi CŨ trước khi có bảng mau_in_tuy_chinh) — tương
+    /// thích ngược tuyệt đối.</summary>
+    private async Task<string> DungMau(string giaoPhanSlug, string tenMau,
+        IReadOnlyDictionary<string, string?> duLieu, IReadOnlyDictionary<string, string?>? khoiHtml,
+        CancellationToken ct)
+    {
+        var gxId = boiCanh.GiaoXuId;
+        var rieng = await db.MauInTuyChinh.AsNoTracking()
+            .Where(m => m.GiaoXuId == gxId && m.TenMau == tenMau)
+            .Select(m => m.NoiDungHtml)
+            .FirstOrDefaultAsync(ct);
+        if (rieng is not null) return mau.ApDung(rieng, duLieu, khoiHtml);
+
+        var heThong = await db.MauInTuyChinh.AsNoTracking()
+            .Where(m => m.GiaoXuId == null && m.TenMau == tenMau)
+            .Select(m => m.NoiDungHtml)
+            .FirstOrDefaultAsync(ct);
+        if (heThong is not null) return mau.ApDung(heThong, duLieu, khoiHtml);
+
+        return mau.Dung(giaoPhanSlug, tenMau, duLieu, khoiHtml);
+    }
+
     /// <summary>Nạp Giáo xứ hiện tại (theo claim đăng nhập — KHÔNG bao giờ nhận id giáo xứ nào
     /// khác) cùng Giáo hạt/Giáo phận của nó, dùng chung cho mọi mẫu in (header quốc hiệu/giáo
     /// xứ giống nhau ở mọi mẫu).</summary>
@@ -241,7 +273,7 @@ public class InAnService(
             ["KhoiAnh"] = KhoiAnhDaiDien(g.AnhDaiDienDuLieu, g.AnhDaiDienLoaiNoiDung),
         };
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
-        var html = mau.Dung(slug, "LyLichCaNhan", duLieu, khoiHtml);
+        var html = await DungMau(slug, "LyLichCaNhan", duLieu, khoiHtml, ct);
         return (g, html);
     }
 
@@ -300,7 +332,7 @@ public class InAnService(
         };
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
-        var html = mau.Dung(slug, "ChungNhanBiTich", duLieu);
+        var html = await DungMau(slug, "ChungNhanBiTich", duLieu, null, ct);
         var pdf = await trinhDuyet.XuatPdfAsync(html, ct);
 
         return new KetQuaInAn(pdf, $"ChungNhanBiTich_{g.MaGiaoDanCu}.pdf");
@@ -395,7 +427,7 @@ public class InAnService(
         };
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
-        var html = mau.Dung(slug, "PhieuGiaDinh", duLieu, khoiHtml);
+        var html = await DungMau(slug, "PhieuGiaDinh", duLieu, khoiHtml, ct);
         var pdf = await trinhDuyet.XuatPdfAsync(html, ct, khoGiay: khoGiay);
 
         var hauTo = khoGiay == "A3" ? "_A3" : "";
@@ -470,7 +502,7 @@ public class InAnService(
         };
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
-        var html = mau.Dung(slug, "ChungNhanHonPhoi", duLieu);
+        var html = await DungMau(slug, "ChungNhanHonPhoi", duLieu, null, ct);
         var pdf = await trinhDuyet.XuatPdfAsync(html, ct);
 
         return new KetQuaInAn(pdf, $"ChungNhanHonPhoi_{honPhoi.MaHonPhoiCu}.pdf");
@@ -535,7 +567,7 @@ public class InAnService(
         foreach (var kv in ThongTinBenNhan(giaoPhan2, giaoXu2, tenLinhMuc)) duLieu[kv.Key] = kv.Value;
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
-        var html = mau.Dung(slug, "GioiThieuRuaToi", duLieu);
+        var html = await DungMau(slug, "GioiThieuRuaToi", duLieu, null, ct);
         var pdf = await trinhDuyet.XuatPdfAsync(html, ct);
         return new KetQuaInAn(pdf, $"GioiThieuRuaToi_{g.MaGiaoDanCu}.pdf");
     }
@@ -570,7 +602,7 @@ public class InAnService(
         foreach (var kv in ThongTinBenNhan(giaoPhan2, giaoXu2, tenLinhMuc)) duLieu[kv.Key] = kv.Value;
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
-        var html = mau.Dung(slug, "GioiThieuThemSuc", duLieu);
+        var html = await DungMau(slug, "GioiThieuThemSuc", duLieu, null, ct);
         var pdf = await trinhDuyet.XuatPdfAsync(html, ct);
         return new KetQuaInAn(pdf, $"GioiThieuThemSuc_{g.MaGiaoDanCu}.pdf");
     }
@@ -606,7 +638,7 @@ public class InAnService(
         foreach (var kv in ThongTinBenNhan(giaoPhan2, giaoXu2, tenLinhMuc)) duLieu[kv.Key] = kv.Value;
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
-        var html = mau.Dung(slug, "GioiThieuGiaoLyHonPhoi", duLieu);
+        var html = await DungMau(slug, "GioiThieuGiaoLyHonPhoi", duLieu, null, ct);
         var pdf = await trinhDuyet.XuatPdfAsync(html, ct);
         return new KetQuaInAn(pdf, $"GioiThieuGiaoLyHonPhoi_{g.MaGiaoDanCu}.pdf");
     }
@@ -661,7 +693,7 @@ public class InAnService(
         var khoiHtml = new Dictionary<string, string?> { ["HangThanhVien"] = hangHtml.ToString() };
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
-        var html = mau.Dung(slug, "GioiThieuChuyenXu", duLieu, khoiHtml);
+        var html = await DungMau(slug, "GioiThieuChuyenXu", duLieu, khoiHtml, ct);
         var pdf = await trinhDuyet.XuatPdfAsync(html, ct);
         return new KetQuaInAn(pdf, $"GioiThieuChuyenXu_{giaDinh.MaGiaDinhCu}.pdf");
     }
@@ -741,7 +773,7 @@ public class InAnService(
         };
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
-        var html = mau.Dung(slug, "RaoHonPhoi", duLieu);
+        var html = await DungMau(slug, "RaoHonPhoi", duLieu, null, ct);
         var pdf = await trinhDuyet.XuatPdfAsync(html, ct);
         return new KetQuaInAn(pdf, $"RaoHonPhoi_{r.MaRaoHonPhoiCu}.pdf");
     }
@@ -802,7 +834,7 @@ public class InAnService(
         };
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
-        var html = mau.Dung(slug, "KQRaoHonPhoi", duLieu);
+        var html = await DungMau(slug, "KQRaoHonPhoi", duLieu, null, ct);
         var pdf = await trinhDuyet.XuatPdfAsync(html, ct);
         return new KetQuaInAn(pdf, $"KQRaoHonPhoi_{r.MaRaoHonPhoiCu}.pdf");
     }
@@ -877,7 +909,7 @@ public class InAnService(
         };
         var khoiHtml = new Dictionary<string, string?> { ["HangDanhSach"] = hangHtml.ToString() };
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu?.GiaoHat?.GiaoPhan?.TenGiaoPhan);
-        var html = mau.Dung(slug, "DanhSachGiaoDan", duLieu, khoiHtml);
+        var html = await DungMau(slug, "DanhSachGiaoDan", duLieu, khoiHtml, ct);
         var pdf = await trinhDuyet.XuatPdfAsync(html, ct, landscape: true);
 
         return new KetQuaInAn(pdf, $"DanhSachGiaoDan_{DateTime.Now:yyyy-MM-dd}.pdf");
@@ -925,7 +957,7 @@ public class InAnService(
         };
         var khoiHtml = new Dictionary<string, string?> { ["HangDanhSach"] = hangHtml.ToString() };
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu?.GiaoHat?.GiaoPhan?.TenGiaoPhan);
-        var html = mau.Dung(slug, "DanhSachGiaDinh", duLieu, khoiHtml);
+        var html = await DungMau(slug, "DanhSachGiaDinh", duLieu, khoiHtml, ct);
         var pdf = await trinhDuyet.XuatPdfAsync(html, ct, landscape: true);
 
         return new KetQuaInAn(pdf, $"DanhSachGiaDinh_{DateTime.Now:yyyy-MM-dd}.pdf");

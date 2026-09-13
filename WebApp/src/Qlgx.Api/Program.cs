@@ -74,6 +74,7 @@ builder.Services.AddScoped<KiemTraDuLieuService>();
 // "Công cụ dữ liệu" -> "Chuyển họ hàng loạt" (spec mục 4) — công cụ sửa dữ liệu hàng loạt.
 builder.Services.AddScoped<ChuyenHoService>();
 builder.Services.AddScoped<GiaoXuService>();
+builder.Services.AddScoped<LinhMucService>();
 builder.Services.AddScoped<ChuanHoaDuLieuService>();
 builder.Services.AddScoped<TaoDotBiTichTuDongService>();
 builder.Services.AddScoped<TimThayTheService>();
@@ -105,6 +106,8 @@ builder.Services.AddScoped<BieuDoService>();
 builder.Services.AddSingleton<Qlgx.Api.Printing.BoTrinhDuyet>();
 builder.Services.AddSingleton<Qlgx.Api.Printing.BoDoMauIn>();
 builder.Services.AddScoped<InAnService>();
+// "Quan ly mau in" (nang luc MOI, xem quan-ly-mau-in.md) — Scoped vi phu thuoc QlgxDbContext.
+builder.Services.AddScoped<MauInService>();
 
 var app = builder.Build();
 
@@ -187,6 +190,7 @@ app.MapGiaoHo();
 app.MapTaiKhoan();
 app.MapQuanLyGiaoXu();
 app.MapGiaoXu();
+app.MapLinhMuc();
 app.MapNhapDuLieu();
 app.MapDanhMuc();
 app.MapDotBiTich();
@@ -194,6 +198,7 @@ app.MapRaoHonPhoi();
 app.MapHoiDoanQuanLy();
 app.MapGiaoLy();
 app.MapThongKe();
+app.MapMauIn();
 
 // Fallback SPA: moi GET khong khop route API/tep tinh nao o tren tra ve index.html de React
 // Router tu xu ly duong dan phia trinh duyet. Loai tru "/api" bang rang buoc regex phu dinh de

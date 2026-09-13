@@ -29,6 +29,7 @@ import { TaoDotBiTichTuDongPage } from './screens/TaoDotBiTichTuDongPage'
 import { TimThayThePage } from './screens/TimThayThePage'
 import { QuanLyGiaoXuPage } from './screens/QuanLyGiaoXuPage'
 import { GiaoXuPage } from './screens/GiaoXuPage'
+import { MauInListPage } from './screens/MauInListPage'
 import { ThongKeChungPage } from './screens/ThongKeChungPage'
 import { BieuDoPage } from './screens/BieuDoPage'
 import { NhapDuLieuPage } from './screens/NhapDuLieuPage'
@@ -49,7 +50,7 @@ function App() {
   // trạng hôn phối…) — gắn MỘT LẦN ở gốc ứng dụng để mọi màn hình/mọi ô mới thêm sau này đều tự
   // có, không cần sửa từng nơi. Xem lib/focusDieuHuong.ts.
   useTuNhayKhiChonDropdown()
-  const { danhSach, dangChon, mo, chon, dong, suaTieuDe } = useTabDocs()
+  const { danhSach, dangChon, mo, chon, dong, dongTatCa, suaTieuDe } = useTabDocs()
   // Đếm số bản ghi mới đang mở dở, giống biến moiDem của bản mẫu — mỗi lần bấm "Thêm mới"
   // là một thẻ nháp riêng, không trùng khoá với thẻ nháp khác đang mở.
   const moiDem = useRef(0)
@@ -334,6 +335,11 @@ function App() {
     mo({ id: 'giaoXu', tieuDe: 'Giáo xứ', noiDung: <GiaoXuPage /> })
   }
 
+  // "Quản lý mẫu in" (năng lực MỚI, xem quan-ly-mau-in.md) — mọi tài khoản đăng nhập mở được.
+  function moMauInList() {
+    mo({ id: 'mauInList', tieuDe: 'Quản lý mẫu in', noiDung: <MauInListPage /> })
+  }
+
   function moNhapDuLieu() {
     mo({ id: 'nhapDuLieu', tieuDe: 'Nhập dữ liệu Access', noiDung: <NhapDuLieuPage /> })
   }
@@ -377,6 +383,7 @@ function App() {
     else if (id === 'timThayThe') moTimThayThe()
     else if (id === 'quanLyGiaoXu') moQuanLyGiaoXu()
     else if (id === 'giaoXu') moGiaoXu()
+    else if (id === 'mauInList') moMauInList()
     else if (id === 'nhapDuLieu') moNhapDuLieu()
     else if (id === 'thongKeChung') moThongKeChung()
     else if (id === 'bieuDo') moBieuDo()
@@ -400,7 +407,13 @@ function App() {
     <>
       <TrangThaiMangBanner />
       <AppShell dangChonNav={dangChon} onNavigate={moTheoDieuHuong} nguoiDung={nguoiDung}>
-        <TabDocs danhSach={danhSach} dangChon={dangChon} onChon={chon} onDong={dong} />
+        <TabDocs
+          danhSach={danhSach}
+          dangChon={dangChon}
+          onChon={chon}
+          onDong={dong}
+          onDongTatCa={dongTatCa}
+        />
       </AppShell>
       <CapNhatPWA />
     </>
