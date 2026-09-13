@@ -68,6 +68,15 @@ bên nào đúng.
   nhận về** — đây là chỗ giữ nhân quả, và là lý do hàm này tồn tại. Bỏ qua nó thì: sơ mở một hồ sơ vừa
   tải về, sửa một ô, và bản sửa **thua chính bản ghi mà nó dựa vào** vì đồng hồ máy con chạy nhanh vài
   giây. Hiệu chỉnh độ lệch vật lý không cứu được — độ lệch đo qua mạng luôn sai.
+- **Chuỗi JSON của giá trị ô phải khớp TỪNG BYTE với `System.Text.Json` mặc định của .NET.** Bản C#
+  escape ký tự ngoài ASCII, nên `"Nguyễn Thị Bưởi"` được lưu là `"Nguyễn Thị Bưởi"`.
+  `JSON.stringify` của JavaScript **không** escape như vậy — nó trả `"Nguyễn Thị Bưởi"` nguyên chữ. Hai
+  chuỗi biểu diễn cùng một giá trị nhưng khác nhau từng byte, và luật gộp so **chuỗi**, không so giá trị.
+  Hậu quả nếu bỏ qua: **mọi tên người Việt có dấu sinh một xung đột giả** ở mỗi lần đồng bộ — tức gần
+  như mọi giáo dân. Hộp cần xem lại ngập hàng nghìn mục vô nghĩa, và quý sơ sẽ quen tay bấm bỏ qua rồi
+  bỏ qua luôn mục thật. Đây là loại lỗi làm hỏng cả tính năng chứ không chỉ một ô.
+  Máy chủ cũng chuẩn hoá lại một lần nữa khi nhận (kế hoạch 4, Task 6), nhưng **máy con vẫn phải sinh
+  đúng ngay từ đầu** — nếu không, chính máy con sẽ tự so sai khi quyết định có gửi lên hay không.
 - **Task 6 phải có một test vector dùng chung**: một file JSON liệt kê các cặp đầu vào/đầu ra, được
   **cả** bộ test C# **và** bộ test TypeScript đọc. Không nhân bản ca kiểm thử bằng tay ở hai nơi — nhân
   bản là cách hai bản trôi khỏi nhau.

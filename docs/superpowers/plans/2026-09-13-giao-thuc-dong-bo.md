@@ -1511,6 +1511,27 @@ không tranh chấp mới, không thêm một thứ tự khoá nào có thể g�
 nằm chỗ khác thì sẽ có đường ghi quên nâng nó, và lỗi đó không có test nào bắt được một cách tự
 nhiên. Đổi chữ ký buộc mọi nơi gọi phải nhìn lại — đó là mục đích.
 
+**Chuẩn hoá `giaTriMoi` TRƯỚC khi so (R33 trong sổ thi công).**
+
+Đã kiểm chứng khứ hồi `DocO -> ApMotO -> DocO` cho chữ Việt có dấu, `DateOnly`, `bool`, chuỗi rỗng,
+`int`, `null`: đúng 100%, và chuỗi sinh ra khớp từng ký tự với `SinhDongNhatKy`. Nhưng đó là khi
+**cả hai đầu đều là .NET**. Máy con là TypeScript, và `JSON.stringify` **không** escape ký tự ngoài
+ASCII trong khi `System.Text.Json` thì có:
+
+| Nguồn | `"Nguyễn Thị Bưởi"` được lưu thành |
+|---|---|
+| .NET (`SinhDongNhatKy`, `DocO`) | `"Nguyễn Thị Bưởi"` |
+| JavaScript (`JSON.stringify`) | `"Nguyễn Thị Bưởi"` |
+
+Luật gộp so **chuỗi**, không so giá trị. Bỏ qua chuyện này thì **mọi tên người Việt có dấu sinh một
+xung đột giả**, tức gần như mọi giáo dân, ở mỗi lần đồng bộ. Hộp cần xem lại ngập hàng nghìn mục vô
+nghĩa và quý sơ sẽ quen tay bấm bỏ qua — rồi bỏ qua luôn mục thật.
+
+Vì vậy T6 phải đưa `giaTriMoi` nhận từ máy con qua đúng cặp `JsonSerializer.Deserialize` →
+`JsonSerializer.Serialize` của .NET **trước** khi truyền vào `LuatGop.Quyet`. Test bắt buộc: một ô
+`HoTen` nhận chuỗi chữ Việt **không** escape phải được coi là **bằng** giá trị đang có, không sinh
+mục cần xem lại.
+
 **Vì sao phải gộp theo NHÓM chứ không quyết từng ô (R16 trong sổ thi công).**
 
 `LuatGop.NhomGop` do Task 3 sinh ra nhưng **bản kế hoạch đầu không có task nào gọi nó** — T6 quyết
