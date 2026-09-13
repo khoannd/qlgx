@@ -157,25 +157,59 @@ function errorResponse(err: unknown): Response {
 }
 
 /**
- * TẠM DỪNG THÔNG BÁO CÓ BẢN MỚI — bật ngày 2026-09-09, xem lý do đầy đủ ở chú
- * thích tại `versionTextResponse()` ngay dưới. XOÁ cờ này (đặt lại `false`)
- * khi đã sửa xong `<downloadpath>` để không ép máy đời cũ dùng `https`.
+ * Địa chỉ gốc theo từng nhóm đường dẫn — PHẢI khớp với "Các địa chỉ cũ" trong
+ * HOP_DONG_MAY_CHU_CAP_NHAT.md. Đây là giá trị sẽ được ghi đè vĩnh viễn vào
+ * máy người dùng qua `<downloadpath>` (xem chú thích ở đầu file), nên mỗi địa
+ * chỉ ở đây phải là địa chỉ mà chính nhóm máy đó ĐANG dùng để gọi tới route
+ * này — không được trỏ sang nhóm khác.
+ *
+ * "goc" và "4.0" cố tình giữ `http://`: máy chạy bản 3.3.7 trở về trước và
+ * 4.0.0–4.0.1 dùng .NET Framework 2.0/4.0 trên Windows XP–7, không thương
+ * lượng được TLS 1.2 — xác nhận bằng cách đọc thật code cũ (`AutoUpdate.cs`,
+ * `CMemory.cs` tại tag release-3.3.7-net20/release-3.7.7-net20): nội dung bên
+ * trong thẻ `<downloadpath>` được gán thẳng vào `Memory.ServerUrl`/
+ * `information.ServerUrl`, dùng để tải mọi thứ sau đó (version.txt lần sau,
+ * chính VersionConfig.xml, và ghép với thuộc tính `value="download-update"`
+ * để tải gói .zip) — ép https ở đây chính là nguyên nhân của lỗi "báo có bản
+ * mới nhưng cập nhật luôn thất bại" đã sửa trước đó.
  */
-const TAM_DUNG_THONG_BAO_CAP_NHAT = true;
+const DOWNLOAD_BASE_URL_FOR = {
+  goc: "http://quanlygiaoxu.net/",
+  "4.0": "http://quanlygiaoxu.net/4.0/",
+  capnhat: "https://quanlygiaoxu.net/capnhat/",
+} as const;
 
-export async function versionTextResponse(): Promise<Response> {
-  // Máy chạy bản 3.3.7 trở về trước và 4.0.0–4.0.1 dùng .NET Framework 2.0 /
-  // 4.0 trên Windows XP–7, không nói được TLS 1.2. VersionConfig.xml hiện trả
-  // NGUYÊN VĂN cùng một <downloadpath> cho MỌI nhóm đường dẫn (mới lẫn cũ) —
-  // https://quanlygiaoxu.net/capnhat/. Máy đời cũ vẫn nhận đúng version.txt
-  // mới hơn (qua http:// thuần, không lỗi gì) nên báo "có bản mới" đúng ý
-  // hợp đồng, nhưng bước tải sau đó ghép ra một địa chỉ https:// mà runtime cũ
-  // không kết nối được — người dùng thấy báo có bản mới nhưng bấm cập nhật
-  // luôn thất bại. Trả version.txt RỖNG để mọi máy (kể cả máy mới) tạm coi
-  // như "không có bản mới" cho tới khi sửa được downloadpath theo từng nhóm
-  // đường dẫn (kế hoạch: /capnhat/* trả https, /,/4.0/ trả một địa chỉ http
-  // riêng — xem HOP_DONG_MAY_CHU_CAP_NHAT.md).
-  if (TAM_DUNG_THONG_BAO_CAP_NHAT) {
+export type NhomDuongDan = keyof typeof DOWNLOAD_BASE_URL_FOR;
+
+/**
+ * TẠM DỪNG BÁO CÓ BẢN MỚI CHO TỪNG NHÓM — bật lại 2026-09-13 riêng cho "goc"
+ * (máy 3.3.7 trở về trước).
+ *
+ * LÝ DO: bản 4.0.2 chạy trên .NET Framework 4.8 (nâng cấp từ .NET 2.0 ở bản
+ * 4.0.0 — xem CLAUDE.md). Máy cài từ 3.3.7 trở về trước có thể vẫn là Windows 7
+ * KHÔNG có sẵn .NET 4.8 (chỉ có .NET 2.0/4.0 đủ để chạy bản cũ) — nếu máy đó tự
+ * cập nhật lên 4.0.2, gói cài xong có thể không chạy được, biến một phần mềm
+ * đang dùng tốt thành hỏng hẳn. Đây là hợp đồng một chiều (xem đầu file) nên
+ * KHÔNG được để xảy ra rồi mới sửa — phải chặn từ trước khi có giải pháp cho
+ * nhóm máy này (ví dụ: gói cài kèm sẵn bộ cài .NET 4.8, hoặc kiểm tra phiên
+ * bản .NET trước khi cho phép cập nhật).
+ *
+ * Đã xác nhận bằng cách đọc code máy khách (`GxCheckVersion.cs`,
+ * `Validator.IsNumber()`): version.txt rỗng khiến `int.Parse("")` ném lỗi,
+ * `CheckNewVersion()` return sớm TRƯỚC cả đoạn hiện hộp thoại "không có bản
+ * mới" — nghĩa là chặn được CẢ kiểm tra tự động lúc mở chương trình LẪN bấm
+ * nút "Kiểm tra cập nhật" thủ công, không có ngoại lệ nào lọt qua.
+ *
+ * "4.0" và "capnhat" KHÔNG tạm dừng: máy 4.0.0 trở lên đã tự chạy trên .NET 4.8
+ * rồi (đang chạy được nghĩa là máy đã có sẵn), nên cập nhật lên 4.0.2 không có
+ * rủi ro tương thích mới nào so với rủi ro vốn đã chấp nhận từ bản 4.0.0.
+ */
+const TAM_DUNG_CAP_NHAT_CHO_NHOM: Partial<Record<NhomDuongDan, true>> = {
+  goc: true,
+};
+
+export async function versionTextResponse(kenh: NhomDuongDan): Promise<Response> {
+  if (TAM_DUNG_CAP_NHAT_CHO_NHOM[kenh]) {
     return new Response("", { headers: { "Content-Type": "text/plain; charset=utf-8" } });
   }
 
@@ -189,10 +223,26 @@ export async function versionTextResponse(): Promise<Response> {
   }
 }
 
-export async function versionConfigXmlResponse(): Promise<Response> {
+const DOWNLOADPATH_TAG_RE = /(<downloadpath\b[^>]*>)([^<]*)(<\/downloadpath>)/;
+
+/**
+ * Thay ĐÚNG phần địa chỉ (nội dung bên trong thẻ) của `<downloadpath>`, giữ
+ * nguyên thuộc tính `value="download-update"` — thuộc tính đó không đổi theo
+ * nhóm đường dẫn, chỉ có địa chỉ gốc mới cần khác nhau (xem `AutoUpdate.cs`:
+ * `node.InnerText + node.Attributes["value"].Value`).
+ */
+function withDownloadBaseUrl(xml: string, baseUrl: string): string {
+  if (!DOWNLOADPATH_TAG_RE.test(xml)) {
+    throw new Error("Không tìm thấy thẻ <downloadpath> trong VersionConfig.xml");
+  }
+  return xml.replace(DOWNLOADPATH_TAG_RE, (_match, open, _oldUrl, close) => `${open}${baseUrl}${close}`);
+}
+
+export async function versionConfigXmlResponse(kenh: NhomDuongDan): Promise<Response> {
   try {
     const xml = await getVersionConfigXml();
-    return new Response(xml, {
+    const xmlChoNhom = withDownloadBaseUrl(xml, DOWNLOAD_BASE_URL_FOR[kenh]);
+    return new Response(xmlChoNhom, {
       headers: { "Content-Type": "application/xml; charset=utf-8" },
     });
   } catch (err) {
