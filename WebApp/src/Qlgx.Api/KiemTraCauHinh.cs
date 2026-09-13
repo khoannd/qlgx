@@ -48,10 +48,14 @@ public static class KiemTraCauHinh
         {
             return new NpgsqlConnectionStringBuilder(chuoiKetNoi).Username ?? "";
         }
-        catch (ArgumentException)
+        catch (Exception ex) when (ex is ArgumentException or FormatException or KeyNotFoundException)
         {
             // Chuỗi không phân tích được thì trả về chính nó — để hai chuỗi hỏng giống hệt nhau
-            // vẫn bị coi là trùng vai trò, thay vì lọt lưới.
+            // vẫn bị coi là trùng vai trò, thay vì lọt lưới. Bắt rộng vì NpgsqlConnectionStringBuilder
+            // ném nhiều loại ngoại lệ khác nhau tuỳ kiểu dị dạng của chuỗi (ví dụ "===" ném
+            // KeyNotFoundException chứ không phải ArgumentException) — mục tiêu ở đây là KHÔNG bao
+            // giờ để việc kiểm tra cấu hình tự nó crash, nên bắt theo nhóm ngoại lệ do phân tích cú
+            // pháp gây ra thay vì chỉ một loại cụ thể.
             return chuoiKetNoi;
         }
     }
