@@ -111,7 +111,6 @@ public class LuatGopTests
     }
 
     [Theory]
-    [InlineData("GiaoDan", "QuaDoi")]
     [InlineData("GiaoDan", "NgayQuaDoi")]
     [InlineData("GiaoDan", "NoiQuaDoi")]
     [InlineData("GiaoDan", "SoAnTang")]
@@ -123,7 +122,6 @@ public class LuatGopTests
     }
 
     [Theory]
-    [InlineData("GiaDinh", "DaChuyenXu")]
     [InlineData("GiaDinh", "NgayChuyen")]
     [InlineData("GiaDinh", "NoiChuyen")]
     public void Nhom_chuyen_xu_gom_du_ca_ba_o(string bang, string truong)
@@ -184,15 +182,35 @@ public class LuatGopTests
         LuatGop.LaONhayCam("GiaDinh", "TenGiaDinh").Should().BeFalse();
     }
 
-    [Fact]
-    public void MocO_lech_bang_hoac_truong_so_voi_o_dang_xet_thi_nem_loi()
+    // Ten test noi "bang HOAC truong" nen phai phu CA HAI ve. Ban dau chi co ca lech Truong, va
+    // dot bien "bo ve `Bang != bang`" song sot — tuc nua dieu kien khong duoc canh.
+    [Theory]
+    [InlineData("GiaoDan", "DienThoai", "GiaoDan", "NgaySinh")]   // lech TRUONG
+    [InlineData("GiaDinh", "GhiChu", "GiaoDan", "GhiChu")]        // lech BANG, TRUNG ten truong
+    public void MocO_lech_bang_hoac_truong_so_voi_o_dang_xet_thi_nem_loi(
+        string bangMoc, string truongMoc, string bangO, string truongO)
     {
-        var mocSai = MocCu(Moc, bang: "GiaoDan", truong: "DienThoai");
+        // Ca lech BANG la ca nguy hiem nhat, vi nhieu bang dung chung ten truong: GhiChu,
+        // DienThoai, DiaChi, DaXoa, NgayChuyen, NoiChuyen, GiaoHoId... Neu chi kiem Truong thi
+        // moc cua o GiaDinh.GhiChu lot qua khi dang quyet o GiaoDan.GhiChu, va vi GhiChu nam
+        // trong danh sach trang nen ghi chu giao dan bi de IM LANG bang moc cua ghi chu gia dinh.
+        var mocSai = MocCu(Moc, bang: bangMoc, truong: truongMoc);
 
         var hanhDong = () => LuatGop.Quyet(mocSai, new DauDongHo(Moc.AddMinutes(5), 0, null, Guid.NewGuid()),
-            "GiaoDan", "NgaySinh", "\"1985-03-12\"", "\"1986-03-12\"");
+            bangO, truongO, "\"cu\"", "\"moi\"");
 
         hanhDong.Should().Throw<ArgumentException>(
             "goi nham moc cua o khac se lam moi luat ben duoi so sanh sai o, phai chan som");
+    }
+
+    [Fact]
+    public void Bang_NhomCuaO_cung_phai_phan_biet_hoa_thuong()
+    {
+        // Test hoa/thuong truoc do chi dung toi `OKhongNhayCam`, nen mot trong hai bang cau hinh
+        // van khong co luoi: doi `StringComparer` cua `NhomCuaO` thanh OrdinalIgnoreCase van xanh.
+        LuatGop.NhomGop("giaodan", "quadoi")
+            .Should().NotBe(LuatGop.NhomGop("GiaoDan", "QuaDoi"),
+                "ten sai hoa thuong khong duoc khop bang nhom — neu khop thi mot o viet sai kieu"
+                + " se bi gop nham vao nhom qua doi va keo theo ca nhom thang/thua oan");
     }
 }
