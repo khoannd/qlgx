@@ -17,6 +17,21 @@ public class ApThaoTacTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         return g.Id;
     }
 
+    /// <summary>Tạo một giáo xứ KHÁC (không phải db.GiaoXuId) kèm một giáo dân của nó — dùng cho
+    /// mọi test kiểm ranh giới giáo xứ.</summary>
+    private async Task<(Guid GiaoXuId, Guid GiaoDanId)> TaoGiaoXuKhacVaGiaoDan(
+        int maGiaoXuCu, int maGiaoDanCu, string hoTen)
+    {
+        var giaoXuKhac = Guid.NewGuid();
+        await using (var ctx = db.TaoContext())
+        {
+            ctx.GiaoXu.Add(new GiaoXu { Id = giaoXuKhac, TenGiaoXu = "Giao xu khac " + maGiaoXuCu, MaGiaoXuCu = maGiaoXuCu });
+            await ctx.SaveChangesAsync();
+        }
+        var idGiaoDan = await TaoGiaoDan(maGiaoDanCu, hoTen, giaoXuKhac);
+        return (giaoXuKhac, idGiaoDan);
+    }
+
     [Fact]
     public async Task Ap_mot_o_doi_dung_gia_tri_va_tra_ve_gia_tri_cu()
     {
@@ -90,8 +105,8 @@ public class ApThaoTacTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
             await ApThaoTac.ApMotO(ctx, db.GiaoXuId, "TaiKhoan", idTaiKhoan, "HoTenNguoiDung", "\"x\"", default);
         };
 
-        await hanhDong.Should().ThrowAsync<InvalidOperationException>(
-            "TaiKhoan nam ngoai dong bo — mot may con khong duoc phep dat mat khau qua duong nay");
+        await hanhDong.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*PhanLoaiThucThe*", "phai chinh la rao chan bang, khong phai mot rao chan khac trung hop xanh");
     }
 
     [Fact]
@@ -105,8 +120,8 @@ public class ApThaoTacTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
             await ApThaoTac.ApMotO(ctx, db.GiaoXuId, "GiaoDan", id, "AnhDaiDienDuLieu", "\"AAAA\"", default);
         };
 
-        await hanhDong.Should().ThrowAsync<InvalidOperationException>(
-            "anh khong di qua nhat ky nen cung khong duoc di qua duong ap thao tac");
+        await hanhDong.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*CotLoaiTru*", "anh khong di qua nhat ky nen cung khong duoc di qua duong ap thao tac");
     }
 
     [Fact]
@@ -121,6 +136,50 @@ public class ApThaoTacTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         };
 
         await hanhDong.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    /// <summary>
+    /// C1 (Critical, vòng review 1): trước khi vá, KiemCot chỉ tra CotLoaiTru — không có gì cấm
+    /// máy con ghi thẳng cột GiaoXuId qua ApMotO, tức "chuyển" một hồ sơ sang giáo xứ khác mà
+    /// không qua bất kỳ kiểm tra phạm vi nào. Rào chắn KiemDungGiaoXu kiểm giáo xứ TRƯỚC khi ghi,
+    /// không kiểm CỘT NÀO đang được ghi — hai việc khác nhau.
+    /// </summary>
+    [Fact]
+    public async Task Tu_choi_dat_truc_tiep_cot_GiaoXuId_qua_ApMotO()
+    {
+        var id = await TaoGiaoDan(9712, "Khong duoc chuyen giao xu qua ApMotO");
+        var giaoXuLa = Guid.NewGuid();
+
+        var hanhDong = async () =>
+        {
+            await using var ctx = db.TaoContext();
+            await ApThaoTac.ApMotO(ctx, db.GiaoXuId, "GiaoDan", id, "GiaoXuId",
+                JsonSerializer.Serialize(giaoXuLa), default);
+        };
+
+        await hanhDong.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*CotCamDongBo*");
+
+        await using var doc = db.TaoContext();
+        (await doc.GiaoDan.SingleAsync(x => x.Id == id)).GiaoXuId.Should().Be(db.GiaoXuId,
+            "thao tac phai bi chan truoc khi cham vao GiaoXuId that");
+    }
+
+    /// <summary>Cùng rào chắn CotCamDongBo, phía cột Id.</summary>
+    [Fact]
+    public async Task Tu_choi_dat_truc_tiep_cot_Id_qua_ApMotO()
+    {
+        var id = await TaoGiaoDan(9713, "Khong duoc doi Id qua ApMotO");
+
+        var hanhDong = async () =>
+        {
+            await using var ctx = db.TaoContext();
+            await ApThaoTac.ApMotO(ctx, db.GiaoXuId, "GiaoDan", id, "Id",
+                JsonSerializer.Serialize(Guid.NewGuid()), default);
+        };
+
+        await hanhDong.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*CotCamDongBo*");
     }
 
     [Fact]
@@ -147,36 +206,52 @@ public class ApThaoTacTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
     }
 
     /// <summary>
-    /// Ca sống còn của Task 4: FindAsync bỏ qua bộ lọc toàn cục khi bản ghi đã nằm trong
-    /// ChangeTracker, và đường nhập dữ liệu đồng bộ chạy bằng kết nối quản trị (bỏ qua RLS) —
-    /// nên ApThaoTac phải tự kiểm GiaoXuId, không được dựa một mình vào RLS/bộ lọc EF. Kịch bản
-    /// thật: một máy con của giáo xứ A gửi lên BanGhiId của giáo dân thuộc giáo xứ B.
+    /// C4 (Important, vòng review 1): bản test ban đầu chỉ tình cờ xanh vì gọi trong một context
+    /// KHÔNG có bối cảnh giáo xứ (BoiCanhGiaoXuId == null) — đường đó thật ra dừng lại ở nhánh
+    /// "không tìm thấy bản ghi" trong sản xuất (có bối cảnh xứ A thì bộ lọc toàn cục đã lọc mất
+    /// bản ghi của xứ B trước khi tới rào chắn), KHÔNG hề đi qua đường ChangeTracker mà toàn bộ
+    /// chú thích đầu file mô tả. Test đúng phải TỰ nạp bản ghi của xứ B vào ChangeTracker của
+    /// CHÍNH context sẽ gọi ApMotO (qua IgnoreQueryFilters, mô phỏng "context đã từng đọc bản ghi
+    /// này trước đó") rồi mới gọi ApMotO với giaoXuId của xứ A trên CÙNG context đó — đây là kịch
+    /// bản DUY NHẤT khiến rào chắn KiemDungGiaoXu thật sự cần thiết (FindAsync bỏ qua bộ lọc khi
+    /// đã có sẵn trong ChangeTracker).
     /// </summary>
     [Fact]
-    public async Task Tu_choi_khi_giao_xu_truyen_vao_khac_giao_xu_that_cua_ban_ghi()
+    public async Task Tu_choi_khi_ban_ghi_da_trong_change_tracker_thuoc_giao_xu_khac()
     {
-        var giaoXuB = Guid.NewGuid();
-        await using (var ctx = db.TaoContext())
-        {
-            ctx.GiaoXu.Add(new GiaoXu { Id = giaoXuB, TenGiaoXu = "Giao xu B", MaGiaoXuCu = 90001 });
-            await ctx.SaveChangesAsync();
-        }
-        var idGiaoDanB = await TaoGiaoDan(9707, "Giao dan cua giao xu B", giaoXuB);
+        var (_, idGiaoDanKhac) = await TaoGiaoXuKhacVaGiaoDan(90004, 9720, "Giao dan xu khac trong change tracker");
+
+        await using var ctxDungChung = db.TaoContext();
+        // Nạp sẵn bản ghi của giáo xứ khác vào ChangeTracker của CHÍNH context này.
+        await ctxDungChung.GiaoDan.IgnoreQueryFilters().SingleAsync(x => x.Id == idGiaoDanKhac);
+
+        var hanhDong = async () => await ApThaoTac.ApMotO(
+            ctxDungChung, db.GiaoXuId, "GiaoDan", idGiaoDanKhac, "HoTen", "\"Doc chiem\"", default);
+
+        await hanhDong.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*giao xu khac*");
+
+        await using var doc = db.TaoContext();
+        (await doc.GiaoDan.IgnoreQueryFilters().SingleAsync(x => x.Id == idGiaoDanKhac)).HoTen
+            .Should().Be("Giao dan xu khac trong change tracker", "thao tac phai bi chan truoc khi cham vao du lieu");
+    }
+
+    /// <summary>Ca gốc (không có bối cảnh giáo xứ) vẫn giữ lại — đường đọc/ghi KHÔNG có bối cảnh
+    /// vẫn tồn tại thật (ví dụ công cụ chuyển đổi dữ liệu, xem QlgxDbContext.cs), nên rào chắn
+    /// vẫn phải đứng vững ở đó nữa, dù đây không phải kịch bản chính đáng lo.</summary>
+    [Fact]
+    public async Task Tu_choi_khi_giao_xu_truyen_vao_khac_giao_xu_that_cua_ban_ghi_khong_co_boi_canh()
+    {
+        var (_, idGiaoDanKhac) = await TaoGiaoXuKhacVaGiaoDan(90001, 9707, "Giao dan cua giao xu B");
 
         var hanhDong = async () =>
         {
             await using var ctx = db.TaoContext();
-            // Bối cảnh giáo xứ A (db.GiaoXuId) gọi ApMotO lên ban ghi that su thuoc giao xu B.
-            await ApThaoTac.ApMotO(ctx, db.GiaoXuId, "GiaoDan", idGiaoDanB, "HoTen", "\"Doc chiem\"", default);
+            await ApThaoTac.ApMotO(ctx, db.GiaoXuId, "GiaoDan", idGiaoDanKhac, "HoTen", "\"Doc chiem\"", default);
         };
 
-        await hanhDong.Should().ThrowAsync<InvalidOperationException>(
-            "mot may con cua giao xu A khong duoc phep sua so sach cua giao xu B du bo loc " +
-            "EF chua duoc ap dung (khong co boi canh giao xu trong context nay)");
-
-        await using var doc = db.TaoContext();
-        (await doc.GiaoDan.IgnoreQueryFilters().SingleAsync(x => x.Id == idGiaoDanB)).HoTen
-            .Should().Be("Giao dan cua giao xu B", "thao tac phai bi chan truoc khi cham vao du lieu");
+        await hanhDong.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*giao xu khac*");
     }
 
     /// <summary>
@@ -188,17 +263,11 @@ public class ApThaoTacTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
     [Fact]
     public async Task Tao_ban_ghi_tu_choi_khi_ban_ghi_id_da_thuoc_giao_xu_khac()
     {
-        var giaoXuB = Guid.NewGuid();
-        await using (var ctx = db.TaoContext())
-        {
-            ctx.GiaoXu.Add(new GiaoXu { Id = giaoXuB, TenGiaoXu = "Giao xu C", MaGiaoXuCu = 90002 });
-            await ctx.SaveChangesAsync();
-        }
-        var idGiaoDanB = await TaoGiaoDan(9708, "Giao dan cua giao xu C", giaoXuB);
+        var (giaoXuKhac, idGiaoDanKhac) = await TaoGiaoXuKhacVaGiaoDan(90002, 9708, "Giao dan cua giao xu C");
 
         var json = JsonSerializer.Serialize(new Dictionary<string, object?>
         {
-            ["Id"] = idGiaoDanB,
+            ["Id"] = idGiaoDanKhac,
             ["GiaoXuId"] = db.GiaoXuId,
             ["MaGiaoDanCu"] = 9709,
             ["HoTen"] = "Gia mao",
@@ -207,10 +276,12 @@ public class ApThaoTacTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         var hanhDong = async () =>
         {
             await using var ctx = db.TaoContext();
-            await ApThaoTac.TaoBanGhi(ctx, "GiaoDan", idGiaoDanB, db.GiaoXuId, json, default);
+            await ApThaoTac.TaoBanGhi(ctx, "GiaoDan", idGiaoDanKhac, db.GiaoXuId, json, default);
         };
 
-        await hanhDong.Should().ThrowAsync<InvalidOperationException>();
+        await hanhDong.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*giao xu khac*");
+        giaoXuKhac.Should().NotBe(db.GiaoXuId); // xac nhan hai giao xu that su khac nhau
     }
 
     /// <summary>
@@ -242,6 +313,38 @@ public class ApThaoTacTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
     }
 
     /// <summary>
+    /// C3 (Important, vòng review 1): cùng nguyên tắc "tin tham số, không tin JSON" như trên,
+    /// nhưng ở CỘT ID. Trước khi có test này, xoá dòng ép <c>muc.Property("Id").CurrentValue =
+    /// banGhiId;</c> vẫn xanh 11/11 vì mọi test khác đều nhét sẵn đúng Id vào JSON. Kịch bản thật:
+    /// máy con gửi "tạo" với BanGhiId = X nhưng JSON chứa Id = Y (dữ liệu cũ, lỗi đồng bộ, hay cố
+    /// ý) — nếu Y thắng, hồ sơ tạo dưới Y; mọi dòng "sửa" sau trỏ tới X đều ném "không tìm thấy
+    /// bản ghi" vĩnh viễn.
+    /// </summary>
+    [Fact]
+    public async Task Tao_ban_ghi_ep_id_theo_tham_so_banGhiId_khong_theo_json()
+    {
+        var banGhiIdThat = Guid.NewGuid();
+        var idGiaMaoTrongJson = Guid.NewGuid();
+        var json = JsonSerializer.Serialize(new Dictionary<string, object?>
+        {
+            ["Id"] = idGiaMaoTrongJson, // giá trị lạ — không được thắng tham số banGhiId
+            ["GiaoXuId"] = db.GiaoXuId,
+            ["MaGiaoDanCu"] = 9714,
+            ["HoTen"] = "Kiem tham so banGhiId thang json",
+        });
+
+        await using var ctx = db.TaoContext();
+        await ApThaoTac.TaoBanGhi(ctx, "GiaoDan", banGhiIdThat, db.GiaoXuId, json, default);
+        await ctx.SaveChangesAsync();
+
+        await using var doc = db.TaoContext();
+        (await doc.GiaoDan.SingleOrDefaultAsync(x => x.Id == banGhiIdThat)).Should().NotBeNull(
+            "ban ghi phai duoc tao dung duoi banGhiId tham so");
+        (await doc.GiaoDan.SingleOrDefaultAsync(x => x.Id == idGiaMaoTrongJson)).Should().BeNull(
+            "Id trong JSON tu may con khong duoc thang tham so banGhiId dang tin");
+    }
+
+    /// <summary>
     /// Đường "tạo" cũng phải tôn trọng CotLoaiTru như đường "áp một ô": một dòng nhật ký "tao"
     /// đến từ máy con không đáng tin hơn một lần ApMotO — nếu JSON toàn bộ chứa AnhDaiDienDuLieu
     /// thì đây là đường TẮT để nhét ảnh (nhị phân) qua nhật ký, đúng thứ CotLoaiTru sinh ra để
@@ -268,5 +371,219 @@ public class ApThaoTacTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         var g = await doc.GiaoDan.SingleAsync(x => x.Id == id);
         g.AnhDaiDienDuLieu.Should().BeNull(
             "AnhDaiDienDuLieu nam trong CotLoaiTru, duong tao khong duoc phep dat no du JSON co gui len");
+    }
+
+    /// <summary>Cùng nguyên tắc CotCamDongBo, nhưng ở đường "tạo" cho SourceSystem/DuLieuLoi —
+    /// hai cột của riêng công cụ NHẬP LIỆU (xem ThucTheCoSo.cs). Không có dòng ép lại nào sau
+    /// vòng lặp cho hai cột này (khác với Id/GiaoXuId), nên nếu thiếu bước bỏ qua trong vòng lặp
+    /// thì máy con tự xưng nguồn gốc/xoá dấu vết lỗi của chính nó qua đường "tạo".</summary>
+    [Fact]
+    public async Task Tao_ban_ghi_bo_qua_cot_cam_dong_bo_SourceSystem_va_DuLieuLoi()
+    {
+        var id = Guid.NewGuid();
+        var json = JsonSerializer.Serialize(new Dictionary<string, object?>
+        {
+            ["Id"] = id,
+            ["GiaoXuId"] = db.GiaoXuId,
+            ["MaGiaoDanCu"] = 9726,
+            ["HoTen"] = "Khong duoc tu xung nguon goc",
+            ["SourceSystem"] = "gia-mao-tu-may-con",
+            ["DuLieuLoi"] = "{\"gia\":\"mao\"}",
+        });
+
+        await using var ctx = db.TaoContext();
+        await ApThaoTac.TaoBanGhi(ctx, "GiaoDan", id, db.GiaoXuId, json, default);
+        await ctx.SaveChangesAsync();
+
+        await using var doc = db.TaoContext();
+        var g = await doc.GiaoDan.SingleAsync(x => x.Id == id);
+        g.SourceSystem.Should().BeNull("SourceSystem la cua rieng cong cu nhap lieu, may con khong duoc tu xung");
+        g.DuLieuLoi.Should().BeNull("DuLieuLoi la cua rieng cong cu nhap lieu, may con khong duoc dat qua duong tao");
+    }
+
+    /// <summary>C6 (Minor, vòng review 1): trước khi có test này, đổi "if (o is null) continue;"
+    /// thành "throw" trong TaoBanGhi vẫn xanh 11/11 — dù chính brief nhấn mạnh điểm này: từ chối
+    /// cả bản ghi vì một cột lạ (ví dụ dòng "tạo" đến từ máy con chạy bản cũ hơn, có thêm cột mà
+    /// bản máy chủ chưa biết) sẽ làm mất nguyên một hồ sơ giáo dân.</summary>
+    [Fact]
+    public async Task Tao_ban_ghi_bo_qua_cot_khong_ton_tai_khong_lam_gay_ca_ban_ghi()
+    {
+        var id = Guid.NewGuid();
+        var json = JsonSerializer.Serialize(new Dictionary<string, object?>
+        {
+            ["Id"] = id,
+            ["GiaoXuId"] = db.GiaoXuId,
+            ["MaGiaoDanCu"] = 9719,
+            ["HoTen"] = "Con song sot du co cot la",
+            ["CotTuBanMayConCuHonChuaCo"] = "gia tri la",
+        });
+
+        await using var ctx = db.TaoContext();
+        await ApThaoTac.TaoBanGhi(ctx, "GiaoDan", id, db.GiaoXuId, json, default);
+        await ctx.SaveChangesAsync();
+
+        await using var doc = db.TaoContext();
+        (await doc.GiaoDan.SingleAsync(x => x.Id == id)).HoTen.Should().Be("Con song sot du co cot la");
+    }
+
+    // ------------------------------------------------------------------
+    // DocO — C2 (Important, vòng review 1): trước khi có các test dưới đây, đổi cả thân DocO
+    // thành "return null;" vẫn xanh 11/11. DocO là nguồn giaTriCu cho LuatGop.Quyet: đọc sai sẽ
+    // sinh mục "cần xem lại" GIẢ cho MỌI ô (quý sơ ngập rồi quen tay bỏ qua cả mục thật), hoặc
+    // ngược lại bỏ lọt xung đột thật của một ô nhạy cảm.
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task DocO_doc_dung_gia_tri_hien_tai()
+    {
+        var id = await TaoGiaoDan(9715, "Gia tri de doc");
+
+        await using var ctx = db.TaoContext();
+        var giaTri = await ApThaoTac.DocO(ctx, db.GiaoXuId, "GiaoDan", id, "HoTen", default);
+
+        giaTri.Should().Be("\"Gia tri de doc\"");
+    }
+
+    [Fact]
+    public async Task DocO_tra_ve_null_khi_o_rong()
+    {
+        var id = await TaoGiaoDan(9716, "Chua co dien thoai");
+
+        await using var ctx = db.TaoContext();
+        var giaTri = await ApThaoTac.DocO(ctx, db.GiaoXuId, "GiaoDan", id, "DienThoai", default);
+
+        giaTri.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task DocO_tu_choi_cot_nam_trong_danh_sach_loai_tru()
+    {
+        var id = await TaoGiaoDan(9717, "Co anh de doc");
+
+        var hanhDong = async () =>
+        {
+            await using var ctx = db.TaoContext();
+            await ApThaoTac.DocO(ctx, db.GiaoXuId, "GiaoDan", id, "AnhDaiDienDuLieu", default);
+        };
+
+        await hanhDong.Should().ThrowAsync<InvalidOperationException>().WithMessage("*CotLoaiTru*");
+    }
+
+    [Fact]
+    public async Task DocO_tu_choi_cot_cam_dong_bo()
+    {
+        var id = await TaoGiaoDan(9718, "Doc GiaoXuId qua DocO");
+
+        var hanhDong = async () =>
+        {
+            await using var ctx = db.TaoContext();
+            await ApThaoTac.DocO(ctx, db.GiaoXuId, "GiaoDan", id, "GiaoXuId", default);
+        };
+
+        await hanhDong.Should().ThrowAsync<InvalidOperationException>().WithMessage("*CotCamDongBo*");
+    }
+
+    [Fact]
+    public async Task DocO_tu_choi_khi_ban_ghi_da_trong_change_tracker_thuoc_giao_xu_khac()
+    {
+        var (_, idGiaoDanKhac) = await TaoGiaoXuKhacVaGiaoDan(90005, 9721, "Giao dan xu khac doc qua DocO");
+
+        await using var ctxDungChung = db.TaoContext();
+        await ctxDungChung.GiaoDan.IgnoreQueryFilters().SingleAsync(x => x.Id == idGiaoDanKhac);
+
+        var hanhDong = async () =>
+            await ApThaoTac.DocO(ctxDungChung, db.GiaoXuId, "GiaoDan", idGiaoDanKhac, "HoTen", default);
+
+        await hanhDong.Should().ThrowAsync<InvalidOperationException>().WithMessage("*giao xu khac*");
+    }
+
+    // ------------------------------------------------------------------
+    // C5 (Important, vòng review 1): JSON hỏng hoặc sai kiểu phải ném LoiApThaoTac (RIÊNG khỏi
+    // InvalidOperationException dùng cho vi phạm rào chắn) — để Task 6 bỏ qua đúng MỘT dòng thay
+    // vì làm gãy CẢ LÔ đồng bộ của một giáo xứ. Ba ca đúng nguyên văn reviewer đã chạy thật.
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task ApMotO_nem_LoiApThaoTac_khi_ngay_sai_dinh_dang()
+    {
+        var id = await TaoGiaoDan(9722, "Ngay sinh se hong");
+
+        var hanhDong = async () =>
+        {
+            await using var ctx = db.TaoContext();
+            await ApThaoTac.ApMotO(ctx, db.GiaoXuId, "GiaoDan", id, "NgaySinh", "\"32/13/2005\"", default);
+        };
+
+        await hanhDong.Should().ThrowAsync<LoiApThaoTac>();
+    }
+
+    [Fact]
+    public async Task ApMotO_nem_LoiApThaoTac_khi_chuoi_vao_cot_kieu_bool()
+    {
+        var id = await TaoGiaoDan(9723, "QuaDoi se hong");
+
+        var hanhDong = async () =>
+        {
+            await using var ctx = db.TaoContext();
+            await ApThaoTac.ApMotO(ctx, db.GiaoXuId, "GiaoDan", id, "QuaDoi", "\"co\"", default);
+        };
+
+        await hanhDong.Should().ThrowAsync<LoiApThaoTac>();
+    }
+
+    [Fact]
+    public async Task ApMotO_nem_LoiApThaoTac_khi_so_vao_cot_kieu_chuoi()
+    {
+        var id = await TaoGiaoDan(9724, "HoTen se hong");
+
+        var hanhDong = async () =>
+        {
+            await using var ctx = db.TaoContext();
+            await ApThaoTac.ApMotO(ctx, db.GiaoXuId, "GiaoDan", id, "HoTen", "12345", default);
+        };
+
+        await hanhDong.Should().ThrowAsync<LoiApThaoTac>();
+    }
+
+    [Fact]
+    public async Task TaoBanGhi_nem_LoiApThaoTac_khi_mot_cot_trong_json_toan_bo_sai_kieu()
+    {
+        var id = Guid.NewGuid();
+        var json = $$"""
+            {"Id":"{{id}}","GiaoXuId":"{{db.GiaoXuId}}","MaGiaoDanCu":9725,
+             "HoTen":"Ca tao se hong","NgaySinh":"32/13/2005"}
+            """;
+
+        var hanhDong = async () =>
+        {
+            await using var ctx = db.TaoContext();
+            await ApThaoTac.TaoBanGhi(ctx, "GiaoDan", id, db.GiaoXuId, json, default);
+        };
+
+        await hanhDong.Should().ThrowAsync<LoiApThaoTac>();
+    }
+
+    [Fact]
+    public async Task TaoBanGhi_nem_LoiApThaoTac_khi_json_khong_hop_le()
+    {
+        var hanhDong = async () =>
+        {
+            await using var ctx = db.TaoContext();
+            await ApThaoTac.TaoBanGhi(ctx, "GiaoDan", Guid.NewGuid(), db.GiaoXuId, "{khong phai json hop le", default);
+        };
+
+        await hanhDong.Should().ThrowAsync<LoiApThaoTac>();
+    }
+
+    [Fact]
+    public async Task TaoBanGhi_nem_LoiApThaoTac_khi_json_khong_phai_doi_tuong()
+    {
+        var hanhDong = async () =>
+        {
+            await using var ctx = db.TaoContext();
+            await ApThaoTac.TaoBanGhi(ctx, "GiaoDan", Guid.NewGuid(), db.GiaoXuId, "42", default);
+        };
+
+        await hanhDong.Should().ThrowAsync<LoiApThaoTac>();
     }
 }

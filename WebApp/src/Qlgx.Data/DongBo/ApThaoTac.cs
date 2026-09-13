@@ -21,17 +21,39 @@ namespace Qlgx.Data.DongBo;
 ///
 /// RÀO CHẮN GIÁO XỨ — SỐNG CÒN, không phải tuỳ chọn: <c>DbContext.FindAsync</c> chỉ áp bộ lọc
 /// toàn cục theo GiaoXuId khi phải XUỐNG CSDL; nếu bản ghi đã nằm sẵn trong ChangeTracker (một
-/// request khác trong cùng context đã đọc nó), FindAsync trả về NGUYÊN bản ghi đó bất kể bối
-/// cảnh giáo xứ hiện tại — hành vi không nhất quán của EF Core, không phải lỗi. Tệ hơn: đường
-/// nhập dữ liệu đồng bộ chạy bằng kết nối QUẢN TRỊ, bỏ qua Row-Level Security ở tầng CSDL, nên
-/// không được dựa một mình vào RLS làm lưới. Vì vậy MỌI hàm ở đây nhận <c>giaoXuId</c> tường
-/// minh và tự kiểm bản ghi vừa nạp có đúng giáo xứ đó không — RLS vẫn là lưới thứ hai, nhưng
-/// không phải lưới duy nhất. Bỏ qua bước này: một máy con của giáo xứ A gửi lên BanGhiId của
-/// giáo dân thuộc giáo xứ B, bối cảnh giáo xứ chưa được đặt nên bộ lọc toàn cục cho qua tất cả,
-/// và sổ sách giáo xứ B bị sửa bởi người của giáo xứ A.
+/// request khác trong cùng context đã đọc nó, kể cả qua <c>IgnoreQueryFilters</c>), FindAsync trả
+/// về NGUYÊN bản ghi đó bất kể bối cảnh giáo xứ hiện tại — hành vi không nhất quán của EF Core,
+/// không phải lỗi. Tệ hơn: đường nhập dữ liệu đồng bộ chạy bằng kết nối QUẢN TRỊ, bỏ qua
+/// Row-Level Security ở tầng CSDL, nên không được dựa một mình vào RLS làm lưới. Vì vậy MỌI hàm
+/// ở đây nhận <c>giaoXuId</c> tường minh và tự kiểm bản ghi vừa nạp có đúng giáo xứ đó không —
+/// RLS vẫn là lưới thứ hai, nhưng không phải lưới duy nhất. Bỏ qua bước này: một máy con của giáo
+/// xứ A gửi lên BanGhiId của giáo dân thuộc giáo xứ B, bối cảnh giáo xứ chưa được đặt (hoặc bản
+/// ghi đã có sẵn trong ChangeTracker) nên bộ lọc toàn cục cho qua tất cả, và sổ sách giáo xứ B bị
+/// sửa bởi người của giáo xứ A.
+///
+/// RÀO CHẮN CỘT — hai danh sách RIÊNG, đừng gộp: <see cref="CotLoaiTru"/> (từ kế hoạch 1) nghĩa
+/// là "không đi qua NHẬT KÝ"; <see cref="CotCamDongBo"/> ở đây nghĩa là "máy con không được ĐỔI
+/// qua đường ĐỒNG BỘ", dù cột đó vẫn được ghi nhật ký bình thường ở các đường khác (ví dụ
+/// GiaoXuId đổi khi cha xứ chuyển một gia đình sang giáo xứ khác qua màn hình quản trị — việc đó
+/// PHẢI vào nhật ký để truy vết). Trộn hai danh sách sẽ đổi hành vi nhật ký như một tác dụng phụ
+/// không ai để ý.
 /// </summary>
 public static class ApThaoTac
 {
+    /// <summary>
+    /// Cột mà đường ĐỒNG BỘ (ApMotO/DocO/TaoBanGhi) không được chạm tới, dù vẫn vào nhật ký bình
+    /// thường ở nơi khác. "Id"/"GiaoXuId": định danh bản ghi và ranh giới giáo xứ — máy con đổi
+    /// được thì coi như tự ý "chuyển" một hồ sơ sang giáo xứ khác hoặc đổi định danh của nó, hồ
+    /// sơ biến mất khỏi mọi sổ sách gốc và mọi thao tác đồng bộ sau đó lên nó bị chính rào chắn
+    /// giáo xứ từ chối vĩnh viễn. "SourceSystem"/"DuLieuLoi": cờ và dữ liệu của riêng công cụ
+    /// NHẬP LIỆU (xem ThucTheCoSo.cs) — máy con không có quyền tự xưng nguồn gốc hay tự xoá dấu
+    /// vết dữ liệu lỗi của chính nó.
+    /// </summary>
+    private static readonly HashSet<string> CotCamDongBo = new(StringComparer.Ordinal)
+    {
+        "Id", "GiaoXuId", "SourceSystem", "DuLieuLoi",
+    };
+
     private static Microsoft.EntityFrameworkCore.Metadata.IEntityType LayKieu(
         QlgxDbContext db, string bang)
     {
@@ -44,12 +66,19 @@ public static class ApThaoTac
         return kieu;
     }
 
+    /// <summary>Kiểm MỘT ô có được phép đi qua đường đồng bộ không — tra CẢ HAI danh sách cấm,
+    /// vì lý do bị cấm khác nhau (không vào nhật ký / máy con không được đổi), và Task 6 cần
+    /// phân biệt được hai lý do đó qua thông điệp lỗi.</summary>
     private static void KiemCot(string bang, string truong)
     {
         if (CotLoaiTru.BiLoai(truong))
             throw new InvalidOperationException(
                 $"Cot '{bang}.{truong}' nam trong CotLoaiTru — khong di qua nhat ky nen cung khong " +
                 "duoc di qua duong dong bo.");
+        if (CotCamDongBo.Contains(truong))
+            throw new InvalidOperationException(
+                $"Cot '{bang}.{truong}' nam trong CotCamDongBo — may con khong duoc phep dat truc " +
+                "tiep cot nay qua duong dong bo (cot van duoc ghi nhat ky binh thuong o cac duong khac).");
     }
 
     /// <summary>
@@ -106,18 +135,36 @@ public static class ApThaoTac
         var o = db.Entry(thucThe).Property(truong);
 
         var cu = o.CurrentValue is null ? null : JsonSerializer.Serialize(o.CurrentValue);
-        o.CurrentValue = giaTriJson is null
-            ? null
-            : JsonSerializer.Deserialize(giaTriJson, o.Metadata.ClrType);
+
+        object? giaTriMoi;
+        try
+        {
+            giaTriMoi = giaTriJson is null
+                ? null
+                : JsonSerializer.Deserialize(giaTriJson, o.Metadata.ClrType);
+        }
+        catch (Exception ex) when (ex is JsonException or FormatException or OverflowException)
+        {
+            // Không phải vi phạm rào chắn — là DỮ LIỆU HỎNG (ví dụ ngày sinh gõ sai trên máy con
+            // cũ). Ném loại ngoại lệ RIÊNG để Task 6 bỏ qua đúng MỘT dòng thay vì làm gãy cả lô
+            // đồng bộ của cả giáo xứ — xem LoiApThaoTac.cs.
+            throw new LoiApThaoTac(
+                bang, truong,
+                $"khong chuyen doi duoc JSON '{giaTriJson}' sang kieu {o.Metadata.ClrType.Name}", ex);
+        }
+
+        o.CurrentValue = giaTriMoi;
         return cu;
     }
 
     /// <summary>
     /// Tạo một bản ghi mới từ JSON toàn bộ thực thể (dòng nhật ký loại "tao").
     ///
-    /// Bỏ qua cột không tồn tại và cột nằm trong CotLoaiTru thay vì ném: dòng "tao" có thể đến từ
-    /// một máy con chạy bản phần mềm cũ hơn, và từ chối cả bản ghi chỉ vì một cột lạ sẽ làm mất
-    /// nguyên một hồ sơ giáo dân.
+    /// Bỏ qua cột không tồn tại và cột nằm trong CotLoaiTru/CotCamDongBo thay vì ném: dòng "tao"
+    /// có thể đến từ một máy con chạy bản phần mềm cũ hơn, và từ chối cả bản ghi chỉ vì một cột
+    /// lạ sẽ làm mất nguyên một hồ sơ giáo dân. Hai cột định danh (Id/GiaoXuId) được BỎ QUA hoàn
+    /// toàn trong vòng lặp rồi ép riêng từ tham số đáng tin — JSON từ máy con không bao giờ có cơ
+    /// hội đặt chúng, kể cả gián tiếp qua thứ tự lặp của Dictionary.
     /// </summary>
     public static async Task TaoBanGhi(
         QlgxDbContext db, string bang, Guid banGhiId, Guid giaoXuId, string giaTriJson,
@@ -139,23 +186,41 @@ public static class ApThaoTac
             ?? throw new InvalidOperationException($"Khong tao duoc thuc the '{bang}'.");
         var muc = db.Entry(thucThe);
 
-        var cacO = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(giaTriJson)
-            ?? throw new InvalidOperationException("Gia tri dong 'tao' khong phai mot doi tuong JSON.");
+        Dictionary<string, JsonElement>? cacO;
+        try
+        {
+            cacO = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(giaTriJson);
+        }
+        catch (JsonException ex)
+        {
+            throw new LoiApThaoTac(bang, "*", "JSON dong 'tao' khong hop le", ex);
+        }
+        if (cacO is null)
+            throw new LoiApThaoTac(bang, "*", "gia tri dong 'tao' khong phai mot doi tuong JSON");
 
         foreach (var (ten, giaTri) in cacO)
         {
-            if (CotLoaiTru.BiLoai(ten)) continue;
+            if (CotLoaiTru.BiLoai(ten) || CotCamDongBo.Contains(ten)) continue;
             var o = muc.Properties.FirstOrDefault(p => p.Metadata.Name == ten);
             if (o is null) continue;
-            o.CurrentValue = giaTri.ValueKind == JsonValueKind.Null
-                ? null
-                : giaTri.Deserialize(o.Metadata.ClrType);
+
+            try
+            {
+                o.CurrentValue = giaTri.ValueKind == JsonValueKind.Null
+                    ? null
+                    : giaTri.Deserialize(o.Metadata.ClrType);
+            }
+            catch (Exception ex) when (ex is JsonException or FormatException or OverflowException)
+            {
+                // Cùng lý do với nhánh JsonException trong ApMotO: dữ liệu hỏng của MỘT cột
+                // không được phép làm gãy cả dòng "tao" (và cả lô đồng bộ chứa nó).
+                throw new LoiApThaoTac(
+                    bang, ten, $"khong chuyen doi duoc gia tri JSON cho cot nay khi tao ban ghi moi", ex);
+            }
         }
 
-        // Ép hai cột định danh: máy con có thể gửi thiếu, và một bản ghi lạc giáo xứ thì RLS sẽ
-        // từ chối ở tầng CSDL với một thông báo khó hiểu hơn nhiều. Ép SAU vòng lặp trên để
-        // giá trị trong JSON (nếu có, và có thể sai) không bao giờ thắng được giá trị tường minh
-        // của tham số giaoXuId — đây chính là rào chắn giáo xứ cho đường "tạo mới".
+        // Ép hai cột định danh TỪ THAM SỐ, không bao giờ từ JSON (JSON đã bị bỏ qua hoàn toàn ở
+        // trên) — đây chính là rào chắn giáo xứ cho đường "tạo mới".
         muc.Property("Id").CurrentValue = banGhiId;
         muc.Property("GiaoXuId").CurrentValue = giaoXuId;
 
