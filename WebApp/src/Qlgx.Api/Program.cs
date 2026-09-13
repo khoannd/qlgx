@@ -37,6 +37,8 @@ builder.Services.AddScoped<TaiKhoanService>();
 builder.Services.AddScoped<QuanLyGiaoXuService>();
 builder.Services.AddScoped<NhapDuLieuService>();
 builder.Services.AddScoped<GiaoHoService>();
+// Man hinh "Sao luu & Phuc hoi" — chi ghi/doc hang doi cong viec, khong tu chay lenh he thong.
+builder.Services.AddScoped<SaoLuuService>();
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opt =>
@@ -232,6 +234,7 @@ app.MapQuanLyGiaoXu();
 app.MapGiaoXu();
 app.MapLinhMuc();
 app.MapNhapDuLieu();
+app.MapSaoLuu();
 app.MapDanhMuc();
 app.MapDotBiTich();
 app.MapRaoHonPhoi();
