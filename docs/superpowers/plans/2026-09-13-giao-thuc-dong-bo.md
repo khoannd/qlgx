@@ -1468,10 +1468,14 @@ mở giao dịch tường minh
      nâng đồng hồ giáo xứ: NangDau(dấu cuối đọc từ dòng đếm, dấu vừa dựng, giờ máy chủ)
         -> ghi lại `dau_cuoi_vat_ly` / `dau_cuoi_logic` trên dòng đếm ĐANG GIỮ KHOÁ
      nếu Loai == "tao"  -> ApThaoTac.TaoBanGhi
-     nếu Loai == "sua"  -> đọc MocO + giá trị hiện tại, LuatGop.Quyet
-                            Thua -> chỉ ghi ThayDoi(Thang=false)
-                            Thang / ThangCanXemLai -> ApThaoTac.ApMotO, ghi ThayDoi(Thang=true)
-                                                      + HieuLuc + cập nhật MocO
+     nếu Loai == "sua"  -> CHIA CÁC Ô THÀNH NHÓM bằng LuatGop.NhomGop, rồi VỚI TỪNG NHÓM:
+                            đọc MocO của MỌI ô thuộc nhóm, lấy mốc MỚI NHẤT làm mốc của nhóm
+                            LuatGop.Quyet MỘT LẦN cho cả nhóm bằng mốc đó
+                            Thua -> CẢ NHÓM thua, ghi ThayDoi(Thang=false), không ô nào áp lẻ
+                            Thang / ThangCanXemLai -> ApThaoTac.ApMotO cho mọi ô của nhóm CÓ
+                                                      trong thao tác, ghi ThayDoi(Thang=true)
+                                                      + HieuLuc, và cập nhật MocO cho TOÀN BỘ ô
+                                                      của nhóm — kể cả ô không đổi
                             ThangCanXemLai -> thêm một dòng CanXemLai
      ghi kết quả vào thao_tac_da_nhan
   SaveChanges một lần cho cả lô
@@ -1506,6 +1510,51 @@ không tranh chấp mới, không thêm một thứ tự khoá nào có thể g�
 **Giữ nguyên chữ ký cũ không được.** `LayDaiSo` là điểm duy nhất mọi đường ghi đi qua; nếu đồng hồ
 nằm chỗ khác thì sẽ có đường ghi quên nâng nó, và lỗi đó không có test nào bắt được một cách tự
 nhiên. Đổi chữ ký buộc mọi nơi gọi phải nhìn lại — đó là mục đích.
+
+**Vì sao phải gộp theo NHÓM chứ không quyết từng ô (R16 trong sổ thi công).**
+
+`LuatGop.NhomGop` do Task 3 sinh ra nhưng **bản kế hoạch đầu không có task nào gọi nó** — T6 quyết
+từng ô độc lập. Đó là một lỗ thật, và doc-comment trong `LuatGop.cs` mô tả đúng tai hoạ nó gây ra:
+
+> Máy A đánh dấu qua đời kèm ngày 12/9. Máy B (mới hơn) bỏ dấu qua đời nhưng không đụng ô ngày.
+> Gộp từng ô độc lập xong ra **một người còn sống mà có ngày qua đời**.
+
+Với sổ sách giáo xứ, đây là loại sai không ai phát hiện được bằng mắt cho tới khi in sổ ra — lọt
+hay không lọt thống kê tuỳ chỗ nào đọc ô nào.
+
+**Điểm mấu chốt là cập nhật `MocO` cho TOÀN BỘ ô của nhóm, kể cả ô không đổi.** Nếu chỉ cập nhật ô
+có thay đổi, thì một thao tác cũ hơn đến sau vẫn sửa lẻ được ô `NgayQuaDoi` (mốc của nó chưa tiến)
+và trạng thái lai quay lại. Đừng thay bước này bằng "bắt máy con luôn gửi đủ cả nhóm": máy con là
+form nên nó vốn gửi cả bản ghi, **nhưng ta không được dựa vào đó** — một bản máy con cũ, một lỗi,
+hay một lần bù lại sau khôi phục đều có thể gửi thiếu. Cập nhật mốc cả nhóm thì không cần tin ai.
+
+**Test bắt buộc cho bất biến này** (hai test `NhomGop` của Task 3 chỉ kiểm bảng tra, không kiểm bất
+biến — chúng xanh kể cả khi không ai gọi hàm):
+
+```csharp
+[Fact]
+public async Task Bo_dau_qua_doi_thi_ngay_qua_doi_KHONG_duoc_o_lai()
+{
+    // Máy A: đánh dấu qua đời kèm ngày. Máy B mới hơn: chỉ bỏ dấu qua đời, không đụng ô ngày.
+    // Nếu gộp từng ô độc lập, ô ngày sống sót và ta có người còn sống mang ngày qua đời.
+    await GuiLen(mayA, moc: T0, o: [("QuaDoi", "true"), ("NgayQuaDoi", "2026-09-12")]);
+    await GuiLen(mayB, moc: T0.AddMinutes(5), o: [("QuaDoi", "false")]);
+
+    var gd = await DocGiaoDan();
+    gd.QuaDoi.Should().BeFalse();
+    gd.NgayQuaDoi.Should().BeNull("cung nhom voi QuaDoi nen phai theo ca nhom");
+}
+
+[Fact]
+public async Task Thao_tac_CU_HON_den_SAU_khong_duoc_sua_le_mot_o_trong_nhom()
+{
+    // Đây là ca mà "chỉ cập nhật MocO của ô có đổi" sẽ hỏng.
+    await GuiLen(mayB, moc: T0.AddMinutes(5), o: [("QuaDoi", "false")]);
+    await GuiLen(mayA, moc: T0, o: [("NgayQuaDoi", "2026-09-12")]);   // cũ hơn, tới sau
+
+    (await DocGiaoDan()).NgayQuaDoi.Should().BeNull("moc CA NHOM da tien, thao tac cu phai thua");
+}
+```
 
 **Vì sao kẹp và nâng đồng hồ phải đi CÙNG NHAU (R6/R10 trong sổ thi công):**
 
