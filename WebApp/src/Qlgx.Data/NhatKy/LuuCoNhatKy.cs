@@ -31,11 +31,20 @@ public static class QlgxDbContextNhatKyExtensions
     /// bảng thay_doi còn rỗng — nhật ký nói ĐÃ ĐỔI GÌ nhưng chưa nói AI ĐỔI. Đây là khoảng
     /// trống ĐÃ BIẾT, để lại cho bước nối danh tính (dựng một lớp đọc claim tài khoản và tiêm
     /// vào các service), không phải sót.
+    ///
+    /// <paramref name="giaoDichIdBenNgoai"/> để trống thì tự sinh một giá trị mới — đúng cho tuyệt đại
+    /// đa số chỗ gọi, nơi một lần lưu là một thao tác. TRUYỀN VÀO khi thao tác của người dùng
+    /// gồm nhiều đợt ghi nhật ký trong CÙNG một giao dịch CSDL (xoá vĩnh viễn: ghi nhật ký xoá
+    /// bản ghi con qua GhiNhatKyXoaSapToi rồi mới lưu bản ghi cha), để tất cả mang chung một
+    /// <c>giao_dich_id</c>. Theo thiết kế trường này gom đúng các dòng của MỘT lần lưu, để máy
+    /// con áp nguyên một nhóm trong một giao dịch của nó — sinh nhiều nhóm cho một giao dịch là
+    /// sai định nghĩa, và máy con có thể áp nửa nhóm này rồi mới tới nhóm kia.
     /// </summary>
     public static async Task<int> LuuCoNhatKy(
-        this QlgxDbContext db, CancellationToken ct, IBoiCanhGhiNhatKy? boiCanh = null)
+        this QlgxDbContext db, CancellationToken ct, IBoiCanhGhiNhatKy? boiCanh = null,
+        Guid? giaoDichIdBenNgoai = null)
     {
-        var giaoDichId = Guid.NewGuid();
+        var giaoDichId = giaoDichIdBenNgoai ?? Guid.NewGuid();
         var moc = DateTimeOffset.UtcNow;
 
         var dong = SinhDongNhatKy.Tu(db.ChangeTracker, boiCanh, moc, giaoDichId);

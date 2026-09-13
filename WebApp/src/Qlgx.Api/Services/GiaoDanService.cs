@@ -620,15 +620,19 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         // khi xoá không còn Id để đọc, vừa vì thứ tự khoá: phải khoá dòng đếm hiệu lực trước,
         // dòng nghiệp vụ sau, giống mọi đường ghi khác, nếu không sẽ deadlock thật khi hai giao
         // dịch giành khoá ngược thứ tự nhau. Xem GhiNhatKyXoaCung.
+        // MỘT giaoDichId duy nhất cho cả ba đợt ghi nhật ký (chi tiết bí tích, chi tiết giáo lý,
+        // và chính giáo dân): tất cả nằm trong CÙNG một giao dịch CSDL nên phải cùng một
+        // giao_dich_id — xem GhiNhatKyXoaSapToi.
+        var giaoDichId = Guid.NewGuid();
         var biTichBiXoa = db.BiTichChiTiet.Where(b => b.GiaoDanId == id);
         var giaoLyBiXoa = db.ChiTietLopGiaoLy.Where(c => c.GiaoDanId == id);
-        await db.GhiNhatKyXoaSapToi(biTichBiXoa, ct);
-        await db.GhiNhatKyXoaSapToi(giaoLyBiXoa, ct);
+        await db.GhiNhatKyXoaSapToi(biTichBiXoa, giaoDichId, ct);
+        await db.GhiNhatKyXoaSapToi(giaoLyBiXoa, giaoDichId, ct);
 
         await biTichBiXoa.ExecuteDeleteAsync(ct);
         await giaoLyBiXoa.ExecuteDeleteAsync(ct);
         db.GiaoDan.Remove(g);
-        await db.LuuCoNhatKy(ct);
+        await db.LuuCoNhatKy(ct, giaoDichIdBenNgoai: giaoDichId);
         await giaoDich.CommitAsync(ct);
         return (KetQuaXoaGiaoDan.ThanhCong, null);
     }

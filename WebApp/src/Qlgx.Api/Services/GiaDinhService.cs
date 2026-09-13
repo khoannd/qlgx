@@ -325,12 +325,16 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         // đọc, mà còn vì thứ tự khoá: GhiNhatKyXoaSapToi khoá dòng đếm hiệu lực, mọi đường ghi
         // khác cũng khoá dòng đếm trước rồi mới chạm dữ liệu. Đảo thứ tự ở đây là deadlock thật
         // khi hai người cùng xoá lúc. Xem GhiNhatKyXoaCung.
+        // MỘT giaoDichId duy nhất cho cả thao tác xoá: nhật ký xoá thành viên và nhật ký xoá
+        // chính gia đình nằm trong CÙNG một giao dịch CSDL, nên phải cùng một giao_dich_id —
+        // xem GhiNhatKyXoaSapToi.
+        var giaoDichId = Guid.NewGuid();
         var tvBiXoa = db.ThanhVienGiaDinh.Where(tv => tv.GiaDinhId == id);
-        await db.GhiNhatKyXoaSapToi(tvBiXoa, ct);
+        await db.GhiNhatKyXoaSapToi(tvBiXoa, giaoDichId, ct);
         await tvBiXoa.ExecuteDeleteAsync(ct);
 
         db.GiaDinh.Remove(g);
-        await db.LuuCoNhatKy(ct);
+        await db.LuuCoNhatKy(ct, giaoDichIdBenNgoai: giaoDichId);
         await giaoDich.CommitAsync(ct);
         return KetQuaXoaGiaDinh.ThanhCong;
     }

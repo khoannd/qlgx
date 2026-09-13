@@ -37,6 +37,14 @@ public static class GhiNhatKyXoaCung
     /// nằm chung một giao dịch với chính lệnh xoá — chia lô ở đây không rút ngắn được thời gian
     /// giữ khoá.
     /// </summary>
+    /// <paramref name="giaoDichId"/> ĐƯỢC TRUYỀN TỪ NGOÀI, không tự sinh ở đây. Trường
+    /// <c>giao_dich_id</c> theo thiết kế phải gom đúng các dòng của MỘT lần lưu, để máy con sau
+    /// này áp nguyên một nhóm trong một giao dịch của nó. Trước đây hàm này tự
+    /// <c>Guid.NewGuid()</c> còn <c>LuuCoNhatKy</c> sinh thêm một cái nữa, nên xoá vĩnh viễn một
+    /// giáo dân đẻ ra hai tới ba nhóm khác nhau tuy tất cả nằm trong CÙNG MỘT giao dịch CSDL —
+    /// sai đúng định nghĩa của trường. Chỗ gọi nay sinh một giá trị duy nhất rồi truyền cho cả
+    /// hàm này lẫn <c>LuuCoNhatKy</c>.
+    ///
     /// <paramref name="boiCanh"/> hiện luôn để trống ở cả ba chỗ gọi — cùng một khoảng trống ĐÃ
     /// BIẾT với <see cref="QlgxDbContextNhatKyExtensions.LuuCoNhatKy"/>: chưa có chỗ nào dựng
     /// IBoiCanhGhiNhatKy từ claim của người đăng nhập, nên cột tai_khoan_id còn rỗng. Giữ tham số
@@ -44,7 +52,7 @@ public static class GhiNhatKyXoaCung
     ///
     /// <returns>Số dòng nhật ký đã xếp — cũng chính là số bản ghi sắp bị xoá.</returns>
     public static async Task<int> GhiNhatKyXoaSapToi<T>(
-        this QlgxDbContext db, IQueryable<T> truyVan, CancellationToken ct,
+        this QlgxDbContext db, IQueryable<T> truyVan, Guid giaoDichId, CancellationToken ct,
         IBoiCanhGhiNhatKy? boiCanh = null) where T : ThucTheCoSo
     {
         var bang = typeof(T).Name;
@@ -60,7 +68,6 @@ public static class GhiNhatKyXoaCung
         if (canXoa.Count == 0) return 0;
 
         var moc = DateTimeOffset.UtcNow;
-        var giaoDichId = Guid.NewGuid();
         var giaTriDaXoa = JsonSerializer.Serialize(true);
 
         var dong = canXoa.Select(x => new ThayDoi

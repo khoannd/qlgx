@@ -165,12 +165,16 @@ public class DotBiTichService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGi
         // khoá của mọi đường ghi khác (khoá dòng đếm trước, dữ liệu sau). Xem GhiNhatKyXoaCung.
         await using var giaoDich = await db.Database.BeginTransactionAsync(ct);
 
+        // MỘT giaoDichId duy nhất cho cả thao tác xoá: nhật ký xoá chi tiết bí tích và nhật ký
+        // xoá chính đợt nằm trong CÙNG một giao dịch CSDL, nên phải cùng một giao_dich_id —
+        // xem GhiNhatKyXoaSapToi.
+        var giaoDichId = Guid.NewGuid();
         var chiTietBiXoa = db.BiTichChiTiet.Where(c => c.DotBiTichId == id);
-        await db.GhiNhatKyXoaSapToi(chiTietBiXoa, ct);
+        await db.GhiNhatKyXoaSapToi(chiTietBiXoa, giaoDichId, ct);
         await chiTietBiXoa.ExecuteDeleteAsync(ct);
 
         db.DotBiTich.Remove(d);
-        await db.LuuCoNhatKy(ct);
+        await db.LuuCoNhatKy(ct, giaoDichIdBenNgoai: giaoDichId);
         await giaoDich.CommitAsync(ct);
         return true;
     }
