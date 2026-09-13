@@ -65,6 +65,18 @@ setup() {
   [ "$(doc_env_kv "$BE" RESTIC_PASSWORD)" = "$cu" ]
 }
 
+@test "lay_ma_nguon bao loi ro rang khi GOC_CHECKOUT la thu muc rac khong phai git repo" {
+  export GOC_CHECKOUT="$BATS_TEST_TMPDIR/rac"
+  mkdir -p "$GOC_CHECKOUT"
+  touch "$GOC_CHECKOUT/mot-tep-la"
+  export THU_MUC_CAU_HINH="$BATS_TEST_TMPDIR/etc-qlgx"
+  export THU_MUC_SPOOL="$BATS_TEST_TMPDIR/spool"
+  export THU_MUC_LOG="$BATS_TEST_TMPDIR/log"
+  run lay_ma_nguon
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"rm -rf"* ]]
+}
+
 @test "la_cai_moi dung theo su ton tai cua .env" {
   GOC_UNG_DUNG="$BATS_TEST_TMPDIR/ung-dung"
   mkdir -p "$GOC_UNG_DUNG"

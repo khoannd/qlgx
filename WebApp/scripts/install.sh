@@ -10,7 +10,9 @@ set -euo pipefail
 
 readonly NHANH_MAC_DINH="webapp-phase-1"
 readonly KHO_GIT="https://github.com/khoannd/qlgx.git"
-readonly GOC_CHECKOUT="/opt/qlgx"
+# KHONG readonly: cho phep bo test tro GOC_CHECKOUT sang mot thu muc tam, tranh dung cham
+# vao /opt/qlgx that tren may chay test. Mac dinh khi chay that van la /opt/qlgx.
+GOC_CHECKOUT="${GOC_CHECKOUT:-/opt/qlgx}"
 GOC_UNG_DUNG="${GOC_UNG_DUNG:-$GOC_CHECKOUT/WebApp}"
 THU_MUC_CAU_HINH="${THU_MUC_CAU_HINH:-/etc/qlgx}"
 THU_MUC_SPOOL="${THU_MUC_SPOOL:-/var/lib/qlgx/spool}"
@@ -140,6 +142,17 @@ lay_ma_nguon() {
     ghi_log thong-tin "Da co ban checkout tai $GOC_CHECKOUT."
     return
   fi
+
+  # Thu muc ton tai, khong rong, nhung khong phai git repo: rat co the la rac cua mot lan
+  # chay truoc bi ngat giua chung (mat dien, Ctrl-C, timeout) -- ngay sau khi thu muc duoc
+  # tao nhung truoc khi `git clone` kip hoan tat. Neu cu de troi qua, `git clone` ben duoi se
+  # tu bao loi tieng Anh goc cua git roi dung qua set -e, pha vo quy uoc "moi loi deu qua
+  # bao_loi_va_thoat voi thong bao tieng Viet" cua toan bo script. KHONG tu y xoa -- thu muc
+  # la co the chua thu gi do khong lien quan quan trong, de nguoi van hanh tu quyet dinh.
+  if [ -e "$GOC_CHECKOUT" ] && [ -n "$(ls -A "$GOC_CHECKOUT" 2>/dev/null)" ]; then
+    bao_loi_va_thoat "Thu muc $GOC_CHECKOUT da ton tai nhung khong phai ban checkout git hop le (co the do lan chay truoc bi ngat giua chung). Xoa thu muc nay roi chay lai: rm -rf $GOC_CHECKOUT"
+  fi
+
   ghi_log thong-tin "Tai ma nguon nhanh $NHANH tu $KHO_GIT"
   # Sparse checkout: chi lay thu muc WebApp. BIN/, Source/, Release/ la ban desktop Windows,
   # vo dung tren may chu Linux va chiem hang tram MB nhi phan.
