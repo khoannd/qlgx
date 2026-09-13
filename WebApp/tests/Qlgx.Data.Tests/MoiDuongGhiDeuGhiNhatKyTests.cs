@@ -14,14 +14,38 @@ public class MoiDuongGhiDeuGhiNhatKyTests
         "NhapDuLieuService.cs",   // nhập Access, nhật ký thuộc kế hoạch riêng
         "ChuyenDoiDuLieu.cs",     // cùng lý do
         "AuthService.cs",         // chỉ cập nhật thời điểm đăng nhập
+        // Hai file dưới nằm ở GỐC src/Qlgx.Api (không phải trong Services/) và chỉ lọt lưới từ
+        // khi phép quét mở rộng ra cả cây thư mục. Miễn trừ ở đây là quyết định CÓ CHỦ Ý, không
+        // phải bỏ sót:
+        //  - KhoiPhucNgayThangThieu.cs là CÔNG CỤ VÁ DỮ LIỆU ngoài luồng (chạy tay, một lần, để
+        //    dựng lại các cột ngày bị mất khi nhập từ Access). Nó CÓ sửa hàng loạt cột ngày của
+        //    GiaoDan — bảng thuộc PhanLoaiThucThe.DuocGhi — nên việc đưa nó vào nhật ký là một
+        //    câu hỏi thiết kế thật (một lần vá tay nên sinh mấy nghìn dòng nhật ký mang danh
+        //    ai?), thuộc phạm vi riêng, không giải quyết bằng cách sửa vội ở đây.
+        //  - TaoTaiKhoanQuanTri.cs chỉ chạm GiaoXu/TaiKhoan, không bảng nào thuộc
+        //    PhanLoaiThucThe.DuocGhi — không có gì để ghi nhật ký.
+        "KhoiPhucNgayThangThieu.cs",
+        "TaoTaiKhoanQuanTri.cs",
     };
+
+    /// <summary>
+    /// Quét CẢ CÂY src/Qlgx.Api, không riêng Services/. Trước đây chỉ quét Services/ nên hai file
+    /// ở gốc dự án (KhoiPhucNgayThangThieu.cs, TaoTaiKhoanQuanTri.cs) lọt lưới hoàn toàn — một
+    /// đường ghi mới đặt ngoài thư mục Services/ sẽ vô hình với chính cái test sinh ra để bắt nó.
+    /// </summary>
+    private static IEnumerable<string> MoiFileNguon(string goc) =>
+        Directory.EnumerateFiles(
+            Path.Combine(goc, "src", "Qlgx.Api"), "*.cs", SearchOption.AllDirectories)
+        // bin/ và obj/ chứa mã sinh tự động (AssemblyInfo, EF model đã biên dịch...) — không
+        // phải mã người viết, và quét chúng chỉ tạo báo động giả.
+        .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")
+                 && !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"));
 
     [Fact]
     public void Khong_service_nao_goi_thang_SaveChangesAsync()
     {
         var goc = TimThuMucGoc();
-        var viPham = Directory
-            .EnumerateFiles(Path.Combine(goc, "src", "Qlgx.Api", "Services"), "*.cs")
+        var viPham = MoiFileNguon(goc)
             .Where(f => !DuocPhepGoiThang.Contains(Path.GetFileName(f)))
             .Where(f => File.ReadAllText(f).Contains("SaveChangesAsync("))
             .Select(Path.GetFileName)
@@ -49,8 +73,7 @@ public class MoiDuongGhiDeuGhiNhatKyTests
             "DotBiTichService.cs",
         };
         var goc = TimThuMucGoc();
-        var viPham = Directory
-            .EnumerateFiles(Path.Combine(goc, "src", "Qlgx.Api", "Services"), "*.cs")
+        var viPham = MoiFileNguon(goc)
             .Where(f => !daXuLy.Contains(Path.GetFileName(f)))
             .Where(f => File.ReadAllText(f) is var noi
                 && (noi.Contains("ExecuteUpdateAsync") || noi.Contains("ExecuteDeleteAsync")))
