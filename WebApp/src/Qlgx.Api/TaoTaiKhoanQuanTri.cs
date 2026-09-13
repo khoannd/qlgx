@@ -18,6 +18,9 @@ namespace Qlgx.Api;
 ///   QLGX_ADMIN_HO_TEN          — họ tên hiển thị (bắt buộc)
 ///   QLGX_ADMIN_GIAO_XU_ID      — GUID giáo xứ (một trong hai, ưu tiên nếu có cả hai)
 ///   QLGX_ADMIN_GIAO_XU_TEN     — tên giáo xứ, dùng để tra Id nếu không có GIAO_XU_ID
+///   QLGX_ADMIN_TAO_GIAO_XU_NEU_CHUA_CO — tuỳ chọn, "true" thì TẠO MỚI giáo xứ theo
+///                                 QLGX_ADMIN_GIAO_XU_TEN nếu chưa tồn tại. Dùng cho script cài
+///                                 đặt trên máy trắng; idempotent (chạy lại không tạo trùng).
 ///   QLGX_ADMIN_LOAI_TAI_KHOAN  — tuỳ chọn, mặc định "0" (Quản trị viên giáo xứ). Đặt "9" để
 ///                                 tạo tài khoản "Quản trị hệ thống" (policy "QuanTriHeThong",
 ///                                 xem docs/superpowers/specs/man-hinh/quan-ly-giao-xu.md mục
@@ -41,6 +44,9 @@ public static class TaoTaiKhoanQuanTri
 
         var giaoXuIdChuoi = Environment.GetEnvironmentVariable("QLGX_ADMIN_GIAO_XU_ID");
         var giaoXuTen = Environment.GetEnvironmentVariable("QLGX_ADMIN_GIAO_XU_TEN");
+        var taoNeuChuaCo = string.Equals(
+            Environment.GetEnvironmentVariable("QLGX_ADMIN_TAO_GIAO_XU_NEU_CHUA_CO"),
+            "true", StringComparison.OrdinalIgnoreCase);
         if (giaoXuIdChuoi is null && giaoXuTen is null)
             throw new InvalidOperationException(
                 "Can mot trong hai bien: QLGX_ADMIN_GIAO_XU_ID (GUID) hoac QLGX_ADMIN_GIAO_XU_TEN (ten giao xu).");
@@ -52,19 +58,7 @@ public static class TaoTaiKhoanQuanTri
             .Options;
         await using var db = new QlgxDbContext(options);
 
-        Guid giaoXuId;
-        if (giaoXuIdChuoi is not null)
-        {
-            giaoXuId = Guid.Parse(giaoXuIdChuoi);
-            if (!await db.GiaoXu.AnyAsync(g => g.Id == giaoXuId))
-                throw new InvalidOperationException($"Khong tim thay giao xu co Id={giaoXuId}.");
-        }
-        else
-        {
-            var giaoXu = await db.GiaoXu.FirstOrDefaultAsync(g => g.TenGiaoXu == giaoXuTen)
-                ?? throw new InvalidOperationException($"Khong tim thay giao xu ten '{giaoXuTen}'.");
-            giaoXuId = giaoXu.Id;
-        }
+        var giaoXuId = await LayHoacTaoGiaoXu(db, giaoXuIdChuoi, giaoXuTen, taoNeuChuaCo);
 
         var daCo = await db.TaiKhoan.AnyAsync(t => t.GiaoXuId == giaoXuId && t.TenTaiKhoan == tenTaiKhoan && !t.DaXoa);
         if (daCo)
@@ -83,5 +77,44 @@ public static class TaoTaiKhoanQuanTri
         await db.SaveChangesAsync();
 
         Console.WriteLine($"Da tao tai khoan (LoaiTaiKhoan={loaiTaiKhoan}) '{tenTaiKhoan}' cho giao xu {giaoXuId}.");
+    }
+
+    /// <summary>
+    /// Tra Id giao xu, va TAO MOI neu chua co (chi khi taoNeuChuaCo = true).
+    ///
+    /// Vi sao can: script cai dat (WebApp/scripts/install.sh) chay tren mot may hoan toan trang,
+    /// bang GiaoXu con rong — khong co giao xu nao de tra cuu. Truoc day nguoi cai phai tu chen
+    /// mot dong bang psql roi moi chay duoc lenh nay, dung mot buoc thao tac tay giua mot quy
+    /// trinh cai dat le ra tu dong hoan toan.
+    ///
+    /// Idempotent: goi lai voi cung ten thi tra ve dung giao xu cu, khong tao trung — script cai
+    /// dat duoc thiet ke de chay lai nhieu lan.
+    /// </summary>
+    public static async Task<Guid> LayHoacTaoGiaoXu(
+        QlgxDbContext db, string? giaoXuIdChuoi, string? giaoXuTen, bool taoNeuChuaCo)
+    {
+        if (giaoXuIdChuoi is not null)
+        {
+            var id = Guid.Parse(giaoXuIdChuoi);
+            if (!await db.GiaoXu.AnyAsync(g => g.Id == id))
+                throw new InvalidOperationException($"Khong tim thay giao xu co Id={id}.");
+            return id;
+        }
+
+        var daCo = await db.GiaoXu.FirstOrDefaultAsync(g => g.TenGiaoXu == giaoXuTen);
+        if (daCo is not null) return daCo.Id;
+
+        if (!taoNeuChuaCo)
+            throw new InvalidOperationException(
+                $"Khong tim thay giao xu ten '{giaoXuTen}'. Dat QLGX_ADMIN_TAO_GIAO_XU_NEU_CHUA_CO=true " +
+                "neu muon tu tao moi giao xu nay.");
+
+        // MaGiaoXuCu la so nguyen ke thua tu Access, khong tu tang o CSDL — tu tinh so ke tiep.
+        var maKeTiep = (await db.GiaoXu.MaxAsync(g => (int?)g.MaGiaoXuCu) ?? 0) + 1;
+        var moi = new GiaoXu { TenGiaoXu = giaoXuTen!, MaGiaoXuCu = maKeTiep };
+        db.GiaoXu.Add(moi);
+        await db.SaveChangesAsync();
+        Console.WriteLine($"Da tao giao xu moi '{giaoXuTen}' (MaGiaoXuCu={maKeTiep}).");
+        return moi.Id;
     }
 }
