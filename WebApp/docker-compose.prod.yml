@@ -1,0 +1,37 @@
+# Lop phu cho trien khai THAT -- dung kem docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Chi chua nhung gi KHAC voi moi truong pilot: reverse proxy co HTTPS tu dong, va xoay vong log
+# de o dia khong day len sau vai thang chay lien tuc.
+services:
+  api:
+    # Khong con map cong ra host -- moi luu luong di qua Caddy. Cong 8080 chi con trong mang
+    # noi bo cua compose.
+    ports: !reset []
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  postgres:
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data      # chung chi Let's Encrypt -- MAT volume nay la phai xin lai chung chi
+      - caddy-config:/config
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+volumes:
+  caddy-data:
+  caddy-config:

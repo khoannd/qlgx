@@ -219,5 +219,251 @@ ghi_backup_env() {
   ghi_log thong-tin "Da ghi cau hinh sao luu vao $tep (chi root doc duoc)."
 }
 
+# Boc docker compose: luon dung dung thu muc va dung hai tep overlay.
+dc() { docker compose --project-directory "$GOC_UNG_DUNG" \
+         -f "$GOC_UNG_DUNG/docker-compose.yml" \
+         -f "$GOC_UNG_DUNG/docker-compose.prod.yml" "$@"; }
+
+bat_postgres() {
+  ghi_log thong-tin "Khoi dong PostgreSQL va cho san sang"
+  dc up -d postgres
+  local i
+  for i in $(seq 1 60); do
+    dc exec -T postgres pg_isready -q && return 0
+    sleep 2
+  done
+  bao_loi_va_thoat "PostgreSQL khong san sang sau 120 giay. Xem: dc logs postgres"
+}
+
+tao_vai_tro_rls() {
+  ghi_log thong-tin "Tao/cap nhat hai vai tro RLS"
+  local db user
+  db=$(doc_env_kv "$GOC_UNG_DUNG/.env" POSTGRES_DB)
+  user=$(doc_env_kv "$GOC_UNG_DUNG/.env" POSTGRES_USER)
+  # KHONG dung /docker-entrypoint-initdb.d: thu muc do chi chay khi volume du lieu con TRONG,
+  # nen se bi bo qua o moi lan chay lai -- dung luc ta can tinh idempotent nhat.
+  dc exec -T postgres psql -v ON_ERROR_STOP=1 -U "$user" -d "$db" \
+    -v qlgx_app_user="$(doc_env_kv "$GOC_UNG_DUNG/.env" QLGX_APP_DB_USER)" \
+    -v qlgx_app_password="$(doc_env_kv "$GOC_UNG_DUNG/.env" QLGX_APP_DB_PASSWORD)" \
+    -v qlgx_admin_user="$(doc_env_kv "$GOC_UNG_DUNG/.env" QLGX_ADMIN_DB_USER)" \
+    -v qlgx_admin_password="$(doc_env_kv "$GOC_UNG_DUNG/.env" QLGX_ADMIN_DB_PASSWORD)" \
+    < "$GOC_UNG_DUNG/scripts/sql/00-vai-tro-rls.sql"
+}
+
+cho_san_sang() {
+  local gioi_han="${1:-180}" i
+  for i in $(seq 1 "$gioi_han"); do
+    if dc exec -T api curl -fsS http://localhost:8080/api/suc-khoe/san-sang >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
+bat_api() {
+  ghi_log thong-tin "Dung image va khoi dong API (migration tu chay luc khoi dong)"
+  dc build api
+  dc up -d api
+  cho_san_sang 300 || bao_loi_va_thoat "API khong san sang. Xem: docker compose logs api"
+  ghi_log thong-tin "API da san sang."
+}
+
+khoi_tao_giao_xu_va_admin() {
+  local ten_giao_xu ten_tk mat_khau ho_ten
+  ten_giao_xu=$(hoi_hoac_bien QLGX_GIAO_XU_TEN "Ten giao xu")
+  ten_tk=$(hoi_hoac_bien QLGX_ADMIN_TEN_TAI_KHOAN "Ten dang nhap quan tri he thong")
+  mat_khau=$(hoi_hoac_bien QLGX_ADMIN_MAT_KHAU "Mat khau (toi thieu 8 ky tu)")
+  ho_ten=$(hoi_hoac_bien QLGX_ADMIN_HO_TEN "Ho ten hien thi")
+
+  # Chay lai voi cung ten tai khoan se bao "da ton tai" -- coi la THANH CONG, khong phai loi,
+  # vi script duoc thiet ke de chay lai nhieu lan.
+  if dc exec -T \
+      -e QLGX_ADMIN_GIAO_XU_TEN="$ten_giao_xu" \
+      -e QLGX_ADMIN_TAO_GIAO_XU_NEU_CHUA_CO=true \
+      -e QLGX_ADMIN_TEN_TAI_KHOAN="$ten_tk" \
+      -e QLGX_ADMIN_MAT_KHAU="$mat_khau" \
+      -e QLGX_ADMIN_HO_TEN="$ho_ten" \
+      -e QLGX_ADMIN_LOAI_TAI_KHOAN=9 \
+      api dotnet Qlgx.Api.dll tao-tai-khoan-quan-tri 2>&1 | tee /tmp/qlgx-tao-admin.log; then
+    ghi_log thong-tin "Da tao tai khoan quan tri he thong '$ten_tk'."
+  elif grep -q "da ton tai" /tmp/qlgx-tao-admin.log; then
+    ghi_log thong-tin "Tai khoan '$ten_tk' da co san -- bo qua."
+  else
+    bao_loi_va_thoat "Khong tao duoc tai khoan quan tri. Xem /tmp/qlgx-tao-admin.log"
+  fi
+}
+
+cau_hinh_https() {
+  if [ -z "$TEN_MIEN" ] && [ "$KHONG_TUONG_TAC" -eq 0 ]; then
+    TEN_MIEN=$(hoi_hoac_bien QLGX_TEN_MIEN "Ten mien (de trong neu chua co)")
+  fi
+  if [ -z "$TEN_MIEN" ]; then
+    ghi_log canh-bao "CHUA CO TEN MIEN -- he thong se chay qua HTTP THUAN, khong ma hoa duong " \
+                     "truyen. Du lieu giao dan (ho ten, ngay sinh, so can cuoc) di qua mang o " \
+                     "dang doc duoc. Chay lai script voi --domain=<ten mien> ngay khi co."
+    cat > "$GOC_UNG_DUNG/Caddyfile" <<'EOF'
+:80 {
+	reverse_proxy api:8080
+}
+EOF
+  else
+    cat > "$GOC_UNG_DUNG/Caddyfile" <<EOF
+$TEN_MIEN {
+	reverse_proxy api:8080
+
+	header {
+		# HSTS: mot khi trinh duyet da vao bang HTTPS thi khong bao gio thu HTTP nua.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		-Server
+	}
+
+	# Anh dai dien tai len toi da 8 MB (xem XuLyAnh.cs) -- chan som o day de yeu cau qua lon
+	# khong di toi tan ung dung.
+	request_body { max_size 10MB }
+
+	encode gzip zstd
+}
+EOF
+  fi
+  dc up -d caddy
+  ghi_log thong-tin "Caddy da chay${TEN_MIEN:+ cho $TEN_MIEN (HTTPS tu dong)}."
+}
+
+in_the_phuc_hoi() {
+  local tep="$THU_MUC_CAU_HINH/the-phuc-hoi.txt"
+  local be="$THU_MUC_CAU_HINH/backup.env"
+  local env="$GOC_UNG_DUNG/.env"
+  cat > "$tep" <<EOF
+================== THE PHUC HOI QLGX ==================
+May chu   : $(hostname)  ${TEN_MIEN:+($TEN_MIEN)}
+Lap ngay  : $(date '+%d/%m/%Y %H:%M')
+
+MAT KHAU RESTIC (khong co dong nay thi KHONG AI phuc hoi duoc,
+ke ca Cloudflare -- day la ban chat cua ma hoa phia may chu):
+  $(doc_env_kv "$be" RESTIC_PASSWORD)
+
+KHO SAO LUU : $(doc_env_kv "$be" RESTIC_REPOSITORY)
+R2 KEY ID   : $(doc_env_kv "$be" AWS_ACCESS_KEY_ID)
+R2 SECRET   : $(doc_env_kv "$be" AWS_SECRET_ACCESS_KEY)
+
+MAT KHAU CSDL:
+  postgres   : $(doc_env_kv "$env" POSTGRES_USER) / $(doc_env_kv "$env" POSTGRES_PASSWORD)
+  qlgx_app   : $(doc_env_kv "$env" QLGX_APP_DB_USER) / $(doc_env_kv "$env" QLGX_APP_DB_PASSWORD)
+  qlgx_admin : $(doc_env_kv "$env" QLGX_ADMIN_DB_USER) / $(doc_env_kv "$env" QLGX_ADMIN_DB_PASSWORD)
+
+PHUC HOI TU MAY TRANG:
+  1. Dung mot may chu Linux moi
+  2. curl -fsSL $KHO_GIT/raw/$NHANH/WebApp/scripts/qlgx-restore.sh -o qlgx-restore.sh
+  3. sudo bash qlgx-restore.sh --card the-phuc-hoi.txt          (in ra ke hoach)
+  4. sudo bash qlgx-restore.sh --card the-phuc-hoi.txt --apply  (thuc hien)
+=======================================================
+EOF
+  chmod 600 "$tep"
+  cat "$tep"
+  ghi_log canh-bao "IN THE TREN RA GIAY hoac chep vao noi an toan NGOAI may chu nay, roi xoa: " \
+                   "rm $tep -- de tren chinh may chu thi mat may la mat luon kha nang phuc hoi."
+}
+
+tu_kiem_chung() {
+  local so_loi=0
+  local env="$GOC_UNG_DUNG/.env"
+  bao() { # bao <ten> <lenh...>
+    local ten="$1"; shift
+    if "$@" >/dev/null 2>&1; then printf '  DAT           %s\n' "$ten"
+    else printf '  KHONG DAT     %s\n' "$ten"; so_loi=$((so_loi + 1)); fi
+  }
+  local db user app_user admin_user
+  db=$(doc_env_kv "$env" POSTGRES_DB);       user=$(doc_env_kv "$env" POSTGRES_USER)
+  app_user=$(doc_env_kv "$env" QLGX_APP_DB_USER)
+  admin_user=$(doc_env_kv "$env" QLGX_ADMIN_DB_USER)
+  # KHONG dinh nghia ham roi goi qua `bash -c`: subshell moi KHONG ke thua ham cua shell cha,
+  # moi kiem tra se im lang that bai. Moi muc duoi day tu goi thang mot lenh.
+  psql_hoi() { dc exec -T postgres psql -tAX -U "$user" -d "$db" -c "$1" | tr -d ' \r'; }
+
+  bang_bang() { [ "$(psql_hoi "$1")" = "$2" ]; }
+  it_nhat()   { [ "$(psql_hoi "$1")" -ge "$2" ] 2>/dev/null; }
+
+  echo "--- Bang tu kiem chung ---"
+  bao "Container postgres dang chay"  eval 'dc ps --status running postgres | grep -q postgres'
+  bao "Container api dang chay"       eval 'dc ps --status running api | grep -q api'
+  bao "API tra ve san sang"           dc exec -T api curl -fsS http://localhost:8080/api/suc-khoe/san-sang
+  bao "Vai tro nghiep vu KHONG co BYPASSRLS" \
+      bang_bang "SELECT rolbypassrls FROM pg_roles WHERE rolname='$app_user'" "f"
+  bao "Vai tro quan tri CO BYPASSRLS" \
+      bang_bang "SELECT rolbypassrls FROM pg_roles WHERE rolname='$admin_user'" "t"
+  bao "RLS dang bat tren cac bang nghiep vu" \
+      it_nhat "SELECT count(*) FROM pg_class WHERE relrowsecurity" 20
+  bao "Hai vai tro CSDL khac nhau"    test "$app_user" != "$admin_user"
+  bao "Tep .env quyen 600"            test "$(stat -c '%a' "$env")" = "600"
+  bao "backup.env quyen 600, chu root" \
+      test "$(stat -c '%a:%U' "$THU_MUC_CAU_HINH/backup.env")" = "600:root"
+  bao "Container API KHONG biet khoa R2" \
+      eval '! dc exec -T api env | grep -q AWS_SECRET_ACCESS_KEY'
+  bao "In duoc PDF (Chromium co trong image)" \
+      dc exec -T api sh -c 'find "$PLAYWRIGHT_BROWSERS_PATH" \( -name headless_shell -o -name chrome \) | head -1 | grep -q .'
+  # The phuc hoi con nam tren chinh may chu sau 7 ngay nghia la no chua duoc cat ra ngoai --
+  # mat may chu la mat luon kha nang phuc hoi. Bao KHONG DAT de nguoi van hanh nho lam not.
+  bao "The phuc hoi da duoc cat ngoai may chu" \
+      eval "[ ! -f '$THU_MUC_CAU_HINH/the-phuc-hoi.txt' ] || \
+            [ -z \"\$(find '$THU_MUC_CAU_HINH/the-phuc-hoi.txt' -mtime +7)\" ]"
+  if [ "${QLGX_BO_QUA_R2:-0}" != "1" ]; then
+    bao "Kho restic mo duoc" \
+      eval "set -a; . '$THU_MUC_CAU_HINH/backup.env'; set +a; restic snapshots --json >/dev/null"
+  fi
+  echo "--------------------------"
+  if [ "$so_loi" -gt 0 ]; then
+    ghi_log loi "$so_loi muc KHONG DAT."
+    return 1
+  fi
+  ghi_log thong-tin "Toan bo muc kiem chung DAT."
+}
+
+# Task 12 se thay the ham nay bang logic cap nhat that (dung, chuyen sang ban moi, tu quay lui
+# neu that bai). Tam thoi day chi la cho giu cho de main() chay duoc het duong "cap nhat".
+cap_nhat() {
+  ghi_log canh-bao "cap_nhat: chua cai dat (se lam o Task 12)"
+}
+
+# Task 15 se thay the ham nay bang logic tao don vi systemd that de he thong tu khoi dong lai
+# dich vu sau khi may chu reboot. Tam thoi day chi la cho giu cho.
+cai_dat_systemd() {
+  ghi_log canh-bao "cai_dat_systemd: chua cai dat (se lam o Task 15)"
+}
+
+main() {
+  phan_tich_tham_so "$@"
+  if [ "$CHI_TRANG_THAI" -eq 1 ]; then tu_kiem_chung; exit $?; fi
+
+  kiem_tra_tien_de
+  cai_phu_thuoc
+  cau_hinh_tuong_lua
+  lay_ma_nguon
+
+  if la_cai_moi; then ghi_log thong-tin "=== CAI MOI ==="
+  else ghi_log thong-tin "=== CAP NHAT ==="; cap_nhat; exit $?; fi
+
+  sinh_env "$GOC_UNG_DUNG/.env"
+  ghi_backup_env "$THU_MUC_CAU_HINH/backup.env"
+  bat_postgres
+  tao_vai_tro_rls
+  bat_api
+  khoi_tao_giao_xu_va_admin
+  cau_hinh_https
+  cai_dat_systemd
+  if [ "${QLGX_BO_QUA_R2:-0}" != "1" ]; then
+    ghi_log thong-tin "Chay sao luu dau tien de chung minh duong ong song that"
+    "$GOC_UNG_DUNG/scripts/qlgx-runner.sh" sao-luu --nhan "cai-dat-lan-dau"
+    "$GOC_UNG_DUNG/scripts/qlgx-runner.sh" kiem-tra
+  fi
+  tu_kiem_chung
+  in_the_phuc_hoi
+  ghi_log thong-tin "HOAN TAT. Mo: ${TEN_MIEN:+https://$TEN_MIEN}${TEN_MIEN:-http://<dia-chi-ip-may-chu>}"
+}
+
 # Cho phep bo test nap file nay ma khong chay gi.
 [ "${QLGX_CHI_NAP_HAM:-0}" = "1" ] && return 0
+main "$@"
