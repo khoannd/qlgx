@@ -112,6 +112,9 @@ builder.Services.AddScoped<InAnService>();
 builder.Services.AddScoped<MauInService>();
 // "Cach hien thi du lieu dung/sai" — cung man hinh "Quan ly mau in", cung ly do Scoped.
 builder.Services.AddScoped<CachHienThiDungSaiService>();
+// Man hinh "Lich su thay doi" (Task 7 nhat ky thay doi) — chi doc bang thay_doi, Scoped vi
+// phu thuoc QlgxDbContext.
+builder.Services.AddScoped<NhatKyService>();
 
 var app = builder.Build();
 
@@ -243,6 +246,7 @@ app.MapGiaoLy();
 app.MapThongKe();
 app.MapMauIn();
 app.MapCachHienThi();
+app.MapNhatKy();
 
 // Fallback SPA: moi GET khong khop route API/tep tinh nao o tren tra ve index.html de React
 // Router tu xu ly duong dan phia trinh duyet. Loai tru "/api" bang rang buoc regex phu dinh de
