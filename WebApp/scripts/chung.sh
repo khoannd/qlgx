@@ -52,14 +52,14 @@ set_env_kv() {
   # dinh vao cuoi dong cuoi, tao ra mot dong hong va lam mat ca hai gia tri.
   [ -s "$tep" ] && [ "$(tail -c1 "$tep" | wc -l)" -eq 0 ] && printf '\n' >> "$tep"
 
-  # Doc quyen HIEN TAI cua tep (sau buoc ep 600 o tren neu la tep moi) bang stat, roi ap dung
-  # dung so do cho tep tam. KHONG dung "chmod --reference": tuy chon nay la GNU coreutils,
-  # khong co tren BusyBox/Alpine (may chu that dung Debian/RHEL nen co, nhung khong nen phu
-  # thuoc vao dieu do) -- khi thieu no, chmod loi lang le va roi vao nhanh du phong sai, co
-  # the ghi de quyen cua mot tep da co san.
-  local quyen
-  quyen=$(stat -c '%a' "$tep" 2>/dev/null || echo 600)
-
+  # KHONG doc quyen bang stat roi chmod cho tep tam nhu truoc: stat -c la cu phap GNU
+  # coreutils, that bai lang le tren BusyBox/Alpine, va nhanh du phong khi do se ep quyen ve
+  # 600 -- ghi de len quyen mot tep da co san ma nguoi van hanh co the co y dat khac 600.
+  # Thay vao do: ghi noi dung THANG vao dung inode cua $tep dang co san bang "cat > ", vi
+  # ghi de noi dung mot inode co san thi quyen cua inode do tu dong giu nguyen -- khong can
+  # doc, khong can copy, khong co khe ho nao cho stat that bai. Van phai dung tep tam truoc
+  # (awk khong the vua doc vua ghi cung mot tep), nhung buoc cuoi la "cat" chu khong phai
+  # "mv" (mv thay ca inode nen moi can copy quyen thu cong).
   local tam="${tep}.tam.$$"
   awk -v k="$khoa" -v v="$gia_tri" '
     BEGIN { da_ghi = 0 }
@@ -67,8 +67,8 @@ set_env_kv() {
     { print }
     END { if (!da_ghi) print k "=" v }
   ' "$tep" > "$tam"
-  chmod "$quyen" "$tam" 2>/dev/null || chmod 600 "$tam"
-  mv "$tam" "$tep"
+  cat "$tam" > "$tep"
+  rm -f "$tam"
 }
 
 # Chi ghi khi khoa CHUA CO hoac dang rong. Day la nen tang cua tinh idempotent: chay lai

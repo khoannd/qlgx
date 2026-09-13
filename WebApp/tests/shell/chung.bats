@@ -56,6 +56,18 @@ setup() {
   [ "$(stat -c '%a' "$TEP")" = "640" ]
 }
 
+@test "set_env_kv ghi vao DUNG inode cu, khong thay tep bang tep moi" {
+  # Chung minh cach lam moi (cat > thay vi mv) that su ghi de noi dung vao inode da co san --
+  # neu lam sai (vi du quay lai dung mv), inode se doi sau moi lan goi.
+  printf 'K=1\n' > "$TEP"
+  local inode_truoc inode_sau
+  inode_truoc=$(stat -c '%i' "$TEP")
+  set_env_kv "$TEP" "K" "2"
+  set_env_kv "$TEP" "M" "3"
+  inode_sau=$(stat -c '%i' "$TEP")
+  [ "$inode_truoc" = "$inode_sau" ]
+}
+
 @test "doc_env_kv khong nham khoa co tien to giong nhau" {
   printf 'AB=2\nA=1\n' > "$TEP"
   [ "$(doc_env_kv "$TEP" A)" = "1" ]
