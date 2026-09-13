@@ -57,4 +57,28 @@ public class TaoTaiKhoanQuanTriTests(QlgxApiFactory factory) : IClassFixture<Qlg
         (await db.GiaoXu.SingleAsync(g => g.Id == id)).MaGiaoXuCu
             .Should().BeGreaterThan(maLonNhatTruoc);
     }
+
+    [Fact]
+    public async Task Dong_thoi_hai_lan_voi_cung_ten_thi_cung_tra_ve_mot_id_va_chi_co_mot_giao_xu()
+    {
+        // Idempotent duoi dong thoi: hai tien trinh chay cung luc voi database connections
+        // rieng — advisory lock phai bao ve tranh tao trung.
+        var ten = "Giao xu Dong thoi " + Guid.NewGuid().ToString("N")[..8];
+
+        // Goi hai lan song song, moi lan voi context rieng.
+        var id1Task = TaoTaiKhoanQuanTri.LayHoacTaoGiaoXu(
+            factory.TaoContextThuan(), null, ten, taoNeuChuaCo: true);
+        var id2Task = TaoTaiKhoanQuanTri.LayHoacTaoGiaoXu(
+            factory.TaoContextThuan(), null, ten, taoNeuChuaCo: true);
+
+        var (id1, id2) = await Task.WhenAll(id1Task, id2Task).ContinueWith(
+            t => (t.Result[0], t.Result[1]));
+
+        // Phai la cung mot giao xu.
+        id2.Should().Be(id1);
+
+        // Va bang chi co dung mot dong voi ten nay.
+        await using var dbKiemTra = factory.TaoContextThuan();
+        (await dbKiemTra.GiaoXu.CountAsync(g => g.TenGiaoXu == ten)).Should().Be(1);
+    }
 }

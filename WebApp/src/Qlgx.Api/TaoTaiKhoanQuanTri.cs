@@ -88,7 +88,12 @@ public static class TaoTaiKhoanQuanTri
     /// trinh cai dat le ra tu dong hoan toan.
     ///
     /// Idempotent: goi lai voi cung ten thi tra ve dung giao xu cu, khong tao trung — script cai
-    /// dat duoc thiet ke de chay lai nhieu lan.
+    /// dat duoc thiet ke de chay lai nhieu lan, EVEN KHI DONG THOI nhieu ban chay cung luc
+    /// (vi du: nguoi van hanh chay lai install.sh khi lan chay truoc con chua hoan tat).
+    /// Bao ve bang advisory lock (khong UNIQUE constraint) vi ten giao xu trung nhau giua
+    /// cac giao phan la thuong (Vo Nhiem, Thanh Tam, v.v.); UNIQUE toan cuc se cam du lieu
+    /// hop le — xem HOP_DONG_MAY_CHU_CAP_NHAT.md muc 5 ve "khong bao gio xoa hay doi cac
+    /// duong dan cu cua may chu cap nhat".
     /// </summary>
     public static async Task<Guid> LayHoacTaoGiaoXu(
         QlgxDbContext db, string? giaoXuIdChuoi, string? giaoXuTen, bool taoNeuChuaCo)
@@ -101,20 +106,44 @@ public static class TaoTaiKhoanQuanTri
             return id;
         }
 
-        var daCo = await db.GiaoXu.FirstOrDefaultAsync(g => g.TenGiaoXu == giaoXuTen);
-        if (daCo is not null) return daCo.Id;
+        // Bao ve nhanh TEN bang advisory lock cua PostgreSQL de dam bao idempotent dang dong
+        // thoi: chi MOT tien trinh trai qua "kiem tra ton tai + tao neu chua co" o mot lan.
+        // So khoa 725190002 (duy nhat trong pham vi ung dung, KHAC khoa migration 725190001).
+        const long KhoaTaoGiaoXuAdvisory = 725_190_002;
+        var ketNoi = db.Database.GetDbConnection();
+        if (ketNoi.State != System.Data.ConnectionState.Open)
+            await ketNoi.OpenAsync();
+        try
+        {
+            await using (var khoa = ketNoi.CreateCommand())
+            {
+                khoa.CommandText = $"SELECT pg_advisory_lock({KhoaTaoGiaoXuAdvisory})";
+                await khoa.ExecuteNonQueryAsync();
+            }
 
-        if (!taoNeuChuaCo)
-            throw new InvalidOperationException(
-                $"Khong tim thay giao xu ten '{giaoXuTen}'. Dat QLGX_ADMIN_TAO_GIAO_XU_NEU_CHUA_CO=true " +
-                "neu muon tu tao moi giao xu nay.");
+            // Kiem tra lai sau khi co khoa — co the mot tien trinh khac vua tao xong trong
+            // khoang thoi gian tap chung (danh banh khoa la co the xay ra).
+            var daCo = await db.GiaoXu.FirstOrDefaultAsync(g => g.TenGiaoXu == giaoXuTen);
+            if (daCo is not null) return daCo.Id;
 
-        // MaGiaoXuCu la so nguyen ke thua tu Access, khong tu tang o CSDL — tu tinh so ke tiep.
-        var maKeTiep = (await db.GiaoXu.MaxAsync(g => (int?)g.MaGiaoXuCu) ?? 0) + 1;
-        var moi = new GiaoXu { TenGiaoXu = giaoXuTen!, MaGiaoXuCu = maKeTiep };
-        db.GiaoXu.Add(moi);
-        await db.SaveChangesAsync();
-        Console.WriteLine($"Da tao giao xu moi '{giaoXuTen}' (MaGiaoXuCu={maKeTiep}).");
-        return moi.Id;
+            if (!taoNeuChuaCo)
+                throw new InvalidOperationException(
+                    $"Khong tim thay giao xu ten '{giaoXuTen}'. Dat QLGX_ADMIN_TAO_GIAO_XU_NEU_CHUA_CO=true " +
+                    "neu muon tu tao moi giao xu nay.");
+
+            // MaGiaoXuCu la so nguyen ke thua tu Access, khong tu tang o CSDL — tu tinh so ke tiep.
+            var maKeTiep = (await db.GiaoXu.MaxAsync(g => (int?)g.MaGiaoXuCu) ?? 0) + 1;
+            var moi = new GiaoXu { TenGiaoXu = giaoXuTen!, MaGiaoXuCu = maKeTiep };
+            db.GiaoXu.Add(moi);
+            await db.SaveChangesAsync();
+            Console.WriteLine($"Da tao giao xu moi '{giaoXuTen}' (MaGiaoXuCu={maKeTiep}).");
+            return moi.Id;
+        }
+        finally
+        {
+            await using var moKhoa = ketNoi.CreateCommand();
+            moKhoa.CommandText = $"SELECT pg_advisory_unlock({KhoaTaoGiaoXuAdvisory})";
+            await moKhoa.ExecuteNonQueryAsync();
+        }
     }
 }
