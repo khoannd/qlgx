@@ -15,8 +15,16 @@ namespace Qlgx.Api.Printing;
 /// (họ tên, ghi chú tự do…) do người dùng nhập, không thoát đúng cách thì một cái tên kiểu
 /// <c>&lt;script&gt;</c> gõ nhầm/cố ý sẽ chèn được mã vào PDF xuất ra (dù rủi ro thấp vì PDF
 /// chỉ hiển thị cho chính người in, vẫn phải chặn cho đúng nguyên tắc).
+///
+/// KHÔNG `sealed` và <see cref="ApDung"/> là `virtual` CHỈ để bài test MauInDayDuBienTests thay
+/// được lớp này trong DI và ĐỌC ĐƯỢC tập khoá mà InAnService trao vào — cần thiết vì phép thay
+/// thế dưới đây XOÁ TRẮNG mọi <c>{{Key}}</c> không có trong <paramref name="duLieu"/> (xem ghi
+/// chú ở <see cref="ApDung"/>), nên nhìn HTML kết quả KHÔNG phân biệt được "biến có giá trị
+/// rỗng" với "biến bị quên hẳn". Mọi đường dựng mẫu đều chảy qua đúng hàm này
+/// (<see cref="Dung"/> cũng gọi lại nó), nên đây là chỗ chặn duy nhất cần thiết. KHÔNG thêm
+/// thành viên công khai nào mới.
 /// </summary>
-public sealed class BoDoMauIn
+public class BoDoMauIn
 {
     /// <summary>Tên giáo phận (đã chuẩn hoá — xem <see cref="ChuanHoaTenGiaoPhan"/>) ứng với
     /// mỗi thư mục mẫu riêng đã nhúng, để chọn mẫu theo giáo phận. Mặc định luôn là "Chung" khi
@@ -86,7 +94,7 @@ public sealed class BoDoMauIn
     /// HTML mẫu (KHÔNG đọc từ EmbeddedResource) — tách riêng để dùng cho "Xem thử" mẫu in tuỳ
     /// chỉnh (MauInService), nơi HTML mẫu là nội dung NHÁP người dùng đang gõ, chưa lưu, không
     /// tồn tại trong assembly. Tách hàm này ra thay vì lặp lại logic Regex.Replace ở hai nơi.</summary>
-    public string ApDung(string mauHtml, IReadOnlyDictionary<string, string?> duLieu,
+    public virtual string ApDung(string mauHtml, IReadOnlyDictionary<string, string?> duLieu,
         IReadOnlyDictionary<string, string?>? khoiHtmlAnToan = null)
     {
         return System.Text.RegularExpressions.Regex.Replace(mauHtml, @"\{\{(\w+)\}\}", m =>

@@ -152,4 +152,66 @@ public class RaoHonPhoiInAnTests(QlgxApiFactory app) : IClassFixture<QlgxApiFact
 
         res.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
+
+    // --- "In danh sách" (toolbar "Danh sách rao hôn phối", tương đương
+    // ReportRaoHP.ExportList/DanhSachRaoHonPhoi.xls) ------------------------------------------
+
+    [Fact]
+    public async Task In_danh_sach_rao_hon_phoi_xuat_thanh_cong_ke_ca_khi_khong_co_doi_rao_nao()
+    {
+        // Không tạo đôi rao nào riêng cho test này — chỉ cần xác nhận endpoint luôn trả 200
+        // (không phải 404) dù danh sách rỗng, đúng tinh thần "xuất Excel" đã có.
+        var res = await app.CreateAuthClient().GetAsync("/api/rao-hon-phoi/in/danh-sach?xemTatCa=true");
+
+        await VerifyPdf(res);
+    }
+
+    [Fact]
+    public async Task In_danh_sach_rao_hon_phoi_co_du_lieu_xuat_thanh_cong()
+    {
+        await TaoDoiRao(9020, 9021, 86, r =>
+        {
+            r.NgayRaoLan1 = new DateOnly(2024, 6, 1);
+            r.NgayRaoLan2 = new DateOnly(2024, 6, 8);
+            r.NgayRaoLan3 = new DateOnly(2024, 6, 15);
+        });
+
+        var res = await app.CreateAuthClient().GetAsync("/api/rao-hon-phoi/in/danh-sach");
+
+        await VerifyPdf(res);
+    }
+
+    /// <summary>"In danh sách" gọi thẳng <c>LayDanhSach</c> — bộ lọc chung của
+    /// <c>QlgxDbContext</c> áp dụng bình thường nên đôi rao của giáo xứ KHÁC không bao giờ lọt
+    /// vào PDF của giáo xứ hiện tại. Kiểm bằng cách đếm số dòng gián tiếp qua kích thước PDF:
+    /// thêm một bản ghi ở giáo xứ khác không được làm PDF nặng thêm.</summary>
+    [Fact]
+    public async Task In_danh_sach_rao_hon_phoi_khong_lan_sang_giao_xu_khac()
+    {
+        var resTruoc = await app.CreateAuthClient().GetAsync("/api/rao-hon-phoi/in/danh-sach?xemTatCa=true");
+        var bytesTruoc = await resTruoc.Content.ReadAsByteArrayAsync();
+
+        var giaoXuKhac = Guid.NewGuid();
+        await using (var db = app.TaoContextThuan())
+        {
+            db.GiaoXu.Add(new GiaoXu { Id = giaoXuKhac, TenGiaoXu = "Giao xu khac DS Rao", MaGiaoXuCu = 993 });
+            var g1 = new GiaoDan { GiaoXuId = giaoXuKhac, MaGiaoDanCu = 9022, HoTen = "DS Xu Khac 1" };
+            var g2 = new GiaoDan { GiaoXuId = giaoXuKhac, MaGiaoDanCu = 9023, HoTen = "DS Xu Khac 2" };
+            db.AddRange(g1, g2);
+            db.RaoHonPhoi.Add(new RaoHonPhoi
+            {
+                GiaoXuId = giaoXuKhac, MaRaoHonPhoiCu = 87, TenRaoHonPhoi = "DS Doi Xu Khac",
+                GiaoDan1 = g1, GiaoDan2 = g2,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var resSau = await app.CreateAuthClient().GetAsync("/api/rao-hon-phoi/in/danh-sach?xemTatCa=true");
+        var bytesSau = await resSau.Content.ReadAsByteArrayAsync();
+
+        // Không so bằng tuyệt đối (NgayThangNamIn có giờ:phút, PDF có thể lệch vài byte metadata
+        // giữa hai lần gọi) — chỉ cần xác nhận KHÔNG có thêm một dòng đầy đủ (chênh > 50 byte,
+        // đủ để phát hiện một dòng <tr> mới nếu vô tình lọt qua bộ lọc).
+        Math.Abs(bytesSau.Length - bytesTruoc.Length).Should().BeLessThan(50);
+    }
 }

@@ -7,8 +7,12 @@ namespace Qlgx.Api.Dtos;
 /// đúng ba giá trị: "MacDinh" (chưa ai tuỳ chỉnh — đang dùng mẫu gốc nhúng cứng), "TuyChinhHeThong"
 /// (Quản trị hệ thống đã đặt mẫu chung, giáo xứ này chưa tự tuỳ chỉnh riêng), "TuyChinhGiaoXu"
 /// (giáo xứ này đã có mẫu riêng, ưu tiên cao nhất).</summary>
+/// <paramref name="ChoTrong"/> là những <c>{{Key}}</c> mẫu GỐC đang dùng thật;
+/// <paramref name="BienKhaDung"/> là SIÊU TẬP của nó — mọi biến người dùng được phép chèn thêm,
+/// kèm nhóm để gom trong combobox (xem <see cref="BienMauIn"/>).
 public record MauInDanhSachItemDto(
-    string TenMau, string TenHienThi, string CapDangDung, IReadOnlyList<ChoTrongMauIn> ChoTrong);
+    string TenMau, string TenHienThi, string CapDangDung, IReadOnlyList<ChoTrongMauIn> ChoTrong,
+    IReadOnlyList<BienMauIn> BienKhaDung);
 
 /// <summary>Chi tiết một mẫu tuỳ chỉnh (giáo xứ hoặc hệ thống) để mở trong trình soạn thảo.
 /// <paramref name="DaTuyChinh"/> false nghĩa là chưa có dòng tuỳ chỉnh nào — <paramref
@@ -16,7 +20,8 @@ public record MauInDanhSachItemDto(
 /// phải ô trống), <paramref name="RowVersion"/> là 0 (giá trị canh dấu "chưa tồn tại", Lưu lần
 /// đầu sẽ TẠO MỚI thay vì cập nhật).</summary>
 public record MauInChiTietDto(string TenMau, string TenHienThi, bool DaTuyChinh,
-    string NoiDungHtml, uint RowVersion, IReadOnlyList<ChoTrongMauIn> ChoTrong);
+    string NoiDungHtml, uint RowVersion, IReadOnlyList<ChoTrongMauIn> ChoTrong,
+    IReadOnlyList<BienMauIn> BienKhaDung);
 
 public record LuuMauInRequest(string NoiDungHtml, uint RowVersion);
 

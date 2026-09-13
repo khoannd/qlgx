@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Qlgx.Data;
@@ -11,9 +12,11 @@ using Qlgx.Data;
 namespace Qlgx.Data.Migrations
 {
     [DbContext(typeof(QlgxDbContext))]
-    partial class QlgxDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260913052303_ThemCachHienThiDungSai")]
+    partial class ThemCachHienThiDungSai
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -81,27 +84,6 @@ namespace Qlgx.Data.Migrations
                         .HasDatabaseName("ix_bi_tich_chi_tiet_giao_xu_id_dot_bi_tich_id_giao_dan_id");
 
                     b.ToTable("bi_tich_chi_tiet");
-                });
-
-            modelBuilder.Entity("Qlgx.Domain.Entities.BoDemHieuLuc", b =>
-                {
-                    b.Property<Guid>("GiaoXuId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("giao_xu_id");
-
-                    b.Property<Guid>("Epoch")
-                        .HasColumnType("uuid")
-                        .HasColumnName("epoch");
-
-                    b.Property<long>("SoTiepTheo")
-                        .HasColumnType("bigint")
-                        .HasColumnName("so_tiep_theo");
-
-                    b.HasKey("GiaoXuId")
-                        .HasName("pk_bo_dem_hieu_luc");
-
-                    b.ToTable("bo_dem_hieu_luc");
                 });
 
             modelBuilder.Entity("Qlgx.Domain.Entities.BoDemMa", b =>

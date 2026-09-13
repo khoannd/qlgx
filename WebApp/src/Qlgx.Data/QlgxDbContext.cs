@@ -50,6 +50,12 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
     /// vấn lọc tường minh trong MauInService.</summary>
     public DbSet<MauInTuyChinh> MauInTuyChinh => Set<MauInTuyChinh>();
 
+    /// <summary>Câu chữ tuỳ chỉnh cho các biến in đúng/sai (xem quan-ly-mau-in.md) — CỐ Ý không
+    /// có bộ lọc toàn cục theo GiaoXuId, y hệt <see cref="MauInTuyChinh"/> ngay trên và vì đúng
+    /// cùng một lý do (NULL ở đây nghĩa là "ánh xạ cấp hệ thống", không phải "không lọc giáo xứ
+    /// nào"). Mọi truy vấn lọc tường minh trong CachHienThiDungSaiService và InAnService.</summary>
+    public DbSet<CachHienThiDungSai> CachHienThiDungSai => Set<CachHienThiDungSai>();
+
     // --- Trên cấp giáo xứ, không có GiaoXuId (xem GiaoPhan.cs, GiaoHat.cs) ---
     public DbSet<GiaoPhan> GiaoPhan => Set<GiaoPhan>();
     public DbSet<GiaoHat> GiaoHat => Set<GiaoHat>();

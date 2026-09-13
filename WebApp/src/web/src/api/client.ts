@@ -12,7 +12,7 @@ import type {
   ChuyenHoGiaoDanXemTruoc, ChuyenHoGiaoDanKetQua, ChuyenHoGiaDinhXemTruoc, ChuyenHoGiaDinhKetQua,
   ChuanHoaXemTruoc, ChuanHoaKetQua, TaoDotBiTichXemTruoc, TaoDotBiTichKetQua,
   BangTimThayThe, TimThayTheXemTruoc, TimThayTheKetQua,
-  MauInDanhSachItem, MauInChiTiet,
+  MauInDanhSachItem, MauInChiTiet, CachHienThiDungSaiItem,
 } from './types'
 import { authStore } from './authStore'
 
@@ -552,6 +552,10 @@ export const api = {
     /** "In kết quả rao hôn phối" (RaoHonPhoiDetail.tsx) — tương đương
      * ReportRaoHP.Export(ds, printRS: true)/KQRaoHonPhoi.doc, xem in-an.md mục 8. */
     inKetQua: (id: string) => taiTepIn(`/api/rao-hon-phoi/${id}/in/ket-qua`, 'KQRaoHonPhoi.pdf'),
+    /** "In danh sách" (toolbar "Danh sách rao hôn phối") — tương đương
+     * ReportRaoHP.ExportList/DanhSachRaoHonPhoi.xls, CÙNG tham số lọc `xemTatCa` với `danhSach()`. */
+    inDanhSach: (xemTatCa?: boolean) =>
+      taiTepIn(`/api/rao-hon-phoi/in/danh-sach${xemTatCa ? '?xemTatCa=true' : ''}`, 'DanhSachRaoHonPhoi.pdf'),
   },
   danhMuc: {
     // Danh sách "Tên thánh" tĩnh (bảng `du_lieu_chung`, 343 dòng đã chuyển từ Access) — một
@@ -856,6 +860,26 @@ export const api = {
       luu: (tenMau: string, noiDungHtml: string, rowVersion: number) =>
         goi<void>(`/api/mau-in/${tenMau}/he-thong`, { method: 'PUT', body: JSON.stringify({ noiDungHtml, rowVersion }) }),
       khoiPhuc: (tenMau: string) => goi<void>(`/api/mau-in/${tenMau}/he-thong`, { method: 'DELETE' }),
+    },
+  },
+  /** Khu vực "Cách hiển thị dữ liệu đúng/sai" của màn hình "Quản lý mẫu in" — một lượt GET trả
+   * đủ cả 5 biến kèm CẢ HAI cấp (xem CachHienThiDungSaiItemDto), nên không có route GET riêng
+   * theo cấp như `mauIn`. */
+  cachHienThi: {
+    danhSach: () => goi<CachHienThiDungSaiItem[]>('/api/cach-hien-thi'),
+    rieng: {
+      luu: (tenBien: string, khiDung: string, khiSai: string, rowVersion: number) =>
+        goi<void>(`/api/cach-hien-thi/${tenBien}/rieng`,
+          { method: 'PUT', body: JSON.stringify({ khiDung, khiSai, rowVersion }) }),
+      khoiPhuc: (tenBien: string) =>
+        goi<void>(`/api/cach-hien-thi/${tenBien}/rieng`, { method: 'DELETE' }),
+    },
+    heThong: {
+      luu: (tenBien: string, khiDung: string, khiSai: string, rowVersion: number) =>
+        goi<void>(`/api/cach-hien-thi/${tenBien}/he-thong`,
+          { method: 'PUT', body: JSON.stringify({ khiDung, khiSai, rowVersion }) }),
+      khoiPhuc: (tenBien: string) =>
+        goi<void>(`/api/cach-hien-thi/${tenBien}/he-thong`, { method: 'DELETE' }),
     },
   },
 }

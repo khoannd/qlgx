@@ -15,8 +15,17 @@ namespace Qlgx.Api.Printing;
 ///
 /// Khởi tạo trễ (lazy) và có khoá (SemaphoreSlim) để hai yêu cầu in đến cùng lúc khi trình
 /// duyệt CHƯA khởi động không cùng đua nhau gọi LaunchAsync hai lần.
+///
+/// KHÔNG `sealed` và <see cref="XuatPdfAsync"/> là `virtual` CHỈ vì một lý do: bài test
+/// MauInDayDuBienTests cần xem CHUỖI HTML cuối cùng trước khi vẽ PDF (PDF là nhị phân, không
+/// kiểm được còn sót "{{Key}}" nào hay không). Đây là chỗ hẹp nhất để chặn: MỌI mẫu in của mọi
+/// màn hình đều đi qua đúng hàm này. Lựa chọn này được cân nhắc so với hai phương án khác và
+/// được chọn vì ít xâm lấn nhất: (a) mở `public` các hàm dựng HTML của InAnService — thêm API
+/// công khai chỉ để test, bị cấm; (b) tách một `IBoTrinhDuyet` — phải sửa mọi nơi tiêm kiểu cụ
+/// thể, thêm một trừu tượng mà sản phẩm không cần. Ở đây KHÔNG thêm thành viên công khai nào
+/// mới, chỉ cho phép thay thế trong DI lúc chạy test.
 /// </summary>
-public sealed class BoTrinhDuyet : IAsyncDisposable
+public class BoTrinhDuyet : IAsyncDisposable
 {
     private readonly SemaphoreSlim _khoa = new(1, 1);
     private IPlaywright? _playwright;
@@ -59,7 +68,7 @@ public sealed class BoTrinhDuyet : IAsyncDisposable
     /// InAnService.XuatPhieuGiaDinh và in-an.md mục 5c/8. Chỉ hai giá trị "A4"/"A3" được endpoint
     /// chấp nhận (kiểm tra ở tầng endpoint, xem GiaDinhEndpoints) — tham số này không tự kiểm
     /// tra vì Playwright ném lỗi rõ ràng nếu nhận chuỗi khổ giấy không hợp lệ.</summary>
-    public async Task<byte[]> XuatPdfAsync(string html, CancellationToken ct, bool landscape = false, string khoGiay = "A4")
+    public virtual async Task<byte[]> XuatPdfAsync(string html, CancellationToken ct, bool landscape = false, string khoGiay = "A4")
     {
         var trinhDuyet = await LayTrinhDuyet(ct);
         // Tắt JavaScript VÀ chặn mọi yêu cầu mạng — bắt buộc kể từ khi mẫu in có thể do

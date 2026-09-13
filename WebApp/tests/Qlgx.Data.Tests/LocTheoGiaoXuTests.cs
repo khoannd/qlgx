@@ -70,10 +70,10 @@ public class LocTheoGiaoXuTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieu
              "CauHinh", "DuLieuChung", "VaiTro", "TenLoaiTaiKhoan", "TaiKhoan",
              "DotBiTich", "BiTichChiTiet", "ChuyenXu", "RaoHonPhoi", "TanHien", "LinhMuc",
              "KhoiGiaoLy", "LopGiaoLy", "ChiTietLopGiaoLy", "GiaoLyVien", "HoiDoan", "ChiTietHoiDoan",
-             "MauInTuyChinh"],
+             "MauInTuyChinh", "CachHienThiDungSai"],
             "danh sach bang co GiaoXuId phai duoc ra soat co y thuc moi khi thay doi, khong duoc troi qua im lang");
 
-        // MauInTuyChinh la NGOAI LE CO CHU DICH DUY NHAT: cot GiaoXuId cua no cho phep NULL voi
+        // HAI bang MauInTuyChinh va CachHienThiDungSai la NGOAI LE CO CHU DICH: cot GiaoXuId cho phep NULL voi
         // NGHIA NGHIEP VU RIENG ("mau tuy chinh cap he thong"), khac han y nghia "khong loc gi
         // ca" ma bo loc toan cuc dung NULL de dai dien (xem MauInTuyChinh.cs) — neu gan bo loc
         // toan cuc binh thuong ("BoiCanhGiaoXuId == null || GiaoXuId == BoiCanhGiaoXuId") thi
@@ -81,11 +81,15 @@ public class LocTheoGiaoXuTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieu
         // la mau ap dung chung), NHUNG boi canh "khong co giao xu" (cong cu chuyen doi du lieu)
         // cung se thay ca hai loai lan lon voi nhau. MauInService tu loc tuong minh
         // (GiaoXuId == boiCanh.GiaoXuId hoac GiaoXuId == null tuy endpoint), khong dua vao bo
-        // loc tu dong — day la ngoai le duy nhat duoc rao soat co y thuc, khong phai bo sot.
+        // loc tu dong — day la ngoai le duoc rao soat co y thuc, khong phai bo sot.
+        // CachHienThiDungSai (cau chu tuy chinh cho cac bien in dung/sai) dung y het khuon do:
+        // GiaoXuId NULL = "anh xa cap he thong", CachHienThiDungSaiService va
+        // InAnService.LayBangCachHienThi tu loc tuong minh. Xem CachHienThiDungSai.cs.
+        string[] ngoaiLeCoDongCapHeThong = ["MauInTuyChinh", "CachHienThiDungSai"];
         var thieuBoLoc = ungVien
             .Where(t => t.GetDeclaredQueryFilters().Count == 0)
             .Select(t => t.ClrType.Name)
-            .Where(ten => ten != "MauInTuyChinh")
+            .Where(ten => !ngoaiLeCoDongCapHeThong.Contains(ten))
             .ToList();
 
         thieuBoLoc.Should().BeEmpty(

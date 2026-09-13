@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Qlgx.Domain.Entities;
 
 namespace Qlgx.Api.Tests;
@@ -87,6 +88,67 @@ public class GiaoDanInAnTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory
         var bytesKhongAnh = await resKhongAnh.Content.ReadAsByteArrayAsync();
         var bytesCoAnh = await resCoAnh.Content.ReadAsByteArrayAsync();
         bytesCoAnh.Length.Should().BeGreaterThan(bytesKhongAnh.Length + 500);
+    }
+
+    /// <summary>Vá lỗ hổng so với bản desktop (xem so-sanh-mau-in-desktop.md): Website giáo xứ,
+    /// giáo họ cha (giáo họ lẻ trực thuộc giáo họ chính, GiaoHo.GiaoHoChaId — KHÔNG có navigation
+    /// property CLR, xem GiaoHoConfig), linh mục chánh xứ đương nhiệm (bảng LinhMuc, ChucVu +
+    /// DenNgay), và ghi chú hôn phối đều là truy vấn MỚI thêm vào DungHtmlLyLichCaNhan — bài test
+    /// này không so khớp nội dung PDF (nhị phân, xem class doc) mà xác nhận các truy vấn EF mới
+    /// không ném lỗi lúc chạy thật (rủi ro thật: sai kiểu Include/so sánh enum, lệch tên cột).</summary>
+    [Fact]
+    public async Task In_ly_lich_ca_nhan_khong_loi_khi_co_giao_ho_cha_chanh_xu_website_va_ghi_chu_hon_phoi()
+    {
+        await using (var db = app.TaoContextThuan())
+        {
+            var gx = await db.GiaoXu.SingleAsync(x => x.Id == app.GiaoXuId);
+            gx.Website = "https://gxvonhiem.example";
+            db.LinhMuc.Add(new LinhMuc
+            {
+                GiaoXuId = app.GiaoXuId, MaLinhMucCu = 9001, TenThanh = "Gioan", HoTen = "Nguyen Van Chanh",
+                ChucVu = "Chánh xứ", TuNgay = new DateOnly(2020, 1, 1), DenNgay = null,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        Guid giaoHoConId;
+        await using (var db = app.TaoContextThuan())
+        {
+            var cha = new GiaoHo { GiaoXuId = app.GiaoXuId, MaGiaoHoCu = 9501, TenGiaoHo = "Giáo họ Chính" };
+            db.GiaoHo.Add(cha);
+            await db.SaveChangesAsync();
+            var con = new GiaoHo
+            {
+                GiaoXuId = app.GiaoXuId, MaGiaoHoCu = 9502, TenGiaoHo = "Giáo họ Lẻ", GiaoHoChaId = cha.Id,
+            };
+            db.GiaoHo.Add(con);
+            await db.SaveChangesAsync();
+            giaoHoConId = con.Id;
+        }
+
+        var id = await TaoGiaoDan(app.GiaoXuId, 9120, "Nguoi Co Giao Ho Le");
+        var chongId = await TaoGiaoDan(app.GiaoXuId, 9121, "Vo Chong Cua Nguoi In");
+        await using (var db = app.TaoContextThuan())
+        {
+            var g = db.GiaoDan.Single(x => x.Id == id);
+            g.GiaoHoId = giaoHoConId;
+            var hp = new HonPhoi
+            {
+                GiaoXuId = app.GiaoXuId, MaHonPhoiCu = 9001, SoHonPhoi = "HP-9001",
+                GhiChu = "Ghi chú thử nghiệm hôn phối",
+            };
+            db.HonPhoi.Add(hp);
+            db.GiaoDanHonPhoi.AddRange(
+                new GiaoDanHonPhoi { GiaoXuId = app.GiaoXuId, HonPhoi = hp, GiaoDanId = id, SoThuTu = 1 },
+                new GiaoDanHonPhoi { GiaoXuId = app.GiaoXuId, HonPhoi = hp, GiaoDanId = chongId, SoThuTu = 2 });
+            await db.SaveChangesAsync();
+        }
+
+        var res = await app.CreateAuthClient().GetAsync($"/api/giao-dan/{id}/in/ly-lich-ca-nhan");
+
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var bytes = await res.Content.ReadAsByteArrayAsync();
+        Encoding.ASCII.GetString(bytes, 0, 5).Should().Be("%PDF-");
     }
 
     [Fact]

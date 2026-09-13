@@ -23,6 +23,7 @@ export function RaoHonPhoiList({ rows, xemTatCa, onDoiXemTatCa, moRao, onXoa, on
   const [trangThaiXoa, setTrangThaiXoa] = useState<'hoi' | 'dang-xoa' | null>(null)
   const [loiXoa, setLoiXoa] = useState<string | null>(null)
   const [dangXuatExcel, setDangXuatExcel] = useState(false)
+  const [dangIn, setDangIn] = useState(false)
 
   // "Xuất Excel" (xem docs/superpowers/specs/man-hinh/in-an.md mục 8) — CÙNG tham số lọc
   // `xemTatCa` đang áp dụng trên màn hình, giống cách GiaoDanList/GiaDinhList đã làm.
@@ -35,6 +36,21 @@ export function RaoHonPhoiList({ rows, xemTatCa, onDoiXemTatCa, moRao, onXoa, on
       window.alert(e instanceof Error ? e.message : 'Xuất Excel thất bại, thử lại sau.')
     } finally {
       setDangXuatExcel(false)
+    }
+  }
+
+  // "In danh sách" — CÙNG lý do/tham số với "Xuất Excel" ở trên (gọi thẳng máy chủ với đúng bộ
+  // lọc đang áp dụng, xem InAnService.XuatDanhSachRaoHonPhoi) nhưng ra PDF khổ ngang thay vì
+  // .xlsx, tương đương ReportRaoHP.ExportList/DanhSachRaoHonPhoi.xls ở bản desktop.
+  async function inDanhSach() {
+    setDangIn(true)
+    try {
+      await api.raoHonPhoi.inDanhSach(xemTatCa)
+    } catch (e) {
+      console.error('Không in được danh sách rao hôn phối', e)
+      window.alert(e instanceof Error ? e.message : 'In thất bại, thử lại sau.')
+    } finally {
+      setDangIn(false)
     }
   }
 
@@ -73,6 +89,9 @@ export function RaoHonPhoiList({ rows, xemTatCa, onDoiXemTatCa, moRao, onXoa, on
             { label: dangXuatExcel ? 'Đang xuất…' : 'Xuất Excel', icon: 'excel',
               onClick: dangXuatExcel ? undefined : () => { void xuatExcel() },
               title: 'Xuất danh sách đang hiện trên lưới ra tệp Excel (.xlsx)' },
+            { label: dangIn ? 'Đang in…' : 'In danh sách', icon: 'print',
+              onClick: dangIn ? undefined : () => { void inDanhSach() },
+              title: 'In danh sách đang hiện trên lưới ra PDF' },
           ]}
         />
 

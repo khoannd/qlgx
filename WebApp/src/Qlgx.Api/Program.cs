@@ -108,6 +108,8 @@ builder.Services.AddSingleton<Qlgx.Api.Printing.BoDoMauIn>();
 builder.Services.AddScoped<InAnService>();
 // "Quan ly mau in" (nang luc MOI, xem quan-ly-mau-in.md) — Scoped vi phu thuoc QlgxDbContext.
 builder.Services.AddScoped<MauInService>();
+// "Cach hien thi du lieu dung/sai" — cung man hinh "Quan ly mau in", cung ly do Scoped.
+builder.Services.AddScoped<CachHienThiDungSaiService>();
 
 var app = builder.Build();
 

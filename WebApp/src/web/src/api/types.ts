@@ -778,8 +778,15 @@ export type BieuDoDoTuoi = {
 
 // --- "Quản lý mẫu in" (năng lực MỚI, xem quan-ly-mau-in.md) -------------------------------
 
-/** Ánh xạ 1-1 với ChoTrongMauIn phía máy chủ — một chỗ trống {{Key}} khả dụng trên một mẫu. */
+/** Ánh xạ 1-1 với ChoTrongMauIn phía máy chủ — một chỗ trống {{Key}} mẫu GỐC đang dùng thật. */
 export type ChoTrongMauIn = { key: string; nhan: string }
+
+/**
+ * Ánh xạ 1-1 với BienMauIn phía máy chủ — một biến người dùng ĐƯỢC PHÉP chèn vào mẫu. Tập này là
+ * SIÊU TẬP của `choTrong` (mẫu gốc không dùng hết mọi dữ liệu có sẵn); `nhom` dùng để gom mục
+ * thành <optgroup> trong combobox "Chèn chỗ trống" vì danh sách dài tới 80+ mục.
+ */
+export type BienMauIn = { key: string; nhan: string; nhom: string }
 
 /** Ánh xạ 1-1 với MauInDanhSachItemDto — một dòng danh sách 13 mẫu in. */
 export type MauInDanhSachItem = {
@@ -787,6 +794,7 @@ export type MauInDanhSachItem = {
   tenHienThi: string
   capDangDung: 'MacDinh' | 'TuyChinhHeThong' | 'TuyChinhGiaoXu'
   choTrong: ChoTrongMauIn[]
+  bienKhaDung: BienMauIn[]
 }
 
 /** Ánh xạ 1-1 với MauInChiTietDto. */
@@ -797,6 +805,31 @@ export type MauInChiTiet = {
   noiDungHtml: string
   rowVersion: number
   choTrong: ChoTrongMauIn[]
+  bienKhaDung: BienMauIn[]
+}
+
+/** Ánh xạ 1-1 với CachHienThiCapDto — câu chữ đã đặt ở MỘT cấp (riêng giáo xứ, hoặc hệ thống).
+ * `daTuyChinh` false nghĩa là cấp đó chưa đặt gì: `khiDung`/`khiSai` là null và `rowVersion` là 0
+ * (quy ước "chưa tồn tại", lần lưu đầu sẽ tạo mới thay vì báo xung đột). */
+export type CachHienThiCap = {
+  daTuyChinh: boolean
+  khiDung: string | null
+  khiSai: string | null
+  rowVersion: number
+}
+
+/** Ánh xạ 1-1 với CachHienThiDungSaiItemDto — một biến đúng/sai trên khu vực "Cách hiển thị dữ
+ * liệu đúng/sai" của màn hình "Quản lý mẫu in". `khiDungDangDung`/`khiSaiDangDung` là câu chữ
+ * ĐANG THẬT SỰ in ra giấy sau khi phân giải giáo xứ → hệ thống → mặc định gốc ("[x]"/"[  ]"). */
+export type CachHienThiDungSaiItem = {
+  tenBien: string
+  nhan: string
+  nhom: string
+  khiDungDangDung: string | null
+  khiSaiDangDung: string | null
+  capDangDung: 'MacDinh' | 'TuyChinhHeThong' | 'TuyChinhGiaoXu'
+  rieng: CachHienThiCap
+  heThong: CachHienThiCap
 }
 
 export type BieuDoGiaoHo = { tenGiaoHo: string; soLuong: number }

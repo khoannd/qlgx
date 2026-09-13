@@ -28,15 +28,15 @@ public class MauInTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     }
 
     [Fact]
-    public async Task Danh_sach_co_du_13_mau_va_bao_dung_cap_dang_dung()
+    public async Task Danh_sach_co_du_14_mau_va_bao_dung_cap_dang_dung()
     {
         var res = await app.CreateAuthClient().GetAsync("/api/mau-in");
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         var ds = await res.Content.ReadFromJsonAsync<List<MauInDanhSachItemDto>>();
 
-        ds!.Should().HaveCount(12); // 12 TenMau — "Phiếu gia đình A3" dùng chung TenMau "PhieuGiaDinh".
+        ds!.Should().HaveCount(13); // 13 TenMau — "Phiếu gia đình A3" dùng chung TenMau "PhieuGiaDinh".
         ds!.Should().OnlyContain(m => m.CapDangDung == "MacDinh");
-        ds!.Sum(m => m.ChoTrong.Count).Should().Be(238, "đúng tổng 238 chỗ trống đã đếm bằng grep");
+        ds!.Sum(m => m.ChoTrong.Count).Should().Be(252, "238 gốc + 9 chỗ trống vá lỗ hổng so với desktop (WebsiteGiaoXu, GhiChuHonPhoi, TenChanhXu) + 5 chỗ trống mẫu mới DanhSachRaoHonPhoi");
     }
 
     [Fact]

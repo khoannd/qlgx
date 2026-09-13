@@ -22,11 +22,148 @@ public record KetQuaInAn(byte[] NoiDung, string TenTep);
 /// </summary>
 public class InAnService(
     QlgxDbContext db, IBoiCanhGiaoXu boiCanh, BoDoMauIn mau, BoTrinhDuyet trinhDuyet,
-    GiaDinhService giaDinhDv, GiaoDanService giaoDanDv)
+    GiaDinhService giaDinhDv, GiaoDanService giaoDanDv, RaoHonPhoiService raoHonPhoiDv)
 {
     private static string Ngay(DateOnly? d) => VanBanInAn.Ngay(d);
 
-    private static string Dau(bool coDau) => coDau ? "[x]" : "[  ]";
+    /// <summary>Bảng câu chữ đúng/sai đã phân giải, NHỚ LẠI cho cả lượt in. InAnService đăng ký
+    /// Scoped (xem Program.cs) nên một thực thể phục vụ đúng MỘT yêu cầu HTTP, tức đúng một lượt
+    /// in — nhớ ở đây chính là "nạp một lần cho mỗi lượt in", không có chuyện rò rỉ bảng của giáo
+    /// xứ này sang yêu cầu của giáo xứ khác.
+    ///
+    /// CẠM BẪY HIỆU NĂNG, ĐỪNG BỎ TRƯỜNG NÀY: <see cref="DungHtmlLyLichCaNhan"/> chạy LẶP cho
+    /// TỪNG thành viên khi in lý lịch cả gia đình (<see cref="XuatLyLichCaNhanGiaDinh"/>). Tra
+    /// CSDL bên trong đó sẽ thành (số thành viên) truy vấn, và nếu tra theo từng biến thì còn
+    /// nhân thêm 5 lần nữa. Với trường này, cả lượt in tốn đúng MỘT truy vấn dù in cho bao nhiêu
+    /// người.</summary>
+    private BangCachHienThi? _bangCachHienThi;
+
+    /// <summary>Nạp và phân giải bảng câu chữ đúng/sai theo đúng thứ tự "giáo xứ đang đăng nhập →
+    /// cấp hệ thống → mặc định gốc [x]/[  ]" — cùng một thứ tự với <see cref="DungMau"/>, cố ý
+    /// giống hệt để người dùng chỉ phải hiểu MỘT quy tắc ưu tiên cho cả màn hình.
+    ///
+    /// Phân giải theo TỪNG BIẾN chứ không theo cả bảng: giáo xứ đặt riêng mỗi biến TanTong thì 4
+    /// biến còn lại vẫn giữ nguyên ánh xạ hệ thống (hoặc mặc định gốc) — xem BangCachHienThi.
+    ///
+    /// Giáo xứ chưa tuỳ chỉnh gì thì cả hai truy vấn không trả dòng nào, bảng rỗng, và
+    /// <c>BangCachHienThi.Dau</c> trả đúng "[x]"/"[  ]" như hàm <c>Dau(bool)</c> static cũ —
+    /// tương thích ngược tuyệt đối, có bài test khẳng định (CachHienThiDungSaiTests).</summary>
+    private async Task<BangCachHienThi> LayBangCachHienThi(CancellationToken ct)
+    {
+        if (_bangCachHienThi is not null) return _bangCachHienThi;
+
+        var gxId = boiCanh.GiaoXuId;
+        // MỘT truy vấn lấy cả hai cấp (dòng của giáo xứ này + dòng hệ thống GiaoXuId NULL), rồi
+        // phân giải trong bộ nhớ. Bảng cach_hien_thi_dung_sai KHÔNG có bộ lọc toàn cục theo
+        // GiaoXuId (xem CachHienThiDungSai.cs) nên điều kiện dưới đây là bộ lọc DUY NHẤT — phải
+        // tường minh, và tuyệt đối không được nới rộng.
+        var dong = await db.CachHienThiDungSai.AsNoTracking()
+            .Where(x => x.GiaoXuId == gxId || x.GiaoXuId == null)
+            .Select(x => new { x.GiaoXuId, x.TenBien, x.KhiDung, x.KhiSai })
+            .ToListAsync(ct);
+
+        // Giáo xứ THẮNG hệ thống, đặt bằng hai lượt ghi theo thứ tự: rải dòng hệ thống trước,
+        // rồi để dòng riêng của giáo xứ ghi đè lên. Biến nào không có dòng nào thì vắng mặt khỏi
+        // từ điển và BangCachHienThi.Dau tự rơi về mặc định gốc.
+        var anhXa = new Dictionary<string, (string? KhiDung, string? KhiSai)>();
+        foreach (var d in dong.Where(x => x.GiaoXuId is null))
+            anhXa[d.TenBien] = (d.KhiDung, d.KhiSai);
+        foreach (var d in dong.Where(x => x.GiaoXuId is not null))
+            anhXa[d.TenBien] = (d.KhiDung, d.KhiSai);
+
+        return _bangCachHienThi = new BangCachHienThi(anhXa);
+    }
+
+    /// <summary>Mã gia đình hiển thị trên giấy tờ: ưu tiên mã do giáo xứ tự nhập
+    /// (<c>MaGiaDinhRieng</c>, bật bằng cấu hình TUNHAP_MAGIADINH), không có thì dùng mã gốc.
+    /// Tách thành hàm dùng chung vì nay có ba mẫu cần (Phiếu gia đình, Giới thiệu chuyển xứ,
+    /// và biến {{MaGiaDinh}} thêm vào Lý lịch cá nhân).</summary>
+    private static string MaGiaDinh(GiaDinh gd) => gd.MaGiaDinhRieng ?? gd.MaGiaDinhCu.ToString();
+
+    // --- Biến NGƯỜI DÙNG TỰ CHÈN (MauInCatalog.BienKhaDung) ---------------------------------
+    //
+    // Các nhóm giá trị dưới đây KHÔNG có trong mẫu gốc nào cả — thêm vào dictionary `duLieu` là
+    // vô hại (BoDoMauIn.ApDung chỉ thay {{Key}} CÓ MẶT trong HTML, nên kết quả in của mọi mẫu
+    // gốc không đổi một ký tự) nhưng BẮT BUỘC phải có: MauInCatalog công bố các khoá này cho
+    // combobox "Chèn chỗ trống", và bài test MauInDayDuBienTests dựng một mẫu chứa TẤT CẢ biến
+    // rồi in thật để chứng minh không khoá nào bị bỏ quên. Mọi giá trị đều lấy từ thực thể ĐÃ
+    // NẠP ở nơi gọi — không hàm nào dưới đây chạm CSDL, nên không sinh truy vấn N+1.
+
+    private static Dictionary<string, string?> NhanThanThem(GiaoDan g) => new()
+    {
+        ["MaGiaoDan"] = g.MaGiaoDanCu.ToString(),
+        ["Phai"] = g.Phai,
+        ["CMND"] = g.CMND,
+        ["DanToc"] = g.DanToc,
+        ["NgheNghiep"] = g.NgheNghiep,
+        ["ThuocGiaoXu"] = g.ThuocGiaoXu,
+        ["ThuocGiaoPhan"] = g.ThuocGiaoPhan,
+        ["GhiChuGiaoDan"] = g.GhiChu,
+        ["DienThoaiGiaoDan"] = g.DienThoai,
+        ["EmailGiaoDan"] = g.Email,
+    };
+
+    private static Dictionary<string, string?> RuaToiRoi(GiaoDan g) => new()
+    {
+        ["SoRuaToi"] = g.SoRuaToi,
+        ["NgayRuaToi"] = Ngay(g.NgayRuaToi),
+        ["NoiRuaToi"] = g.NoiRuaToi,
+        ["ChaRuaToi"] = g.ChaRuaToi,
+        ["NguoiDoDauRuaToi"] = g.NguoiDoDauRuaToi,
+    };
+
+    private static Dictionary<string, string?> RuocLeRoi(GiaoDan g) => new()
+    {
+        ["SoRuocLe"] = g.SoRuocLe,
+        ["NgayRuocLe"] = Ngay(g.NgayRuocLe),
+        ["NoiRuocLe"] = g.NoiRuocLe,
+        ["ChaRuocLe"] = g.ChaRuocLe,
+    };
+
+    private static Dictionary<string, string?> ThemSucRoi(GiaoDan g) => new()
+    {
+        ["SoThemSuc"] = g.SoThemSuc,
+        ["NgayThemSuc"] = Ngay(g.NgayThemSuc),
+        ["NoiThemSuc"] = g.NoiThemSuc,
+        ["ChaThemSuc"] = g.ChaThemSuc,
+        ["NguoiDoDauThemSuc"] = g.NguoiDoDauThemSuc,
+    };
+
+    private static Dictionary<string, string?> GiaoLyThem(GiaoDan g) => new()
+    {
+        ["NgayBD1"] = Ngay(g.NgayBD1), ["NoiBD1"] = g.NoiBD1,
+        ["NgayBD2"] = Ngay(g.NgayBD2), ["NoiBD2"] = g.NoiBD2,
+        ["NgayTHVaoDoi"] = Ngay(g.NgayTHVaoDoi), ["NoiTHVaoDoi"] = g.NoiTHVaoDoi,
+        ["NgayGLHN1"] = Ngay(g.NgayGLHN1), ["NgayGLHN2"] = Ngay(g.NgayGLHN2),
+        ["NoiGLHN"] = g.NoiGLHN, ["NguoiChungNhanGLHN"] = g.NguoiChungNhanGLHN,
+        ["XepLoaiGLHN"] = g.XepLoaiGLHN,
+    };
+
+    /// <summary>Các biến thêm của một GIA ĐÌNH — dùng chung cho "Phiếu gia đình" và "Giới thiệu
+    /// chuyển xứ" (hai mẫu duy nhất có ngữ cảnh gia đình đầy đủ).</summary>
+    private static Dictionary<string, string?> GiaDinhThem(GiaDinh gd, int soThanhVien, BangCachHienThi bang) => new()
+    {
+        ["MaGiaDinhCu"] = gd.MaGiaDinhCu.ToString(),
+        ["SoHoKhau"] = gd.SoHoKhau,
+        ["DienGiaDinh"] = gd.DienGiaDinh,
+        ["SoLuongThanhVien"] = soThanhVien.ToString(),
+        ["DaChuyenXu"] = bang.Dau("DaChuyenXu", gd.DaChuyenXu),
+        ["NgayChuyen"] = Ngay(gd.NgayChuyen),
+        ["NoiChuyen"] = gd.NoiChuyen,
+    };
+
+    /// <summary>Hôn phối dạng RỜI (mẫu gốc "Phiếu gia đình" chỉ in câu ghép {{MoTaHonPhoi}}).</summary>
+    private static Dictionary<string, string?> HonPhoiRoi(HonPhoi? hp) => new()
+    {
+        ["SoHonPhoi"] = hp?.SoHonPhoi,
+        ["NgayHonPhoi"] = Ngay(hp?.NgayHonPhoi),
+        ["NoiHonPhoi"] = hp?.NoiHonPhoi,
+        ["ChaHonPhoi"] = hp?.LinhMucChung,
+        ["CachThucHonPhoi"] = hp?.CachThucHonPhoi,
+        ["NguoiChung1"] = hp?.NguoiChung1,
+        ["NguoiChung2"] = hp?.NguoiChung2,
+        ["GhiChuHonPhoi"] = hp?.GhiChu,
+    };
 
     /// <summary>Khối HTML thô (KHÔNG qua HtmlEncoder — xem BoDoMauIn.Dung) cho ô ảnh đại diện
     /// trên mẫu in (Task 1.2 VIEC-TIEP-THEO.md) — an toàn để chèn nguyên văn vì tự dựng hoàn
@@ -90,6 +227,7 @@ public class InAnService(
         ["DiaChiGiaoXu"] = string.IsNullOrWhiteSpace(giaoXu.DiaChi) ? "" : $" — {giaoXu.DiaChi}",
         ["DienThoaiGiaoXu"] = string.IsNullOrWhiteSpace(giaoXu.DienThoai) ? "" : $" — ĐT: {giaoXu.DienThoai}",
         ["EmailGiaoXu"] = string.IsNullOrWhiteSpace(giaoXu.Email) ? "" : $" — Email: {giaoXu.Email}",
+        ["WebsiteGiaoXu"] = string.IsNullOrWhiteSpace(giaoXu.Website) ? "" : $" — Website: {giaoXu.Website}",
     };
 
     /// <summary>Xuất PDF "Lý lịch cá nhân" cho một giáo dân — tương đương
@@ -154,13 +292,26 @@ public class InAnService(
     /// một trang HTML đã dựng xong (mẫu LyLichCaNhan.html không có thuộc tính nào trên hai thẻ
     /// này) — dùng để ghép nhiều trang "lý lịch cá nhân" độc lập thành MỘT tài liệu nhiều trang
     /// khi in cho cả gia đình (xem <see cref="XuatLyLichCaNhanGiaDinh"/>), không cần thêm một
-    /// mẫu HTML thứ hai chỉ để lặp lại toàn bộ CSS/bố cục đã có.</summary>
+    /// mẫu HTML thứ hai chỉ để lặp lại toàn bộ CSS/bố cục đã có.
+    ///
+    /// KHÔNG phải mẫu nào cũng có vỏ <c>&lt;body&gt;</c>: mẫu tuỳ chỉnh do giáo xứ/quản trị hệ
+    /// thống lưu đã đi qua HtmlSanitizer, và <c>Sanitize()</c> trả về FRAGMENT (chỉ phần bên
+    /// trong body, không còn <c>&lt;html&gt;/&lt;head&gt;/&lt;body&gt;</c>). Với fragment thì
+    /// chính cả chuỗi là phần thân — chỉ bỏ khối <c>&lt;style&gt;</c> đã tách ra để CSS không bị
+    /// lặp lại ở mỗi trang. Thiếu nhánh này, mọi giáo xứ ĐÃ tuỳ chỉnh mẫu "Lý lịch cá nhân" bấm
+    /// in cả gia đình sẽ nhận về tờ giấy TRẮNG (regex không khớp → phần thân rỗng), trong khi in
+    /// từng người vẫn đúng nên rất dễ bị tưởng nhầm là lỗi máy in — xem
+    /// InAnGhepNhieuTrangTests.</summary>
     private static (string Kieu, string Than) TachKieuVaThan(string htmlDayDu)
     {
+        const System.Text.RegularExpressions.RegexOptions motDong =
+            System.Text.RegularExpressions.RegexOptions.Singleline;
         var kieu = System.Text.RegularExpressions.Regex.Match(
-            htmlDayDu, "<style>(.*?)</style>", System.Text.RegularExpressions.RegexOptions.Singleline).Groups[1].Value;
-        var than = System.Text.RegularExpressions.Regex.Match(
-            htmlDayDu, "<body>(.*?)</body>", System.Text.RegularExpressions.RegexOptions.Singleline).Groups[1].Value;
+            htmlDayDu, "<style>(.*?)</style>", motDong).Groups[1].Value;
+        var khopThan = System.Text.RegularExpressions.Regex.Match(htmlDayDu, "<body>(.*?)</body>", motDong);
+        var than = khopThan.Success
+            ? khopThan.Groups[1].Value
+            : System.Text.RegularExpressions.Regex.Replace(htmlDayDu, "<style>.*?</style>", "", motDong);
         return (kieu, than);
     }
 
@@ -172,9 +323,14 @@ public class InAnService(
     {
         // FirstOrDefaultAsync với điều kiện tường minh — KHÔNG dùng Find()/FindAsync() (bị cấm
         // trong mã nghiệp vụ vì bỏ qua bộ lọc giáo xứ toàn cục, xem CLAUDE.md).
+        // ThenInclude(GiaDinh): nạp luôn gia đình đang tham gia để cấp các biến {{TenGiaDinh}},
+        // {{SoHoKhau}}… mà mẫu gốc chưa dùng nhưng người dùng được phép chèn (xem
+        // MauInCatalog.BienKhaDung). KHÔNG phải truy vấn N+1 mới: vẫn đúng MỘT truy vấn cho mỗi
+        // giáo dân như trước, chỉ thêm phép nối bảng — quan trọng vì hàm này chạy LẶP cho từng
+        // thành viên khi in lý lịch cả gia đình (XuatLyLichCaNhanGiaDinh).
         var g = await db.GiaoDan
             .Include(x => x.GiaoHo)
-            .Include(x => x.GiaDinhThamGia)
+            .Include(x => x.GiaDinhThamGia).ThenInclude(tv => tv.GiaDinh)
             .FirstOrDefaultAsync(x => x.Id == giaoDanId && !x.DaXoa, ct);
         if (g is null) return null;
 
@@ -214,8 +370,41 @@ public class InAnService(
             }
         }
 
+        // "Giáo họ cha" — giáo họ lẻ trực thuộc một giáo họ chính (GiaoHo.GiaoHoChaId, xem
+        // GiaoHoConfig — quan hệ tự tham chiếu KHÔNG có navigation property CLR nên phải tự
+        // truy vấn thêm một bước). Đúng logic ghép "{TenGiaoHoCha} - {TenGiaoHo}" của bản
+        // desktop (Source/ExcelReport/ReportLyLichCaNhan.cs dòng 64-71) — chỉ ghép khi có giáo
+        // họ cha VÀ tên khác giáo họ hiện tại (không phân biệt hoa/thường), tránh lặp thừa kiểu
+        // "Giáo họ A - Giáo họ A" khi dữ liệu tự tham chiếu chính nó.
         var tenGiaoHo = g.GiaoHo?.TenGiaoHo ?? "Ngoài xứ";
+        if (g.GiaoHo?.GiaoHoChaId is { } giaoHoChaId)
+        {
+            var tenGiaoHoCha = await db.GiaoHo
+                .Where(h => h.Id == giaoHoChaId)
+                .Select(h => h.TenGiaoHo)
+                .FirstOrDefaultAsync(ct);
+            if (!string.IsNullOrWhiteSpace(tenGiaoHoCha) &&
+                !tenGiaoHoCha.Equals(tenGiaoHo, StringComparison.OrdinalIgnoreCase))
+                tenGiaoHo = $"{tenGiaoHoCha} - {tenGiaoHo}";
+        }
+
+        // Linh mục chánh xứ ĐƯƠNG NHIỆM — cùng điều kiện bản desktop
+        // (Source/GXControl/GxGiaoDanList.cs dòng 435: "ChucVu='Chánh xứ' AND DenNgay IS NULL").
+        // ChucVu là chuỗi tự do nhưng luôn nhập qua combobox 3 giá trị cố định (frmLinhMuc.cs),
+        // nên so khớp chuỗi chính xác là an toàn. Nếu có nhiều dòng khớp (dữ liệu lỗi hiếm gặp)
+        // lấy dòng nhận xứ gần nhất — vẫn tốt hơn báo lỗi hay bỏ trống khi in giấy tờ thật.
+        var chanhXu = await db.LinhMuc
+            .Where(l => !l.DaXoa && l.ChucVu == "Chánh xứ" && l.DenNgay == null)
+            .OrderByDescending(l => l.TuNgay)
+            .FirstOrDefaultAsync(ct);
+        var tenChanhXu = chanhXu is null ? null
+            : string.IsNullOrWhiteSpace(chanhXu.TenThanh) ? chanhXu.HoTen : $"{chanhXu.TenThanh} {chanhXu.HoTen}";
+
         var hoTenDayDu = string.IsNullOrWhiteSpace(g.TenThanh) ? g.HoTen : $"{g.TenThanh} {g.HoTen}";
+
+        // Nạp MỘT LẦN cho cả lượt in, kể cả khi hàm này chạy lặp cho từng thành viên gia đình —
+        // xem ghi chú cạm bẫy hiệu năng ở _bangCachHienThi/LayBangCachHienThi.
+        var bangCachHienThi = await LayBangCachHienThi(ct);
 
         var duLieu = new Dictionary<string, string?>(ThongTinGiaoXu(giaoXu))
         {
@@ -256,17 +445,48 @@ public class InAnService(
             ["CachThucHonPhoi"] = honPhoi?.CachThucHonPhoi,
             ["NguoiChung1"] = honPhoi?.NguoiChung1,
             ["NguoiChung2"] = honPhoi?.NguoiChung2,
+            ["GhiChuHonPhoi"] = honPhoi?.GhiChu,
 
-            ["ConHoc"] = Dau(g.ConHoc),
-            ["TanTong"] = Dau(g.TanTong),
-            ["DaCoGiaDinh"] = Dau(g.DaCoGiaDinh),
-            ["QuaDoi"] = Dau(g.QuaDoi),
+            ["TenChanhXu"] = tenChanhXu,
+
+            ["ConHoc"] = bangCachHienThi.Dau("ConHoc", g.ConHoc),
+            ["TanTong"] = bangCachHienThi.Dau("TanTong", g.TanTong),
+            ["DaCoGiaDinh"] = bangCachHienThi.Dau("DaCoGiaDinh", g.DaCoGiaDinh),
+            ["QuaDoi"] = bangCachHienThi.Dau("QuaDoi", g.QuaDoi),
             ["NgayQuaDoi"] = g.QuaDoi && g.NgayQuaDoi is not null ? $"— ngày {Ngay(g.NgayQuaDoi)}" : "",
             ["NoiAnTang"] = g.QuaDoi && !string.IsNullOrWhiteSpace(g.NoiAnTang) ? $"— an táng tại {g.NoiAnTang}" : "",
             ["SoAnTang"] = g.QuaDoi && !string.IsNullOrWhiteSpace(g.SoAnTang) ? $" (số {g.SoAnTang})" : "",
 
             ["NgayThangNamIn"] = DateTime.Now.ToString("dd/MM/yyyy"),
         };
+
+        // --- Biến NGƯỜI DÙNG TỰ CHÈN (MauInCatalog.BienKhaDung) ------------------------------
+        // Xem khối ghi chú ở các hàm NhanThanThem/RuaToiRoi/… phía trên: mẫu gốc KHÔNG dùng khoá
+        // nào dưới đây nên kết quả in hiện tại không đổi, nhưng chúng là dữ liệu thật để giáo xứ
+        // tự thêm dòng "CMND", "Ngày xức dầu", hay tách riêng "số sổ/ngày/nơi rửa tội".
+        // KHÔNG truy vấn thêm lần nào — mọi giá trị lấy từ `g`/`giaDinh` đã nạp sẵn ở trên, quan
+        // trọng vì hàm này chạy lặp cho từng thành viên khi in lý lịch cả gia đình.
+        var giaDinh = thamGia?.GiaDinh;
+        foreach (var kv in NhanThanThem(g)) duLieu[kv.Key] = kv.Value;
+        foreach (var kv in RuaToiRoi(g)) duLieu[kv.Key] = kv.Value;
+        foreach (var kv in RuocLeRoi(g)) duLieu[kv.Key] = kv.Value;
+        foreach (var kv in ThemSucRoi(g)) duLieu[kv.Key] = kv.Value;
+        foreach (var kv in GiaoLyThem(g)) duLieu[kv.Key] = kv.Value;
+        foreach (var kv in new Dictionary<string, string?>
+        {
+            ["NoiQuaDoi"] = g.NoiQuaDoi,
+
+            ["NgayXucDau"] = Ngay(g.NgayXucDau), ["NguoiXucDau"] = g.NguoiXucDau,
+            ["TinhTrangXucDau"] = g.TinhTrangXucDau, ["GhiChuXucDau"] = g.GhiChuXucDau,
+
+            ["TenGiaDinh"] = giaDinh?.TenGiaDinh,
+            ["MaGiaDinh"] = giaDinh is null ? "" : MaGiaDinh(giaDinh),
+            ["DiaChiGiaDinh"] = giaDinh?.DiaChi,
+            ["DienThoaiGiaDinh"] = giaDinh?.DienThoai,
+            ["SoHoKhau"] = giaDinh?.SoHoKhau,
+            ["DienGiaDinh"] = giaDinh?.DienGiaDinh,
+            ["GhiChuGiaDinh"] = giaDinh?.GhiChu,
+        }) duLieu[kv.Key] = kv.Value;
 
         var khoiHtml = new Dictionary<string, string?>
         {
@@ -330,6 +550,14 @@ public class InAnService(
             ["DanhSachBiTich"] = danhSach,
             ["NgayThangNamIn"] = DateTime.Now.ToString("dd/MM/yyyy"),
         };
+        // Biến người dùng tự chèn — xem ghi chú ở DungHtmlLyLichCaNhan. Không truy vấn thêm.
+        foreach (var kv in NhanThanThem(g)) duLieu[kv.Key] = kv.Value;
+        foreach (var kv in RuaToiRoi(g)) duLieu[kv.Key] = kv.Value;
+        foreach (var kv in RuocLeRoi(g)) duLieu[kv.Key] = kv.Value;
+        foreach (var kv in ThemSucRoi(g)) duLieu[kv.Key] = kv.Value;
+        duLieu["MoTaRuaToi"] = moTaRuaToi;
+        duLieu["MoTaRuocLe"] = moTaRuocLe;
+        duLieu["MoTaThemSuc"] = moTaThemSuc;
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
         var html = await DungMau(slug, "ChungNhanBiTich", duLieu, null, ct);
@@ -411,7 +639,7 @@ public class InAnService(
 
         var duLieu = new Dictionary<string, string?>(ThongTinGiaoXu(giaoXu))
         {
-            ["MaGiaDinh"] = giaDinh.MaGiaDinhRieng ?? giaDinh.MaGiaDinhCu.ToString(),
+            ["MaGiaDinh"] = MaGiaDinh(giaDinh),
             ["TenGiaDinh"] = giaDinh.TenGiaDinh,
             ["TenGiaoHo"] = giaDinh.GiaoHo?.TenGiaoHo ?? "Ngoài xứ",
             ["DienThoaiGiaDinh"] = giaDinh.DienThoai,
@@ -420,6 +648,10 @@ public class InAnService(
             ["GhiChuGiaDinh"] = giaDinh.GhiChu,
             ["NgayThangNamIn"] = DateTime.Now.ToString("dd/MM/yyyy"),
         };
+        // Biến người dùng tự chèn — xem ghi chú ở khối helper "Biến NGƯỜI DÙNG TỰ CHÈN".
+        foreach (var kv in GiaDinhThem(giaDinh, giaDinh.ThanhVien.Count, await LayBangCachHienThi(ct))) duLieu[kv.Key] = kv.Value;
+        foreach (var kv in HonPhoiRoi(honPhoi)) duLieu[kv.Key] = kv.Value;
+
         var khoiHtml = new Dictionary<string, string?>
         {
             ["HangThanhVien"] = hangHtml.ToString(),
@@ -434,11 +666,15 @@ public class InAnService(
         return new KetQuaInAn(pdf, $"PhieuGiaDinh_{giaDinh.MaGiaDinhCu}{hauTo}.pdf");
     }
 
+    /// <summary>Bốn cột cuối (MaGiaoDanCu/CMND/DiaChi/DienThoai) thêm ở lượt công bố
+    /// <see cref="Printing.MauInCatalog"/>.BienKhaDung — chỉ là thêm cột vào CÙNG một phép chiếu
+    /// đã có, KHÔNG thêm truy vấn nào.</summary>
     private sealed record NguoiHonPhoi(
         Guid Id, string? Phai, string? TenThanh, string HoTen, DateOnly? NgaySinh, string? NoiSinh,
         string? HoTenCha, string? HoTenMe, DateOnly? NgayRuaToi, string? NoiRuaToi, string? SoRuaToi,
         string? ChaRuaToi, string? NguoiDoDauRuaToi, DateOnly? NgayThemSuc, string? NoiThemSuc,
-        string? SoThemSuc, string? ChaThemSuc, string? NguoiDoDauThemSuc, string? TenGiaoHo);
+        string? SoThemSuc, string? ChaThemSuc, string? NguoiDoDauThemSuc, string? TenGiaoHo,
+        int MaGiaoDanCu, string? CMND, string? DiaChi, string? DienThoai);
 
     /// <summary>"In chứng nhận hôn phối" (menu chuột phải GxGiaDinhList.tsx) — tương đương
     /// Source/ExcelReport/ReportChungNhanHP.cs. Trả null nếu gia đình không tồn tại HOẶC chưa
@@ -466,7 +702,8 @@ public class InAnService(
                 x.GiaoDan.NgayRuaToi, x.GiaoDan.NoiRuaToi, x.GiaoDan.SoRuaToi, x.GiaoDan.ChaRuaToi,
                 x.GiaoDan.NguoiDoDauRuaToi, x.GiaoDan.NgayThemSuc, x.GiaoDan.NoiThemSuc,
                 x.GiaoDan.SoThemSuc, x.GiaoDan.ChaThemSuc, x.GiaoDan.NguoiDoDauThemSuc,
-                x.GiaoDan.GiaoHo != null ? x.GiaoDan.GiaoHo.TenGiaoHo : null))
+                x.GiaoDan.GiaoHo != null ? x.GiaoDan.GiaoHo.TenGiaoHo : null,
+                x.GiaoDan.MaGiaoDanCu, x.GiaoDan.CMND, x.GiaoDan.DiaChi, x.GiaoDan.DienThoai))
             .ToListAsync(ct);
         if (haiNguoi.Count == 0) return null;
 
@@ -500,6 +737,32 @@ public class InAnService(
             ["NguoiChung2"] = honPhoi.NguoiChung2,
             ["NgayThangNamIn"] = DateTime.Now.ToString("dd/MM/yyyy"),
         };
+
+        // Biến người dùng tự chèn — xem ghi chú ở khối helper "Biến NGƯỜI DÙNG TỰ CHÈN". Mọi giá
+        // trị lấy từ phép chiếu `haiNguoi`/`honPhoi` đã nạp, không truy vấn thêm.
+        foreach (var kv in new Dictionary<string, string?>
+        {
+            ["TenHonPhoi"] = honPhoi.TenHonPhoi,
+            ["GhiChuHonPhoi"] = honPhoi.GhiChu,
+
+            ["MaGiaoDanNam"] = nam.MaGiaoDanCu.ToString(),
+            ["MaGiaoDanNu"] = nu?.MaGiaoDanCu.ToString(),
+            ["CMNDNam"] = nam.CMND, ["CMNDNu"] = nu?.CMND,
+            ["DiaChiNam"] = nam.DiaChi, ["DiaChiNu"] = nu?.DiaChi,
+            ["DienThoaiNam"] = nam.DienThoai, ["DienThoaiNu"] = nu?.DienThoai,
+
+            ["SoRuaToiNam"] = nam.SoRuaToi, ["SoRuaToiNu"] = nu?.SoRuaToi,
+            ["NgayRuaToiNam"] = Ngay(nam.NgayRuaToi), ["NgayRuaToiNu"] = Ngay(nu?.NgayRuaToi),
+            ["NoiRuaToiNam"] = nam.NoiRuaToi, ["NoiRuaToiNu"] = nu?.NoiRuaToi,
+            ["ChaRuaToiNam"] = nam.ChaRuaToi, ["ChaRuaToiNu"] = nu?.ChaRuaToi,
+            ["NguoiDoDauRuaToiNam"] = nam.NguoiDoDauRuaToi, ["NguoiDoDauRuaToiNu"] = nu?.NguoiDoDauRuaToi,
+
+            ["SoThemSucNam"] = nam.SoThemSuc, ["SoThemSucNu"] = nu?.SoThemSuc,
+            ["NgayThemSucNam"] = Ngay(nam.NgayThemSuc), ["NgayThemSucNu"] = Ngay(nu?.NgayThemSuc),
+            ["NoiThemSucNam"] = nam.NoiThemSuc, ["NoiThemSucNu"] = nu?.NoiThemSuc,
+            ["ChaThemSucNam"] = nam.ChaThemSuc, ["ChaThemSucNu"] = nu?.ChaThemSuc,
+            ["NguoiDoDauThemSucNam"] = nam.NguoiDoDauThemSuc, ["NguoiDoDauThemSucNu"] = nu?.NguoiDoDauThemSuc,
+        }) duLieu[kv.Key] = kv.Value;
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
         var html = await DungMau(slug, "ChungNhanHonPhoi", duLieu, null, ct);
@@ -565,6 +828,12 @@ public class InAnService(
             ["DienThoaiGiaoDan"] = g.DienThoai,
         };
         foreach (var kv in ThongTinBenNhan(giaoPhan2, giaoXu2, tenLinhMuc)) duLieu[kv.Key] = kv.Value;
+        // Biến người dùng tự chèn — xem ghi chú ở khối helper "Biến NGƯỜI DÙNG TỰ CHÈN".
+        foreach (var kv in NhanThanThem(g)) duLieu[kv.Key] = kv.Value;
+        foreach (var kv in RuaToiRoi(g)) duLieu[kv.Key] = kv.Value;
+        duLieu["TenGiaoHo"] = g.GiaoHo?.TenGiaoHo ?? "Ngoài xứ";
+        duLieu["MoTaRuaToi"] = VanBanInAn.MoTaBiTich(g.SoRuaToi, g.NgayRuaToi, g.NoiRuaToi,
+            g.ChaRuaToi, "rửa", g.NguoiDoDauRuaToi, "người đỡ đầu");
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
         var html = await DungMau(slug, "GioiThieuRuaToi", duLieu, null, ct);
@@ -600,6 +869,14 @@ public class InAnService(
                 g.ChaRuaToi, "rửa", g.NguoiDoDauRuaToi, "người đỡ đầu"),
         };
         foreach (var kv in ThongTinBenNhan(giaoPhan2, giaoXu2, tenLinhMuc)) duLieu[kv.Key] = kv.Value;
+        // Biến người dùng tự chèn — xem ghi chú ở khối helper "Biến NGƯỜI DÙNG TỰ CHÈN".
+        foreach (var kv in NhanThanThem(g)) duLieu[kv.Key] = kv.Value;
+        foreach (var kv in RuaToiRoi(g)) duLieu[kv.Key] = kv.Value;
+        foreach (var kv in ThemSucRoi(g)) duLieu[kv.Key] = kv.Value;
+        duLieu["TenGiaoHo"] = g.GiaoHo?.TenGiaoHo ?? "Ngoài xứ";
+        duLieu["DiaChiGiaoDan"] = g.DiaChi;
+        duLieu["MoTaThemSuc"] = VanBanInAn.MoTaBiTich(g.SoThemSuc, g.NgayThemSuc, g.NoiThemSuc,
+            g.ChaThemSuc, "ban", g.NguoiDoDauThemSuc, "người đỡ đầu");
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
         var html = await DungMau(slug, "GioiThieuThemSuc", duLieu, null, ct);
@@ -636,6 +913,11 @@ public class InAnService(
                 g.ChaThemSuc, "ban", g.NguoiDoDauThemSuc, "người đỡ đầu"),
         };
         foreach (var kv in ThongTinBenNhan(giaoPhan2, giaoXu2, tenLinhMuc)) duLieu[kv.Key] = kv.Value;
+        // Biến người dùng tự chèn — xem ghi chú ở khối helper "Biến NGƯỜI DÙNG TỰ CHÈN".
+        foreach (var kv in NhanThanThem(g)) duLieu[kv.Key] = kv.Value;
+        foreach (var kv in RuaToiRoi(g)) duLieu[kv.Key] = kv.Value;
+        foreach (var kv in ThemSucRoi(g)) duLieu[kv.Key] = kv.Value;
+        foreach (var kv in GiaoLyThem(g)) duLieu[kv.Key] = kv.Value;
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
         var html = await DungMau(slug, "GioiThieuGiaoLyHonPhoi", duLieu, null, ct);
@@ -650,8 +932,11 @@ public class InAnService(
     public async Task<KetQuaInAn?> XuatGioiThieuChuyenXu(
         Guid giaDinhId, string? giaoPhan2, string? giaoXu2, string? tenLinhMuc, CancellationToken ct)
     {
+        // Include(GiaoHo) thêm ở lượt này CHỈ để cấp biến {{TenGiaoHo}} người dùng được phép
+        // chèn — vẫn đúng MỘT truy vấn như trước (thêm phép nối, không phải N+1).
         var giaDinh = await db.GiaDinh
             .Include(x => x.ThanhVien).ThenInclude(tv => tv.GiaoDan)
+            .Include(x => x.GiaoHo)
             .FirstOrDefaultAsync(x => x.Id == giaDinhId && !x.DaXoa, ct);
         if (giaDinh is null) return null;
 
@@ -690,6 +975,13 @@ public class InAnService(
             ["DiaChiGiaDinh"] = giaDinh.DiaChi,
         };
         foreach (var kv in ThongTinBenNhan(giaoPhan2, giaoXu2, tenLinhMuc)) duLieu[kv.Key] = kv.Value;
+        // Biến người dùng tự chèn — xem ghi chú ở khối helper "Biến NGƯỜI DÙNG TỰ CHÈN".
+        foreach (var kv in GiaDinhThem(giaDinh, giaDinh.ThanhVien.Count, await LayBangCachHienThi(ct))) duLieu[kv.Key] = kv.Value;
+        duLieu["TenGiaoHo"] = giaDinh.GiaoHo?.TenGiaoHo ?? "Ngoài xứ";
+        duLieu["MaGiaDinh"] = MaGiaDinh(giaDinh);
+        duLieu["TenGiaDinh"] = giaDinh.TenGiaDinh;
+        duLieu["GhiChuGiaDinh"] = giaDinh.GhiChu;
+
         var khoiHtml = new Dictionary<string, string?> { ["HangThanhVien"] = hangHtml.ToString() };
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
@@ -727,6 +1019,45 @@ public class InAnService(
     }
 
     private static string AnhChi(string? phai) => phai == "Nam" ? "Anh" : "Chị";
+
+    /// <summary>Biến thêm dùng chung cho HAI mẫu rao hôn phối ("Xin điều tra và rao hôn phối" và
+    /// "Kết quả rao hôn phối") — mỗi mẫu gốc chỉ in một phần dữ liệu của đôi rao, phần còn lại
+    /// vẫn có sẵn trong tay nên công bố cho người dùng tự chèn. Giá trị nào mẫu gốc ĐÃ dùng thì
+    /// ở đây gán ĐÚNG cùng một biểu thức (không đổi kết quả in hiện tại). Không truy vấn thêm —
+    /// `r` đã Include sẵn GiaoDan1/GiaoDan2 ở nơi gọi.</summary>
+    private static Dictionary<string, string?> ThongTinDoiRaoThem(RaoHonPhoi r)
+    {
+        static string MoTaRuaToi(GiaoDan? g) => g is null ? "" : VanBanInAn.MoTaBiTich(
+            g.SoRuaToi, g.NgayRuaToi, g.NoiRuaToi, g.ChaRuaToi, "rửa", g.NguoiDoDauRuaToi, "người đỡ đầu");
+        static string MoTaThemSuc(GiaoDan? g) => g is null ? "" : VanBanInAn.MoTaBiTich(
+            g.SoThemSuc, g.NgayThemSuc, g.NoiThemSuc, g.ChaThemSuc, "ban", g.NguoiDoDauThemSuc, "người đỡ đầu");
+
+        return new Dictionary<string, string?>
+        {
+            ["Phai1"] = r.GiaoDan1?.Phai, ["Phai2"] = r.GiaoDan2?.Phai,
+            ["Tuoi1"] = Tuoi(r.GiaoDan1?.NgaySinh), ["Tuoi2"] = Tuoi(r.GiaoDan2?.NgaySinh),
+            ["NgaySinh1"] = Ngay(r.GiaoDan1?.NgaySinh), ["NgaySinh2"] = Ngay(r.GiaoDan2?.NgaySinh),
+            ["NoiSinh1"] = r.GiaoDan1?.NoiSinh, ["NoiSinh2"] = r.GiaoDan2?.NoiSinh,
+            ["DienThoai1"] = r.GiaoDan1?.DienThoai, ["DienThoai2"] = r.GiaoDan2?.DienThoai,
+            ["DiaChi1"] = r.GiaoDan1?.DiaChi, ["DiaChi2"] = r.GiaoDan2?.DiaChi,
+            ["MoTaRuaToi1"] = MoTaRuaToi(r.GiaoDan1), ["MoTaRuaToi2"] = MoTaRuaToi(r.GiaoDan2),
+            ["MoTaThemSuc1"] = MoTaThemSuc(r.GiaoDan1), ["MoTaThemSuc2"] = MoTaThemSuc(r.GiaoDan2),
+
+            ["TenGiaoXu1"] = r.GiaoXu1, ["TenGiaoXu2"] = r.GiaoXu2,
+            ["TenGiaoPhan1"] = r.GiaoPhan1, ["TenGiaoPhan2"] = r.GiaoPhan2,
+            ["TenGiaoXuNQ1"] = r.GiaoXuNQ1, ["TenGiaoPhanNQ1"] = r.GiaoPhanNQ1,
+            ["TenGiaoXuNQ2"] = r.GiaoXuNQ2, ["TenGiaoPhanNQ2"] = r.GiaoPhanNQ2,
+            ["TenGiaoXuTruoc1"] = r.GiaoXuTruoc1, ["TenGiaoPhanTruoc1"] = r.GiaoPhanTruoc1,
+            ["TenGiaoXuTruoc2"] = r.GiaoXuTruoc2, ["TenGiaoPhanTruoc2"] = r.GiaoPhanTruoc2,
+
+            ["MaRaoHonPhoi"] = r.MaRaoHonPhoiCu.ToString(),
+            ["TenRaoHonPhoi"] = r.TenRaoHonPhoi,
+            ["NgayRaoLan1"] = Ngay(r.NgayRaoLan1),
+            ["NgayRaoLan2"] = Ngay(r.NgayRaoLan2),
+            ["NgayRaoLan3"] = Ngay(r.NgayRaoLan3),
+            ["GhiChuRao"] = r.GhiChu,
+        };
+    }
 
     public async Task<KetQuaInAn?> XuatGioiThieuHonPhoi(Guid giaoDanId, CancellationToken ct)
     {
@@ -771,6 +1102,8 @@ public class InAnService(
 
             ["NgayThangNamIn"] = DateTime.Now.ToString("dd/MM/yyyy"),
         };
+        // Biến người dùng tự chèn — xem ghi chú ở khối helper "Biến NGƯỜI DÙNG TỰ CHÈN".
+        foreach (var kv in ThongTinDoiRaoThem(r)) duLieu[kv.Key] = kv.Value;
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
         var html = await DungMau(slug, "RaoHonPhoi", duLieu, null, ct);
@@ -832,12 +1165,28 @@ public class InAnService(
             ["RaoHonPhoi"] = raoHonPhoi,
             ["NgayThangNamIn"] = DateTime.Now.ToString("dd/MM/yyyy"),
         };
+        // Biến người dùng tự chèn — xem ghi chú ở khối helper "Biến NGƯỜI DÙNG TỰ CHÈN".
+        foreach (var kv in ThongTinDoiRaoThem(r)) duLieu[kv.Key] = kv.Value;
 
         var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu.GiaoHat?.GiaoPhan?.TenGiaoPhan);
         var html = await DungMau(slug, "KQRaoHonPhoi", duLieu, null, ct);
         var pdf = await trinhDuyet.XuatPdfAsync(html, ct);
         return new KetQuaInAn(pdf, $"KQRaoHonPhoi_{r.MaRaoHonPhoiCu}.pdf");
     }
+
+    /// <summary>Như <see cref="ThongTinGiaoXu"/> nhưng chịu được <c>null</c> — ba mẫu "In danh
+    /// sách" không bắt buộc tìm thấy giáo xứ (vẫn in được danh sách rỗng). Dùng để công bố các
+    /// biến liên hệ giáo xứ ({{DiaChiGiaoXu}}, {{TenGiaoPhan}}…) cho phần đầu trang mà mẫu gốc
+    /// chưa in — xem MauInCatalog.BienKhaDung của DanhSach*.</summary>
+    private static Dictionary<string, string?> ThongTinGiaoXuCoTheRong(GiaoXu? giaoXu) =>
+        giaoXu is null
+            ? new Dictionary<string, string?>
+            {
+                ["TenGiaoPhan"] = "", ["TenGiaoHat"] = "", ["TenGiaoXu"] = "",
+                ["DiaChiGiaoXu"] = "", ["DienThoaiGiaoXu"] = "", ["EmailGiaoXu"] = "",
+                ["WebsiteGiaoXu"] = "",
+            }
+            : ThongTinGiaoXu(giaoXu);
 
     private static string ChuoiDs(string? v) => string.IsNullOrEmpty(v) ? "—" : v;
     private static string NgayDs(DateOnly? v) => v is null ? "—" : Ngay(v);
@@ -900,9 +1249,11 @@ public class InAnService(
                 .Append("</tr>");
         }
 
-        var duLieu = new Dictionary<string, string?>
+        // Khởi tạo từ ThongTinGiaoXuCoTheRong để công bố thêm các biến liên hệ giáo xứ cho người
+        // dùng tự chèn vào đầu trang (mẫu gốc mới chỉ in {{TenGiaoXu}}) — xem khối helper "Biến
+        // NGƯỜI DÙNG TỰ CHÈN". {{TenGiaoXu}} vẫn ra đúng giá trị cũ.
+        var duLieu = new Dictionary<string, string?>(ThongTinGiaoXuCoTheRong(giaoXu))
         {
-            ["TenGiaoXu"] = giaoXu?.TenGiaoXu ?? "",
             ["SoLuong"] = rows.Count.ToString(),
             ["NgayThangNamIn"] = DateTime.Now.ToString("dd/MM/yyyy HH:mm"),
             ["DieuKienLoc"] = hienCaDaMat ? "(hiện cả giáo dân đã mất/chuyển xứ)" : "",
@@ -948,9 +1299,11 @@ public class InAnService(
                 .Append("</tr>");
         }
 
-        var duLieu = new Dictionary<string, string?>
+        // Khởi tạo từ ThongTinGiaoXuCoTheRong để công bố thêm các biến liên hệ giáo xứ cho người
+        // dùng tự chèn vào đầu trang (mẫu gốc mới chỉ in {{TenGiaoXu}}) — xem khối helper "Biến
+        // NGƯỜI DÙNG TỰ CHÈN". {{TenGiaoXu}} vẫn ra đúng giá trị cũ.
+        var duLieu = new Dictionary<string, string?>(ThongTinGiaoXuCoTheRong(giaoXu))
         {
-            ["TenGiaoXu"] = giaoXu?.TenGiaoXu ?? "",
             ["SoLuong"] = rows.Count.ToString(),
             ["NgayThangNamIn"] = DateTime.Now.ToString("dd/MM/yyyy HH:mm"),
             ["DieuKienLoc"] = chiKhongThongKe ? "(chỉ gia đình không được thống kê)" : "",
@@ -961,5 +1314,54 @@ public class InAnService(
         var pdf = await trinhDuyet.XuatPdfAsync(html, ct, landscape: true);
 
         return new KetQuaInAn(pdf, $"DanhSachGiaDinh_{DateTime.Now:yyyy-MM-dd}.pdf");
+    }
+
+    /// <summary>"In danh sách" của màn hình "Danh sách rao hôn phối" (`RaoHonPhoiList.tsx`) —
+    /// tương đương <c>ReportRaoHP.ExportList</c>/`DanhSachRaoHonPhoi.xls`
+    /// (Source/ExcelReport/ReportRaoHP.cs:128), khác bản gốc ở một điểm CỐ Ý đơn giản hoá: bản
+    /// desktop yêu cầu chọn MỘT ngày rao (hộp thoại `frmDateInput`) rồi chỉ giữ những đôi rao có
+    /// một lần rao rơi trong tuần đó (`GxRaoHonPhoiList.isPrinted`, dòng 416-459); bản web KHÔNG
+    /// có khái niệm "tuần đang chọn" ở màn hình danh sách — CÙNG lý do/thiết kế với
+    /// <see cref="XuatDanhSachGiaoDan"/>: gọi lại đúng <see cref="RaoHonPhoiService.LayDanhSach"/>
+    /// bằng tham số lọc `xemTatCa` đang áp dụng trên lưới (giống hệt "Xuất Excel" đã làm ở
+    /// <see cref="XuatExcelService"/>), để danh sách in ra LUÔN khớp với chính GET danh sách đã
+    /// dựng nên lưới. 8 cột đúng thứ tự <see cref="Dtos.RaoHonPhoiListItemDto"/>, khổ NGANG.</summary>
+    public async Task<KetQuaInAn> XuatDanhSachRaoHonPhoi(bool xemTatCa, CancellationToken ct)
+    {
+        var giaoXu = await LayGiaoXuHienTai(ct);
+        var rows = await raoHonPhoiDv.LayDanhSach(xemTatCa, ct);
+
+        var hangHtml = new System.Text.StringBuilder();
+        foreach (var r in rows)
+        {
+            string E(string? s) => System.Text.Encodings.Web.HtmlEncoder.Default.Encode(ChuoiDs(s));
+            string EDs(string s) => System.Text.Encodings.Web.HtmlEncoder.Default.Encode(s);
+            hangHtml.Append("<tr>")
+                .Append("<td>").Append(r.MaRaoHonPhoiCu).Append("</td>")
+                .Append("<td>").Append(E(r.TenRaoHonPhoi)).Append("</td>")
+                .Append("<td>").Append(E(r.Nguoi1)).Append("</td>")
+                .Append("<td>").Append(E(r.Nguoi2)).Append("</td>")
+                .Append("<td>").Append(EDs(NgayDs(r.NgayRaoLan1))).Append("</td>")
+                .Append("<td>").Append(EDs(NgayDs(r.NgayRaoLan2))).Append("</td>")
+                .Append("<td>").Append(EDs(NgayDs(r.NgayRaoLan3))).Append("</td>")
+                .Append("<td>").Append(E(r.GhiChu)).Append("</td>")
+                .Append("</tr>");
+        }
+
+        // Khởi tạo từ ThongTinGiaoXuCoTheRong để công bố thêm các biến liên hệ giáo xứ cho người
+        // dùng tự chèn vào đầu trang (mẫu gốc mới chỉ in {{TenGiaoXu}}) — xem khối helper "Biến
+        // NGƯỜI DÙNG TỰ CHÈN". {{TenGiaoXu}} vẫn ra đúng giá trị cũ.
+        var duLieu = new Dictionary<string, string?>(ThongTinGiaoXuCoTheRong(giaoXu))
+        {
+            ["SoLuong"] = rows.Count.ToString(),
+            ["NgayThangNamIn"] = DateTime.Now.ToString("dd/MM/yyyy HH:mm"),
+            ["DieuKienLoc"] = xemTatCa ? "(xem tất cả)" : "(chỉ những đôi rao chưa hoàn tất)",
+        };
+        var khoiHtml = new Dictionary<string, string?> { ["HangDanhSach"] = hangHtml.ToString() };
+        var slug = BoDoMauIn.ChuanHoaTenGiaoPhan(giaoXu?.GiaoHat?.GiaoPhan?.TenGiaoPhan);
+        var html = await DungMau(slug, "DanhSachRaoHonPhoi", duLieu, khoiHtml, ct);
+        var pdf = await trinhDuyet.XuatPdfAsync(html, ct, landscape: true);
+
+        return new KetQuaInAn(pdf, $"DanhSachRaoHonPhoi_{DateTime.Now:yyyy-MM-dd}.pdf");
     }
 }

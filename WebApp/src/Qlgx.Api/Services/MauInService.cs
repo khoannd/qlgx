@@ -31,7 +31,7 @@ public class MauInService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, BoDoMauIn ma
             m.TenMau, m.TenHienThi,
             tenMauRieng.Contains(m.TenMau) ? "TuyChinhGiaoXu"
                 : tenMauHeThong.Contains(m.TenMau) ? "TuyChinhHeThong" : "MacDinh",
-            m.ChoTrong)).ToList();
+            m.ChoTrong, m.BienKhaDung)).ToList();
     }
 
     private async Task<MauInChiTietDto?> LayChiTiet(string tenMau, Guid? giaoXuId, CancellationToken ct)
@@ -42,14 +42,14 @@ public class MauInService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, BoDoMauIn ma
         var dong = await db.MauInTuyChinh.AsNoTracking()
             .FirstOrDefaultAsync(m => m.GiaoXuId == giaoXuId && m.TenMau == tenMau, ct);
         if (dong is not null)
-            return new MauInChiTietDto(tenMau, moTa.TenHienThi, true, dong.NoiDungHtml, dong.RowVersion, moTa.ChoTrong);
+            return new MauInChiTietDto(tenMau, moTa.TenHienThi, true, dong.NoiDungHtml, dong.RowVersion, moTa.ChoTrong, moTa.BienKhaDung);
 
         // Chưa tuỳ chỉnh — hiển thị mẫu GỐC nhúng cứng (không phải ô trống) để người dùng thấy
         // đang dùng gì trước khi sửa. "Chung" — chưa có giáo phận riêng nào trong dữ liệu thật
         // hiện tại (xem BoDoMauIn.ChuanHoaTenGiaoPhan), và mẫu tuỳ chỉnh KHÔNG phân biệt theo
         // giáo phận (một giáo xứ chỉ có một bản tuỳ chỉnh mỗi TenMau, xem MauInTuyChinh.cs).
         var goc = mau.DocMauGocCongKhai("Chung", tenMau);
-        return new MauInChiTietDto(tenMau, moTa.TenHienThi, false, goc, 0, moTa.ChoTrong);
+        return new MauInChiTietDto(tenMau, moTa.TenHienThi, false, goc, 0, moTa.ChoTrong, moTa.BienKhaDung);
     }
 
     public Task<MauInChiTietDto?> LayRieng(string tenMau, CancellationToken ct) =>
@@ -132,9 +132,12 @@ public class MauInService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, BoDoMauIn ma
 
         var duLieu = new Dictionary<string, string?>();
         var khoiHtml = new Dictionary<string, string?>();
-        foreach (var choTrong in moTa.ChoTrong)
+        // Duyệt BienKhaDung (siêu tập) chứ KHÔNG phải ChoTrong: người dùng vừa chèn thêm một
+        // biến mẫu gốc chưa dùng thì "Xem thử" cũng phải hiện "[Nhãn]" của biến đó, không để lại
+        // {{Key}} thô trên bản xem trước.
+        foreach (var choTrong in moTa.BienKhaDung)
         {
-            if (choTrong.Nhan.StartsWith('[') && choTrong.Nhan.Contains("hệ thống tự"))
+            if (choTrong.Nhom == NhomBienMauIn.KhoiHeThong)
             {
                 // Khối lặp (HangThanhVien/HangDanhSach/DanhSachBiTich/RaoHonPhoi/KhoiAnh...) —
                 // một dòng minh hoạ để trình xem trước không trống trơn, không phải dữ liệu thật.

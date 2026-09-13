@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Times New Roman", "Liberation Serif", Georgia, serif;
+    font-size: 9pt;
+    color: #000;
+    margin: 0;
+    padding: 0;
+  }
+  .tieu-de { text-align: center; margin-bottom: 2mm; }
+  .tieu-de h1 { font-size: 14pt; margin: 0 0 1mm 0; letter-spacing: 0.5px; }
+  .tieu-de .giao-xu { font-size: 10pt; font-weight: bold; text-transform: uppercase; }
+  .tieu-de .phu-de { font-size: 9pt; }
+
+  table.ds { width: 100%; border-collapse: collapse; }
+  table.ds th, table.ds td { border: 1px solid #999; padding: 0.8mm 1.5mm; text-align: left; }
+  table.ds thead { display: table-header-group; }
+  table.ds th { background: #eee; font-weight: bold; white-space: nowrap; }
+  table.ds td.so { text-align: right; }
+
+  .chan-trang { margin-top: 2mm; font-size: 8pt; font-style: italic; color: #333; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+  <div class="tieu-de">
+    <div class="giao-xu">GIÁO XỨ {{TenGiaoXu}}</div>
+    <h1>DANH SÁCH RAO HÔN PHỐI</h1>
+    <div class="phu-de">{{DieuKienLoc}}</div>
+  </div>
+
+  <table class="ds">
+    <thead>
+      <tr>
+        <th>Mã rao</th><th>Đôi rao</th><th>Người thứ nhất</th><th>Người thứ hai</th>
+        <th>Rao lần 1</th><th>Rao lần 2</th><th>Rao lần 3</th><th>Ghi chú</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{HangDanhSach}}
+    </tbody>
+  </table>
+
+  <div class="chan-trang">
+    <span>Tổng số: {{SoLuong}} đôi rao</span>
+    <span>In lúc {{NgayThangNamIn}}</span>
+  </div>
+</body>
+</html>

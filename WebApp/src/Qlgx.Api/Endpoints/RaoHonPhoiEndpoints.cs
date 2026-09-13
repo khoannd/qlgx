@@ -29,6 +29,16 @@ public static class RaoHonPhoiEndpoints
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", tenTep);
         });
 
+        // "In danh sách" (thanh công cụ "Danh sách rao hôn phối", xem in-an.md và
+        // InAnService.XuatDanhSachRaoHonPhoi) — CÙNG tham số lọc `xemTatCa` với GET "" phía
+        // trên, giống hệt "/xuat-excel" đã có. "/in/danh-sach" không khớp mẫu "/{id:guid}/..."
+        // bên dưới (không phải GUID) nên không giẫm route.
+        nhom.MapGet("/in/danh-sach", async (InAnService dv, bool? xemTatCa, CancellationToken ct) =>
+        {
+            var ketQua = await dv.XuatDanhSachRaoHonPhoi(xemTatCa ?? false, ct);
+            return Results.File(ketQua.NoiDung, "application/pdf", ketQua.TenTep);
+        });
+
         nhom.MapPost("", async (RaoHonPhoiService dv, LuuRaoHonPhoiRequest yc, CancellationToken ct) =>
         {
             var loi = KiemTra(yc);

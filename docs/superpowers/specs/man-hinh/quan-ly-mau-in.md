@@ -31,12 +31,19 @@ Mở từ mục "Thông tin giáo xứ" trên thanh điều hướng, hiện cho
 | (nút) | — | "Sửa" — chỉ hiện khi tài khoản có quyền sửa (QuanTri hoặc QuanTriHeThong) |
 
 **Trình soạn mẫu** (mở dưới danh sách khi bấm "Sửa"):
-- Dropdown "Chèn chỗ trống" — liệt kê đúng các `{{Key}}` khả dụng CHO ĐÚNG mẫu đang sửa, kèm
-  nhãn tiếng Việt; chọn một mục chèn `{{Key}}` vào đúng vị trí con trỏ trong vùng soạn thảo.
+- Dropdown "Chèn chỗ trống" — liệt kê toàn bộ **biến khả dụng** CHO ĐÚNG mẫu đang sửa (`BienKhaDung`,
+  SIÊU TẬP của các chỗ trống mẫu gốc đang dùng — xem mục 10), kèm nhãn tiếng Việt, gom thành
+  `<optgroup>` theo nhóm ("Giáo xứ", "Giáo dân", "Bí tích", "Giáo lý", "Gia đình"…) vì danh sách dài
+  tới 87 mục ở mẫu "Lý lịch cá nhân"; chọn một mục chèn `{{Key}}` vào đúng vị trí con trỏ trong vùng
+  soạn thảo.
 - Vùng soạn thảo rich-text (`react-simple-wysiwyg`) — xem mục 8.
 - Nút "Xem thử" — vẽ PDF ngay từ nội dung NHÁP, mở tab mới.
 - Nút "Lưu".
 - Nút "Khôi phục về mặc định" — chỉ hiện khi đã có tuỳ chỉnh (`daTuyChinh=true`).
+
+**Khu vực "Cách hiển thị dữ liệu đúng/sai"** (bảng riêng, ngay dưới danh sách mẫu): cho giáo xứ đặt
+câu chữ in ra cho các mục chỉ có hai trạng thái (tân tòng, còn đi học…) thay cho dấu `[x]`/`[  ]`
+mặc định — xem **mục 12**.
 
 ## 3. Hành vi khi tải
 
@@ -163,7 +170,175 @@ Thiết kế mới quan trọng nhất, tự quyết và ghi lại lý do:
   này nhắm tới) — đúng kiến trúc mà bản thân thư viện `react-simple-wysiwyg` dùng nội bộ cho mọi
   nút định dạng, không phải lựa chọn riêng của tính năng này.
 
-## 10. Danh mục 238 chỗ trống theo từng mẫu
+## 10. Hai khái niệm khác nhau: "chỗ trống mẫu gốc" và "biến khả dụng để chèn thêm"
+
+Người dùng thật nêu vấn đề: mẫu gốc "Lý lịch cá nhân" chỉ dùng 46 chỗ trống, nhưng hồ sơ giáo dân
+còn nhiều dữ liệu KHÁC mà mẫu gốc không in ra (CMND, ngày xức dầu, các mốc giáo lý, và đặc biệt là
+số sổ / ngày / nơi rửa tội TÁCH RIÊNG thay vì một câu ghép sẵn `{{MoTaRuaToi}}`). Giáo xứ muốn tự
+thêm những dòng đó vào giấy của mình.
+
+Vì vậy `MauInCatalog.cs` phân biệt HAI tập hợp — cố ý KHÔNG gộp thành một:
+
+| | `ChoTrong` | `BienKhaDung` |
+|---|---|---|
+| Nghĩa | các `{{Key}}` **có mặt thật** trong tệp mẫu gốc `.html` | **mọi** biến người dùng được phép chèn |
+| Quan hệ | tập con | **siêu tập** của `ChoTrong` |
+| Dùng ở đâu | tài liệu này, bài test đối chiếu với tệp `.html` | combobox "Chèn chỗ trống", "Xem thử" |
+| Bài test canh giữ | `MauInCatalogTests.Danh_muc_khop_dung_tap_hop_cho_trong_that_trong_tep_html` (khớp CHÍNH XÁC) + `Tong_so_cho_trong_toan_bo_danh_muc_la_252` | `MauInDayDuBienTests` (xem 10.1) |
+
+**Vì sao tách:** mẫu gốc không nên phình to vô ích — thêm 40 dòng dữ liệu mà phần lớn giáo xứ không
+dùng chỉ làm tờ giấy rối và khó sửa. Nhưng nếu combobox chỉ liệt kê đúng những gì mẫu gốc đang dùng
+thì người dùng **không có cách nào biết** còn dữ liệu gì để thêm.
+
+**Vì sao vô hại với bản in hiện tại:** `BoDoMauIn.ApDung` chỉ thay những `{{Key}}` **CÓ MẶT trong
+HTML**. Việc `InAnService` bỏ thêm nhiều khoá vào dictionary `duLieu` không đổi một ký tự nào của
+13 mẫu gốc — chỉ khiến biến người dùng tự chèn có dữ liệu thật phía sau.
+
+### 10.1 Ràng buộc bắt buộc và bài test chứng minh
+
+**Mọi Key công bố trong `BienKhaDung` PHẢI được `InAnService` gán một giá trị thật.** Không được
+công bố biến "cho đẹp" rồi để người dùng chèn vào và in ra tờ giấy có chữ `{{NgayXucDau}}` giữa
+trang. `MauInDayDuBienTests` chứng minh điều đó tự động: với TỪNG mẫu, nó dựng một mẫu tuỳ chỉnh
+riêng của giáo xứ chứa TẤT CẢ `{{Key}}` của mẫu đó (lưu qua chính `PUT /api/mau-in/{tenMau}/rieng`),
+gọi ĐÚNG endpoint in thật, rồi kiểm hai điều:
+
+1. **(chính)** mọi Key có mặt trong dictionary mà `InAnService` trao cho `BoDoMauIn`;
+2. **(đầu-cuối)** bản in cuối cùng không còn chuỗi `{{` nào.
+
+Phép kiểm (1) là phép kiểm thật sự có giá trị: `ApDung` **xoá trắng** cả những `{{Key}}` KHÔNG có
+trong dictionary, nên nhìn HTML thì "quên gán hẳn" trông y hệt "giá trị rỗng hợp lệ" — chỉ soi tập
+khoá mới phân biệt được. Một bài test đối chứng (`Hai_phep_kiem_deu_biet_bao_loi`) xác nhận cả hai
+phép kiểm **biết báo lỗi**, không phải luôn xanh.
+
+Kiểm ở tầng HTML/dictionary chứ không phải PDF vì PDF là nhị phân đã nén, không tìm chuỗi trong đó
+một cách đáng tin được. Chỗ chặn: `BoTrinhDuyet.XuatPdfAsync` (HTML cuối cùng) và
+`BoDoMauIn.ApDung` (tập khoá) — hai hàm mà MỌI mẫu của mọi màn hình đều đi qua. Cả hai lớp được bỏ
+`sealed` và hai hàm đó thành `virtual` CHỈ để bài test thay được chúng trong DI; **không thêm thành
+viên công khai nào mới**, và cố ý KHÔNG mở `public` các hàm dựng HTML của `InAnService` cũng như
+KHÔNG tách một `IBoTrinhDuyet`/`IBoDoMauIn` mà sản phẩm không cần. Lợi ích kèm theo: bài test không
+khởi động Chromium nên in đủ 13 mẫu chỉ mất dưới một giây.
+
+### 10.2 Quy tắc đặt tên khoá cho biến thêm
+
+Dùng **tên tự nhiên trùng tên thuộc tính thực thể** (`SoRuaToi`, `NgayRuaToi`, `NoiRuaToi`,
+`NgayXucDau`, `SoHoKhau`…) — đã đối chiếu và KHÔNG khoá nào trong số đó đụng khoá sẵn có của bất kỳ
+mẫu nào (mẫu gốc chỉ có câu ghép `MoTaRuaToi`; các khoá ngày sẵn có chỉ là `NgaySinh`,
+`NgayHonPhoi`, `NgayQuaDoi`, `NgayThangNamIn`). Vì vậy **không cần hậu tố "Rieng"** nào.
+
+Hai chỗ buộc phải đổi tên vì tên tự nhiên đã bị chiếm nghĩa khác:
+
+| Thuộc tính | Khoá dùng | Vì sao không dùng tên tự nhiên |
+|---|---|---|
+| `GiaoDan.GhiChu` | `GhiChuGiaoDan` | `GhiChuGiaDinh`/`GhiChuHonPhoi` đã có nghĩa khác trong cùng mẫu |
+| `RaoHonPhoi.GhiChu` | `GhiChuRao` | như trên |
+
+Lưu ý riêng ở "Lý lịch cá nhân": `{{NgayQuaDoi}}`, `{{NoiAnTang}}`, `{{SoAnTang}}` sẵn có là các
+**cụm câu đã ghép sẵn** ("— ngày …", "— an táng tại …", " (số …)"), KHÔNG phải giá trị thô — giữ
+nguyên ngữ nghĩa đó; biến thô bổ sung chỉ có `{{NoiQuaDoi}}` (chưa từng tồn tại).
+
+### 10.3 Số lượng theo từng mẫu
+
+| Mẫu | Chỗ trống mẫu gốc đang dùng | Biến thêm (chèn được) | Tổng biến khả dụng |
+|---|---|---|---|
+| Lý lịch cá nhân | 46 | 41 | **87** |
+| Chứng nhận bí tích | 17 | 27 | 44 |
+| Chứng nhận hôn phối | 31 | 30 | 61 |
+| Phiếu gia đình (A4/A3) | 13 | 19 | 32 |
+| Giới thiệu chứng nhận rửa tội | 18 | 16 | 34 |
+| Giới thiệu chứng nhận thêm sức | 17 | 23 | 40 |
+| Giới thiệu giáo lý hôn phối | 21 | 30 | 51 |
+| Giới thiệu chuyển xứ | 15 | 11 | 26 |
+| Xin điều tra và rao hôn phối | 26 | 26 | 52 |
+| Kết quả rao hôn phối | 33 | 21 | 54 |
+| In danh sách giáo dân | 5 | 6 | 11 |
+| In danh sách gia đình | 5 | 6 | 11 |
+| In danh sách rao hôn phối | 5 | 6 | 11 |
+| **Tổng** | **252** | **262** | **514** |
+
+### 10.4 Bảng biến thêm theo nhóm
+
+Nhóm (`BienMauIn.Nhom`) chỉ để gom mục thành `<optgroup>` trong combobox — 87 mục liệt kê phẳng thì
+quý cha/quý sơ không tìm nổi. Thứ tự nhóm giữ đúng **lần xuất hiện đầu tiên** từ máy chủ (trình tự
+đọc của tờ giấy: giáo xứ → giáo dân → bí tích → …), frontend KHÔNG sắp lại theo bảng chữ cái.
+
+**Nhóm "Giáo xứ"** — thêm cho mẫu nào chưa in: `{{DiaChiGiaoXu}}`, `{{DienThoaiGiaoXu}}`,
+`{{EmailGiaoXu}}`, `{{WebsiteGiaoXu}}` (Phiếu gia đình, hai mẫu rao hôn phối, 3 mẫu danh sách),
+`{{TenGiaoPhan}}`/`{{TenGiaoHat}}` (3 mẫu danh sách, Kết quả rao), `{{TenGiaoHo}}` (3 giấy giới
+thiệu cá nhân, Giới thiệu chuyển xứ).
+
+**Nhóm "Giáo dân"** — có ở mọi mẫu theo một giáo dân:
+
+| Biến | Nguồn dữ liệu |
+|---|---|
+| `{{MaGiaoDan}}` | `GiaoDan.MaGiaoDanCu` |
+| `{{Phai}}` | `GiaoDan.Phai` |
+| `{{CMND}}` | `GiaoDan.CMND` |
+| `{{DanToc}}` | `GiaoDan.DanToc` |
+| `{{NgheNghiep}}` | `GiaoDan.NgheNghiep` |
+| `{{ThuocGiaoXu}}` | `GiaoDan.ThuocGiaoXu` |
+| `{{ThuocGiaoPhan}}` | `GiaoDan.ThuocGiaoPhan` |
+| `{{GhiChuGiaoDan}}` | `GiaoDan.GhiChu` |
+| `{{DienThoaiGiaoDan}}` / `{{EmailGiaoDan}}` / `{{DiaChiGiaoDan}}` | `GiaoDan.DienThoai` / `Email` / `DiaChi` |
+| `{{NoiQuaDoi}}` | `GiaoDan.NoiQuaDoi` (chỉ Lý lịch cá nhân) |
+
+Ở "Chứng nhận hôn phối" các biến trên có dạng cặp hậu tố `Nam`/`Nu` (`{{MaGiaoDanNam}}`,
+`{{CMNDNu}}`, `{{DiaChiNam}}`, `{{DienThoaiNu}}`…). Ở hai mẫu rao hôn phối là hậu tố `1`/`2`
+(`{{Phai1}}`, `{{NgaySinh2}}`, `{{DienThoai1}}`, `{{DiaChi2}}`, `{{Tuoi1}}`…).
+
+**Nhóm "Bí tích"** — bí tích dạng RỜI, đúng như bản desktop in từng ô
+(`Source/ExcelReport/ReportLyLichCaNhan.cs`), thay vì chỉ có câu ghép `{{MoTaRuaToi}}`:
+
+| Rửa tội | Rước lễ lần đầu | Thêm sức | Xức dầu bệnh nhân |
+|---|---|---|---|
+| `{{SoRuaToi}}` | `{{SoRuocLe}}` | `{{SoThemSuc}}` | — |
+| `{{NgayRuaToi}}` | `{{NgayRuocLe}}` | `{{NgayThemSuc}}` | `{{NgayXucDau}}` |
+| `{{NoiRuaToi}}` | `{{NoiRuocLe}}` | `{{NoiThemSuc}}` | — |
+| `{{ChaRuaToi}}` | `{{ChaRuocLe}}` | `{{ChaThemSuc}}` | `{{NguoiXucDau}}` |
+| `{{NguoiDoDauRuaToi}}` | — | `{{NguoiDoDauThemSuc}}` | `{{TinhTrangXucDau}}`, `{{GhiChuXucDau}}` |
+
+Mọi ngày đi qua đúng helper `VanBanInAn.Ngay(...)` (định dạng `dd/MM/yyyy`, rỗng khi null) — KHÔNG
+định dạng lại ở từng nơi. Ở "Chứng nhận hôn phối" các biến này cũng có dạng cặp `Nam`/`Nu`
+(`{{SoRuaToiNam}}`, `{{NgayThemSucNu}}`…); ở hai mẫu rao là `{{MoTaRuaToi1}}`/`{{MoTaThemSuc2}}`.
+
+**Nhóm "Giáo lý"** (Lý lịch cá nhân, Giới thiệu giáo lý hôn phối): `{{NgayBD1}}`, `{{NoiBD1}}`,
+`{{NgayBD2}}`, `{{NoiBD2}}`, `{{NgayTHVaoDoi}}`, `{{NoiTHVaoDoi}}`, `{{NgayGLHN1}}`,
+`{{NgayGLHN2}}`, `{{NoiGLHN}}`, `{{NguoiChungNhanGLHN}}`, `{{XepLoaiGLHN}}`.
+
+**Nhóm "Gia đình"**:
+
+| Biến | Nguồn dữ liệu | Có ở mẫu |
+|---|---|---|
+| `{{TenGiaDinh}}`, `{{MaGiaDinh}}`, `{{DiaChiGiaDinh}}`, `{{DienThoaiGiaDinh}}`, `{{GhiChuGiaDinh}}` | `GiaDinh` | Lý lịch cá nhân (gia đình đang tham gia), Giới thiệu chuyển xứ |
+| `{{SoHoKhau}}`, `{{DienGiaDinh}}` | `GiaDinh.SoHoKhau` / `DienGiaDinh` | Lý lịch cá nhân, Phiếu gia đình, Giới thiệu chuyển xứ |
+| `{{MaGiaDinhCu}}`, `{{SoLuongThanhVien}}`, `{{DaChuyenXu}}`, `{{NgayChuyen}}`, `{{NoiChuyen}}` | `GiaDinh` + số thành viên | Phiếu gia đình, Giới thiệu chuyển xứ |
+
+`{{MaGiaDinh}}` ưu tiên `MaGiaDinhRieng` (mã giáo xứ tự nhập, bật bằng cấu hình
+`TUNHAP_MAGIADINH`) rồi mới tới mã gốc; `{{MaGiaDinhCu}}` luôn là mã gốc.
+
+**Nhóm "Hôn phối"** (Phiếu gia đình — mẫu gốc chỉ in câu ghép `{{MoTaHonPhoi}}`): `{{SoHonPhoi}}`,
+`{{NgayHonPhoi}}`, `{{NoiHonPhoi}}`, `{{ChaHonPhoi}}`, `{{CachThucHonPhoi}}`, `{{NguoiChung1}}`,
+`{{NguoiChung2}}`, `{{GhiChuHonPhoi}}`. "Chứng nhận hôn phối" thêm `{{TenHonPhoi}}` và
+`{{GhiChuHonPhoi}}`.
+
+**Nhóm "Rao hôn phối"**: `{{MaRaoHonPhoi}}`, `{{TenRaoHonPhoi}}`, `{{NgayRaoLan1}}`,
+`{{NgayRaoLan2}}`, `{{NgayRaoLan3}}`, `{{GhiChuRao}}`, và các cột giáo xứ/giáo phận hiện tại /
+nguyên quán / trước đây của hai người (`{{TenGiaoPhan1}}`, `{{TenGiaoXuNQ2}}`,
+`{{TenGiaoPhanTruoc1}}`…) cho mẫu nào chưa in hết.
+
+### 10.5 Hiệu năng: không thêm truy vấn N+1
+
+`DungHtmlLyLichCaNhan` được gọi **lặp cho từng thành viên** khi in lý lịch cả gia đình
+(`XuatLyLichCaNhanGiaDinh`), nên mọi biến thêm đều lấy từ thực thể **đã nạp**, không hàm helper nào
+chạm CSDL. Ba thay đổi truy vấn duy nhất đều là **thêm phép nối vào truy vấn đã có**, không phải
+truy vấn mới:
+
+- `DungHtmlLyLichCaNhan`: `.Include(GiaDinhThamGia).ThenInclude(tv => tv.GiaDinh)` — để có nhóm
+  "Gia đình".
+- `XuatGioiThieuChuyenXu`: `.Include(x => x.GiaoHo)` — để có `{{TenGiaoHo}}`.
+- `XuatChungNhanHonPhoi`: thêm 4 cột (`MaGiaoDanCu`, `CMND`, `DiaChi`, `DienThoai`) vào **cùng một**
+  phép chiếu `NguoiHonPhoi` đã có.
+
+## 11. Danh mục 252 chỗ trống mẫu gốc theo từng mẫu
 
 Đọc trực tiếp từ đối chiếu `InAnService.cs` (nơi gán giá trị cho từng `Key`) với các tệp
 `PrintTemplates/Chung/*.html` (nơi dùng `Key`) — có bài kiểm tra tự động
@@ -171,7 +346,7 @@ Thiết kế mới quan trọng nhất, tự quyết và ghi lại lý do:
 danh mục này với đúng tập `{{Key}}` thật trong từng tệp `.html`, tự báo lỗi nếu ai gõ nhầm tên
 hay bỏ sót khi sửa `MauInCatalog.cs` sau này.
 
-### Lý lịch cá nhân (`LyLichCaNhan`) — 43 chỗ trống
+### Lý lịch cá nhân (`LyLichCaNhan`) — 46 chỗ trống
 
 | Chỗ trống | Ý nghĩa |
 |---|---|
@@ -181,6 +356,7 @@ hay bỏ sót khi sửa `MauInCatalog.cs` sau này.
 | `{{DiaChiGiaoXu}}` | Địa chỉ giáo xứ |
 | `{{DienThoaiGiaoXu}}` | Điện thoại giáo xứ |
 | `{{EmailGiaoXu}}` | Email giáo xứ |
+| `{{WebsiteGiaoXu}}` | Website giáo xứ |
 | `{{TenGiaoHo}}` | Tên giáo họ |
 | `{{MaGiaoDan}}` | Mã giáo dân (số cũ) |
 | `{{HoTen}}` | Họ và tên (kèm tên thánh) |
@@ -209,6 +385,8 @@ hay bỏ sót khi sửa `MauInCatalog.cs` sau này.
 | `{{CachThucHonPhoi}}` | Cách thức hôn phối |
 | `{{NguoiChung1}}` | Người chứng thứ nhất |
 | `{{NguoiChung2}}` | Người chứng thứ hai |
+| `{{GhiChuHonPhoi}}` | Ghi chú hôn phối |
+| `{{TenChanhXu}}` | Tên linh mục chánh xứ đương nhiệm |
 | `{{ConHoc}}` | Dấu [x]/[ ] — còn học |
 | `{{TanTong}}` | Dấu [x]/[ ] — tân tòng |
 | `{{DaCoGiaDinh}}` | Dấu [x]/[ ] — đã có gia đình |
@@ -219,7 +397,7 @@ hay bỏ sót khi sửa `MauInCatalog.cs` sau này.
 | `{{NgayThangNamIn}}` | Ngày tháng năm in phiếu |
 | `{{KhoiAnh}}` | [Khối ảnh đại diện — không gõ tay, hệ thống tự chèn] |
 
-### Chứng nhận bí tích (`ChungNhanBiTich`) — 16 chỗ trống
+### Chứng nhận bí tích (`ChungNhanBiTich`) — 17 chỗ trống
 
 | Chỗ trống | Ý nghĩa |
 |---|---|
@@ -229,6 +407,7 @@ hay bỏ sót khi sửa `MauInCatalog.cs` sau này.
 | `{{DiaChiGiaoXu}}` | Địa chỉ giáo xứ |
 | `{{DienThoaiGiaoXu}}` | Điện thoại giáo xứ |
 | `{{EmailGiaoXu}}` | Email giáo xứ |
+| `{{WebsiteGiaoXu}}` | Website giáo xứ |
 | `{{TieuDeBiTich}}` | Tiêu đề (Rửa tội / Xưng tội-Rước lễ / Thêm sức / Các bí tích) |
 | `{{TenGiaoHo}}` | Tên giáo họ |
 | `{{HoTen}}` | Họ và tên |
@@ -240,7 +419,7 @@ hay bỏ sót khi sửa `MauInCatalog.cs` sau này.
 | `{{DanhSachBiTich}}` | [Khối các dòng bí tích được chứng nhận — hệ thống tự dựng] |
 | `{{NgayThangNamIn}}` | Ngày tháng năm in |
 
-### Chứng nhận hôn phối (`ChungNhanHonPhoi`) — 30 chỗ trống
+### Chứng nhận hôn phối (`ChungNhanHonPhoi`) — 31 chỗ trống
 
 | Chỗ trống | Ý nghĩa |
 |---|---|
@@ -250,6 +429,7 @@ hay bỏ sót khi sửa `MauInCatalog.cs` sau này.
 | `{{DiaChiGiaoXu}}` | Địa chỉ giáo xứ |
 | `{{DienThoaiGiaoXu}}` | Điện thoại giáo xứ |
 | `{{EmailGiaoXu}}` | Email giáo xứ |
+| `{{WebsiteGiaoXu}}` | Website giáo xứ |
 | `{{HoTenNam}}` | Họ tên người nam |
 | `{{HoTenNu}}` | Họ tên người nữ |
 | `{{NgaySinhNam}}` | Ngày sinh người nam |
@@ -293,7 +473,7 @@ hay bỏ sót khi sửa `MauInCatalog.cs` sau này.
 | `{{HangThanhVien}}` | [Khối các dòng thành viên — hệ thống tự dựng theo số người thật] |
 | `{{KhoiAnh}}` | [Khối ảnh đại diện gia đình — không gõ tay, hệ thống tự chèn] |
 
-### Giấy giới thiệu chứng nhận rửa tội (`GioiThieuRuaToi`) — 17 chỗ trống
+### Giấy giới thiệu chứng nhận rửa tội (`GioiThieuRuaToi`) — 18 chỗ trống
 
 | Chỗ trống | Ý nghĩa |
 |---|---|
@@ -303,6 +483,7 @@ hay bỏ sót khi sửa `MauInCatalog.cs` sau này.
 | `{{DiaChiGiaoXu}}` | Địa chỉ giáo xứ |
 | `{{DienThoaiGiaoXu}}` | Điện thoại giáo xứ |
 | `{{EmailGiaoXu}}` | Email giáo xứ |
+| `{{WebsiteGiaoXu}}` | Website giáo xứ |
 | `{{HoTen}}` | Họ và tên |
 | `{{NgaySinh}}` | Ngày sinh |
 | `{{NoiSinh}}` | Nơi sinh |
@@ -315,7 +496,7 @@ hay bỏ sót khi sửa `MauInCatalog.cs` sau này.
 | `{{TenLinhMuc}}` | Tên linh mục ký giấy giới thiệu (nhập tay lúc in) |
 | `{{NgayThangNamIn}}` | Ngày tháng năm in |
 
-### Giấy giới thiệu chứng nhận thêm sức (`GioiThieuThemSuc`) — 16 chỗ trống
+### Giấy giới thiệu chứng nhận thêm sức (`GioiThieuThemSuc`) — 17 chỗ trống
 
 | Chỗ trống | Ý nghĩa |
 |---|---|
@@ -325,6 +506,7 @@ hay bỏ sót khi sửa `MauInCatalog.cs` sau này.
 | `{{DiaChiGiaoXu}}` | Địa chỉ giáo xứ |
 | `{{DienThoaiGiaoXu}}` | Điện thoại giáo xứ |
 | `{{EmailGiaoXu}}` | Email giáo xứ |
+| `{{WebsiteGiaoXu}}` | Website giáo xứ |
 | `{{HoTen}}` | Họ và tên |
 | `{{NgaySinh}}` | Ngày sinh |
 | `{{NoiSinh}}` | Nơi sinh |
@@ -336,7 +518,7 @@ hay bỏ sót khi sửa `MauInCatalog.cs` sau này.
 | `{{TenLinhMuc}}` | Tên linh mục ký giấy giới thiệu (nhập tay lúc in) |
 | `{{NgayThangNamIn}}` | Ngày tháng năm in |
 
-### Giấy giới thiệu giáo lý hôn phối (`GioiThieuGiaoLyHonPhoi`) — 20 chỗ trống
+### Giấy giới thiệu giáo lý hôn phối (`GioiThieuGiaoLyHonPhoi`) — 21 chỗ trống
 
 | Chỗ trống | Ý nghĩa |
 |---|---|
@@ -346,6 +528,7 @@ hay bỏ sót khi sửa `MauInCatalog.cs` sau này.
 | `{{DiaChiGiaoXu}}` | Địa chỉ giáo xứ |
 | `{{DienThoaiGiaoXu}}` | Điện thoại giáo xứ |
 | `{{EmailGiaoXu}}` | Email giáo xứ |
+| `{{WebsiteGiaoXu}}` | Website giáo xứ |
 | `{{TenGiaoHo}}` | Tên giáo họ |
 | `{{HoTen}}` | Họ và tên |
 | `{{NgaySinh}}` | Ngày sinh |
@@ -361,7 +544,7 @@ hay bỏ sót khi sửa `MauInCatalog.cs` sau này.
 | `{{TenLinhMuc}}` | Tên linh mục ký giấy giới thiệu (nhập tay lúc in) |
 | `{{NgayThangNamIn}}` | Ngày tháng năm in |
 
-### Giấy giới thiệu chuyển xứ (`GioiThieuChuyenXu`) — 14 chỗ trống
+### Giấy giới thiệu chuyển xứ (`GioiThieuChuyenXu`) — 15 chỗ trống
 
 | Chỗ trống | Ý nghĩa |
 |---|---|
@@ -371,6 +554,7 @@ hay bỏ sót khi sửa `MauInCatalog.cs` sau này.
 | `{{DiaChiGiaoXu}}` | Địa chỉ giáo xứ |
 | `{{DienThoaiGiaoXu}}` | Điện thoại giáo xứ |
 | `{{EmailGiaoXu}}` | Email giáo xứ |
+| `{{WebsiteGiaoXu}}` | Website giáo xứ |
 | `{{TenChuHo}}` | Họ tên chủ hộ |
 | `{{DienThoaiGiaDinh}}` | Điện thoại gia đình |
 | `{{DiaChiGiaDinh}}` | Địa chỉ gia đình |
@@ -468,3 +652,151 @@ hay bỏ sót khi sửa `MauInCatalog.cs` sau này.
 | `{{DieuKienLoc}}` | Mô tả điều kiện lọc đang áp dụng |
 | `{{NgayThangNamIn}}` | Ngày giờ in |
 | `{{HangDanhSach}}` | [Khối các dòng danh sách — hệ thống tự dựng, 12 cột] |
+
+### In danh sách rao hôn phối (`DanhSachRaoHonPhoi`) — 5 chỗ trống
+
+| Chỗ trống | Ý nghĩa |
+|---|---|
+| `{{TenGiaoXu}}` | Tên giáo xứ |
+| `{{SoLuong}}` | Tổng số đôi rao trong danh sách |
+| `{{DieuKienLoc}}` | Mô tả điều kiện lọc đang áp dụng |
+| `{{NgayThangNamIn}}` | Ngày giờ in |
+| `{{HangDanhSach}}` | [Khối các dòng danh sách — hệ thống tự dựng, 8 cột] |
+
+## 12. Cách hiển thị dữ liệu đúng/sai
+
+### 12.1 Vấn đề và cách giải
+
+Một số mục trên giấy tờ chỉ có hai trạng thái (có/không): "còn đi học", "tân tòng", "đã có gia
+đình", "đã qua đời", "gia đình đã chuyển xứ". Bản desktop in cứng dấu `[x]` khi đúng và `[  ]`
+khi sai (`Source/ExcelReport/ReportLyLichCaNhan.cs` dòng 122-124), bản web ban đầu migrate nguyên
+trạng bằng `InAnService.Dau(bool)`.
+
+Nhiều giáo xứ muốn in **câu chữ** thay cho dấu ngoặc vuông — ví dụ mục tân tòng: khi đúng in chữ
+"Tân tòng", khi sai **để trắng**; hoặc in "Là tân tòng: đúng". Vì vậy màn hình này có thêm khu vực
+**"Cách hiển thị dữ liệu đúng/sai"**: với mỗi mục, giáo xứ gõ đúng **hai ô** — "Khi có" và "Khi
+không".
+
+CỐ Ý **không** làm bằng cú pháp điều kiện trong mẫu (`{{#if}}`…): người dùng là quý cha/quý sơ
+phần lớn không rành máy tính, một bảng hai ô để gõ không cần học cú pháp nào. Hướng dẫn trên màn
+hình nói rõ: *"Để trống ô nào thì chỗ đó không in ra chữ gì."*
+
+### 12.2 Thứ tự phân giải — GIỐNG HỆT mẫu in
+
+Đúng ba cấp, xét **theo từng biến một** (không phải theo cả bảng), cùng thứ tự với
+`InAnService.DungMau` để người dùng chỉ phải hiểu MỘT quy tắc ưu tiên cho cả màn hình:
+
+1. Câu chữ RIÊNG của giáo xứ đang đăng nhập (`GiaoXuId` = claim).
+2. Câu chữ cấp HỆ THỐNG do Quản trị hệ thống đặt (`GiaoXuId IS NULL`).
+3. **Mặc định gốc** `[x]` / `[  ]` — giữ nguyên xi hành vi cũ.
+
+Giáo xứ chưa tuỳ chỉnh gì thì bản in **không đổi một ly nào** — tương thích ngược tuyệt đối, có
+bài test khẳng định (`CachHienThiDungSaiTests.Chua_tuy_chinh_gi_thi_ban_in_khong_doi_van_la_dau_ngoac_vuong`).
+
+Một dòng tuỳ chỉnh ghi đè **cả hai vế** của đúng biến đó; ô để trống (NULL/rỗng) nghĩa là "không
+in gì" và **không** rơi tiếp xuống cấp dưới — nếu không thì giáo xứ sẽ không có cách nào làm cho
+một vế im lặng, mà đó chính là cách dùng chính.
+
+### 12.3 Danh mục 5 biến đúng/sai
+
+Đúng tập khoá mà `InAnService` dựng bằng bảng câu chữ, không hơn không kém (`BienDungSaiCatalog`):
+
+| Biến | Nhãn trên màn hình | Nhóm | Mẫu in có dùng |
+|---|---|---|---|
+| `ConHoc` | Còn đi học | Giáo dân | Lý lịch cá nhân |
+| `TanTong` | Tân tòng | Giáo dân | Lý lịch cá nhân |
+| `DaCoGiaDinh` | Đã có gia đình | Giáo dân | Lý lịch cá nhân |
+| `QuaDoi` | Đã qua đời | Giáo dân | Lý lịch cá nhân |
+| `DaChuyenXu` | Gia đình đã chuyển xứ | Gia đình | Phiếu gia đình, Giới thiệu chuyển xứ, Giới thiệu rửa tội |
+
+CỐ Ý **không** liệt kê mọi thuộc tính `bool` của thực thể: những cờ như `GiaDinh.KhongThongKe` hay
+`DaXoa` không được công bố thành biến in nào trong `MauInCatalog`, nên không có chỗ nào trên tờ
+giấy để tuỳ chỉnh — đưa vào chỉ tạo ra những dòng bấm vào không có tác dụng gì. Có bài test khẳng
+định mọi biến trong danh mục đều là biến in thật **và** thật sự đổi được bản in.
+
+Cũng CỐ Ý **không** áp dụng cho các cột đúng/sai trong "In danh sách giáo dân/gia đình"
+(`InAnService.BoolDs`, in `✓`/`—`): đó là ô của một bảng 29 cột khổ ngang, không phải biến
+`{{Key}}` người dùng chèn được, và nhét một cụm từ dài vào đó sẽ phá vỡ bố cục.
+
+### 12.4 Lưu trữ
+
+Bảng `cach_hien_thi_dung_sai`, dựng **đúng khuôn** `mau_in_tuy_chinh` (đọc ghi chú ở
+`CachHienThiDungSai.cs` và `MauInTuyChinh.cs`):
+
+- `GiaoXuId` (`uuid`, **NULL được**) — NULL = dòng cấp hệ thống.
+- `TenBien`, `KhiDung` (≤200 ký tự), `KhiSai` (≤200), `CreatedAt`, `UpdatedAt`, `xmin` (RowVersion).
+- **Hai chỉ mục MỘT PHẦN** thay cho một `UNIQUE(GiaoXuId, TenBien)` thường, vì PostgreSQL coi hai
+  NULL là khác nhau trong chỉ mục duy nhất nên chỉ mục thường KHÔNG chặn được hai dòng hệ thống
+  trùng `TenBien`.
+- **KHÔNG** nằm trong bộ lọc toàn cục theo `GiaoXuId` của `QlgxDbContext`, và **KHÔNG** bật RLS:
+  policy chung của dự án là `giao_xu_id::text = current_setting('app.giao_xu_id', true)`, mà với
+  dòng cấp hệ thống `giao_xu_id IS NULL` nên vế so sánh trả NULL — policy đó sẽ **giấu mất** chính
+  những dòng hệ thống cần mọi giáo xứ đọc được. Hai bảng "có dòng cấp hệ thống" này vì vậy lọc
+  **tay, tường minh** ở tầng service. Xem ghi chú ở migration `ThemCachHienThiDungSai` để biết cách
+  bật RLS đúng cho cả hai bảng nếu sau này muốn thêm lớp phòng thủ CSDL.
+
+### 12.5 API
+
+Đối xứng với `MauInEndpoints`, cùng cách đặt policy:
+
+| Route | Policy | Ghi chú |
+|---|---|---|
+| `GET /api/cach-hien-thi` | đã đăng nhập | Trả 5 biến + câu chữ đang áp dụng + `capDangDung` + **cả hai cấp** |
+| `PUT`/`DELETE` `/api/cach-hien-thi/{tenBien}/rieng` | `QuanTri` | `GiaoXuId` LUÔN từ claim, KHÔNG BAO GIỜ qua tham số |
+| `PUT`/`DELETE` `/api/cach-hien-thi/{tenBien}/he-thong` | `QuanTriHeThong` | — |
+
+Khác một điểm có chủ đích so với mẫu in: **không** có `GET` riêng theo cấp. Màn hình mẫu in mở
+từng mẫu MỘT trong trình soạn thảo nên một GET mỗi lần là hợp lý; ở đây cả 5 biến hiện cùng lúc
+trên một bảng, tách route theo cấp sẽ thành 5 lượt gọi chỉ để vẽ xong một bảng.
+
+`RowVersion` chống ghi đè âm thầm y như `MauInService.Luu`, kể cả quy ước **`RowVersion: 0` nghĩa
+là "chưa từng tuỳ chỉnh, đây là lần lưu đầu"** (tạo mới thay vì báo xung đột).
+
+### 12.6 Khử trùng: dựa vào HtmlEncoder, không lọc thêm
+
+Câu chữ đi vào mẫu qua từ điển `duLieu`, mà `BoDoMauIn.ApDung` cho **mọi** giá trị trong `duLieu`
+chạy qua `HtmlEncoder.Default.Encode`. Nên giáo xứ gõ `<script>alert(1)</script>` thì trên giấy in
+ra đúng mấy chữ đó, **không** thành thẻ sống — đã kiểm bằng bài test thật
+(`Cau_chu_co_the_script_bi_thoat_html_khong_thanh_the_song`), không tin suông.
+
+Vì vậy service **cố ý KHÔNG** gọi `MauInHtmlSanitizer` cho hai ô này (khác hẳn nội dung mẫu HTML):
+lọc thêm chỉ làm hỏng câu chữ hợp lệ có dấu `<` `>` `&`. Chỉ chuẩn hoá (cắt khoảng trắng hai đầu,
+quy chuỗi rỗng về NULL) và giới hạn 200 ký tự.
+
+Lưu ý khi viết test: `HtmlEncoder` thoát **cả ký tự tiếng Việt có dấu** thành thực thể số
+("Tân" → `T&#xE2;n`), nên mọi phép so chuỗi tiếng Việt trên HTML in ra phải đi qua cùng bộ mã hoá.
+
+### 12.7 Hiệu năng: nạp một lần cho mỗi lượt in
+
+`DungHtmlLyLichCaNhan` chạy **lặp cho từng thành viên** khi in lý lịch cả gia đình
+(`XuatLyLichCaNhanGiaDinh`). Nếu tra CSDL bên trong đó thì tốn (số thành viên) truy vấn, và nếu
+tra theo từng biến thì còn nhân thêm 5 lần nữa.
+
+Cách giải: `InAnService` giữ một trường `_bangCachHienThi` nhớ lại bảng đã phân giải. `InAnService`
+đăng ký **Scoped** nên một thực thể phục vụ đúng một yêu cầu HTTP, tức đúng một lượt in — nhớ ở đây
+chính là "nạp một lần cho mỗi lượt in", không rò rỉ bảng của giáo xứ này sang yêu cầu của giáo xứ
+khác. Cả hai cấp lấy trong **một** truy vấn (`GiaoXuId == gx || GiaoXuId == null`) rồi phân giải
+trong bộ nhớ.
+
+Có bài test **đếm thẳng số câu lệnh SQL** chạm bảng qua một `DbCommandInterceptor` và khẳng định
+đúng **1** truy vấn khi in cho gia đình 3 người
+(`In_ca_gia_dinh_chi_nap_bang_cau_chu_dung_mot_lan`) — kèm một bộ đếm tổng số câu lệnh để bài test
+không "đạt" nhầm khi interceptor chưa được gắn. Lưu ý: interceptor phải gắn qua
+`AddDbContext(...).AddInterceptors(...)`, **không** phải bằng cách thả `IInterceptor` vào DI — dự án
+này gắn interceptor trong `QlgxDbContext.OnConfiguring` nên đường auto-discover qua DI không có
+tác dụng.
+
+### 12.8 Giao diện
+
+Khu vực riêng ngay dưới danh sách mẫu in (cùng màn hình, vì hai việc luôn đi cùng nhau: chèn biến
+`{{TanTong}}` vào mẫu ở phần trên rồi quyết định nó in ra chữ gì ở phần này). Bảng gồm: nhãn mục
+tiếng Việt, ô "Khi có", ô "Khi không", huy hiệu cấp đang dùng (dùng lại `HuyHieuCap` của phần mẫu
+in), nút "Lưu", nút "Khôi phục mặc định" (chỉ hiện khi **cấp đang sửa** đã tuỳ chỉnh).
+
+Tài khoản Quản trị hệ thống sửa cấp hệ thống, tài khoản Quản trị viên giáo xứ sửa cấp riêng, tài
+khoản thường **chỉ đọc** câu chữ đang áp dụng (không có ô nhập, không có nút Lưu) — đúng cách màn
+hình mẫu in đang phân biệt.
+
+Hai ô nhập khởi tạo từ câu chữ của **đúng cấp đang sửa** (không phải câu chữ đang áp dụng): quản
+trị hệ thống mở màn hình phải thấy ô trống khi chính cấp hệ thống chưa đặt gì, dù giáo xứ đã đè
+riêng — nếu không, bấm Lưu sẽ vô tình sao chép câu chữ của cấp khác sang cấp mình.
