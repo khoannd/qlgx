@@ -181,6 +181,36 @@ app.MapGet("/api/suc-khoe", () => Results.Ok(new
     phienBan = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0"
 })).AllowAnonymous();
 
+// Readiness — KHÁC liveness ở trên: có chạm CSDL thật. Script cài đặt và luồng cập nhật
+// (WebApp/scripts/install.sh) dùng đúng endpoint này làm cổng quyết định "đã lên được chưa";
+// nếu tín hiệu đó nói dối thì cơ chế tự quay lui khi cập nhật hỏng cũng vô nghĩa. Cố ý KHÔNG
+// dùng cho Docker healthcheck (gọi mỗi 10 giây thì không nên mở kết nối CSDL mỗi lần).
+app.MapGet("/api/suc-khoe/san-sang", async (QlgxDbContext db, CancellationToken ct) =>
+{
+    try
+    {
+        var conThieu = (await db.Database.GetPendingMigrationsAsync(ct)).Count();
+        if (conThieu > 0)
+            return Results.Json(new
+            {
+                trangThai = "chua-san-sang",
+                soMigrationConThieu = conThieu,
+                lyDo = $"Còn {conThieu} migration chưa áp dụng."
+            }, statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        return Results.Ok(new { trangThai = "san-sang", soMigrationConThieu = 0 });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            trangThai = "chua-san-sang",
+            soMigrationConThieu = -1,
+            lyDo = "Không kết nối được cơ sở dữ liệu: " + ex.Message
+        }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+}).AllowAnonymous();
+
 app.MapAuth();
 
 // Moi nhom endpoint nghiep vu duoi day BAT BUOC xac thuc — tung ham Map* tu goi
