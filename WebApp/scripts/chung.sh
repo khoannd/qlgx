@@ -38,10 +38,27 @@ doc_env_kv() {
 # Thay vao do doc-loc-ghi bang awk voi gia tri truyen qua bien, khong qua mau thay the.
 set_env_kv() {
   local tep="$1" khoa="$2" gia_tri="$3"
+  local tep_moi=0
+  [ -e "$tep" ] || tep_moi=1
   touch "$tep"
+  # Tep MOI tao (chua tung ton tai) phai duoc ep quyen 600 NGAY, khong duoc de umask he
+  # thong quyet dinh. Tep nay se chua bi mat (mat khau CSDL, khoa JWT) -- kich ban that la
+  # install.sh tao .env lan dau, umask mac dinh cua he thong (thuong la 022) se tao tep 644,
+  # doc duoc boi moi nguoi dung tren may. Tep DA CO san thi giu nguyen quyen nguoi van hanh
+  # da chon, khong tu y sua.
+  if [ "$tep_moi" -eq 1 ]; then chmod 600 "$tep"; fi
+
   # Bao dam tep ket thuc bang xuong dong TRUOC khi noi them -- thieu buoc nay thi khoa moi bi
   # dinh vao cuoi dong cuoi, tao ra mot dong hong va lam mat ca hai gia tri.
   [ -s "$tep" ] && [ "$(tail -c1 "$tep" | wc -l)" -eq 0 ] && printf '\n' >> "$tep"
+
+  # Doc quyen HIEN TAI cua tep (sau buoc ep 600 o tren neu la tep moi) bang stat, roi ap dung
+  # dung so do cho tep tam. KHONG dung "chmod --reference": tuy chon nay la GNU coreutils,
+  # khong co tren BusyBox/Alpine (may chu that dung Debian/RHEL nen co, nhung khong nen phu
+  # thuoc vao dieu do) -- khi thieu no, chmod loi lang le va roi vao nhanh du phong sai, co
+  # the ghi de quyen cua mot tep da co san.
+  local quyen
+  quyen=$(stat -c '%a' "$tep" 2>/dev/null || echo 600)
 
   local tam="${tep}.tam.$$"
   awk -v k="$khoa" -v v="$gia_tri" '
@@ -50,8 +67,7 @@ set_env_kv() {
     { print }
     END { if (!da_ghi) print k "=" v }
   ' "$tep" > "$tam"
-  # Giu nguyen quyen cua tep goc (thuong la 600) thay vi de mv tao tep moi voi umask mac dinh.
-  if [ -f "$tep" ]; then chmod --reference="$tep" "$tam" 2>/dev/null || chmod 600 "$tam"; fi
+  chmod "$quyen" "$tam" 2>/dev/null || chmod 600 "$tam"
   mv "$tam" "$tep"
 }
 

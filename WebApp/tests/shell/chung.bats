@@ -37,6 +37,25 @@ setup() {
   [ "$(doc_env_kv "$TEP" P)" = 'a/b&c$d|e' ]
 }
 
+@test "set_env_kv tao tep moi voi quyen 600, khong theo umask he thong" {
+  # Kich ban that: install.sh tao .env lan dau de ghi mat khau CSDL/khoa JWT. Neu tep chua
+  # ton tai, touch se tao no theo umask he thong (thuong la 644) roi chmod --reference sao
+  # chep dung cai quyen ho hoac do sang tep tam -- lo bi mat cho moi nguoi dung tren may doc
+  # duoc. Tep MOI phai duoc ep ve 600 ngay khi tao.
+  rm -f "$TEP"
+  ( umask 022; set_env_kv "$TEP" "K" "bi-mat" )
+  [ "$(stat -c '%a' "$TEP")" = "600" ]
+}
+
+@test "set_env_kv KHONG doi quyen cua tep da ton tai" {
+  # Nguoi van hanh co the co y dat quyen khac (vi du 640 de mot nhom doc duoc). set_env_kv
+  # chi duoc dam bao tep MOI la 600 -- khong duoc tu y sua quyen tep da co san.
+  printf 'K=cu\n' > "$TEP"
+  chmod 640 "$TEP"
+  set_env_kv "$TEP" "K" "moi"
+  [ "$(stat -c '%a' "$TEP")" = "640" ]
+}
+
 @test "doc_env_kv khong nham khoa co tien to giong nhau" {
   printf 'AB=2\nA=1\n' > "$TEP"
   [ "$(doc_env_kv "$TEP" A)" = "1" ]
