@@ -37,11 +37,33 @@ RUN dotnet publish src/Qlgx.Api/Qlgx.Api.csproj -c Release -o /app/publish --no-
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 # curl chỉ để docker-compose healthcheck gọi /api/suc-khoe từ BÊN TRONG container — ảnh nền
 # chính thức không có sẵn công cụ gọi HTTP nào.
+#
+# Chromium + thư viện hệ thống của nó: BẮT BUỘC cho toàn bộ đường in PDF (mẫu HTML -> Chromium
+# không giao diện qua Playwright -> PDF trong bộ nhớ, xem BoTrinhDuyet.cs). Thiếu chúng thì cả
+# 13 mẫu in đều hỏng ngay lần đầu người dùng bấm in trên máy chủ thật, dù chạy tốt khi phát
+# triển trên Windows. `playwright install --with-deps chromium` tự cài đúng bộ thư viện hệ
+# thống cần thiết cho bản Debian nền, không phải liệt kê tay ~20 gói và tự bảo trì danh sách đó.
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build-api /app/publish .
 COPY --from=build-web /web/dist ./wwwroot
+# Cai Chromium cho Playwright bang npx: da thu ca 3 cach chinh thuc tren may build nay —
+# `dotnet Qlgx.Api.dll --playwright-install` khong duoc ung dung nay xu ly (thoat ngay, khong
+# cai gi) va `pwsh` khong co san trong anh dotnet/aspnet chinh thuc ("pwsh: not found") — chi
+# con npx la chay duoc, xem bang chung trong task-4-report.md. Phai ghim dung phien ban
+# Playwright ma Qlgx.Api tham chieu (PackageReference Microsoft.Playwright trong
+# src/Qlgx.Api/Qlgx.Api.csproj) de khong lech phien ban trinh duyet/thu vien voi assembly
+# Microsoft.Playwright da publish; go nodejs/npm sau khi cai xong vi anh chay khong can toi
+# chung nua.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends nodejs npm \
+    && npx --yes playwright@1.55.0 install --with-deps chromium \
+    && apt-get purge -y nodejs npm && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
+# Chromium được tải dưới quyền root nhưng chạy dưới user "app" — mở quyền đọc/thực thi.
+RUN chmod -R a+rX /ms-playwright
 # Không chạy bằng root trong container — ảnh nền chính thức đã có sẵn user "app" không đặc
 # quyền. Đặt USER SAU khi COPY xong để các tệp copy vào không bị thiếu quyền đọc/ghi cần thiết.
 USER app
