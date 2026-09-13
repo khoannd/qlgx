@@ -32,10 +32,22 @@ public class MoiDuongGhiDeuGhiNhatKyTests
             "goi thang thi them vao DuocPhepGoiThang kem ly do");
     }
 
-    [Fact(Skip = "Mo lai o Task 6 Step 4")]
+    [Fact]
     public void Khong_service_nao_goi_ExecuteUpdate_hay_ExecuteDelete_ngoai_danh_sach_da_xu_ly()
     {
-        var daXuLy = new[] { "TimThayTheService.cs", "ChuyenHoService.cs", "AuthService.cs" };
+        var daXuLy = new[]
+        {
+            // Ba file dưới chỉ còn NHẮC TÊN ExecuteUpdate/ExecuteDelete trong chú thích giải
+            // thích vì sao KHÔNG dùng nữa — test quét theo văn bản nên vẫn phải liệt ở đây.
+            "TimThayTheService.cs",   // Task 5 đã đổi sang đọc-sửa-lưu theo lô
+            "ChuyenHoService.cs",     // Task 6 đã đổi sang đọc-sửa-lưu theo lô
+            "AuthService.cs",         // chỉ cập nhật thời điểm đăng nhập, TaiKhoan không vào nhật ký
+            // Ba file dưới CÒN gọi ExecuteDeleteAsync thật (xoá cứng bản ghi con), nhưng đã ghi
+            // nhật ký tường minh qua GhiNhatKyXoaSapToi ngay trước lệnh xoá — xem Task 6.
+            "GiaDinhService.cs",
+            "GiaoDanService.cs",
+            "DotBiTichService.cs",
+        };
         var goc = TimThuMucGoc();
         var viPham = Directory
             .EnumerateFiles(Path.Combine(goc, "src", "Qlgx.Api", "Services"), "*.cs")

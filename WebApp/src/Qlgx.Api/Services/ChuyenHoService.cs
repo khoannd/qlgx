@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
+using Qlgx.Data.NhatKy;
 
 namespace Qlgx.Api.Services;
 
@@ -50,8 +51,8 @@ public class ChuyenHoService(QlgxDbContext db)
         if (!conTonTai) return null;
 
         await using var giaoTac = await db.Database.BeginTransactionAsync(ct);
-        var soLuong = await db.GiaoDan.Where(g => giaoDanIds.Contains(g.Id))
-            .ExecuteUpdateAsync(s => s.SetProperty(g => g.GiaoHoId, giaoHoDichId), ct);
+        var soLuong = await ChuyenTheoLo(
+            db.GiaoDan.Where(g => giaoDanIds.Contains(g.Id)), g => g.GiaoHoId = giaoHoDichId, ct);
         await giaoTac.CommitAsync(ct);
         return new ChuyenHoGiaoDanKetQua(soLuong);
     }
@@ -89,14 +90,55 @@ public class ChuyenHoService(QlgxDbContext db)
             .Where(tv => giaDinhIds.Contains(tv.GiaDinhId))
             .Select(tv => tv.GiaoDanId).Distinct().ToListAsync(ct);
 
-        var soLuongThanhVien = idThanhVien.Count == 0 ? 0 :
-            await db.GiaoDan.Where(g => idThanhVien.Contains(g.Id))
-                .ExecuteUpdateAsync(s => s.SetProperty(g => g.GiaoHoId, giaoHoDichId), ct);
+        var soLuongThanhVien = idThanhVien.Count == 0 ? 0 : await ChuyenTheoLo(
+            db.GiaoDan.Where(g => idThanhVien.Contains(g.Id)), g => g.GiaoHoId = giaoHoDichId, ct);
 
-        var soLuongGiaDinh = await db.GiaDinh.Where(g => giaDinhIds.Contains(g.Id))
-            .ExecuteUpdateAsync(s => s.SetProperty(g => g.GiaoHoId, giaoHoDichId), ct);
+        var soLuongGiaDinh = await ChuyenTheoLo(
+            db.GiaDinh.Where(g => giaDinhIds.Contains(g.Id)), g => g.GiaoHoId = giaoHoDichId, ct);
 
         await giaoTac.CommitAsync(ct);
         return new ChuyenHoGiaDinhKetQua(soLuongGiaDinh, soLuongThanhVien);
+    }
+
+    /// <summary>Số bản ghi nạp lên mỗi lô — cùng cỡ với TimThayTheService.CoLo.</summary>
+    internal const int CoLo = 200;
+
+    /// <summary>
+    /// Nạp theo lô rồi sửa qua ChangeTracker thay vì <c>ExecuteUpdateAsync</c>.
+    ///
+    /// <c>ExecuteUpdateAsync</c> nhanh hơn (một câu SQL) nhưng ĐI VÒNG QUA SaveChanges nên không
+    /// sinh nhật ký, không đóng dấu UpdatedAt, không đụng xmin. "Chuyển họ hàng loạt" là công cụ
+    /// sửa dữ liệu nguy hiểm nhất nhóm — mất nhật ký đúng ở đây là mất khả năng truy lại ai đã
+    /// chuyển ai đi đâu.
+    ///
+    /// Dùng <c>OrderBy(Id).Skip(daXet).Take(CoLo)</c> (KHÁC ThayTheTheoLo của Task 5, nơi dùng
+    /// Take không Skip): ở đó bộ lọc là chính giá trị đang bị thay nên tập hợp CO LẠI sau mỗi
+    /// lô; ở đây bộ lọc là danh sách Id do người dùng chọn, không liên quan gì tới cột GiaoHoId
+    /// bị sửa, nên tập hợp KHÔNG đổi kích thước — bỏ Skip sẽ nạp lại mãi cùng 200 bản ghi đầu và
+    /// lặp vô hạn. OrderBy(Id) để phân trang có thứ tự ổn định giữa các lô.
+    ///
+    /// Chia lô ở đây KHÔNG rút ngắn thời gian giữ khoá dòng đếm (cả hai bước vẫn nằm trong MỘT
+    /// giao dịch — nguyên tắc 3 ở đầu lớp: gia đình và thành viên phải cùng đổi hoặc cùng không).
+    /// Nó chỉ giữ ChangeTracker khỏi phình ra hàng nghìn thực thể trong một lần lưu. Đây là khác
+    /// biệt CÓ CHỦ Ý so với "Tìm và thay thế", nơi mỗi lô tự commit vì thao tác đó chạy lại được
+    /// còn "chuyển họ" nửa chừng thì để lại gia đình một họ, thành viên một họ.
+    /// </summary>
+    private async Task<int> ChuyenTheoLo<T>(
+        IQueryable<T> truyVan, Action<T> sua, CancellationToken ct) where T : Qlgx.Domain.Entities.ThucTheCoSo
+    {
+        var daXet = 0;
+        while (true)
+        {
+            var lo = await truyVan.OrderBy(x => x.Id).Skip(daXet).Take(CoLo).ToListAsync(ct);
+            if (lo.Count == 0) break;
+
+            foreach (var muc in lo) sua(muc);
+            await db.LuuCoNhatKy(ct);
+            daXet += lo.Count;
+
+            if (lo.Count < CoLo) break;
+            db.ChangeTracker.Clear();
+        }
+        return daXet;
     }
 }

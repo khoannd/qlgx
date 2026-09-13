@@ -157,9 +157,21 @@ public class DotBiTichService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGi
     {
         var d = await db.DotBiTich.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (d is null) return false;
-        await db.BiTichChiTiet.Where(c => c.DotBiTichId == id).ExecuteDeleteAsync(ct);
+
+        // Giao dịch tường minh MỚI THÊM: trước đây chỉ có lệnh xoá con rồi LuuCoNhatKy tự mở
+        // giao dịch riêng, nên xoá con có thể thành công mà xoá đợt lại hỏng. Giờ ghi nhật ký
+        // cho từng chi tiết bí tích sắp bị xoá, và việc đó phải nằm chung giao dịch với chính
+        // lệnh xoá — đồng thời khoá dòng đếm hiệu lực TRƯỚC ExecuteDelete để giữ đúng thứ tự
+        // khoá của mọi đường ghi khác (khoá dòng đếm trước, dữ liệu sau). Xem GhiNhatKyXoaCung.
+        await using var giaoDich = await db.Database.BeginTransactionAsync(ct);
+
+        var chiTietBiXoa = db.BiTichChiTiet.Where(c => c.DotBiTichId == id);
+        await db.GhiNhatKyXoaSapToi(chiTietBiXoa, ct);
+        await chiTietBiXoa.ExecuteDeleteAsync(ct);
+
         db.DotBiTich.Remove(d);
         await db.LuuCoNhatKy(ct);
+        await giaoDich.CommitAsync(ct);
         return true;
     }
 

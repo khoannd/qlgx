@@ -109,4 +109,106 @@ public class NhatKyGhiHangLoatTests(QlgxApiFactory f) : IClassFixture<QlgxApiFac
         var dong = await doc.HieuLuc.Where(x => x.Truong == "NgheNghiep").ToListAsync();
         dong.Should().HaveCount(soBanGhi, "moi ban ghi bi doi phai co dung mot dong nhat ky, ke ca o lo thu hai");
     }
+
+    [Fact]
+    public async Task Chuyen_giao_ho_hang_loat_sinh_nhat_ky()
+    {
+        Guid hoNguon, hoDich;
+        var giaDinhIds = new List<Guid>();
+
+        await using (var db = f.TaoContextThuan())
+        {
+            // MaGiaoHoCu phải khác nhau: có chỉ mục duy nhất (GiaoXuId, MaGiaoHoCu), để mặc
+            // định 0 cả hai thì bản ghi thứ hai vi phạm ràng buộc.
+            var nguon = new Domain.Entities.GiaoHo
+            {
+                GiaoXuId = f.GiaoXuId, MaGiaoHoCu = 95001, TenGiaoHo = "Ho nguon 9501",
+            };
+            var dich = new Domain.Entities.GiaoHo
+            {
+                GiaoXuId = f.GiaoXuId, MaGiaoHoCu = 95002, TenGiaoHo = "Ho dich 9501",
+            };
+            db.GiaoHo.AddRange(nguon, dich);
+            await db.SaveChangesAsync();
+            hoNguon = nguon.Id;
+            hoDich = dich.Id;
+
+            for (var i = 0; i < 3; i++)
+            {
+                var gd = new Domain.Entities.GiaDinh
+                {
+                    GiaoXuId = f.GiaoXuId, MaGiaDinhCu = 9500 + i,
+                    TenGiaDinh = $"Gia dinh {i}", GiaoHoId = hoNguon,
+                };
+                db.GiaDinh.Add(gd);
+                giaDinhIds.Add(gd.Id);
+            }
+            await db.SaveChangesAsync();
+        }
+
+        var client = f.CreateAuthClient();
+        var phanHoi = await client.PostAsJsonAsync("/api/cong-cu-du-lieu/chuyen-ho/gia-dinh",
+            new ChuyenHoGiaDinhRequest(giaDinhIds, hoDich));
+        phanHoi.EnsureSuccessStatusCode();
+
+        await using var doc = f.TaoContextThuan();
+        var dong = await doc.HieuLuc
+            .Where(x => x.Truong == "GiaoHoId" && giaDinhIds.Contains(x.BanGhiId))
+            .ToListAsync();
+
+        dong.Should().HaveCount(3, "moi gia dinh bi chuyen phai co mot dong nhat ky rieng");
+        dong.Should().OnlyContain(x => x.GiaTri!.Contains(hoDich.ToString()));
+    }
+
+    /// <summary>
+    /// Xoá cứng bản ghi con đi qua ExecuteDeleteAsync — không qua ChangeTracker, và SinhDongNhatKy
+    /// cố ý bỏ qua EntityState.Deleted — nên nếu không ghi tường minh thì việc xoá biến mất khỏi
+    /// nhật ký hoàn toàn. Test này giữ đúng hình dạng dòng đã chốt: một dòng "sua" trên ô DaXoa.
+    /// </summary>
+    [Fact]
+    public async Task Xoa_vinh_vien_gia_dinh_sinh_nhat_ky_cho_tung_thanh_vien()
+    {
+        Guid giaDinhId;
+        var thanhVienIds = new List<Guid>();
+
+        await using (var db = f.TaoContextThuan())
+        {
+            var gd = new Domain.Entities.GiaDinh
+            {
+                GiaoXuId = f.GiaoXuId, MaGiaDinhCu = 9801, TenGiaDinh = "Gia dinh xoa 9801",
+            };
+            db.GiaDinh.Add(gd);
+            await db.SaveChangesAsync();
+            giaDinhId = gd.Id;
+
+            for (var i = 0; i < 2; i++)
+            {
+                var nguoi = new Domain.Entities.GiaoDan
+                {
+                    GiaoXuId = f.GiaoXuId, MaGiaoDanCu = 9800 + i, HoTen = $"Thanh vien {i}",
+                };
+                db.GiaoDan.Add(nguoi);
+                var tv = new Domain.Entities.ThanhVienGiaDinh
+                {
+                    GiaoXuId = f.GiaoXuId, GiaDinhId = giaDinhId, GiaoDan = nguoi,
+                    VaiTro = Domain.VaiTroGiaDinh.Con,
+                };
+                db.ThanhVienGiaDinh.Add(tv);
+                thanhVienIds.Add(tv.Id);
+            }
+            await db.SaveChangesAsync();
+        }
+
+        var client = f.CreateAuthClient();
+        var phanHoi = await client.DeleteAsync($"/api/gia-dinh/{giaDinhId}?vinhVien=true");
+        phanHoi.EnsureSuccessStatusCode();
+
+        await using var doc = f.TaoContextThuan();
+        var dong = await doc.HieuLuc
+            .Where(x => x.Bang == "ThanhVienGiaDinh" && thanhVienIds.Contains(x.BanGhiId))
+            .ToListAsync();
+
+        dong.Should().HaveCount(2, "moi thanh vien bi xoa cung phai co mot dong nhat ky rieng");
+        dong.Should().OnlyContain(x => x.Truong == "DaXoa" && x.GiaTri == "true");
+    }
 }

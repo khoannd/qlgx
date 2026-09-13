@@ -320,7 +320,15 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         }
 
         await using var giaoDich = await db.Database.BeginTransactionAsync(ct);
-        await db.ThanhVienGiaDinh.Where(tv => tv.GiaDinhId == id).ExecuteDeleteAsync(ct);
+
+        // Ghi nhật ký TRƯỚC khi ExecuteDelete — không chỉ vì sau khi xoá thì không còn Id để
+        // đọc, mà còn vì thứ tự khoá: GhiNhatKyXoaSapToi khoá dòng đếm hiệu lực, mọi đường ghi
+        // khác cũng khoá dòng đếm trước rồi mới chạm dữ liệu. Đảo thứ tự ở đây là deadlock thật
+        // khi hai người cùng xoá lúc. Xem GhiNhatKyXoaCung.
+        var tvBiXoa = db.ThanhVienGiaDinh.Where(tv => tv.GiaDinhId == id);
+        await db.GhiNhatKyXoaSapToi(tvBiXoa, ct);
+        await tvBiXoa.ExecuteDeleteAsync(ct);
+
         db.GiaDinh.Remove(g);
         await db.LuuCoNhatKy(ct);
         await giaoDich.CommitAsync(ct);

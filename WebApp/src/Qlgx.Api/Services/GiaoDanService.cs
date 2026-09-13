@@ -615,8 +615,18 @@ public class GiaoDanService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         }
 
         await using var giaoDich = await db.Database.BeginTransactionAsync(ct);
-        await db.BiTichChiTiet.Where(b => b.GiaoDanId == id).ExecuteDeleteAsync(ct);
-        await db.ChiTietLopGiaoLy.Where(c => c.GiaoDanId == id).ExecuteDeleteAsync(ct);
+
+        // Ghi nhật ký cho CẢ HAI bảng con TRƯỚC khi chạy bất kỳ ExecuteDelete nào — vừa vì sau
+        // khi xoá không còn Id để đọc, vừa vì thứ tự khoá: phải khoá dòng đếm hiệu lực trước,
+        // dòng nghiệp vụ sau, giống mọi đường ghi khác, nếu không sẽ deadlock thật khi hai giao
+        // dịch giành khoá ngược thứ tự nhau. Xem GhiNhatKyXoaCung.
+        var biTichBiXoa = db.BiTichChiTiet.Where(b => b.GiaoDanId == id);
+        var giaoLyBiXoa = db.ChiTietLopGiaoLy.Where(c => c.GiaoDanId == id);
+        await db.GhiNhatKyXoaSapToi(biTichBiXoa, ct);
+        await db.GhiNhatKyXoaSapToi(giaoLyBiXoa, ct);
+
+        await biTichBiXoa.ExecuteDeleteAsync(ct);
+        await giaoLyBiXoa.ExecuteDeleteAsync(ct);
         db.GiaoDan.Remove(g);
         await db.LuuCoNhatKy(ct);
         await giaoDich.CommitAsync(ct);
