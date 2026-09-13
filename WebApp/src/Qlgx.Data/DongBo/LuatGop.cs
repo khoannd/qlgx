@@ -23,24 +23,42 @@ public enum KetQuaGop
 public static class LuatGop
 {
     /// <summary>
-    /// Những ô mà "mới hơn thì đúng hơn" KHÔNG chắc đúng, nên phải để người kiểm lại.
+    /// Danh sách TRẮNG những ô mà "mới hơn thì đúng hơn" gần như luôn đúng — vì nó đổi theo ĐỜI
+    /// SỐNG THAY ĐỔI (chuyển chỗ ở, đổi việc, học thêm bằng cấp, sửa lại ghi chú cho rõ hơn...),
+    /// không phải ghi lại một SỰ KIỆN ĐÃ XẢY RA. Mọi ô KHÔNG có mặt ở đây mặc định là nhạy cảm.
     ///
-    /// Tiêu chí phân nhóm: số điện thoại, địa chỉ, ghi chú đổi là vì đời sống thay đổi — bản mới
-    /// gần như luôn đúng. Còn ngày sinh, ngày bí tích, họ tên là SỰ KIỆN ĐÃ XẢY RA, không thay
-    /// đổi theo thời gian; hai người ghi khác nhau nghĩa là một trong hai đọc sai sổ, và máy
-    /// không có cách nào biết ai đúng.
+    /// Đảo chiều so với bản đầu (từ danh sách đen sang danh sách trắng) là có chủ ý: bản đầu liệt
+    /// kê "ô nhạy cảm" — quên khai một ô ở ĐÓ nghĩa là ô đó bị máy tự quyết và ĐÈ ÂM THẦM, không ai
+    /// được mời kiểm lại. Với danh sách trắng, quên khai một ô ở ĐÂY chỉ khiến hộp cần xem lại rộng
+    /// hơn một chút — an toàn hơn nhiều so với chiều ngược lại. Một giáo xứ có khoảng bốn chục ô
+    /// nhạy cảm (nhân thân, mọi ngày/nơi/cha chủ sự bí tích...) so với một nhúm ô đổi vì đời sống,
+    /// nên danh sách trắng còn NGẮN HƠN nhiều so với danh sách đen cũ — dễ duy trì đúng hơn.
     ///
     /// Đây là bảng cấu hình, sửa được mà không phải sửa logic.
     /// </summary>
-    private static readonly HashSet<string> ONhayCam = new(StringComparer.Ordinal)
+    private static readonly HashSet<string> OKhongNhayCam = new(StringComparer.Ordinal)
     {
-        "GiaoDan.HoTen", "GiaoDan.TenThanh", "GiaoDan.NgaySinh", "GiaoDan.Phai",
-        "GiaoDan.NgayRuaToi", "GiaoDan.NgayRuocLe", "GiaoDan.NgayThemSuc",
-        "GiaoDan.NgayQuaDoi", "GiaoDan.QuaDoi",
+        // --- Liên lạc: đổi vì đời sống (chuyển nhà, đổi số, đổi việc) ---
+        "GiaoDan.DienThoai", "GiaoDan.Email", "GiaoDan.DiaChi",
+        "GiaoDan.NgheNghiep", "GiaoDan.TrinhDoVanHoa", "GiaoDan.TrinhDoChuyenMon",
+        "GiaoDan.BietNgoaiNgu", "GiaoDan.ConHoc",
+        "GiaDinh.DienThoai", "GiaDinh.DiaChi",
+        // GiaDinh.TenGiaDinh đổi phe: tên gia đình đổi vì đời sống thay đổi (đổi chủ hộ, chồng
+        // qua đời...), không phải một sự kiện đã xảy ra — khác hẳn HoTen của MỘT người.
         "GiaDinh.TenGiaDinh",
-        "ThanhVienGiaDinh.VaiTro", "ThanhVienGiaDinh.ChuHo",
-        "HonPhoi.NgayHonPhoi",
-        "BiTichChiTiet.DotBiTichId",
+        "TanHien.DienThoaiPhucVu", "TanHien.EmailPhucVu", "TanHien.DiaChiPhucVu", "TanHien.ChucVu",
+        "LinhMuc.DienThoai", "LinhMuc.Email",
+
+        // --- Ghi chú tự do: ai đó sửa lại cho rõ hơn gần như luôn là cải thiện, không phải hai
+        // sự thật xung đột về một sự kiện đã xảy ra ---
+        "GiaoDan.GhiChu", "GiaoDan.GhiChuXucDau",
+        "GiaDinh.GhiChu",
+        "HonPhoi.GhiChu",
+        "BiTichChiTiet.GhiChu",
+        "RaoHonPhoi.GhiChu",
+        "ChuyenXu.GhiChuChuyen",
+        "TanHien.GhiChu",
+        "LinhMuc.GhiChu",
     };
 
     /// <summary>
@@ -55,9 +73,20 @@ public static class LuatGop
         ["GiaoDan.QuaDoi"] = "GiaoDan#quadoi",
         ["GiaoDan.NgayQuaDoi"] = "GiaoDan#quadoi",
         ["GiaoDan.NoiQuaDoi"] = "GiaoDan#quadoi",
+        // SoAnTang/NoiAnTang thiếu trong nhóm sinh đúng bệnh mà nhóm này lập ra để chữa: người
+        // CÒN SỐNG mà có nơi an táng, nếu máy A ghi an táng còn máy B (mới hơn) bỏ dấu qua đời
+        // mà không đụng tới hai ô này.
+        ["GiaoDan.SoAnTang"] = "GiaoDan#quadoi",
+        ["GiaoDan.NoiAnTang"] = "GiaoDan#quadoi",
+
+        // Cùng hình dạng với nhóm qua đời ở trên, cho GiaDinh: thiếu thì ra gia đình CHƯA chuyển
+        // xứ (DaChuyenXu=false) mà vẫn có ngày/nơi chuyển — thống kê giáo xứ đếm sai người.
+        ["GiaDinh.DaChuyenXu"] = "GiaDinh#chuyenxu",
+        ["GiaDinh.NgayChuyen"] = "GiaDinh#chuyenxu",
+        ["GiaDinh.NoiChuyen"] = "GiaDinh#chuyenxu",
     };
 
-    public static bool LaONhayCam(string bang, string truong) => ONhayCam.Contains($"{bang}.{truong}");
+    public static bool LaONhayCam(string bang, string truong) => !OKhongNhayCam.Contains($"{bang}.{truong}");
 
     /// <summary>
     /// Tên nhóm gộp của một ô. Ô không thuộc nhóm nào thì chính nó là một nhóm — nhờ vậy chỗ gọi
@@ -74,6 +103,17 @@ public static class LuatGop
         // mocDangCo null nghĩa là CHƯA TỪNG có mốc, không phải một mốc thua cuộc.
         if (mocDangCo is null) return KetQuaGop.Thang;
 
+        // Bảo vệ chính chỗ gọi hàm, không phải chỗ nào khác: mốc truyền vào PHẢI là mốc của đúng
+        // ô đang xét, nếu không toàn bộ luật ở dưới so sánh nhầm ô. Chỉ so Bang/Truong — không so
+        // GiaoXuId/BanGhiId vì đó là việc định danh bản ghi của Task 6 và của RLS, đưa vào đây
+        // biến hàm thuần này thành phụ thuộc ngữ cảnh khó tái dùng ở nơi khác.
+        if (mocDangCo.Bang != bang || mocDangCo.Truong != truong)
+        {
+            throw new ArgumentException(
+                $"MocO truyen vao la cua o '{mocDangCo.Bang}.{mocDangCo.Truong}' " +
+                $"nhung dang xet o '{bang}.{truong}'.", nameof(mocDangCo));
+        }
+
         var dauCu = new DauDongHo(
             mocDangCo.DongHoVatLy, mocDangCo.DongHoLogic, mocDangCo.ThietBiId, mocDangCo.MaThaoTac);
 
@@ -84,6 +124,9 @@ public static class LuatGop
         // bằng string.Equals chứ không kiểm null rồi bỏ qua. KHÔNG được thêm luật kiểu "một bên
         // trống thì lấy bên có giá trị": xoá trắng phải xoá được, nếu không giá trị sai nhập
         // nhầm rồi bị xoá sẽ sống lại vĩnh viễn mỗi lần gộp với một bản cũ còn giữ giá trị cũ.
+        // Ordinal (phân biệt hoa/thường) là bắt buộc: "Nguyễn Văn a" và "Nguyễn Văn A" là hai giá
+        // trị KHÁC NHAU của một ô nhạy cảm, một trong hai chắc chắn gõ sai — coi chúng là giống
+        // nhau sẽ bỏ lọt đúng loại xung đột mà ô nhạy cảm được lập ra để bắt.
         if (string.Equals(giaTriCu, giaTriMoi, StringComparison.Ordinal)) return KetQuaGop.Thang;
 
         return LaONhayCam(bang, truong) ? KetQuaGop.ThangCanXemLai : KetQuaGop.Thang;
