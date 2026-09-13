@@ -37,6 +37,11 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
     public DbSet<GiaoDanHonPhoi> GiaoDanHonPhoi => Set<GiaoDanHonPhoi>();
     public DbSet<BoDemMa> BoDemMa => Set<BoDemMa>();
 
+    /// <summary>Dòng đếm cấp số thứ tự cho hieu_luc (xem BoDemHieuLuc.cs). CỐ Ý không có bộ
+    /// lọc toàn cục: nó được đọc/ghi bằng SQL thô trong CapSoHieuLuc, luôn lọc tường minh theo
+    /// giao_xu_id, và vẫn chịu RLS ở tầng CSDL.</summary>
+    public DbSet<BoDemHieuLuc> BoDemHieuLuc => Set<BoDemHieuLuc>();
+
     /// <summary>Mẫu in tuỳ chỉnh (xem quan-ly-mau-in.md) — CỐ Ý không có bộ lọc toàn cục theo
     /// GiaoXuId bên dưới (giống GiaoPhan/GiaoHat/NhapDuLieuJob): cột GiaoXuId ở bảng này cho
     /// phép NULL với ý nghĩa nghiệp vụ riêng ("mẫu hệ thống"), khác hẳn ý nghĩa "không giáo xứ

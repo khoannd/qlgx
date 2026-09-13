@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Qlgx.Data;
@@ -11,9 +12,11 @@ using Qlgx.Data;
 namespace Qlgx.Data.Migrations
 {
     [DbContext(typeof(QlgxDbContext))]
-    partial class QlgxDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260913065138_ThemBoDemHieuLuc")]
+    partial class ThemBoDemHieuLuc
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -122,6 +125,62 @@ namespace Qlgx.Data.Migrations
                         .HasName("pk_bo_dem_ma");
 
                     b.ToTable("bo_dem_ma");
+                });
+
+            modelBuilder.Entity("Qlgx.Domain.Entities.CachHienThiDungSai", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("GiaoXuId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("giao_xu_id");
+
+                    b.Property<string>("KhiDung")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("khi_dung");
+
+                    b.Property<string>("KhiSai")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("khi_sai");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("TenBien")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ten_bien");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_cach_hien_thi_dung_sai");
+
+                    b.HasIndex("TenBien")
+                        .IsUnique()
+                        .HasDatabaseName("ix_cach_hien_thi_dung_sai_he_thong")
+                        .HasFilter("giao_xu_id IS NULL");
+
+                    b.HasIndex("GiaoXuId", "TenBien")
+                        .IsUnique()
+                        .HasDatabaseName("ix_cach_hien_thi_dung_sai_giao_xu")
+                        .HasFilter("giao_xu_id IS NOT NULL");
+
+                    b.ToTable("cach_hien_thi_dung_sai");
                 });
 
             modelBuilder.Entity("Qlgx.Domain.Entities.CauHinh", b =>
