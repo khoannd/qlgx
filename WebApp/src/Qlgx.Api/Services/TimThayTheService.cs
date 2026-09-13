@@ -53,10 +53,20 @@ public class TimThayTheService(QlgxDbContext db)
 
     // Không còn tự mở giao dịch bao trọn ở đây — mỗi lô trong ThayTheTheoLo tự mở giao dịch
     // riêng qua LuuCoNhatKy. Xem chú thích "MỘT transaction" ở đầu lớp.
-    public Task<int> ThayThe(BangTimThayThe bang, string truong, string giaTriTim, string giaTriThay, CancellationToken ct) =>
-        bang == BangTimThayThe.GiaoDan
+    public Task<int> ThayThe(BangTimThayThe bang, string truong, string giaTriTim, string giaTriThay, CancellationToken ct)
+    {
+        // Điều kiện dừng của ThayTheTheoLo dựa vào việc bản ghi tự rời khỏi bộ lọc sau khi sửa
+        // (xem chú thích ở đó); thay bằng chính giá trị đang tìm thì bản ghi không bao giờ rời
+        // khỏi bộ lọc — Take(CoLo) lặp lại đúng cùng 200 bản ghi vô hạn, giữ một kết nối và một
+        // luồng bận suốt thời gian đó. Đây cũng là no-op (không có gì đổi), nên chặn sớm và trả
+        // về đúng số bản ghi khớp — giống hệt số ExecuteUpdateAsync cũ sẽ trả (số bản ghi bị
+        // "ảnh hưởng" bởi một UPDATE không đổi gì vẫn là số bản ghi khớp WHERE).
+        if (giaTriTim == giaTriThay) return DemKhop(bang, truong, giaTriTim, ct);
+
+        return bang == BangTimThayThe.GiaoDan
             ? ThayTheGiaoDan(truong, giaTriTim, giaTriThay, ct)
             : ThayTheGiaDinh(truong, giaTriTim, giaTriThay, ct);
+    }
 
     /// <summary>
     /// Nạp theo lô rồi sửa qua ChangeTracker thay vì ExecuteUpdateAsync.
@@ -66,15 +76,19 @@ public class TimThayTheService(QlgxDbContext db)
     /// hình sửa được hàng nghìn bản ghi trong một lần bấm, mất nhật ký ở đây nghĩa là không
     /// bao giờ truy lại được ai đã đổi gì.
     ///
-    /// Chia lô 200 để giữ khoá dòng đếm ngắn — khoá đó xếp hàng MỌI việc ghi của giáo xứ đó
-    /// (xem CapSoHieuLuc), nên một giao dịch dài sẽ làm người khác không lưu được.
+    /// Chia lô để giữ khoá dòng đếm ngắn — khoá đó xếp hàng MỌI việc ghi của giáo xứ đó (xem
+    /// CapSoHieuLuc), nên một giao dịch dài sẽ làm người khác không lưu được.
     ///
     /// Dùng Take(CoLo) KHÔNG Skip (khác ChuanHoaTheoLo của Task 4, nơi điều kiện là "mọi bản
     /// ghi" nên phải nhớ vị trí bằng Skip): ở đây truyVan lọc theo chính giá trị đang bị thay,
     /// nên sau khi sửa một lô, các bản ghi đó không còn khớp điều kiện nữa và tự rời khỏi kết
     /// quả truy vấn của lô sau — Skip sẽ nhảy qua nhầm các bản ghi chưa xét.
+    ///
+    /// GIẢ ĐỊNH BẮT BUỘC để vòng lặp dừng: <c>sua</c> luôn khiến bản ghi hết khớp điều kiện của
+    /// <c>truyVan</c> — tức GiaTriTim != GiaTriThay. Người gọi (ThayThe) chặn sẵn trường hợp
+    /// bằng nhau; nếu bỏ chặn đó, vòng lặp này sẽ nạp lại đúng CoLo bản ghi mãi mãi.
     /// </summary>
-    private const int CoLo = 200;
+    internal const int CoLo = 200;
 
     private async Task<int> ThayTheTheoLo<T>(
         IQueryable<T> truyVan, Action<T> sua, CancellationToken ct) where T : class

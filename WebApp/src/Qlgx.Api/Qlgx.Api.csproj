@@ -41,4 +41,11 @@
     <EmbeddedResource Include="PrintTemplates\**\*.html" />
   </ItemGroup>
 
+  <!-- Cho phép Qlgx.Api.Tests đọc TimThayTheService.CoLo (internal) để hạ kích thước lô khi
+       kiểm thử kịch bản nhiều lô — không có cách nào khác kiểm chứng ChangeTracker.Clear() giữa
+       các lô mà không phải tạo hàng trăm bản ghi thật trong test. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Qlgx.Api.Tests" />
+  </ItemGroup>
+
 </Project>
