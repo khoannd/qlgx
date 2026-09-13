@@ -716,16 +716,17 @@ export function GiaoDanDetail({
   // rất dễ hiểu là thao tác chưa ăn, rồi rời màn hình mà không bấm "Cập nhật" và MẤT phần vừa
   // nhập (phát hiện khi kiểm thử qua trình duyệt thật 2026-09-13).
   //
-  // Bắt thay đổi ở HAI đường vì form này không giữ một object state duy nhất:
-  //   (1) sự kiện DOM nổi bọt lên thẻ <form> — bao mọi ô nhập/checkbox/select thường;
-  //   (2) các state React đổi KHÔNG qua sự kiện DOM — chọn cha/mẹ bằng picker, đổi giáo họ,
-  //       tick qua đổi trạng thái (doiQuaDoi/doiConHoc), đổi loại chuyển xứ.
+  // CHỈ bắt bằng sự kiện DOM nổi bọt lên thẻ <form> (bao mọi ô nhập/checkbox/select), KHÔNG
+  // theo dõi state bằng useEffect. Bản đầu có thêm một useEffect theo dõi
+  // [tenCha, chaId, ..., ngayMoc] và nó BÁO SAI NGAY KHI MỞ màn hình: các ô ngày (GxDate) tự
+  // chuẩn hoá giá trị lúc gắn vào trang nên gọi setNgayMoc, state đổi, effect tưởng người dùng
+  // vừa sửa. Test đơn vị KHÔNG bắt được (trong jsdom các ô đó không tự chuẩn hoá) — chỉ lộ ra
+  // khi bấm thử trên trình duyệt thật.
+  //
+  // Đánh đổi đã cân nhắc: vài đường sửa không qua sự kiện DOM (chọn cha/mẹ bằng picker) có thể
+  // không được đánh dấu. Thà BỎ SÓT còn hơn BÁO NHẦM — một chỉ báo lúc nào cũng kêu "có thay
+  // đổi" thì người dùng sẽ mặc kệ nó, mất luôn tác dụng cảnh báo.
   const [daSua, setDaSua] = useState(false)
-  const boQuaLanDau = useRef(true)
-  useEffect(() => {
-    if (boQuaLanDau.current) { boQuaLanDau.current = false; return }
-    setDaSua(true)
-  }, [tenCha, chaId, tenMe, meId, giaoHoId, quaDoi, conHoc, giaoDanAo, loaiChuyenXu, ngayMoc])
 
   const doiQuaDoi = (v: boolean) => { setQuaDoi(v); if (v) setConHoc(false) }
   const doiConHoc = (v: boolean) => { setConHoc(v); if (v) setQuaDoi(false) }
