@@ -8,6 +8,20 @@ public readonly record struct DauDongHo(
     DateTimeOffset VatLy, long Logic, Guid? ThietBiId, Guid MaThaoTac)
     : IComparable<DauDongHo>
 {
+    /// <summary>
+    /// Cắt về micro giây NGAY TẠI ĐÂY, không phải ở nơi dùng. Đây là chỗ duy nhất cưỡng chế được:
+    /// nếu để nơi dùng tự cắt thì sớm muộn có đường quên cắt, và lỗi đó không lộ ra.
+    ///
+    /// Vì sao bắt buộc: <c>DateTimeOffset.UtcNow</c> trên Windows có độ phân giải 100ns nên mốc
+    /// rất thường xuyên lẻ dưới micro giây, còn <c>timestamptz</c> của Postgres chỉ giữ tới micro
+    /// giây. Nếu để mốc lẻ lọt vào, <c>NangDau</c> cắt rồi mới lấy max sẽ phát ra một mốc NHỎ HƠN
+    /// chính mốc nó vừa thấy (tới 9 tick) — mà <c>VatLy</c> là khoá so hàng đầu, nên dấu mới xếp
+    /// TRƯỚC dấu nó dựa vào. Hậu quả thật: sơ sửa ngày rửa tội của một giáo dân, máy chủ hợp nhất
+    /// rồi phát ra mốc sớm hơn bản vừa đọc; lần đồng bộ sau bản cũ của máy con thắng ngược và đè
+    /// lên bản đã hợp nhất — sổ rửa tội quay về giá trị cũ, không một lỗi nào hiện ra.
+    /// </summary>
+    public DateTimeOffset VatLy { get; init; } = DongHoLai.CatMicroGiay(VatLy);
+
     public int CompareTo(DauDongHo khac) => DongHoLai.SoSanh(this, khac);
 }
 

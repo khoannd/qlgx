@@ -35,10 +35,10 @@ public class DongHoLaiTests
 
         // Không quan trọng bên nào thắng — quan trọng là MỌI máy đều kết luận GIỐNG NHAU và
         // kết quả không đổi giữa hai lần so.
-        var lan1 = DongHoLai.SoSanh(a, b);
-        var lan2 = DongHoLai.SoSanh(a, b);
-        lan1.Should().Be(lan2);
-        lan1.Should().NotBe(0, "hai dau dong ho khac nhau khong duoc coi la bang nhau");
+        // Bo assertion `lan1 == lan2` (goi cung mot ham thuan hai lan) — khong hien thuc nao co
+        // the lam no fail, nen no chi tao cam giac da kiem tinh tat dinh.
+        DongHoLai.SoSanh(a, b)
+            .Should().NotBe(0, "hai dau dong ho khac nhau khong duoc coi la bang nhau");
     }
 
     [Fact]
@@ -238,6 +238,71 @@ public class DongHoLaiTests
 
         DongHoLai.CatMicroGiay(tho).Ticks.Should().Be(
             new DateTimeOffset(2026, 9, 13, 10, 0, 0, TimeSpan.Zero).AddTicks(1230).Ticks);
+    }
+
+    [Fact]
+    public void Dung_DauDongHo_voi_moc_le_thi_moc_TU_DONG_tron_micro_giay()
+    {
+        // Hàng rào cho N1. Đột biến bỏ `= DongHoLai.CatMicroGiay(VatLy)` trong constructor phải
+        // làm test này đỏ.
+        var le = new DateTimeOffset(2026, 9, 13, 10, 0, 0, TimeSpan.Zero).AddTicks(1237);
+
+        new DauDongHo(le, 0, null, Guid.Empty).VatLy.Ticks.Should().Be(
+            new DateTimeOffset(2026, 9, 13, 10, 0, 0, TimeSpan.Zero).AddTicks(1230).Ticks);
+    }
+
+    [Fact]
+    public void Nang_dau_KHONG_BAO_GIO_phat_ra_moc_som_hon_dau_vao_du_dau_vao_le()
+    {
+        // Đây là bất biến sống còn: `VatLy` là khoá so hàng đầu, nên một mốc phát ra sớm hơn mốc
+        // nó vừa thấy sẽ bị chính bản cũ đè ngược lại ở lần đồng bộ sau. Trước khi sửa, fuzz với
+        // mốc lẻ dưới micro giây cho 111.563/200.000 ca vi phạm.
+        var goc = new DateTimeOffset(2026, 9, 13, 10, 0, 0, TimeSpan.Zero);
+        var rnd = new Random(20260913);
+
+        for (var i = 0; i < 20000; i++)
+        {
+            var ta = new DauDongHo(goc.AddTicks(rnd.Next(0, 100)), rnd.Next(0, 5), null, Guid.Empty);
+            var ho = new DauDongHo(goc.AddTicks(rnd.Next(0, 100)), rnd.Next(0, 5),
+                Guid.NewGuid(), Guid.NewGuid());
+            var nay = goc.AddTicks(rnd.Next(-100, 100));
+
+            var phat = DongHoLai.NangDau(ta, ho, nay);
+            var dauPhat = new DauDongHo(phat.VatLy, phat.Logic, null, Guid.Empty);
+
+            phat.VatLy.Should().BeOnOrAfter(ta.VatLy, "khong duoc lui so voi moc cuoi cua chinh ta");
+            phat.VatLy.Should().BeOnOrAfter(ho.VatLy, "khong duoc lui so voi moc vua nhan");
+            DongHoLai.SoSanh(dauPhat, ta).Should().BePositive("dau moi phai xep SAU dau cu cua ta");
+            DongHoLai.SoSanh(dauPhat, ho).Should().BePositive("dau moi phai xep SAU dau vua nhan");
+            phat.VatLy.Ticks.Should().Be(phat.VatLy.Ticks - phat.VatLy.Ticks % 10);
+        }
+    }
+
+    [Fact]
+    public void Nang_dau_cat_micro_giay_cho_ca_gio_hien_tai()
+    {
+        // Hàng rào cho N2. `gioHienTai` là DateTimeOffset thô, không đi qua constructor DauDongHo,
+        // nên NangDau vẫn phải tự cắt nó. Đột biến bỏ CatMicroGiay(gioHienTai) phải làm test đỏ.
+        var goc = new DateTimeOffset(2026, 9, 13, 10, 0, 0, TimeSpan.Zero);
+        var ta = new DauDongHo(goc.AddSeconds(-10), 0, null, Guid.Empty);
+
+        var phat = DongHoLai.NangDau(ta, nhanDuoc: null, gioHienTai: goc.AddTicks(1237));
+
+        (phat.VatLy.Ticks % 10).Should().Be(0);
+    }
+
+    [Fact]
+    public void Do_lech_DUONG_nghia_la_may_con_chay_NHANH()
+    {
+        // Hàng rào cho N3. Test cũ chỉ kiểm đẳng thức khứ hồi `x - (x - Moc) == Moc`, nên đảo dấu
+        // CẢ HAI hàm vẫn xanh. Quy ước dấu phải được canh riêng: Task 6 tự tính do lech qua bắt
+        // tay mạng, nếu quy ước ngược thì HieuChinh đẩy mốc của một máy chạy nhanh 3 ngày thành
+        // 6 ngày ở tương lai — máy đó LUÔN thắng và âm thầm đè lên sổ rửa tội, sổ hôn phối đúng.
+        var doLech = DongHoLai.TinhDoLech(gioMayCon: Moc.AddDays(3), gioMayChu: Moc);
+
+        doLech.Should().BePositive("may con chay nhanh thi do lech phai duong");
+        DongHoLai.HieuChinh(Moc.AddDays(3), doLech).Should().Be(Moc,
+            "hieu chinh phai KEO VE gio may chu, khong day ra xa them");
     }
 
     [Fact]
