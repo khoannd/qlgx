@@ -903,3 +903,55 @@ xoá vĩnh viễn `GiaoDan`/`GiaDinh` có xoá tầng con.
 và số sổ bí tích phải do máy chủ cấp; `GiaoDanHonPhoi` không có `Id`; `navigator.storage.persist()`;
 bầu chủ một tab; hỏi tên máy; nhiều người dùng chung một tài khoản; trang bàn giao; ràng buộc x86
 và chỗ lưu token của `Qlgx.Migration.exe`.
+
+## 14. Đã kiểm chứng trên dữ liệu thật
+
+**Ngày kiểm chứng:** 2026-09-13. Nhánh `webapp-phase-1`, CSDL `qlgx_thu` (Postgres cục bộ), giáo xứ
+**An Phú** (không phải Vô Nhiễm — 3 giáo xứ hiện có trong `qlgx_thu` đều là dữ liệu thật, không có
+giáo xứ thử nghiệm nào; đã báo lại và chọn An Phú thay vì Vô Nhiễm theo đúng chỉ dẫn "tránh nếu có
+thể"). Tài khoản `tester_task8` tạo tạm qua CLI `tao-tai-khoan-quan-tri`, đã xoá sau khi xong.
+`Qlgx.Api` chạy ở cổng 5199 (không đụng cổng 5096 của phiên khác), migration áp qua `dotnet ef
+database update --startup-project ../Qlgx.Api`.
+
+**Số dòng nhật ký sinh ra cho mỗi thao tác** (gọi thẳng API `PUT`/`POST`, không qua trình duyệt):
+
+| Thao tác | Số dòng `thay_doi`/`hieu_luc` | Ghi chú |
+|---|---|---|
+| Sửa họ tên 1 giáo dân | 1 (`GiaoDan.HoTen`, loại `sua`) | Đúng như kỳ vọng |
+| Đổi số điện thoại 1 gia đình | **2**: `GiaDinh.DienThoai` + `ThanhVienGiaDinh.ChuHo` | **Khác dự kiến** — xem dưới |
+| Thêm mới 1 giáo dân | 1 (`GiaoDan`, loại `tao`, `gia_tri` là JSON toàn bộ thực thể) | Đúng như kỳ vọng |
+
+**Phát hiện ngoài dự kiến:** `PUT /api/gia-dinh/{id}` không có tham số `chuHoVaiTro` trong payload
+(giá trị mặc định `null`) sẽ **âm thầm đặt `ChuHo=false`** cho người đang là chủ hộ — đây là hành vi
+**đã được thiết kế** (`CapNhatGiaDinhRequest.ChuHoVaiTro` — "máy chủ ghi đúng y những gì client gửi,
+không tự đoán/chọn gì thêm"), không phải lỗi của kế hoạch nhật ký này, nhưng có nghĩa **client web
+phải luôn gửi đúng `chuHoVaiTro` hiện tại** mỗi lần lưu gia đình, nếu không sẽ tạo thêm một dòng nhật
+ký `ThanhVienGiaDinh.ChuHo` không chủ ý và xoá mất trạng thái chủ hộ thật. Đã phát hiện đúng lúc kiểm
+chứng (số điện thoại đổi kèm chủ hộ Lucia bị đặt `false` ngoài ý muốn) và đã hoàn nguyên cả hai giá
+trị (`dienThoai` và `chuHoVaiTro=1`) bằng đúng API, xác nhận lại qua `psql` khớp nguyên trạng.
+
+**Kiểm tra không lỗ hổng số thứ tự (Step 3):** không thể tái hiện đúng nghĩa đen "lưu giáo dân với
+mã cũ trùng" qua API — `MaGiaoDanCu` do `SinhMaService` cấp nguyên tử phía máy chủ (không nhận từ
+client), và endpoint "Thêm thành viên gia đình" đã tự chặn trùng ở tầng ứng dụng trước khi chạm CSDL
+(`GiaDinhService.ThemThanhVien` dòng kiểm `gd.ThanhVien.Any(...)`) nên không bao giờ chạm tới chỉ mục
+duy nhất mới `(gia_dinh_id, giao_dan_id, vai_tro)`. Thay vào đó dùng một đường thất bại thật khác đi
+đúng qua `LuuCoNhatKy`/`CapSoHieuLuc`: gọi `PUT /api/giao-dan/{id}` với `RowVersion` cũ (xung đột
+đồng thời), gây `DbUpdateConcurrencyException` bên trong `SaveChangesAsync` sau khi đã xếp dòng nhật
+ký vào `ChangeTracker` — đúng kiểu lỗi mà `LuuCoNhatKy` phải bắt và cuộn lui. Kết quả: `so_tiep_theo`
+của `bo_dem_hieu_luc` giữ nguyên ở 5 trước và sau lần gọi thất bại (409); lưu hợp lệ ngay sau đó cấp
+đúng số 5, dãy `so_thu_tu` 1→5 liên tục không hở. Xác nhận cơ chế đếm bằng dòng khoá (không phải
+`sequence` của PostgreSQL) hoạt động đúng như thiết kế mục 4.2.
+
+**Dung lượng đo được:** `pg_total_relation_size('thay_doi')` = 48 kB, `pg_total_relation_size(
+'hieu_luc')` = 48 kB, với 5 dòng mỗi bảng — đúng mức nền tối thiểu của một bảng gần như rỗng
+(overhead trang/chỉ mục), không có dấu hiệu cột `byte[]` lọt lưới `CotLoaiTru`.
+
+**Sự cố trong lúc kiểm chứng (đã xử lý, không phải lỗi của kế hoạch này):** biến môi trường
+`QLGX_TEST_PG` đã được `setx` từ trước **thiếu `Database=`**, và `dotnet ef` luôn ưu tiên
+`QlgxDbContextFactory` (đọc `QLGX_TEST_PG`) trong project `Qlgx.Data` bất kể cờ `--startup-project`
+trỏ tới `Qlgx.Api` — đúng cái bẫy `QUY_TRINH_PHAT_HANH`/brief đã cảnh báo. Lần chạy đầu vô tình áp 3
+migration cuối (`ThemBangSaoLuu`, `ThemBangNhatKyThayDoi`, `ThemKhoaChinhChoBangNoi`) lên database
+**`postgres` dùng chung** thay vì `qlgx_thu`. Việc dọn dẹp bằng `DROP TABLE`/`dotnet ef database
+update` lùi lại đã bị hệ thống chặn vì là thao tác phá huỷ — **chưa dọn được**, để lại nguyên trạng
+cho người điều phối quyết định (xem báo cáo Task 8 để biết chi tiết và câu lệnh dọn đề xuất). Sau đó
+đã chạy lại đúng với `QLGX_TEST_PG` có `Database=qlgx_thu` và xác nhận `qlgx_thu` đã đúng migration.
