@@ -57,8 +57,13 @@ bên nào đúng.
   IndexedDB, không cần chuyển đổi gì.
 - **`ThietBiId` null xếp TRƯỚC mọi giá trị có danh tính** (null = ghi từ máy chủ). Không quy null về
   `Guid.Empty` / chuỗi rỗng.
-- **Mốc vật lý cắt về micro giây ngay lúc dựng dấu**, không phải lúc lưu. `Date.getTime()` của JS chỉ có
-  mili giây; khi dựng dấu phải nhân lên micro giây rõ ràng và giữ nguyên độ phân giải đó suốt vòng đời.
+- **Mốc vật lý cắt về micro giây trong chính hàm dựng `DauDongHo`**, không phải ở nơi dùng và không phải
+  lúc lưu. Bản C# đã vấp đúng chỗ này: lúc đầu cắt bên trong `NangDau`, và vì cắt **rồi mới** lấy max nên
+  kết quả nhỏ hơn chính đầu vào chưa cắt tới 9 tick — đo thật **111.563/200.000 ca vi phạm**. `VatLy` là
+  khoá so hàng đầu, nên dấu mới xếp **trước** dấu nó vừa thấy, và lần đồng bộ sau bản cũ đè ngược lên bản
+  đã hợp nhất. Chỉ hàm dựng mới cưỡng chế được; để nơi dùng tự cắt thì sớm muộn có đường quên cắt và lỗi
+  đó không lộ ra. `Date.getTime()` của JS chỉ có mili giây, nên khi dựng dấu phải nâng lên micro giây rõ
+  ràng và giữ nguyên độ phân giải đó suốt vòng đời.
 - **`NangDau(dauCuoiCuaTa, nhanDuoc, gioHienTai)` phải được gọi mỗi khi máy con ÁP một dòng `hieu_luc`
   nhận về** — đây là chỗ giữ nhân quả, và là lý do hàm này tồn tại. Bỏ qua nó thì: sơ mở một hồ sơ vừa
   tải về, sửa một ô, và bản sửa **thua chính bản ghi mà nó dựa vào** vì đồng hồ máy con chạy nhanh vài

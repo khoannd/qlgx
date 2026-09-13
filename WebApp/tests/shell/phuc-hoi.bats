@@ -166,6 +166,57 @@ EOF
   [ "$troi_qua" -ge 3 ]
 }
 
+# Vong review 2 (hoi quy do chinh ban sua Critical 2 mang vao): phep do "CSDL co ton tai khong"
+# tung gop "khong doc duoc" chung voi "chac chan khong co" -- mot nhip postgres khoi dong lai la
+# du de mot giao xu that bi ghi de MA KHONG co ban sao ngoai may. Ba test duoi chot lai ba trang
+# thai phai duoc phan biet. `pg1` gia phan luong theo cau lenh SQL de khong dung toi Docker.
+@test "co_du_lieu_can_bao_ve: do CSDL THAT BAI (chuoi rong) thi VAN phai sao luu" {
+  pg1() { printf ''; }          # moi truy van deu that bai -> khong biet gi
+  run co_du_lieu_can_bao_ve qlgx
+  [ "$status" -eq 0 ]           # 0 = CO du lieu can bao ve -> KHONG duoc bo qua sao luu
+  [[ "$output" == *"COI NHU CO du lieu"* ]]
+}
+
+@test "co_du_lieu_can_bao_ve: do CSDL tra ve rac thi VAN phai sao luu" {
+  pg1() { printf 'khong phai so'; }
+  run co_du_lieu_can_bao_ve qlgx
+  [ "$status" -eq 0 ]
+}
+
+@test "co_du_lieu_can_bao_ve: CSDL chac chan KHONG ton tai (dem duoc '0') thi bo qua sao luu" {
+  pg1() { printf '0'; }
+  run co_du_lieu_can_bao_ve qlgx
+  [ "$status" -eq 1 ]           # 1 = khong co gi de mat -> bo qua hop ly
+  [[ "$output" == *"chua ton tai tren cum"* ]]
+}
+
+@test "co_du_lieu_can_bao_ve: CSDL co that nhung 0 giao dan/0 gia dinh thi bo qua; co du lieu thi khong" {
+  pg1() {
+    case "$*" in
+      *pg_database*) printf '1' ;;   # CSDL co ton tai
+      *) printf '0' ;;               # 0 giao dan, 0 gia dinh
+    esac
+  }
+  run co_du_lieu_can_bao_ve qlgx
+  [ "$status" -eq 1 ]
+  pg1() {
+    case "$*" in
+      *pg_database*) printf '1' ;;
+      *giao_dan*)    printf '4000' ;;
+      *)             printf '900' ;;
+    esac
+  }
+  run co_du_lieu_can_bao_ve qlgx
+  [ "$status" -eq 0 ]
+}
+
+@test "co_du_lieu_can_bao_ve: dem giao dan that bai thi VAN phai sao luu" {
+  pg1() { case "$*" in *pg_database*) printf '1' ;; *) printf '' ;; esac; }
+  run co_du_lieu_can_bao_ve qlgx
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"COI NHU CO du lieu"* ]]
+}
+
 @test "gia_tri_dong_the giu nguyen moi dau hai cham trong gia tri" {
   printf 'KHO SAO LUU : s3:https://a.b/c:d\n' > "$BATS_TEST_TMPDIR/x.txt"
   [ "$(gia_tri_dong_the "$BATS_TEST_TMPDIR/x.txt" 'KHO SAO LUU')" = "s3:https://a.b/c:d" ]

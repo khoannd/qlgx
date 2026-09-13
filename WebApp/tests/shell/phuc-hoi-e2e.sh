@@ -241,6 +241,43 @@ cho_san_sang 120 || that_bai "he thong hong sau kich ban 1b"
 echo "    DAT: tu choi phuc hoi khi khong xac minh duoc ban sao luu moi, he thong nguyen ven"
 
 echo ""
+echo "=== Kich ban 1c (hoi quy vong 2): do CSDL THAT BAI thi KHONG duoc bo qua sao luu ==="
+# Ban sua Critical 2 them buoc "bo qua sao luu khi khong co gi de mat". Bay: neu phep do "CSDL co
+# ton tai khong" THAT BAI (postgres dang khoi dong lai, dc exec truot mot nhip, POSTGRES_USER sai)
+# thi ket qua rong -- ban dau bi hieu nham thanh "CSDL chua ton tai" va BO HAN buoc sao luu bat
+# buoc, dung tren mot giao xu that dang co day du so sach. O day ep dung tinh huong do bang cach
+# doi tam POSTGRES_USER trong .env thanh mot vai tro KHONG ton tai: moi truy van psql cua
+# qlgx-restore.sh deu that bai, con .env van du de doc POSTGRES_DB.
+NGUOI_DB_THAT=$(doc_env_kv "$GOC_UNG_DUNG/.env" POSTGRES_USER)
+set_env_kv "$GOC_UNG_DUNG/.env" POSTGRES_USER "vai_tro_khong_ton_tai_$$"
+sn_truoc_1c=$(so_snapshot)
+set +e
+ra_1c=$(chay_restore --snapshot "$SN_GOC" --apply 2>&1)
+ma_1c=$?
+set -e
+set_env_kv "$GOC_UNG_DUNG/.env" POSTGRES_USER "$NGUOI_DB_THAT"   # tra lai NGAY
+printf '%s\n' "$ra_1c" | grep -vE "^ Container" | tail -6
+[ "$ma_1c" -ne 0 ] || that_bai "phuc hoi van chay tiep du khong do duoc CSDL va khong sao luu duoc"
+if printf '%s\n' "$ra_1c" | grep -qi "BO QUA sao luu truoc phuc hoi"; then
+  that_bai "DA BO QUA sao luu chi vi phep do CSDL that bai -- dung hoi quy can chan"
+fi
+if printf '%s\n' "$ra_1c" | grep -qi "chua ton tai tren cum"; then
+  that_bai "bao sai su that 'CSDL chua ton tai' trong khi that ra chi la khong do duoc"
+fi
+printf '%s\n' "$ra_1c" | grep -qi "COI NHU CO du lieu" \
+  || that_bai "khong ghi nhan 'khong do duoc -> coi nhu co du lieu'"
+printf '%s\n' "$ra_1c" | grep -qi "Khong sao luu duoc trang thai hien tai" \
+  || that_bai "khong dung lai o buoc sao luu bat buoc"
+[ "$(so_snapshot)" = "$sn_truoc_1c" ] || that_bai "kho co them snapshot trong kich ban nay (khong the)"
+if danh_sach_db | grep -q "^${TEN_DB}_truoc_phuc_hoi_"; then
+  that_bai "da hoan doi CSDL du khong sao luu duoc"
+fi
+[ "$(psql_db "$TEN_DB" "SELECT count(*) FROM pg_tables WHERE tablename='moc'")" = "0" ] \
+  || that_bai "da phuc hoi du khong sao luu duoc"
+cho_san_sang 120 || that_bai "he thong hong sau kich ban 1c"
+echo "    DAT: do CSDL that bai -> coi nhu CO du lieu -> van doi sao luu -> dung lai, khong ghi de"
+
+echo ""
 echo "=== Kich ban 2: phuc hoi THAT -- du lieu quay lai, CSDL cu duoc GIU, he thong van chay ==="
 sn_truoc=$(so_snapshot)
 chay_restore --snapshot "$SN_GOC" --apply || that_bai "phuc hoi that bai"

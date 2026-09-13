@@ -515,6 +515,14 @@ public readonly record struct DauDongHo(
     DateTimeOffset VatLy, long Logic, Guid? ThietBiId, Guid MaThaoTac)
     : IComparable<DauDongHo>
 {
+    /// <summary>
+    /// Cắt về micro giây NGAY TẠI ĐÂY, không phải ở nơi dùng — đây là chỗ duy nhất cưỡng chế được.
+    /// Nếu để `NangDau` cắt rồi mới lấy max, kết quả có thể NHỎ HƠN chính đầu vào chưa cắt tới 9
+    /// tick (đo thật: 111.563/200.000 ca). `VatLy` là khoá so hàng đầu, nên dấu mới xếp TRƯỚC dấu
+    /// nó vừa thấy, và lần đồng bộ sau bản cũ đè ngược lên bản đã hợp nhất.
+    /// </summary>
+    public DateTimeOffset VatLy { get; init; } = DongHoLai.CatMicroGiay(VatLy);
+
     public int CompareTo(DauDongHo khac) => DongHoLai.SoSanh(this, khac);
 }
 

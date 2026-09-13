@@ -279,10 +279,22 @@ dem_snapshot_theo_nhan() {
 co_du_lieu_can_bao_ve() {
   local db="$1" co_db gd gdinh
   co_db=$(pg1 -d postgres -c "SELECT count(*) FROM pg_database WHERE datname = '${db//\'/\'\'}'" 2>/dev/null || echo '')
-  if [ "${co_db:-0}" != "1" ]; then
-    ghi_log thong-tin "CSDL '$db' chua ton tai tren cum -- khong co du lieu nao bi ghi de."
-    return 1
-  fi
+  # BA trang thai, KHONG phai hai. Ban truoc gop "khong doc duoc" chung voi "chac chan khong co"
+  # (`[ "$co_db" != "1" ]` -> bo qua sao luu) -- do la mot hoi quy nghiem trong: chi can container
+  # postgres dang khoi dong lai, `dc exec` truot mot nhip, hay POSTGRES_USER sai la phep do tra ve
+  # chuoi RONG, va mot giao xu that voi 4000 giao dan se bi ghi de MA KHONG co ban sao ngoai may --
+  # dung bao dam ma Critical 1 vua dung len. Gio: chi "0" (dem duoc, chac chan khong co CSDL do)
+  # moi cho phep bo qua; moi gia tri khac deu la "khong chac" va di theo nhanh AN TOAN (van sao luu).
+  case "$co_db" in
+    0)
+      ghi_log thong-tin "CSDL '$db' chua ton tai tren cum -- khong co du lieu nao bi ghi de."
+      return 1 ;;
+    1) : ;;
+    *)
+      ghi_log canh-bao "Khong do duoc su ton tai cua CSDL '$db' (ket qua: '${co_db}') --" \
+                       "COI NHU CO du lieu, VAN sao luu truoc khi ghi de."
+      return 0 ;;
+  esac
   gd=$(pg1 -d "$db" -c 'SELECT count(*) FROM giao_dan' 2>/dev/null || echo 'loi')
   gdinh=$(pg1 -d "$db" -c 'SELECT count(*) FROM gia_dinh' 2>/dev/null || echo 'loi')
   # Bat ky gia tri nao KHONG phai mot so (rong, 'loi', thong diep la) deu duoc coi la "khong biet"
