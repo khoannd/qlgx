@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using Qlgx.Data.NhatKy;
 using Qlgx.Domain.Entities;
 
 namespace Qlgx.Data.Tests;
@@ -356,6 +357,10 @@ public class RlsTests : IAsyncLifetime
     /// Nhật ký thay đổi (migration ThemBangNhatKyThayDoi) chứa NGUYÊN VĂN giá trị các ô dữ liệu,
     /// nên rò rỉ ở đây tương đương rò rỉ toàn bộ sổ sách giáo xứ — phải kiểm chứng ở TẦNG
     /// DATABASE bằng Npgsql thô, đúng lối các test RLS phía trên, không đi qua EF Core.
+    ///
+    /// Kiểm CẢ hai bảng thay_doi VÀ hieu_luc: hieu_luc là bảng DUY NHẤT máy con kéo về, nên rò
+    /// rỉ nó tương đương rò rỉ toàn bộ sổ sách — và nếu sau này ai tách policy riêng cho từng
+    /// bảng, test lặp trên cả hai vẫn bắt được lỗi thay vì chỉ xanh nhờ trùng policy hiện tại.
     /// </summary>
     [Fact]
     public async Task Bang_nhat_ky_chiu_rls_nhu_bang_nghiep_vu()
@@ -381,6 +386,21 @@ public class RlsTests : IAsyncLifetime
                     DongHoVatLy = DateTimeOffset.UtcNow, MaThaoTac = Guid.NewGuid(),
                     GiaoDichId = Guid.NewGuid(),
                 });
+            ctx.HieuLuc.AddRange(
+                new HieuLuc
+                {
+                    GiaoXuId = giaoXuA, SoThuTu = 1, Epoch = Guid.NewGuid(),
+                    Bang = "GiaoDan", BanGhiId = Guid.NewGuid(), Truong = "HoTen",
+                    GiaTri = "\"Nguoi cua xu A\"", DongHoVatLy = DateTimeOffset.UtcNow,
+                    GiaoDichId = Guid.NewGuid(),
+                },
+                new HieuLuc
+                {
+                    GiaoXuId = giaoXuB, SoThuTu = 1, Epoch = Guid.NewGuid(),
+                    Bang = "GiaoDan", BanGhiId = Guid.NewGuid(), Truong = "HoTen",
+                    GiaTri = "\"Nguoi cua xu B\"", DongHoVatLy = DateTimeOffset.UtcNow,
+                    GiaoDichId = Guid.NewGuid(),
+                });
             await ctx.SaveChangesAsync();
         }
 
@@ -391,6 +411,7 @@ public class RlsTests : IAsyncLifetime
                 $"""
                 CREATE ROLE "{_tenVaiTro}" LOGIN PASSWORD '{MatKhauVaiTro}' NOSUPERUSER NOBYPASSRLS;
                 GRANT SELECT, INSERT, UPDATE, DELETE ON thay_doi TO "{_tenVaiTro}";
+                GRANT SELECT, INSERT, UPDATE, DELETE ON hieu_luc TO "{_tenVaiTro}";
                 """, superuser);
             await taoVaiTro.ExecuteNonQueryAsync();
         }
@@ -401,7 +422,7 @@ public class RlsTests : IAsyncLifetime
             Password = MatKhauVaiTro,
         };
 
-        async Task<List<string>> DocGiaTri(Guid? datThamSoPhien)
+        async Task<List<string>> DocGiaTri(string bang, Guid? datThamSoPhien)
         {
             await using var ketNoi = new NpgsqlConnection(builder.ConnectionString);
             await ketNoi.OpenAsync();
@@ -414,21 +435,80 @@ public class RlsTests : IAsyncLifetime
             }
 
             var ketQua = new List<string>();
-            await using var truyVan = new NpgsqlCommand("SELECT gia_tri::text FROM thay_doi", ketNoi);
+            await using var truyVan = new NpgsqlCommand($"SELECT gia_tri::text FROM {bang}", ketNoi);
             await using var reader = await truyVan.ExecuteReaderAsync();
             while (await reader.ReadAsync()) ketQua.Add(reader.GetString(0));
             return ketQua;
         }
 
-        var choA = await DocGiaTri(giaoXuA);
-        Assert.Single(choA);
-        Assert.Contains("xu A", choA[0]);
+        foreach (var bang in new[] { "thay_doi", "hieu_luc" })
+        {
+            var choA = await DocGiaTri(bang, giaoXuA);
+            Assert.Single(choA);
+            Assert.Contains("xu A", choA[0]);
 
-        var choB = await DocGiaTri(giaoXuB);
-        Assert.Single(choB);
-        Assert.Contains("xu B", choB[0]);
+            var choB = await DocGiaTri(bang, giaoXuB);
+            Assert.Single(choB);
+            Assert.Contains("xu B", choB[0]);
 
-        // Kết nối thô "quên" gọi set_config -> đóng mặc định, không rò một dòng nào.
-        Assert.Empty(await DocGiaTri(datThamSoPhien: null));
+            // Kết nối thô "quên" gọi set_config -> đóng mặc định, không rò một dòng nào.
+            Assert.Empty(await DocGiaTri(bang, datThamSoPhien: null));
+        }
+    }
+
+    /// <summary>
+    /// Task 1 (CapSoHieuLuc.LayDaiSo) mới chỉ được kiểm bằng vai trò postgres (superuser →
+    /// BYPASSRLS mặc định), nên chưa từng chứng minh nó chạy được dưới vai trò THẬT
+    /// (qlgx_app, không BYPASSRLS) mà Program.cs dùng lúc sản xuất. Hàm này INSERT rồi
+    /// SELECT ... FOR UPDATE trên bo_dem_hieu_luc — cả hai câu đều chịu policy loc_theo_giao_xu
+    /// (bật ở migration ThemBangNhatKyThayDoi) nên phải chạy trong một QlgxDbContext có ĐÚNG
+    /// app.giao_xu_id đặt qua interceptor, giống hệt cách Program.cs mở kết nối thật.
+    /// </summary>
+    [Fact]
+    public async Task CapSoHieuLuc_chay_duoc_qua_vai_tro_khong_bypassrls_khi_boi_canh_dung_giao_xu()
+    {
+        var giaoXuA = _fixture.GiaoXuId;
+
+        await using (var superuser = new NpgsqlConnection(_fixture.ChuoiKetNoi))
+        {
+            await superuser.OpenAsync();
+            await using var taoVaiTro = new NpgsqlCommand(
+                $"""
+                CREATE ROLE "{_tenVaiTro}" LOGIN PASSWORD '{MatKhauVaiTro}' NOSUPERUSER NOBYPASSRLS;
+                GRANT SELECT, INSERT, UPDATE, DELETE ON bo_dem_hieu_luc TO "{_tenVaiTro}";
+                """, superuser);
+            await taoVaiTro.ExecuteNonQueryAsync();
+        }
+
+        var chuoiVaiTro = new NpgsqlConnectionStringBuilder(_fixture.ChuoiKetNoi)
+        {
+            Username = _tenVaiTro,
+            Password = MatKhauVaiTro,
+        }.ConnectionString;
+
+        QlgxDbContext TaoContextVaiTroThat(Guid giaoXu) => new(
+            new DbContextOptionsBuilder<QlgxDbContext>().UseNpgsql(chuoiVaiTro).Options,
+            new BoiCanhGiaoXuCoDinh(giaoXu));
+
+        // Lần cấp ĐẦU (dòng đếm chưa tồn tại) -> nhánh INSERT ... ON CONFLICT phải qua được
+        // WITH CHECK của policy vì giao_xu_id ghi đúng bằng app.giao_xu_id của phiên.
+        await using (var ctx = TaoContextVaiTroThat(giaoXuA))
+        {
+            await using var giaoDich = await ctx.Database.BeginTransactionAsync();
+            var (soDauLan1, _) = await CapSoHieuLuc.LayDaiSo(ctx, giaoXuA, 3, CancellationToken.None);
+            await giaoDich.CommitAsync();
+            Assert.Equal(1, soDauLan1);
+        }
+
+        // Lần cấp THỨ HAI (dòng đếm đã có) -> nhánh SELECT ... FOR UPDATE phải đọc được đúng
+        // dòng của giáo xứ này qua policy, không bị lọc sạch thành "Sequence contains no
+        // elements".
+        await using (var ctx = TaoContextVaiTroThat(giaoXuA))
+        {
+            await using var giaoDich = await ctx.Database.BeginTransactionAsync();
+            var (soDauLan2, _) = await CapSoHieuLuc.LayDaiSo(ctx, giaoXuA, 2, CancellationToken.None);
+            await giaoDich.CommitAsync();
+            Assert.Equal(4, soDauLan2); // 1 + 3 (da cap lan dau) = 4
+        }
     }
 }

@@ -85,15 +85,17 @@ public class LocTheoGiaoXuTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieu
         // CachHienThiDungSai (cau chu tuy chinh cho cac bien in dung/sai) dung y het khuon do:
         // GiaoXuId NULL = "anh xa cap he thong", CachHienThiDungSaiService va
         // InAnService.LayBangCachHienThi tu loc tuong minh. Xem CachHienThiDungSai.cs.
-        // BoDemHieuLuc la ngoai le khac han: GiaoXuId o day la KHOA CHINH (khong nullable), chi
-        // duoc doc/ghi bang SQL tho trong CapSoHieuLuc voi dieu kien loc tuong minh theo
-        // giao_xu_id, va van chiu RLS o tang CSDL — gan them bo loc EF se khong sai nhung thua,
-        // vi khong co truy van LINQ nao qua DbSet nay ca. Xem BoDemHieuLuc.cs.
-        string[] ngoaiLeCoDongCapHeThong = ["MauInTuyChinh", "CachHienThiDungSai", "BoDemHieuLuc"];
+        // BoDemHieuLuc la ngoai le khac han, VA KHONG PHAI "co dong cap he thong": GiaoXuId o
+        // day la KHOA CHINH (khong nullable), khac hoan toan tieu chi NULL=he-thong cua hai
+        // bang tren. CapSoHieuLuc.cs CO doc qua DbSet nay bang FromSql(...).SingleAsync(...) —
+        // va tu EF Core 8, bo loc toan cuc VAN duoc ap len tren FromSql — nen gan them bo loc EF
+        // se khong sai, chi la THUA: cau SQL trong FromSql da tu loc giao_xu_id tuong minh roi,
+        // va bang nay van chiu RLS doc lap o tang CSDL. Xem BoDemHieuLuc.cs va CapSoHieuLuc.cs.
+        string[] ngoaiLeKhongCanBoLocToanCuc = ["MauInTuyChinh", "CachHienThiDungSai", "BoDemHieuLuc"];
         var thieuBoLoc = ungVien
             .Where(t => t.GetDeclaredQueryFilters().Count == 0)
             .Select(t => t.ClrType.Name)
-            .Where(ten => !ngoaiLeCoDongCapHeThong.Contains(ten))
+            .Where(ten => !ngoaiLeKhongCanBoLocToanCuc.Contains(ten))
             .ToList();
 
         thieuBoLoc.Should().BeEmpty(

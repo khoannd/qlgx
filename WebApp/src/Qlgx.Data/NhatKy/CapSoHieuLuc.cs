@@ -16,7 +16,11 @@ public static class CapSoHieuLuc
     ///  - Nếu mở một giao dịch riêng rồi commit để lấy số, giao dịch ghi bị huỷ sẽ để lại lỗ
     ///    hổng — đúng cái lỗi mà việc bỏ sequence sinh ra để tránh. Lỗi này CHỈ lộ khi có tải.
     ///  - Nếu khoá bản ghi nghiệp vụ trước rồi mới khoá dòng đếm, hai giao dịch ngược thứ tự
-    ///    sẽ deadlock. Giao dịch chạm nhiều giáo xứ phải khoá theo GiaoXuId tăng dần.
+    ///    sẽ deadlock. Trước đây định khuyên "giao dịch chạm nhiều giáo xứ thì khoá theo
+    ///    GiaoXuId tăng dần" để né kiểu deadlock này — nhưng dưới vai trò CSDL không BYPASSRLS
+    ///    (vai trò THẬT lúc chạy sản phẩm), một phiên chỉ mang được ĐÚNG MỘT app.giao_xu_id tại
+    ///    một thời điểm, nên một giao dịch không thể hợp lệ khoá dòng đếm của hai giáo xứ khác
+    ///    nhau trong cùng một phiên — lời khuyên đó không còn khả thi trong mô hình RLS này.
     /// </summary>
     public static async Task<(long SoDau, Guid Epoch)> LayDaiSo(
         QlgxDbContext db, Guid giaoXuId, int soLuong, CancellationToken ct)
