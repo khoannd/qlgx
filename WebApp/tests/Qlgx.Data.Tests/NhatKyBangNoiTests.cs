@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Data.NhatKy;
+using Qlgx.Domain;
 using Qlgx.Domain.Entities;
 
 namespace Qlgx.Data.Tests;
@@ -44,6 +45,15 @@ public class NhatKyBangNoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieu
         dong.Single(d => d.Bang == "ThanhVienGiaDinh").Loai.Should().Be("tao");
     }
 
+    /// <summary>
+    /// Hai dòng dưới đây cố tình mang VaiTro = Con (giá trị 2), KHÔNG để mặc định.
+    /// Mặc định là 0 = Chồng, mà ở vai trò 0/1 còn một chỉ mục lọc riêng
+    /// ux_thanh_vien_gia_dinh_mot_chong_mot_vo trên (GiaDinhId, VaiTro) WHERE vai_tro IN (0,1);
+    /// chỉ mục lọc đó MỘT MÌNH đã đủ từ chối dòng thứ hai, nên test sẽ vẫn xanh ngay cả khi ai
+    /// đó lỡ xoá mất chỉ mục bộ ba — tức là không chứng minh được điều nó nói là đang chứng minh.
+    /// Với VaiTro = Con, chỉ mục lọc nằm ngoài phạm vi, chỉ còn chỉ mục duy nhất bộ ba
+    /// (GiaDinhId, GiaoDanId, VaiTro) có thể chặn — đúng thứ cần khoá chặt.
+    /// </summary>
     [Fact]
     public async Task Khoa_phuc_cu_van_con_la_rang_buoc_duy_nhat()
     {
@@ -61,6 +71,7 @@ public class NhatKyBangNoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieu
             ctx.ThanhVienGiaDinh.Add(new ThanhVienGiaDinh
             {
                 GiaoXuId = db.GiaoXuId, GiaDinhId = giaDinhId, GiaoDanId = giaoDanId,
+                VaiTro = VaiTroGiaDinh.Con,
             });
             await ctx.SaveChangesAsync();
         }
@@ -69,10 +80,16 @@ public class NhatKyBangNoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieu
         ctx3.ThanhVienGiaDinh.Add(new ThanhVienGiaDinh
         {
             GiaoXuId = db.GiaoXuId, GiaDinhId = giaDinhId, GiaoDanId = giaoDanId,
+            VaiTro = VaiTroGiaDinh.Con,
         });
 
         var hanhDong = async () => await ctx3.SaveChangesAsync();
-        await hanhDong.Should().ThrowAsync<DbUpdateException>(
-            "them khoa chinh Guid khong duoc lam mat rang buoc mot nguoi chi thuoc mot gia dinh mot lan");
+        var loi = await hanhDong.Should().ThrowAsync<DbUpdateException>(
+            "them khoa chinh Guid khong duoc lam mat rang buoc mot nguoi chi thuoc mot gia dinh mot lan voi mot vai tro");
+
+        // Khẳng định thêm: dòng bị từ chối bởi chỉ mục bộ ba, KHÔNG phải bởi chỉ mục lọc
+        // một-chồng-một-vợ. Nếu một ngày ai đó xoá chỉ mục bộ ba và chỉ mục lọc bắt thay, test
+        // phải đỏ chứ không được âm thầm xanh.
+        loi.And.ToString().Should().NotContain("ux_thanh_vien_gia_dinh_mot_chong_mot_vo");
     }
 }
