@@ -35,6 +35,30 @@
 9. **Thao tác đã nhận không xử lý lại** (phía máy chủ đã có; máy con không được sinh `MaThaoTac` mới khi gửi lại).
 10. **`navigator.storage.persist()` phải được gọi ngay sau đăng nhập** trên máy bật offline; bị từ chối thì **không** bật chế độ offline cho máy đó.
 
+## Hợp đồng đồng hồ lai — phải khớp TỪNG BIT với bản C# (R6/R7 sổ thi công kế hoạch 4)
+
+Bản TypeScript của `DongHoLai` phải cho **cùng một kết quả** với `WebApp/src/Qlgx.Data/DongBo/DongHoLai.cs`
+trên cùng đầu vào. Lệch một chỗ là hai bản sao phân kỳ vĩnh viễn **mà không có bất kỳ lỗi nào hiện ra** —
+loại hỏng tệ nhất trong hệ thống này, vì nó chỉ lộ ra sau nhiều tháng, khi đã không còn cách nào biết
+bên nào đúng.
+
+- **Thứ tự Guid là dạng chuỗi `"D"` chữ thường, so ordinal** (`a < b` theo mã điểm). **Tuyệt đối không**
+  so theo byte, theo `BigInt`, hay theo bất kỳ dạng nào khác. Lý do: .NET so trường `_a` như số nguyên
+  little-endian, Postgres so `uuid` bằng `memcmp` big-endian, TypeScript so chuỗi — **ba thứ tự khác
+  nhau**. Chuỗi chữ thường là dạng duy nhất cả ba nơi biểu diễn được y hệt, và cũng là dạng máy con
+  thật sự lưu trong IndexedDB.
+- **`ThietBiId` null xếp TRƯỚC mọi giá trị có danh tính** (null = ghi từ máy chủ). Không quy null về
+  `Guid.Empty` / chuỗi rỗng.
+- **Mốc vật lý cắt về micro giây ngay lúc dựng dấu**, không phải lúc lưu. `Date.getTime()` của JS chỉ có
+  mili giây; khi dựng dấu phải nhân lên micro giây rõ ràng và giữ nguyên độ phân giải đó suốt vòng đời.
+- **`NangDau(dauCuoiCuaTa, nhanDuoc, gioHienTai)` phải được gọi mỗi khi máy con ÁP một dòng `hieu_luc`
+  nhận về** — đây là chỗ giữ nhân quả, và là lý do hàm này tồn tại. Bỏ qua nó thì: sơ mở một hồ sơ vừa
+  tải về, sửa một ô, và bản sửa **thua chính bản ghi mà nó dựa vào** vì đồng hồ máy con chạy nhanh vài
+  giây. Hiệu chỉnh độ lệch vật lý không cứu được — độ lệch đo qua mạng luôn sai.
+- **Task 6 phải có một test vector dùng chung**: một file JSON liệt kê các cặp đầu vào/đầu ra, được
+  **cả** bộ test C# **và** bộ test TypeScript đọc. Không nhân bản ca kiểm thử bằng tay ở hai nơi — nhân
+  bản là cách hai bản trôi khỏi nhau.
+
 ---
 
 ## Cấu trúc file

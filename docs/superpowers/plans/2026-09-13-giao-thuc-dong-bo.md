@@ -280,7 +280,7 @@ git commit -m "Them bang moc_o va thao_tac_da_nhan kem RLS"
 - Test: `tests/Qlgx.Data.Tests/DongHoLaiTests.cs`
 
 **Interfaces:**
-- Produces: `readonly record struct DauDongHo(DateTimeOffset VatLy, long Logic, Guid? ThietBiId, Guid MaThaoTac)` với `CompareTo`; `DongHoLai.SoSanh(DauDongHo a, DauDongHo b) -> int`; `DongHoLai.HieuChinh(DateTimeOffset mocMayCon, TimeSpan doLech) -> DateTimeOffset`; `DongHoLai.TinhDoLech(DateTimeOffset gioMayCon, DateTimeOffset gioMayChu) -> TimeSpan`; `DongHoLai.NangLogic(long logicDangGiu, DauDongHo nhanDuoc, DateTimeOffset gioHienTai) -> long`.
+- Produces: `readonly record struct DauDongHo(DateTimeOffset VatLy, long Logic, Guid? ThietBiId, Guid MaThaoTac)` với `CompareTo`; `DongHoLai.SoSanh(DauDongHo a, DauDongHo b) -> int`; `DongHoLai.HieuChinh(DateTimeOffset mocMayCon, TimeSpan doLech) -> DateTimeOffset`; `DongHoLai.TinhDoLech(DateTimeOffset gioMayCon, DateTimeOffset gioMayChu) -> TimeSpan`; `DongHoLai.NangDau(DauDongHo dauCuoiCuaTa, DauDongHo? nhanDuoc, DateTimeOffset gioHienTai) -> (DateTimeOffset VatLy, long Logic)`; `DongHoLai.CatMicroGiay(DateTimeOffset moc) -> DateTimeOffset`; `DongHoLai.SoSanhGuid(Guid? a, Guid? b) -> int`.
 
 - [ ] **Step 1: Viết test trước — chạy để thấy fail**
 
@@ -350,23 +350,148 @@ public class DongHoLaiTests
     }
 
     [Fact]
-    public void Nang_logic_khi_nhan_moc_bang_hoac_lon_hon_gio_hien_tai()
+    public void Nang_dau_khi_nhan_moc_o_tuong_lai_thi_bam_theo_moc_do_va_dem_logic_len()
     {
-        // Nhận một dấu có mốc vật lý ở tương lai gần so với đồng hồ máy chủ: phải nâng đồng hồ
-        // logic lên để lần ghi kế tiếp của chính máy chủ xếp SAU dấu vừa nhận, không hoà.
+        // Nhận một dấu có mốc vật lý ở tương lai gần so với đồng hồ máy chủ: mốc phát ra phải
+        // BÁM THEO mốc nhận được (không lùi về giờ máy), và phần logic nâng lên để lần ghi kế
+        // tiếp của chính máy chủ xếp SAU dấu vừa nhận, không hoà.
+        var dauCuoiCuaTa = new DauDongHo(Moc, 0, null, Guid.Empty);
         var nhan = new DauDongHo(Moc.AddSeconds(5), 4, null, Guid.NewGuid());
 
-        DongHoLai.NangLogic(logicDangGiu: 0, nhanDuoc: nhan, gioHienTai: Moc)
-            .Should().BeGreaterThan(4);
+        var phat = DongHoLai.NangDau(dauCuoiCuaTa, nhan, gioHienTai: Moc);
+
+        phat.VatLy.Should().Be(Moc.AddSeconds(5));
+        phat.Logic.Should().Be(5, "phai lon hon 4 de xep sau dau vua nhan");
     }
 
     [Fact]
-    public void Gio_hien_tai_da_vuot_qua_moc_nhan_duoc_thi_logic_ve_khong()
+    public void Gio_hien_tai_da_vuot_qua_moi_moc_thi_logic_ve_khong()
     {
+        var dauCuoiCuaTa = new DauDongHo(Moc, 9, null, Guid.Empty);
         var nhan = new DauDongHo(Moc, 9, null, Guid.NewGuid());
 
-        DongHoLai.NangLogic(logicDangGiu: 9, nhanDuoc: nhan, gioHienTai: Moc.AddMinutes(1))
-            .Should().Be(0, "dong ho vat ly da di toi truoc, khong can dem logic nua");
+        var phat = DongHoLai.NangDau(dauCuoiCuaTa, nhan, gioHienTai: Moc.AddMinutes(1));
+
+        phat.VatLy.Should().Be(Moc.AddMinutes(1));
+        phat.Logic.Should().Be(0, "dong ho vat ly da di toi truoc, khong can dem logic nua");
+    }
+
+    [Fact]
+    public void Nang_dau_khong_nhan_gi_van_khong_duoc_lui_sau_moc_cuoi_cua_chinh_minh()
+    {
+        // Đồng hồ máy chủ bị chỉnh LÙI (NTP kéo về, hoặc admin sửa tay). Mốc phát ra vẫn phải
+        // tiến — nếu không, hai lần ghi liên tiếp của chính máy chủ sẽ đảo thứ tự.
+        var dauCuoiCuaTa = new DauDongHo(Moc, 3, null, Guid.Empty);
+
+        var phat = DongHoLai.NangDau(dauCuoiCuaTa, nhanDuoc: null,
+            gioHienTai: Moc.AddSeconds(-30));
+
+        phat.VatLy.Should().Be(Moc);
+        phat.Logic.Should().Be(4);
+    }
+
+    [Fact]
+    public void Nang_dau_tai_bien_bang_nhau_van_phai_tien_mot_buoc()
+    {
+        var dauCuoiCuaTa = new DauDongHo(Moc, 2, null, Guid.Empty);
+
+        var phat = DongHoLai.NangDau(dauCuoiCuaTa, nhanDuoc: null, gioHienTai: Moc);
+
+        phat.VatLy.Should().Be(Moc);
+        phat.Logic.Should().Be(3, "bang nhau khong phai la di toi truoc");
+    }
+
+    [Fact]
+    public void So_sanh_thiet_bi_dung_dang_chuoi_thuong_chu_khong_phai_Guid_CompareTo()
+    {
+        // Ràng buộc liên ngôn ngữ: .NET so Guid theo _a little-endian, Postgres theo memcmp
+        // big-endian, TypeScript theo chuỗi. Ba thứ tự KHÁC NHAU. Ta chốt một thứ tự duy nhất:
+        // chuỗi "D" chữ thường, so ordinal. Test này cố tình chọn cặp mà hai cách cho kết quả
+        // NGƯỢC nhau, để không ai "tối ưu" ngược về Guid.CompareTo sau này.
+        var a = Guid.Parse("00000002-0000-0000-0000-000000000000");
+        var b = Guid.Parse("00000100-0000-0000-0000-000000000000");
+
+        a.CompareTo(b).Should().BePositive("Guid.CompareTo doc _a la so nguyen little-endian");
+        Math.Sign(DongHoLai.SoSanhGuid(a, b))
+            .Should().Be(-1, "dang chuoi thi 00000002... di truoc 00000100...");
+    }
+
+    [Fact]
+    public void Thiet_bi_null_xep_truoc_moi_thiet_bi_co_danh_tinh()
+    {
+        DongHoLai.SoSanhGuid(null, Guid.Empty).Should().BeNegative();
+        DongHoLai.SoSanhGuid(Guid.Empty, null).Should().BePositive();
+        DongHoLai.SoSanhGuid(null, null).Should().Be(0);
+    }
+
+    [Fact]
+    public void So_sanh_bang_khong_thi_hai_dau_phai_that_su_bang_nhau()
+    {
+        // Bất biến MocO dựa vào: SoSanh(a,b)==0 <=> a.Equals(b). Quy null về Guid.Empty phá
+        // bất biến này.
+        var a = new DauDongHo(Moc, 0, null, Guid.Empty);
+        var b = new DauDongHo(Moc, 0, Guid.Empty, Guid.Empty);
+
+        a.Should().NotBe(b);
+        DongHoLai.SoSanh(a, b).Should().NotBe(0);
+    }
+
+    [Fact]
+    public void Ma_thao_tac_la_tang_pha_hoa_cuoi_cung_va_no_phai_duoc_dung()
+    {
+        var tb = Guid.NewGuid();
+        var nho = Guid.Parse("00000000-0000-0000-0000-00000000000a");
+        var lon = Guid.Parse("00000000-0000-0000-0000-0000000000b0");
+
+        DongHoLai.SoSanh(new DauDongHo(Moc, 0, tb, nho), new DauDongHo(Moc, 0, tb, lon))
+            .Should().BeNegative("hoa het ba tang tren, chi con MaThaoTac phan xu");
+    }
+
+    [Fact]
+    public void So_sanh_doi_xung_nghich_tren_moi_cap()
+    {
+        var tb1 = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        var tb2 = Guid.Parse("00000000-0000-0000-0000-000000000002");
+        var m1 = Guid.Parse("00000000-0000-0000-0000-0000000000a1");
+        var m2 = Guid.Parse("00000000-0000-0000-0000-0000000000a2");
+        var mau = new[]
+        {
+            new DauDongHo(Moc, 0, null, m1),
+            new DauDongHo(Moc, 0, tb1, m1),
+            new DauDongHo(Moc, 0, tb1, m2),
+            new DauDongHo(Moc, 0, tb2, m1),
+            new DauDongHo(Moc, 1, tb1, m1),
+            new DauDongHo(Moc.AddSeconds(1), 0, tb1, m1),
+        };
+
+        foreach (var a in mau)
+        foreach (var b in mau)
+        {
+            Math.Sign(DongHoLai.SoSanh(a, b))
+                .Should().Be(-Math.Sign(DongHoLai.SoSanh(b, a)));
+            (DongHoLai.SoSanh(a, b) == 0).Should().Be(a.Equals(b));
+        }
+    }
+
+    [Fact]
+    public void Cat_micro_giay_bo_phan_le_duoi_micro()
+    {
+        // timestamptz cua Postgres chi giu toi micro giay; DateTimeOffset giu toi 100ns. Neu
+        // khong cat NGAY luc dung dau, cai so trong bo nho va cai so sau khi doc lai tu CSDL se
+        // khac nhau -> hoa gia, hai may ket luan khac nhau.
+        var tho = new DateTimeOffset(2026, 9, 13, 10, 0, 0, TimeSpan.Zero).AddTicks(1237);
+
+        DongHoLai.CatMicroGiay(tho).Ticks.Should().Be(
+            new DateTimeOffset(2026, 9, 13, 10, 0, 0, TimeSpan.Zero).AddTicks(1230).Ticks);
+    }
+
+    [Fact]
+    public void CompareTo_cua_DauDongHo_khop_voi_SoSanh()
+    {
+        var a = new DauDongHo(Moc, 0, null, Guid.NewGuid());
+        var b = new DauDongHo(Moc.AddSeconds(1), 0, null, Guid.NewGuid());
+
+        a.CompareTo(b).Should().Be(DongHoLai.SoSanh(a, b));
     }
 }
 ```
@@ -386,7 +511,11 @@ namespace Qlgx.Data.DongBo;
 /// Bốn thành phần theo đúng thứ tự ưu tiên khi so.
 /// </summary>
 public readonly record struct DauDongHo(
-    DateTimeOffset VatLy, long Logic, Guid? ThietBiId, Guid MaThaoTac);
+    DateTimeOffset VatLy, long Logic, Guid? ThietBiId, Guid MaThaoTac)
+    : IComparable<DauDongHo>
+{
+    public int CompareTo(DauDongHo khac) => DongHoLai.SoSanh(this, khac);
+}
 
 /// <summary>
 /// Đồng hồ lai (hybrid logical clock) — phần vật lý cho người đọc hiểu được, phần logic để phá
@@ -417,13 +546,31 @@ public static class DongHoLai
         var theoLogic = a.Logic.CompareTo(b.Logic);
         if (theoLogic != 0) return theoLogic;
 
-        // Guid.Empty đại diện cho "ghi từ chính máy chủ" — xếp trước mọi thiết bị có danh tính,
-        // để một thao tác của máy chủ không bao giờ tình cờ thắng thao tác của người dùng ở cùng
-        // mốc chỉ vì Guid ngẫu nhiên rơi vào khoảng lớn hơn.
-        var theoThietBi = (a.ThietBiId ?? Guid.Empty).CompareTo(b.ThietBiId ?? Guid.Empty);
+        // null nghĩa là "ghi từ chính máy chủ" — xếp TRƯỚC mọi thiết bị có danh tính. KHÔNG quy
+        // null về Guid.Empty: làm vậy thì hai dấu mà record `Equals` nói là khác nhau lại so ra
+        // bằng nhau, phá bất biến `SoSanh == 0 <=> Equals` mà MocO dựa vào để biết "đã thấy mốc
+        // này chưa".
+        var theoThietBi = SoSanhGuid(a.ThietBiId, b.ThietBiId);
         if (theoThietBi != 0) return theoThietBi;
 
-        return a.MaThaoTac.CompareTo(b.MaThaoTac);
+        return SoSanhGuid(a.MaThaoTac, b.MaThaoTac);
+    }
+
+    /// <summary>
+    /// Thứ tự Guid DUY NHẤT của hệ thống — dạng chuỗi "D" chữ thường, so ordinal.
+    ///
+    /// Bắt buộc phải là dạng này, không được dùng <c>Guid.CompareTo</c>. .NET so trường `_a` như
+    /// một số nguyên little-endian; Postgres so `uuid` bằng memcmp 16 byte big-endian;
+    /// TypeScript so chuỗi. Ba thứ tự KHÁC NHAU. Nếu máy chủ và máy con phá hoà khác nhau, hai
+    /// bản sao phân kỳ vĩnh viễn mà không có bất kỳ lỗi nào hiện ra. Dạng chuỗi chữ thường là
+    /// dạng duy nhất cả ba nơi biểu diễn được y hệt, và cũng là dạng máy con thật sự lưu trong
+    /// IndexedDB. Ràng buộc này áp cho cả bản TypeScript ở kế hoạch 5.
+    /// </summary>
+    public static int SoSanhGuid(Guid? a, Guid? b)
+    {
+        if (a is null) return b is null ? 0 : -1;
+        if (b is null) return 1;
+        return string.CompareOrdinal(a.Value.ToString("D"), b.Value.ToString("D"));
     }
 
     /// <summary>Độ lệch = giờ máy con trừ giờ máy chủ. Dương nghĩa là máy con chạy nhanh.</summary>
@@ -434,14 +581,47 @@ public static class DongHoLai
     public static DateTimeOffset HieuChinh(DateTimeOffset mocMayCon, TimeSpan doLech)
         => mocMayCon - doLech;
 
+    /// <summary>Cắt mốc về micro giây — độ phân giải của <c>timestamptz</c> Postgres.</summary>
+    public static DateTimeOffset CatMicroGiay(DateTimeOffset moc)
+        => moc.AddTicks(-(moc.Ticks % 10));
+
     /// <summary>
-    /// Nâng đồng hồ logic sau khi nhận một dấu từ nơi khác. Nếu đồng hồ vật lý của ta đã đi qua
-    /// mốc nhận được thì phần logic không còn cần thiết và về 0 — nếu không nó chỉ tăng mãi.
+    /// Sinh mốc kế tiếp mà máy này sẽ PHÁT RA, sau khi (tuỳ chọn) nhận một dấu từ nơi khác.
+    /// Đây là quy tắc HLC đầy đủ; nó cần cả ba đầu vào và không thể thiếu cái nào:
+    ///
+    /// - <paramref name="dauCuoiCuaTa"/>: mốc gần nhất chính máy này đã phát. Thiếu nó thì đồng
+    ///   hồ máy bị chỉnh LÙI (NTP kéo về, admin sửa tay) sẽ làm hai lần ghi liên tiếp của cùng
+    ///   một máy đảo thứ tự.
+    /// - <paramref name="nhanDuoc"/>: dấu vừa nhận, hoặc null nếu đây là lần phát nội bộ. Nâng
+    ///   theo nó là cách duy nhất giữ nhân quả: "đã thấy rồi mới sửa" phải xếp SAU. Hiệu chỉnh
+    ///   độ lệch vật lý KHÔNG thay được việc này — độ lệch đo qua mạng luôn sai vài trăm ms tới
+    ///   vài giây, đủ để bản sửa của quý sơ thua chính bản ghi mà nó dựa vào.
+    /// - <paramref name="gioHienTai"/>: để phần logic có đường về 0 khi thời gian thật đã vượt
+    ///   qua mọi mốc, nếu không nó chỉ tăng mãi.
+    ///
+    /// Máy chủ giữ <c>dauCuoiCuaTa</c> ở hai cột <c>dau_cuoi_vat_ly</c> / <c>dau_cuoi_logic</c>
+    /// trên dòng <c>bo_dem_hieu_luc</c> của giáo xứ — đúng dòng mà mọi đường ghi sinh
+    /// <c>so_thu_tu</c> đã giành khoá qua <c>CapSoHieuLuc.LayDaiSo</c>, nên không cần khoá mới.
     /// </summary>
-    public static long NangLogic(long logicDangGiu, DauDongHo nhanDuoc, DateTimeOffset gioHienTai)
-        => gioHienTai > nhanDuoc.VatLy
-            ? 0
-            : Math.Max(logicDangGiu, nhanDuoc.Logic) + 1;
+    public static (DateTimeOffset VatLy, long Logic) NangDau(
+        DauDongHo dauCuoiCuaTa, DauDongHo? nhanDuoc, DateTimeOffset gioHienTai)
+    {
+        var bayGio = CatMicroGiay(gioHienTai);
+        var cuaTa = CatMicroGiay(dauCuoiCuaTa.VatLy);
+        var cuaHo = nhanDuoc is { } n ? CatMicroGiay(n.VatLy) : DateTimeOffset.MinValue;
+
+        var vatLy = bayGio;
+        if (cuaTa > vatLy) vatLy = cuaTa;
+        if (cuaHo > vatLy) vatLy = cuaHo;
+
+        // Đồng hồ vật lý đã đi tới trước cả hai mốc: đếm logic hết việc, về 0.
+        if (vatLy == bayGio && bayGio > cuaTa && bayGio > cuaHo) return (vatLy, 0);
+
+        long logic = 0;
+        if (cuaTa == vatLy) logic = dauCuoiCuaTa.Logic;
+        if (nhanDuoc is { } m && cuaHo == vatLy) logic = Math.Max(logic, m.Logic);
+        return (vatLy, logic + 1);
+    }
 }
 ```
 
@@ -1265,7 +1445,10 @@ mở giao dịch tường minh
   với mỗi thao tác trong lô, theo đúng thứ tự máy con gửi:
      nếu đã có trong thao_tac_da_nhan (theo MaThaoTac, hoặc theo danh tính gốc nếu là bù lại)
         -> trả nguyên phản hồi cũ, sang thao tác kế
-     hiệu chỉnh mốc về giờ máy chủ, dựng DauDongHo
+     hiệu chỉnh mốc về giờ máy chủ, KẸP `min(mốc đã hiệu chỉnh, giờ máy chủ)`,
+        CẮT VỀ MICRO GIÂY (DongHoLai.CatMicroGiay), rồi dựng DauDongHo
+     nâng đồng hồ giáo xứ: NangDau(dấu cuối đọc từ dòng đếm, dấu vừa dựng, giờ máy chủ)
+        -> ghi lại `dau_cuoi_vat_ly` / `dau_cuoi_logic` trên dòng đếm ĐANG GIỮ KHOÁ
      nếu Loai == "tao"  -> ApThaoTac.TaoBanGhi
      nếu Loai == "sua"  -> đọc MocO + giá trị hiện tại, LuatGop.Quyet
                             Thua -> chỉ ghi ThayDoi(Thang=false)
@@ -1277,6 +1460,49 @@ mở giao dịch tường minh
 commit
 đọc các dòng hieu_luc sau ConTro của máy con để trả kèm
 ```
+
+**Hai cột đồng hồ giáo xứ — T6 tạo, vì T6 là nơi duy nhất tiêu thụ (R6 phần 2).**
+
+Thêm vào cùng migration mà task này đã tạo cho `CanXemLai`:
+
+```
+ALTER TABLE bo_dem_hieu_luc
+  ADD COLUMN dau_cuoi_vat_ly timestamptz NOT NULL DEFAULT '-infinity',
+  ADD COLUMN dau_cuoi_logic  bigint      NOT NULL DEFAULT 0;
+```
+
+Và mở rộng `CapSoHieuLuc.LayDaiSo` (file của kế hoạch 1) thành:
+
+```csharp
+public static async Task<(long SoDau, Guid Epoch, DauDongHo DauCuoi)> LayDaiSo(
+    QlgxDbContext db, Guid giaoXuId, int soLuong, CancellationToken ct)
+```
+
+`DauCuoi` dựng từ hai cột mới (`ThietBiId = null`, `MaThaoTac = Guid.Empty`). Sau khi xử lý xong
+cả lô, ghi lại mốc cao nhất đã phát vào hai cột đó **trong cùng giao dịch đang giữ khoá**.
+
+Vì sao đặt ở dòng đếm chứ không phải bảng riêng: mọi đường ghi sinh `so_thu_tu` đã giành khoá
+`FOR UPDATE` trên đúng dòng này rồi. Đặt đồng hồ ở đây thì tính nguyên tử có sẵn — không khoá mới,
+không tranh chấp mới, không thêm một thứ tự khoá nào có thể gây deadlock.
+
+**Giữ nguyên chữ ký cũ không được.** `LayDaiSo` là điểm duy nhất mọi đường ghi đi qua; nếu đồng hồ
+nằm chỗ khác thì sẽ có đường ghi quên nâng nó, và lỗi đó không có test nào bắt được một cách tự
+nhiên. Đổi chữ ký buộc mọi nơi gọi phải nhìn lại — đó là mục đích.
+
+**Vì sao kẹp và nâng đồng hồ phải đi CÙNG NHAU (R6/R10 trong sổ thi công):**
+
+Kẹp một mình tạo ra một lỗ mới. Mốc máy con bị kẹp sẽ **bằng đúng** giờ máy chủ, nên phân xử rơi
+xuống tầng Logic — mà đường ghi thường của web luôn phát `Logic = 0`, còn máy con phát `Logic >= 0`.
+Kết quả: mọi thao tác máy con bị kẹp đều **luôn thắng** thao tác quý cha vừa gõ trên web ở cùng
+giây đó. Chỉ khi máy chủ cũng giữ đồng hồ logic riêng (`dau_cuoi_*` trên dòng đếm) thì kẹp mới an
+toàn. Không được làm một nửa.
+
+Nâng đồng hồ một mình cũng không đủ: thiếu kẹp thì một máy con báo sai giờ (đồng hồ CMOS hỏng,
+hoặc cố tình) gửi mốc ở năm 2030, và mốc đó thắng mọi bản ghi hợp lệ về sau **vĩnh viễn**.
+
+**Cắt micro giây phải làm lúc DỰNG dấu, không phải lúc lưu.** `timestamptz` của Postgres giữ tới
+micro giây, `DateTimeOffset` tới 100ns. Cắt lúc lưu thì cái so trong bộ nhớ và cái so sau khi đọc
+lại từ CSDL là hai thứ khác nhau — sinh ra hoà giả, và hai máy kết luận khác nhau.
 
 Chia lô nếu `ThaoTac.Count` lớn: **tối đa 200 thao tác một giao dịch**, đúng ngưỡng đã dùng ở kế hoạch 1 — giữ khoá dòng đếm ngắn.
 
