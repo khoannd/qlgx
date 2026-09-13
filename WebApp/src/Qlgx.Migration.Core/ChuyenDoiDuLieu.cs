@@ -505,7 +505,11 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             var moi = new ThanhVienGiaDinh
             {
                 GiaoXuId = giaoXuId, GiaDinhId = maGiaDinh, GiaoDanId = maGiaoDan,
-                VaiTro = vaiTro, ChuHo = d.ChuHo
+                VaiTro = vaiTro, ChuHo = d.ChuHo,
+                // Đóng dấu nguồn như mọi bảng khác — cột này chỉ có từ task 3b (lúc bảng nối
+                // kế thừa ThucTheCoSo). Để trống thì sau này không tách được dòng nào từ sổ
+                // Access, dòng nào do người dùng nhập tay.
+                SourceSystem = Nguon,
             };
             db.ThanhVienGiaDinh.Add(moi);
             daThemLuotNay[(maGiaDinh, maGiaoDan, vaiTro)] = moi;
@@ -570,7 +574,9 @@ public class ChuyenDoiDuLieu(QlgxDbContext db, Guid giaoXuId, BangAnhXaId anhXa)
             var moi = new GiaoDanHonPhoi
             {
                 GiaoXuId = giaoXuId, GiaoDanId = giaoDanId, HonPhoiId = honPhoiId,
-                SoThuTu = d.SoThuTu
+                SoThuTu = d.SoThuTu,
+                // Đóng dấu nguồn — xem ghi chú cùng loại ở GhiThanhVien.
+                SourceSystem = Nguon,
             };
             db.GiaoDanHonPhoi.Add(moi);
             daThemLuotNay[(giaoDanId, honPhoiId)] = moi;

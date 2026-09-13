@@ -951,6 +951,33 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
     }
 
     /// <summary>
+    /// Hai bảng nối chỉ có cột SourceSystem từ task 3b (lúc chúng kế thừa ThucTheCoSo), nên rất
+    /// dễ bị quên đóng dấu nguồn trong khi mọi bảng khác đều có. Hậu quả im lặng: sau khi nhập
+    /// một giáo xứ, thanh_vien_gia_dinh.source_system là NULL trên toàn bộ hàng nghìn dòng
+    /// trong khi gia_dinh/giao_dan đều mang dấu "access" — về sau không tách được dòng nào từ
+    /// sổ Access, dòng nào do người dùng nhập tay, đúng việc mà cột này sinh ra để làm.
+    /// </summary>
+    [Fact]
+    public async Task Hai_bang_noi_cung_duoc_dong_dau_nguon_khi_nhap_tu_access()
+    {
+        var mau = NguonMau(27);
+        await using var ctx = db.TaoContext();
+
+        await new ChuyenDoiDuLieu(ctx, db.GiaoXuId, new BangAnhXaId())
+            .Chay(mau.Nguon, chayThu: false, CancellationToken.None);
+
+        var giaDinhId = (await ctx.GiaDinh.SingleAsync(x => x.MaGiaDinhCu == mau.MaGiaDinh)).Id;
+        var honPhoiId = (await ctx.HonPhoi.SingleAsync(x => x.MaHonPhoiCu == mau.MaHonPhoi)).Id;
+
+        (await ctx.ThanhVienGiaDinh.Where(x => x.GiaDinhId == giaDinhId)
+            .Select(x => x.SourceSystem).ToListAsync())
+            .Should().NotBeEmpty().And.OnlyContain(x => x == "access");
+        (await ctx.GiaoDanHonPhoi.Where(x => x.HonPhoiId == honPhoiId)
+            .Select(x => x.SourceSystem).ToListAsync())
+            .Should().NotBeEmpty().And.OnlyContain(x => x == "access");
+    }
+
+    /// <summary>
     /// Sự cố thật, nghiêm trọng nhất trong đợt kiểm thử An Phú: GiaoPhan/GiaoHat được chia sẻ
     /// có chủ đích giữa các giáo xứ (không có GiaoXuId), nhưng trước bản sửa này khoá ổn định lại
     /// dựa THẲNG vào mã cũ (MaGiaoPhan/MaGiaoHat) — mã này chỉ có ý nghĩa CỤC BỘ trong một file

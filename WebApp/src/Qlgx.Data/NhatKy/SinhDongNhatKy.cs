@@ -19,6 +19,23 @@ public static class SinhDongNhatKy
 
         foreach (var muc in theoDoi.Entries<ThucTheCoSo>())
         {
+            // CỐ Ý bỏ qua EntityState.Deleted — đây là khoảng trống ĐÃ BIẾT, không phải sót.
+            //
+            // Vì sao không thêm loại dòng "xoa": thiết kế (mục 4.4) chốt rằng xoá là một Ô
+            // (cột DaXoa) chịu đúng luật gộp như mọi ô khác, không phải một loại dòng riêng.
+            // Lý do: hồi sinh nhầm một bản ghi đã xoá còn khó phát hiện hơn xoá nhầm, mà một ô
+            // DaXoa thì gộp được như mọi ô, còn một loại dòng "xoa" riêng thì không. Thêm loại
+            // dòng đó bây giờ là đi ngược thiết kế và sẽ phải gỡ ra ở kế hoạch sau.
+            //
+            // HỆ QUẢ CÒN TỒN TẠI, cần biết trước khi tin vào nhật ký: chừng nào các chỗ xoá
+            // cứng còn lại chưa chuyển sang xoá mềm, và chừng nào hai bảng nối
+            // (ThanhVienGiaDinh, GiaoDanHonPhoi) chưa có cột DaXoa, thì NHẬT KÝ CÒN THIẾU THAO
+            // TÁC XOÁ. Cụ thể: chuyển ông A từ gia đình X sang gia đình Y là Remove(X,A) +
+            // Add(Y,A). Phần Add sinh được dòng "tao" (từ task 3b), nhưng phần Remove không
+            // sinh gì — đồng bộ xong, các máy khác thấy ông A ở CẢ HAI gia đình. Sổ gia đình
+            // vẫn phân kỳ, chỉ đổi hình dạng so với trước task 3b (trước là "vẫn ở gia đình
+            // cũ", nay là "ở cả hai"). Đừng coi nhật ký là đủ để đồng bộ việc xoá cho tới khi
+            // hai điều kiện trên xong.
             if (muc.State is not (EntityState.Added or EntityState.Modified)) continue;
 
             var bang = muc.Metadata.ClrType.Name;
