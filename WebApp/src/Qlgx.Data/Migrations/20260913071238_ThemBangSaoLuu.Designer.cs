@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Qlgx.Data;
@@ -11,9 +12,11 @@ using Qlgx.Data;
 namespace Qlgx.Data.Migrations
 {
     [DbContext(typeof(QlgxDbContext))]
-    partial class QlgxDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260913071238_ThemBangSaoLuu")]
+    partial class ThemBangSaoLuu
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1409,71 +1412,6 @@ namespace Qlgx.Data.Migrations
                     b.ToTable("giao_xu");
                 });
 
-            modelBuilder.Entity("Qlgx.Domain.Entities.HieuLuc", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<Guid>("BanGhiId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("ban_ghi_id");
-
-                    b.Property<string>("Bang")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("bang");
-
-                    b.Property<long>("DongHoLogic")
-                        .HasColumnType("bigint")
-                        .HasColumnName("dong_ho_logic");
-
-                    b.Property<DateTimeOffset>("DongHoVatLy")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("dong_ho_vat_ly");
-
-                    b.Property<Guid>("Epoch")
-                        .HasColumnType("uuid")
-                        .HasColumnName("epoch");
-
-                    b.Property<string>("GiaTri")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("gia_tri");
-
-                    b.Property<Guid>("GiaoDichId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("giao_dich_id");
-
-                    b.Property<Guid>("GiaoXuId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("giao_xu_id");
-
-                    b.Property<long>("SoThuTu")
-                        .HasColumnType("bigint")
-                        .HasColumnName("so_thu_tu");
-
-                    b.Property<Guid?>("ThietBiId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("thiet_bi_id");
-
-                    b.Property<string>("Truong")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("truong");
-
-                    b.HasKey("Id")
-                        .HasName("pk_hieu_luc");
-
-                    b.HasIndex("GiaoXuId", "SoThuTu")
-                        .IsUnique()
-                        .HasDatabaseName("ix_hieu_luc_giao_xu_id_so_thu_tu");
-
-                    b.ToTable("hieu_luc");
-                });
-
             modelBuilder.Entity("Qlgx.Domain.Entities.HoiDoan", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2398,80 +2336,6 @@ namespace Qlgx.Data.Migrations
                         .HasDatabaseName("ix_thanh_vien_gia_dinh_giao_xu_id_gia_dinh_id");
 
                     b.ToTable("thanh_vien_gia_dinh");
-                });
-
-            modelBuilder.Entity("Qlgx.Domain.Entities.ThayDoi", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<Guid>("BanGhiId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("ban_ghi_id");
-
-                    b.Property<string>("Bang")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("bang");
-
-                    b.Property<long>("DongHoLogic")
-                        .HasColumnType("bigint")
-                        .HasColumnName("dong_ho_logic");
-
-                    b.Property<DateTimeOffset>("DongHoVatLy")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("dong_ho_vat_ly");
-
-                    b.Property<string>("GiaTri")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("gia_tri");
-
-                    b.Property<Guid>("GiaoDichId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("giao_dich_id");
-
-                    b.Property<Guid>("GiaoXuId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("giao_xu_id");
-
-                    b.Property<string>("Loai")
-                        .IsRequired()
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)")
-                        .HasColumnName("loai");
-
-                    b.Property<Guid>("MaThaoTac")
-                        .HasColumnType("uuid")
-                        .HasColumnName("ma_thao_tac");
-
-                    b.Property<Guid?>("TaiKhoanId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tai_khoan_id");
-
-                    b.Property<bool>("Thang")
-                        .HasColumnType("boolean")
-                        .HasColumnName("thang");
-
-                    b.Property<Guid?>("ThietBiId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("thiet_bi_id");
-
-                    b.Property<string>("Truong")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("truong");
-
-                    b.HasKey("Id")
-                        .HasName("pk_thay_doi");
-
-                    b.HasIndex("GiaoXuId", "Bang", "BanGhiId", "DongHoVatLy")
-                        .HasDatabaseName("ix_thay_doi_giao_xu_id_bang_ban_ghi_id_dong_ho_vat_ly");
-
-                    b.ToTable("thay_doi");
                 });
 
             modelBuilder.Entity("Qlgx.Domain.Entities.TrangThaiSaoLuu", b =>
