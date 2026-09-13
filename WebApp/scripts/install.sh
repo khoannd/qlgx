@@ -134,12 +134,22 @@ cau_hinh_tuong_lua() {
   fi
 }
 
+# Kho git duoc phat trien tren Windows, noi he thong tep KHONG luu duoc bit thuc thi -- git ghi
+# nhan moi tep script la 100644. Sau `git clone` tren Linux, scripts/*.sh va scripts/qlgx deu
+# KHONG thuc thi duoc, nen moi cho goi thang "$GOC_UNG_DUNG/scripts/qlgx-runner.sh" (install.sh,
+# qlgx-restore.sh, va ExecStart= cua unit systemd) se bao "Permission denied". Dat lai bit thuc
+# thi sau MOI lan lay/cap nhat ma nguon.
+dat_bit_thuc_thi() {
+  chmod +x "$GOC_UNG_DUNG"/scripts/*.sh "$GOC_UNG_DUNG/scripts/qlgx" 2>/dev/null || true
+}
+
 lay_ma_nguon() {
   mkdir -p "$THU_MUC_CAU_HINH" "$THU_MUC_SPOOL" "$THU_MUC_LOG"
   chmod 700 "$THU_MUC_CAU_HINH"
 
   if [ -d "$GOC_CHECKOUT/.git" ]; then
     ghi_log thong-tin "Da co ban checkout tai $GOC_CHECKOUT."
+    dat_bit_thuc_thi
     return
   fi
 
@@ -158,6 +168,7 @@ lay_ma_nguon() {
   # vo dung tren may chu Linux va chiem hang tram MB nhi phan.
   git clone --depth 1 --filter=blob:none --sparse --branch "$NHANH" "$KHO_GIT" "$GOC_CHECKOUT"
   git -C "$GOC_CHECKOUT" sparse-checkout set WebApp
+  dat_bit_thuc_thi
 }
 
 sinh_env() {
@@ -563,6 +574,8 @@ cap_nhat() {
 co_systemd() { command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; }
 
 cai_tep_systemd() {
+  # Goi lai sau khi `git merge` cua cap_nhat co the da dua ve script moi (xem dat_bit_thuc_thi).
+  dat_bit_thuc_thi
   # CLI `qlgx` cai bat ke co systemd hay khong -- no chi goi lai cac script, khong can timer.
   install -m 755 "$GOC_UNG_DUNG/scripts/qlgx" /usr/local/bin/qlgx
 
