@@ -61,22 +61,155 @@ public class DongHoLaiTests
     }
 
     [Fact]
-    public void Nang_logic_khi_nhan_moc_bang_hoac_lon_hon_gio_hien_tai()
+    public void Nang_dau_khi_nhan_moc_o_tuong_lai_thi_bam_theo_moc_do_va_dem_logic_len()
     {
-        // Nhận một dấu có mốc vật lý ở tương lai gần so với đồng hồ máy chủ: phải nâng đồng hồ
-        // logic lên để lần ghi kế tiếp của chính máy chủ xếp SAU dấu vừa nhận, không hoà.
+        // Nhận một dấu có mốc vật lý ở tương lai gần so với đồng hồ máy chủ: mốc phát ra phải
+        // BÁM THEO mốc nhận được (không lùi về giờ máy), và phần logic nâng lên để lần ghi kế
+        // tiếp của chính máy chủ xếp SAU dấu vừa nhận, không hoà.
+        var dauCuoiCuaTa = new DauDongHo(Moc, 0, null, Guid.Empty);
         var nhan = new DauDongHo(Moc.AddSeconds(5), 4, null, Guid.NewGuid());
 
-        DongHoLai.NangLogic(logicDangGiu: 0, nhanDuoc: nhan, gioHienTai: Moc)
-            .Should().BeGreaterThan(4);
+        var phat = DongHoLai.NangDau(dauCuoiCuaTa, nhan, gioHienTai: Moc);
+
+        phat.VatLy.Should().Be(Moc.AddSeconds(5));
+        phat.Logic.Should().Be(5, "phai lon hon 4 de xep sau dau vua nhan");
     }
 
     [Fact]
-    public void Gio_hien_tai_da_vuot_qua_moc_nhan_duoc_thi_logic_ve_khong()
+    public void Gio_hien_tai_da_vuot_qua_moi_moc_thi_logic_ve_khong()
     {
+        var dauCuoiCuaTa = new DauDongHo(Moc, 9, null, Guid.Empty);
         var nhan = new DauDongHo(Moc, 9, null, Guid.NewGuid());
 
-        DongHoLai.NangLogic(logicDangGiu: 9, nhanDuoc: nhan, gioHienTai: Moc.AddMinutes(1))
-            .Should().Be(0, "dong ho vat ly da di toi truoc, khong can dem logic nua");
+        var phat = DongHoLai.NangDau(dauCuoiCuaTa, nhan, gioHienTai: Moc.AddMinutes(1));
+
+        phat.VatLy.Should().Be(Moc.AddMinutes(1));
+        phat.Logic.Should().Be(0, "dong ho vat ly da di toi truoc, khong can dem logic nua");
+    }
+
+    [Fact]
+    public void Nang_dau_khong_nhan_gi_van_khong_duoc_lui_sau_moc_cuoi_cua_chinh_minh()
+    {
+        // Đồng hồ máy chủ bị chỉnh LÙI (NTP kéo về, hoặc admin sửa tay). Mốc phát ra vẫn phải
+        // tiến — nếu không, hai lần ghi liên tiếp của chính máy chủ sẽ đảo thứ tự.
+        var dauCuoiCuaTa = new DauDongHo(Moc, 3, null, Guid.Empty);
+
+        var phat = DongHoLai.NangDau(dauCuoiCuaTa, nhanDuoc: null,
+            gioHienTai: Moc.AddSeconds(-30));
+
+        phat.VatLy.Should().Be(Moc);
+        phat.Logic.Should().Be(4);
+    }
+
+    [Fact]
+    public void Nang_dau_tai_bien_bang_nhau_van_phai_tien_mot_buoc()
+    {
+        var dauCuoiCuaTa = new DauDongHo(Moc, 2, null, Guid.Empty);
+
+        var phat = DongHoLai.NangDau(dauCuoiCuaTa, nhanDuoc: null, gioHienTai: Moc);
+
+        phat.VatLy.Should().Be(Moc);
+        phat.Logic.Should().Be(3, "bang nhau khong phai la di toi truoc");
+    }
+
+    [Fact]
+    public void So_sanh_thiet_bi_dung_dang_chuoi_thuong_chu_khong_phai_Guid_CompareTo()
+    {
+        // SỬA SO VỚI BRIEF: brief giả định Guid.CompareTo (đọc _a như số nguyên little-endian)
+        // sẽ cho kết quả NGƯỢC với so chuỗi ordinal trên đúng cặp Guid này, và assert thẳng
+        // a.CompareTo(b).Should().BePositive(...). Thực nghiệm (fuzz 2 triệu cặp Guid ngẫu
+        // nhiên, so Guid.CompareTo với string.CompareOrdinal trên dạng "D") KHÔNG tìm được một
+        // cặp nào lệch nhau: trên .NET đang dùng, Guid.CompareTo so từng trường (_a, _b, _c,
+        // rồi các byte _d.._k) đúng theo thứ tự ý nghĩa giống hệt các nhóm hex trong chuỗi
+        // "D", nên nó LUÔN đồng nhất với so chuỗi ordinal — không tồn tại cặp Guid nào làm hai
+        // cách lệch nhau. Rủi ro thật (nếu có) nằm ở chỗ khác so MẢNG BYTE THÔ
+        // (Guid.ToByteArray(), nơi ba nhóm đầu bị đảo byte little-endian) rồi memcmp trực tiếp
+        // — đó là khi thứ tự mới lệch với chuỗi, không phải Guid.CompareTo. Vì vậy bỏ assertion
+        // sai về Guid.CompareTo, giữ lại phần có giá trị bảo vệ thật: SoSanhGuid phải chốt MỘT
+        // thứ tự duy nhất, tường minh (chuỗi "D" chữ thường, ordinal), không phụ thuộc cách
+        // Guid được biểu diễn dưới máy ảo/ngôn ngữ nào khác.
+        var a = Guid.Parse("00000002-0000-0000-0000-000000000000");
+        var b = Guid.Parse("00000100-0000-0000-0000-000000000000");
+
+        Math.Sign(DongHoLai.SoSanhGuid(a, b))
+            .Should().Be(-1, "dang chuoi thi 00000002... di truoc 00000100...");
+    }
+
+    [Fact]
+    public void Thiet_bi_null_xep_truoc_moi_thiet_bi_co_danh_tinh()
+    {
+        DongHoLai.SoSanhGuid(null, Guid.Empty).Should().BeNegative();
+        DongHoLai.SoSanhGuid(Guid.Empty, null).Should().BePositive();
+        DongHoLai.SoSanhGuid(null, null).Should().Be(0);
+    }
+
+    [Fact]
+    public void So_sanh_bang_khong_thi_hai_dau_phai_that_su_bang_nhau()
+    {
+        // Bất biến MocO dựa vào: SoSanh(a,b)==0 <=> a.Equals(b). Quy null về Guid.Empty phá
+        // bất biến này.
+        var a = new DauDongHo(Moc, 0, null, Guid.Empty);
+        var b = new DauDongHo(Moc, 0, Guid.Empty, Guid.Empty);
+
+        a.Should().NotBe(b);
+        DongHoLai.SoSanh(a, b).Should().NotBe(0);
+    }
+
+    [Fact]
+    public void Ma_thao_tac_la_tang_pha_hoa_cuoi_cung_va_no_phai_duoc_dung()
+    {
+        var tb = Guid.NewGuid();
+        var nho = Guid.Parse("00000000-0000-0000-0000-00000000000a");
+        var lon = Guid.Parse("00000000-0000-0000-0000-0000000000b0");
+
+        DongHoLai.SoSanh(new DauDongHo(Moc, 0, tb, nho), new DauDongHo(Moc, 0, tb, lon))
+            .Should().BeNegative("hoa het ba tang tren, chi con MaThaoTac phan xu");
+    }
+
+    [Fact]
+    public void So_sanh_doi_xung_nghich_tren_moi_cap()
+    {
+        var tb1 = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        var tb2 = Guid.Parse("00000000-0000-0000-0000-000000000002");
+        var m1 = Guid.Parse("00000000-0000-0000-0000-0000000000a1");
+        var m2 = Guid.Parse("00000000-0000-0000-0000-0000000000a2");
+        var mau = new[]
+        {
+            new DauDongHo(Moc, 0, null, m1),
+            new DauDongHo(Moc, 0, tb1, m1),
+            new DauDongHo(Moc, 0, tb1, m2),
+            new DauDongHo(Moc, 0, tb2, m1),
+            new DauDongHo(Moc, 1, tb1, m1),
+            new DauDongHo(Moc.AddSeconds(1), 0, tb1, m1),
+        };
+
+        foreach (var a in mau)
+        foreach (var b in mau)
+        {
+            Math.Sign(DongHoLai.SoSanh(a, b))
+                .Should().Be(-Math.Sign(DongHoLai.SoSanh(b, a)));
+            (DongHoLai.SoSanh(a, b) == 0).Should().Be(a.Equals(b));
+        }
+    }
+
+    [Fact]
+    public void Cat_micro_giay_bo_phan_le_duoi_micro()
+    {
+        // timestamptz cua Postgres chi giu toi micro giay; DateTimeOffset giu toi 100ns. Neu
+        // khong cat NGAY luc dung dau, cai so trong bo nho va cai so sau khi doc lai tu CSDL se
+        // khac nhau -> hoa gia, hai may ket luan khac nhau.
+        var tho = new DateTimeOffset(2026, 9, 13, 10, 0, 0, TimeSpan.Zero).AddTicks(1237);
+
+        DongHoLai.CatMicroGiay(tho).Ticks.Should().Be(
+            new DateTimeOffset(2026, 9, 13, 10, 0, 0, TimeSpan.Zero).AddTicks(1230).Ticks);
+    }
+
+    [Fact]
+    public void CompareTo_cua_DauDongHo_khop_voi_SoSanh()
+    {
+        var a = new DauDongHo(Moc, 0, null, Guid.NewGuid());
+        var b = new DauDongHo(Moc.AddSeconds(1), 0, null, Guid.NewGuid());
+
+        a.CompareTo(b).Should().Be(DongHoLai.SoSanh(a, b));
     }
 }
