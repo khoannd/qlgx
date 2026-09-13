@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
+using Qlgx.Data.NhatKy;
 using Qlgx.Domain.Entities;
 
 namespace Qlgx.Api.Services;
@@ -49,7 +50,7 @@ public class TaiKhoanService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, AuthServi
         };
         taiKhoan.MatKhauBam = auth.Bam(taiKhoan, yc.MatKhau);
         db.TaiKhoan.Add(taiKhoan);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return (KetQuaLuuTaiKhoan.ThanhCong, taiKhoan.Id);
     }
 
@@ -68,7 +69,7 @@ public class TaiKhoanService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, AuthServi
         db.Entry(taiKhoan).Property(x => x.RowVersion).OriginalValue = yc.RowVersion;
         try
         {
-            await db.SaveChangesAsync(ct);
+            await db.LuuCoNhatKy(ct);
             return KetQuaLuuTaiKhoan.ThanhCong;
         }
         catch (DbUpdateConcurrencyException) { return KetQuaLuuTaiKhoan.DungPhienBan; }
@@ -82,7 +83,7 @@ public class TaiKhoanService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, AuthServi
         var taiKhoan = await db.TaiKhoan.FirstOrDefaultAsync(t => t.Id == id && !t.DaXoa, ct);
         if (taiKhoan is null) return false;
         taiKhoan.DaXoa = true;
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return true;
     }
 }

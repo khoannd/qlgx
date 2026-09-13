@@ -1,3 +1,4 @@
+using Qlgx.Data.NhatKy;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -103,7 +104,7 @@ public class SaoLuuService(QlgxDbContext db, IConfiguration cauHinh)
             ThamSoJson = JsonSerializer.Serialize(new { snapshotId = yc.SnapshotId, nhan = yc.Nhan }),
         };
         db.CongViecSaoLuu.Add(cv);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return (cv.Id, null);
     }
 

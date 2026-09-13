@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
+using Qlgx.Data.NhatKy;
 using Qlgx.Domain.Entities;
 
 namespace Qlgx.Api.Services;
@@ -69,7 +70,7 @@ public class RaoHonPhoiService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhG
         };
         GanTuYeuCau(r, yc);
         db.RaoHonPhoi.Add(r);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         await db.Entry(r).Reference(x => x.GiaoDan1).LoadAsync(ct);
         await db.Entry(r).Reference(x => x.GiaoDan2).LoadAsync(ct);
         return AnhXa(r);
@@ -82,7 +83,7 @@ public class RaoHonPhoiService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhG
         if (yc.RowVersion is { } rv && r.RowVersion != rv) return KetQuaLuuRaoHonPhoi.DungPhienBan;
 
         GanTuYeuCau(r, yc);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return KetQuaLuuRaoHonPhoi.ThanhCong;
     }
 
@@ -111,7 +112,7 @@ public class RaoHonPhoiService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhG
         var r = await db.RaoHonPhoi.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (r is null) return false;
         db.RaoHonPhoi.Remove(r);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return true;
     }
 }

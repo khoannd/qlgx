@@ -2,6 +2,7 @@ using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
+using Qlgx.Data.NhatKy;
 using Qlgx.Domain.Entities;
 
 namespace Qlgx.Api.Services;
@@ -280,7 +281,7 @@ public class NhapHocVienGiaoLyService(QlgxDbContext db, SinhMaService sinhMa, IB
                     GiaoHoId = giaoHoIdMoi, DaCoGiaDinh = false,
                 };
                 db.GiaoDan.Add(g);
-                await db.SaveChangesAsync(ct); // cần Id thật trước khi dùng làm khoá ngoại bên dưới
+                await db.LuuCoNhatKy(ct); // cần Id thật trước khi dùng làm khoá ngoại bên dưới
                 giaoDanId = g.Id;
                 idDaCoTrongLop.Add(giaoDanId); // phòng trường hợp Mã GD của một dòng sau trùng người vừa tạo
             }
@@ -294,7 +295,7 @@ public class NhapHocVienGiaoLyService(QlgxDbContext db, SinhMaService sinhMa, IB
             idDaCoTrongLop.Add(giaoDanId);
             daNhap++;
         }
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         await giaoTac.CommitAsync(ct);
         return new NhapHocVienKetQua(daNhap, boQua);
     }

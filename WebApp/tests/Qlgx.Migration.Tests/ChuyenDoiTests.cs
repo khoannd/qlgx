@@ -1030,4 +1030,32 @@ public class ChuyenDoiTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         xuB.GiaoHat.GiaoPhan!.TenGiaoPhan.Should().Be("Sai Gon rieng");
         xuA.GiaoHat.Id.Should().NotBe(xuB.GiaoHat.Id, "hai giao hat that su khac nhau, du trung ma cu");
     }
+
+    /// <summary>
+    /// Luồng nhập dữ liệu Access KHÔNG được sinh dòng nhật ký nào. Một giáo xứ thật nhập vào
+    /// là ~4.000 giáo dân, ~8.500 dòng thành viên gia đình, ~8.500 dòng bí tích — mỗi bản ghi
+    /// một dòng thay_doi cộng một dòng hieu_luc là hàng chục nghìn dòng vô ích, và tệ hơn: tất
+    /// cả phải đi qua MỘT dòng đếm bị khoá, nên lượt nhập tự xếp hàng chính nó và chạy rất lâu.
+    /// Nhật ký cho đường nhập thuộc kế hoạch nhập-từ-desktop, không phải kế hoạch này. Vì vậy
+    /// ChuyenDoiDuLieu cố ý gọi thẳng SaveChangesAsync — test này giữ cho quyết định đó không
+    /// bị một lần "dọn dẹp" sau này vô tình đảo ngược.
+    /// </summary>
+    [Fact]
+    public async Task Nhap_du_lieu_khong_sinh_dong_nhat_ky_nao()
+    {
+        var mau = NguonMau(28);
+        await using var ctx = db.TaoContext();
+
+        var thayDoiTruoc = await ctx.ThayDoi.CountAsync();
+        var hieuLucTruoc = await ctx.HieuLuc.CountAsync();
+
+        await new ChuyenDoiDuLieu(ctx, db.GiaoXuId, new BangAnhXaId())
+            .Chay(mau.Nguon, chayThu: false, CancellationToken.None);
+
+        // Có ghi thật thì mới đáng tin — nếu không, test này xanh chỉ vì chẳng có gì xảy ra.
+        (await ctx.GiaDinh.CountAsync(x => x.MaGiaDinhCu == mau.MaGiaDinh)).Should().Be(1);
+
+        (await ctx.ThayDoi.CountAsync()).Should().Be(thayDoiTruoc);
+        (await ctx.HieuLuc.CountAsync()).Should().Be(hieuLucTruoc);
+    }
 }

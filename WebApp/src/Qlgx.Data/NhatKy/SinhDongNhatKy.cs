@@ -91,6 +91,12 @@ public static class SinhDongNhatKy
         DongHoLogic = 0,
         TaiKhoanId = boiCanh?.TaiKhoanId,
         ThietBiId = boiCanh?.ThietBiId,
+        // TẠM do máy chủ sinh. Chú thích trên ThayDoi.MaThaoTac nói mã này dùng "chống xử lý
+        // trùng khi gửi lại lô" — muốn làm được thế thì mã phải do MÁY CON sinh và gửi kèm lô,
+        // để máy chủ nhận lại đúng lô đó lần thứ hai thì nhận ra và bỏ qua. Sinh ở máy chủ thì
+        // mỗi lần nhận là một mã mới, nên KHÔNG chống trùng được gì — nó chỉ là một mã duy
+        // nhất cho mỗi dòng. Trong kế hoạch này chưa có máy con nên chưa có ai gửi mã lên. Khi
+        // làm đường nhận lô từ máy con, mã phải lấy từ lô gửi lên, không sinh ở đây.
         MaThaoTac = Guid.NewGuid(),
         GiaoDichId = giaoDichId,
         Thang = true,

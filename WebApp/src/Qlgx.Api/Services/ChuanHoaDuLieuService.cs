@@ -1,3 +1,4 @@
+using Qlgx.Data.NhatKy;
 using System.Globalization;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
@@ -148,7 +149,7 @@ public class ChuanHoaDuLieuService(QlgxDbContext db)
         await using var giaoTac = await db.Database.BeginTransactionAsync(ct);
         var ds = await db.GiaoDan.ToListAsync(ct);
         var soDoi = ApDung(ds, CotGiaoDan);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         await giaoTac.CommitAsync(ct);
         return new ChuanHoaKetQua(soDoi);
     }
@@ -164,7 +165,7 @@ public class ChuanHoaDuLieuService(QlgxDbContext db)
         await using var giaoTac = await db.Database.BeginTransactionAsync(ct);
         var ds = await db.GiaDinh.ToListAsync(ct);
         var soDoi = ApDung(ds, CotGiaDinh);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         await giaoTac.CommitAsync(ct);
         return new ChuanHoaKetQua(soDoi);
     }

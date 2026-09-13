@@ -1,3 +1,4 @@
+using Qlgx.Data.NhatKy;
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
@@ -259,7 +260,7 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
 
         try
         {
-            await db.SaveChangesAsync(ct);
+            await db.LuuCoNhatKy(ct);
             return KetQuaCapNhatGiaDinh.ThanhCong;
         }
         catch (DbUpdateConcurrencyException ex)
@@ -295,7 +296,7 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
             GiaoHoId = yc.GiaoHoId,
         };
         db.GiaDinh.Add(g);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return new KetQuaTaoGiaDinhDto(g.Id, g.MaGiaDinhCu);
     }
 
@@ -314,14 +315,14 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
         if (!vinhVien)
         {
             g.DaXoa = true;
-            await db.SaveChangesAsync(ct);
+            await db.LuuCoNhatKy(ct);
             return KetQuaXoaGiaDinh.ThanhCong;
         }
 
         await using var giaoDich = await db.Database.BeginTransactionAsync(ct);
         await db.ThanhVienGiaDinh.Where(tv => tv.GiaDinhId == id).ExecuteDeleteAsync(ct);
         db.GiaDinh.Remove(g);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         await giaoDich.CommitAsync(ct);
         return KetQuaXoaGiaDinh.ThanhCong;
     }
@@ -420,7 +421,7 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
             GiaoXuId = gd.GiaoXuId, GiaDinhId = giaDinhId, GiaoDanId = yc.GiaoDanId,
             VaiTro = (VaiTroGiaDinh)yc.VaiTro, ChuHo = false,
         });
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         await giaoDich.CommitAsync(ct);
         return (KetQuaThemThanhVien.ThanhCong, null, []);
     }
@@ -434,7 +435,7 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
             x.GiaDinhId == giaDinhId && x.GiaoDanId == giaoDanId && x.VaiTro == (VaiTroGiaDinh)vaiTro, ct);
         if (tv is null) return false;
         db.ThanhVienGiaDinh.Remove(tv);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return true;
     }
 
@@ -556,7 +557,7 @@ public class GiaDinhService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiao
                 VaiTro = vaiTro, ChuHo = false,
             });
 
-        try { await db.SaveChangesAsync(ct); }
+        try { await db.LuuCoNhatKy(ct); }
         catch (DbUpdateConcurrencyException) { return (KetQuaGanVoChong.DungPhienBan, null, []); }
         await giaoDich.CommitAsync(ct);
         return (KetQuaGanVoChong.ThanhCong, null, []);

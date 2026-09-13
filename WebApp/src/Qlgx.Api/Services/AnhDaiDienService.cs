@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Anh;
 using Qlgx.Data;
+using Qlgx.Data.NhatKy;
 
 namespace Qlgx.Api.Services;
 
@@ -54,7 +55,7 @@ public class AnhDaiDienService(QlgxDbContext db)
 
         g.AnhDaiDienDuLieu = ketQua!.DuLieu;
         g.AnhDaiDienLoaiNoiDung = ketQua.LoaiNoiDung;
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return (KetQuaLuuAnh.ThanhCong, null);
     }
 
@@ -74,7 +75,7 @@ public class AnhDaiDienService(QlgxDbContext db)
         if (g is null) return false;
         g.AnhDaiDienDuLieu = null;
         g.AnhDaiDienLoaiNoiDung = null;
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return true;
     }
 
@@ -94,7 +95,7 @@ public class AnhDaiDienService(QlgxDbContext db)
 
         gd.AnhDaiDienDuLieu = ketQua!.DuLieu;
         gd.AnhDaiDienLoaiNoiDung = ketQua.LoaiNoiDung;
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return (KetQuaLuuAnh.ThanhCong, null);
     }
 
@@ -114,7 +115,7 @@ public class AnhDaiDienService(QlgxDbContext db)
         if (gd is null) return false;
         gd.AnhDaiDienDuLieu = null;
         gd.AnhDaiDienLoaiNoiDung = null;
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return true;
     }
 }

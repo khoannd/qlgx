@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
+using Qlgx.Data.NhatKy;
 
 namespace Qlgx.Api.Services;
 
@@ -22,13 +23,21 @@ namespace Qlgx.Api.Services;
 /// </summary>
 public class GiaoXuService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh)
 {
+    /// <summary>
+    /// Kèm tên Giáo phận/Giáo hạt CHỈ ĐỌC qua điều hướng GiaoHat!.GiaoPhan! (đúng hai bảng dùng
+    /// CHUNG cho nhiều giáo xứ, xem ghi chú ở GiaoHat.cs/GiaoPhan.cs) — không lộ ra ô sửa nào
+    /// cho hai trường này ở màn hình "Giáo xứ" tự phục vụ, tránh một giáo xứ vô tình đổi tên
+    /// hiển thị của giáo xứ khác cùng giáo hạt (xem ghi chú ở GiaoXuHienTaiResponse).
+    /// </summary>
     public async Task<GiaoXuHienTaiResponse?> LayThongTin(CancellationToken ct)
     {
         var giaoXuId = boiCanh.GiaoXuId;
         return await db.GiaoXu
             .Where(x => x.Id == giaoXuId)
             .Select(x => new GiaoXuHienTaiResponse(
-                x.Id, x.TenGiaoXu, x.DiaChi, x.DienThoai, x.Email, x.Website, x.GhiChu))
+                x.Id, x.TenGiaoXu, x.DiaChi, x.DienThoai, x.Email, x.Website, x.GhiChu,
+                x.GiaoHat != null ? x.GiaoHat.GiaoPhan!.TenGiaoPhan : null,
+                x.GiaoHat != null ? x.GiaoHat.TenGiaoHat : null))
             .SingleOrDefaultAsync(ct);
     }
 
@@ -49,7 +58,7 @@ public class GiaoXuService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh)
         giaoXu.Email = yc.Email;
         giaoXu.Website = yc.Website;
         giaoXu.GhiChu = yc.GhiChu;
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return true;
     }
 }

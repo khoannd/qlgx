@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
+using Qlgx.Data.NhatKy;
 using Qlgx.Domain;
 using Qlgx.Domain.Entities;
 
@@ -119,7 +120,7 @@ public class TaoDotBiTichTuDongService(QlgxDbContext db, SinhMaService sinhMa, I
 
         try
         {
-            await db.SaveChangesAsync(ct);
+            await db.LuuCoNhatKy(ct);
             await giaoTac.CommitAsync(ct);
         }
         catch (DbUpdateException ex) when (LaViPhamRangBuocNhomTrung(ex))

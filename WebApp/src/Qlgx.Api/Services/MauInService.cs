@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
 using Qlgx.Api.Printing;
 using Qlgx.Data;
+using Qlgx.Data.NhatKy;
 using Qlgx.Domain.Entities;
 
 namespace Qlgx.Api.Services;
@@ -78,7 +79,7 @@ public class MauInService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, BoDoMauIn ma
                 TenMau = tenMau,
                 NoiDungHtml = noiDungAnToan,
             });
-            await db.SaveChangesAsync(ct);
+            await db.LuuCoNhatKy(ct);
             return KetQuaLuuMauIn.ThanhCong;
         }
 
@@ -87,7 +88,7 @@ public class MauInService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, BoDoMauIn ma
         db.Entry(dong).Property(x => x.RowVersion).OriginalValue = yc.RowVersion;
         try
         {
-            await db.SaveChangesAsync(ct);
+            await db.LuuCoNhatKy(ct);
             return KetQuaLuuMauIn.ThanhCong;
         }
         catch (DbUpdateConcurrencyException) { return KetQuaLuuMauIn.DungPhienBan; }
@@ -109,7 +110,7 @@ public class MauInService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, BoDoMauIn ma
         if (dong is not null)
         {
             db.MauInTuyChinh.Remove(dong);
-            await db.SaveChangesAsync(ct);
+            await db.LuuCoNhatKy(ct);
         }
         return true;
     }

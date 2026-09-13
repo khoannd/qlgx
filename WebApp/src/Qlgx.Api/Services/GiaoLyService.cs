@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
+using Qlgx.Data.NhatKy;
 using Qlgx.Domain.Entities;
 
 namespace Qlgx.Api.Services;
@@ -50,7 +51,7 @@ public class GiaoLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoX
         };
         GanKhoiTuYeuCau(k, yc);
         db.KhoiGiaoLy.Add(k);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return (k.Id, KetQuaLuuKhoi.ThanhCong);
     }
 
@@ -62,7 +63,7 @@ public class GiaoLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoX
         var nguoiQuanLy = await db.GiaoDan.FirstOrDefaultAsync(x => x.Id == yc.NguoiQuanLyId, ct);
         if (nguoiQuanLy is null) return KetQuaLuuKhoi.KhongTimThayNguoiQuanLy;
         GanKhoiTuYeuCau(k, yc);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return KetQuaLuuKhoi.ThanhCong;
     }
 
@@ -87,7 +88,7 @@ public class GiaoLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoX
         var lopCuaKhoi = await db.LopGiaoLy.Where(l => l.KhoiGiaoLyId == id).ToListAsync(ct);
         db.LopGiaoLy.RemoveRange(lopCuaKhoi);
         db.KhoiGiaoLy.Remove(k);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         await tran.CommitAsync(ct);
         return true;
     }
@@ -126,7 +127,7 @@ public class GiaoLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoX
         };
         GanLopTuYeuCau(l, yc);
         db.LopGiaoLy.Add(l);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return (l.Id, KetQuaLuuLop.ThanhCong);
     }
 
@@ -136,7 +137,7 @@ public class GiaoLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoX
         if (l is null) return KetQuaLuuLop.KhongTimThay;
         if (yc.RowVersion is { } rv && l.RowVersion != rv) return KetQuaLuuLop.DungPhienBan;
         GanLopTuYeuCau(l, yc);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return KetQuaLuuLop.ThanhCong;
     }
 
@@ -156,7 +157,7 @@ public class GiaoLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoX
         var l = await db.LopGiaoLy.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (l is null) return false;
         db.LopGiaoLy.Remove(l);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return true;
     }
 
@@ -200,7 +201,7 @@ public class GiaoLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoX
             GiaoXuId = boiCanh.GiaoXuId, LopGiaoLyId = lopId, GiaoDanId = yc.GiaoDanId,
             SoThuTu = soThuTuKeTiep, HoanThanh = false,
         });
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return KetQuaThemHocVien.ThanhCong;
     }
 
@@ -212,7 +213,7 @@ public class GiaoLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoX
         c.SoThuTu = yc.SoThuTu;
         c.HoanThanh = yc.HoanThanh;
         c.GhiChuGLy = yc.GhiChuGLy;
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return KetQuaSuaHocVien.ThanhCong;
     }
 
@@ -224,7 +225,7 @@ public class GiaoLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoX
         var c = await db.ChiTietLopGiaoLy.FirstOrDefaultAsync(x => x.Id == chiTietId, ct);
         if (c is null) return false;
         db.ChiTietLopGiaoLy.Remove(c);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return true;
     }
 
@@ -250,7 +251,7 @@ public class GiaoLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoX
             return KetQuaThemGiaoLyVien.DaCoTrongDanhSach;
 
         db.GiaoLyVien.Add(new GiaoLyVien { GiaoXuId = boiCanh.GiaoXuId, LopGiaoLyId = lopId, GiaoDanId = yc.GiaoDanId });
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return KetQuaThemGiaoLyVien.ThanhCong;
     }
 
@@ -261,7 +262,7 @@ public class GiaoLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoX
         var g = await db.GiaoLyVien.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (g is null) return false;
         db.GiaoLyVien.Remove(g);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return true;
     }
 
@@ -349,7 +350,7 @@ public class GiaoLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoX
                 SoThuTu = soThuTuKeTiep, HoanThanh = false, GhiChuGLy = "",
             });
         }
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         await giaoTac.CommitAsync(ct);
         return new ChuyenLopKetQua(canThem.Count);
     }

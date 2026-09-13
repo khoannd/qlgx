@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
+using Qlgx.Data.NhatKy;
 using Qlgx.Domain.Entities;
 
 namespace Qlgx.Api.Services;
@@ -44,7 +45,7 @@ public class HoiDoanQuanLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCa
         };
         GanTuYeuCau(hd, yc);
         db.HoiDoan.Add(hd);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return hd.Id;
     }
 
@@ -54,7 +55,7 @@ public class HoiDoanQuanLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCa
         if (hd is null) return KetQuaLuuHoiDoan.KhongTimThay;
         if (yc.RowVersion is { } rv && hd.RowVersion != rv) return KetQuaLuuHoiDoan.DungPhienBan;
         GanTuYeuCau(hd, yc);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return KetQuaLuuHoiDoan.ThanhCong;
     }
 
@@ -78,7 +79,7 @@ public class HoiDoanQuanLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCa
         var hd = await db.HoiDoan.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (hd is null) return false;
         db.HoiDoan.Remove(hd);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return true;
     }
 
@@ -124,7 +125,7 @@ public class HoiDoanQuanLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCa
             VaiTro = string.IsNullOrWhiteSpace(yc.VaiTro) ? "Hội viên" : yc.VaiTro,
         };
         db.ChiTietHoiDoan.Add(ct2);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return KetQuaThemThanhVienHoiDoan.ThanhCong;
     }
 
@@ -141,7 +142,7 @@ public class HoiDoanQuanLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCa
         ct2.NgayVaoHoiDoan = yc.NgayVaoHoiDoan;
         ct2.NgayRaHoiDoan = yc.NgayRaHoiDoan;
         ct2.VaiTro = yc.VaiTro;
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return KetQuaSuaThanhVienHoiDoan.ThanhCong;
     }
 
@@ -154,7 +155,7 @@ public class HoiDoanQuanLyService(QlgxDbContext db, SinhMaService sinhMa, IBoiCa
         var ct2 = await db.ChiTietHoiDoan.FirstOrDefaultAsync(x => x.Id == chiTietId, ct);
         if (ct2 is null) return false;
         db.ChiTietHoiDoan.Remove(ct2);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return true;
     }
 }

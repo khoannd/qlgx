@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
 using Qlgx.Api.Printing;
 using Qlgx.Data;
+using Qlgx.Data.NhatKy;
 using Qlgx.Data.Configurations;
 using Qlgx.Domain.Entities;
 
@@ -109,7 +110,7 @@ public class CachHienThiDungSaiService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh)
                 KhiDung = khiDung,
                 KhiSai = khiSai,
             });
-            await db.SaveChangesAsync(ct);
+            await db.LuuCoNhatKy(ct);
             return KetQuaLuuCachHienThi.ThanhCong;
         }
 
@@ -119,7 +120,7 @@ public class CachHienThiDungSaiService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh)
         db.Entry(dong).Property(x => x.RowVersion).OriginalValue = yc.RowVersion;
         try
         {
-            await db.SaveChangesAsync(ct);
+            await db.LuuCoNhatKy(ct);
             return KetQuaLuuCachHienThi.ThanhCong;
         }
         catch (DbUpdateConcurrencyException) { return KetQuaLuuCachHienThi.DungPhienBan; }
@@ -142,7 +143,7 @@ public class CachHienThiDungSaiService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh)
         if (dong is not null)
         {
             db.CachHienThiDungSai.Remove(dong);
-            await db.SaveChangesAsync(ct);
+            await db.LuuCoNhatKy(ct);
         }
         return true;
     }

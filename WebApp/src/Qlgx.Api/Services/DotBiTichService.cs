@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
+using Qlgx.Data.NhatKy;
 using Qlgx.Domain;
 using Qlgx.Domain.Entities;
 
@@ -102,7 +103,7 @@ public class DotBiTichService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGi
                 await db.DotBiTich.MaxAsync(x => (int?)x.MaDotBiTichCu, ct) ?? 0, ct),
         };
         db.DotBiTich.Add(d);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return AnhXaChiTiet(d);
     }
 
@@ -127,7 +128,7 @@ public class DotBiTichService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGi
             foreach (var g in giaoDanList) GanNgayLinhMucNoi(g, d.LoaiBiTich, d.NgayBiTich, d.LinhMuc, d.NoiBiTich);
         }
 
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return KetQuaCapNhatDotBiTich.ThanhCong;
     }
 
@@ -158,7 +159,7 @@ public class DotBiTichService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGi
         if (d is null) return false;
         await db.BiTichChiTiet.Where(c => c.DotBiTichId == id).ExecuteDeleteAsync(ct);
         db.DotBiTich.Remove(d);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return true;
     }
 
@@ -187,7 +188,7 @@ public class DotBiTichService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGi
         GanNgayLinhMucNoi(g, d.LoaiBiTich, d.NgayBiTich, d.LinhMuc, d.NoiBiTich);
         GanSoVaNguoiDoDau(g, d.LoaiBiTich, yc.SoBiTich, yc.NguoiDoDau);
 
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return KetQuaThemNguoiNhan.ThanhCong;
     }
 
@@ -219,7 +220,7 @@ public class DotBiTichService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGi
 
         c.GhiChu = yc.GhiChu;
         GanSoVaNguoiDoDau(g, d.LoaiBiTich, yc.SoBiTich, yc.NguoiDoDau);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return true;
     }
 
@@ -246,7 +247,7 @@ public class DotBiTichService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGi
             }
         }
 
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return true;
     }
 }

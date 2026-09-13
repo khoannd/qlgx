@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
+using Qlgx.Data.NhatKy;
 using Qlgx.Domain.Entities;
 
 namespace Qlgx.Api.Services;
@@ -36,7 +37,7 @@ public class GiaoHoService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoX
             GiaoHoChaId = yc.GiaoHoChaId,
         };
         db.GiaoHo.Add(giaoHo);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return (KetQuaGiaoHo.ThanhCong, giaoHo.Id);
     }
 
@@ -50,7 +51,7 @@ public class GiaoHoService(QlgxDbContext db, SinhMaService sinhMa, IBoiCanhGiaoX
         giaoHo.TenGiaoHo = yc.TenGiaoHo;
         giaoHo.GiaoHoChaId = yc.GiaoHoChaId;
         giaoHo.UpdatedAt = DateTimeOffset.UtcNow;
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return KetQuaGiaoHo.ThanhCong;
     }
 

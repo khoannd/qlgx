@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
+using Qlgx.Data.NhatKy;
 using Qlgx.Domain.Entities;
 
 namespace Qlgx.Api.Services;
@@ -50,7 +51,7 @@ public class QuanLyGiaoXuService(IConfiguration cauHinh)
         await using var db = MoContextQuanTri();
         var giaoPhan = new GiaoPhan { TenGiaoPhan = yc.TenGiaoPhan, GhiChu = yc.GhiChu };
         db.GiaoPhan.Add(giaoPhan);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return giaoPhan.Id;
     }
 
@@ -61,7 +62,7 @@ public class QuanLyGiaoXuService(IConfiguration cauHinh)
         if (giaoPhan is null) return KetQuaQuanLyGiaoXu.KhongTimThay;
         giaoPhan.TenGiaoPhan = yc.TenGiaoPhan;
         giaoPhan.GhiChu = yc.GhiChu;
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return KetQuaQuanLyGiaoXu.ThanhCong;
     }
 
@@ -82,7 +83,7 @@ public class QuanLyGiaoXuService(IConfiguration cauHinh)
         await using var db = MoContextQuanTri();
         var giaoHat = new GiaoHat { GiaoPhanId = yc.GiaoPhanId, TenGiaoHat = yc.TenGiaoHat, GhiChu = yc.GhiChu };
         db.GiaoHat.Add(giaoHat);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return giaoHat.Id;
     }
 
@@ -94,7 +95,7 @@ public class QuanLyGiaoXuService(IConfiguration cauHinh)
         giaoHat.GiaoPhanId = yc.GiaoPhanId;
         giaoHat.TenGiaoHat = yc.TenGiaoHat;
         giaoHat.GhiChu = yc.GhiChu;
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return KetQuaQuanLyGiaoXu.ThanhCong;
     }
 
@@ -135,7 +136,7 @@ public class QuanLyGiaoXuService(IConfiguration cauHinh)
             GhiChu = yc.GhiChu,
         };
         db.GiaoXu.Add(giaoXu);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return giaoXu.Id;
     }
 
@@ -151,7 +152,7 @@ public class QuanLyGiaoXuService(IConfiguration cauHinh)
         giaoXu.Email = yc.Email;
         giaoXu.Website = yc.Website;
         giaoXu.GhiChu = yc.GhiChu;
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return KetQuaQuanLyGiaoXu.ThanhCong;
     }
 
@@ -181,7 +182,7 @@ public class QuanLyGiaoXuService(IConfiguration cauHinh)
         };
         taiKhoan.MatKhauBam = auth.Bam(taiKhoan, yc.MatKhau);
         db.TaiKhoan.Add(taiKhoan);
-        await db.SaveChangesAsync(ct);
+        await db.LuuCoNhatKy(ct);
         return (KetQuaQuanLyGiaoXu.ThanhCong, taiKhoan.Id);
     }
 }
