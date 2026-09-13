@@ -185,7 +185,7 @@ app.MapGet("/api/suc-khoe", () => Results.Ok(new
 // (WebApp/scripts/install.sh) dùng đúng endpoint này làm cổng quyết định "đã lên được chưa";
 // nếu tín hiệu đó nói dối thì cơ chế tự quay lui khi cập nhật hỏng cũng vô nghĩa. Cố ý KHÔNG
 // dùng cho Docker healthcheck (gọi mỗi 10 giây thì không nên mở kết nối CSDL mỗi lần).
-app.MapGet("/api/suc-khoe/san-sang", async (QlgxDbContext db, CancellationToken ct) =>
+app.MapGet("/api/suc-khoe/san-sang", async (QlgxDbContext db, ILogger<Program> logger, CancellationToken ct) =>
 {
     try
     {
@@ -202,11 +202,12 @@ app.MapGet("/api/suc-khoe/san-sang", async (QlgxDbContext db, CancellationToken 
     }
     catch (Exception ex)
     {
+        logger.LogError(ex, "Lỗi kiểm tra readiness: không kết nối được cơ sở dữ liệu");
         return Results.Json(new
         {
             trangThai = "chua-san-sang",
             soMigrationConThieu = -1,
-            lyDo = "Không kết nối được cơ sở dữ liệu: " + ex.Message
+            lyDo = "Không kết nối được cơ sở dữ liệu."
         }, statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 }).AllowAnonymous();
@@ -236,6 +237,7 @@ app.MapHoiDoanQuanLy();
 app.MapGiaoLy();
 app.MapThongKe();
 app.MapMauIn();
+app.MapCachHienThi();
 
 // Fallback SPA: moi GET khong khop route API/tep tinh nao o tren tra ve index.html de React
 // Router tu xu ly duong dan phia trinh duyet. Loai tru "/api" bang rang buoc regex phu dinh de
