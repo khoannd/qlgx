@@ -53,6 +53,11 @@ services:
       # Khoá ký JWT — BẮT BUỘC, tối thiểu 32 byte ngẫu nhiên dạng base64. KHÔNG BAO GIỜ đặt giá
       # trị mẫu/cố định ở đây hay trong .env.example.
       Qlgx__JwtKey: ${QLGX_JWT_KEY:?bat buoc dat trong .env}
+    volumes:
+      # Bo chay tren host GHI vao thu muc nay; container API chi DOC (:ro). Day la kenh duy nhat
+      # de mot tep tu kho sao luu den duoc trinh duyet quan tri vien ma khong phai cho container
+      # API biet khoa R2 — xem thiet ke muc 8.4.
+      - ${QLGX_THU_MUC_SPOOL:-/var/lib/qlgx/spool}:/var/lib/qlgx/spool:ro
     ports:
       - "${QLGX_API_PORT:-8080}:8080"
     healthcheck:

@@ -35,6 +35,25 @@ public static class SaoLuuEndpoints
 
         nhom.MapGet("/cong-viec/{id:guid}", async (SaoLuuService dv, Guid id, CancellationToken ct) =>
             await dv.LayCongViec(id, ct) is { } cv ? Results.Ok(cv) : Results.NotFound());
+
+        // Stream tep tu spool. API KHONG biet khoa R2 va KHONG goi restic — bo chay tren host
+        // da giai nen san vao spool, o day chi con viec doc mot tep tren dia.
+        //
+        // Canh bao nghiep vu: tep nay la ban dump CHUA MA HOA chua toan bo du lieu giao dan.
+        // Giao dien phai noi ro dieu do ngay tai nut tai (xem SaoLuuPage.tsx).
+        nhom.MapGet("/tai-ve/{maCongViec:guid}", async (SaoLuuService dv, Guid maCongViec,
+            CancellationToken ct) =>
+        {
+            var (duongDan, loi) = await dv.LayDuongDanTaiVe(maCongViec, ct);
+            if (loi is not null)
+                return loi.Contains("đã bị dọn")
+                    ? Results.NotFound(new { thongBao = loi })
+                    : Results.BadRequest(new { thongBao = loi });
+            if (duongDan is null) return Results.NotFound();
+
+            return Results.File(duongDan, "application/octet-stream",
+                fileDownloadName: Path.GetFileName(duongDan));
+        });
     }
 
     private static Guid? DocIdNguoiDung(ClaimsPrincipal nguoiDung) =>

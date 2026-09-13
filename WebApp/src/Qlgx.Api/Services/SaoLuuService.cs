@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
 using Qlgx.Domain.Entities;
@@ -12,7 +13,7 @@ namespace Qlgx.Api.Services;
 /// và đọc lại trạng thái mà bộ chạy trên host ghi về (xem CongViecSaoLuu.cs để biết vì sao ranh
 /// giới này là bắt buộc chứ không phải lựa chọn phong cách).
 /// </summary>
-public class SaoLuuService(QlgxDbContext db)
+public class SaoLuuService(QlgxDbContext db, IConfiguration cauHinh)
 {
     /// <summary>Chuỗi quản trị viên phải GÕ TAY để xác nhận phục hồi. Cố ý viết hoa không dấu và
     /// nói rõ "toàn bộ": phạm vi phục hồi là TOÀN MÁY CHỦ, không riêng giáo xứ nào. Không dùng
@@ -96,4 +97,43 @@ public class SaoLuuService(QlgxDbContext db)
     private static readonly System.Linq.Expressions.Expression<Func<CongViecSaoLuu, CongViecDto>> Chieu =
         x => new CongViecDto(x.Id, x.Loai, x.TrangThai, x.BuocHienTai, x.NhatKy,
                              x.TaoLuc, x.BatDauLuc, x.KetThucLuc);
+
+    /// <summary>Thư mục spool — bộ chạy trên host GHI vào đây, container API mount READ-ONLY.
+    /// Đây là kênh duy nhất để một tệp từ kho sao lưu đến được trình duyệt quản trị viên mà
+    /// không cần cho container API biết khoá R2.</summary>
+    private string ThuMucSpool => cauHinh["Qlgx:ThuMucSpool"] ?? "/var/lib/qlgx/spool";
+
+    /// <summary>
+    /// Tìm tệp bản sao đã giải nén sẵn trong spool cho một công việc "tai_ve" đã chạy xong.
+    /// KHÔNG đụng tới restic/R2 — chỉ đọc hệ thống tệp cục bộ, đúng ranh giới đã ghi ở đầu lớp.
+    ///
+    /// Cảnh báo nghiệp vụ: tệp trả về là bản dump CHƯA MÃ HOÁ chứa toàn bộ dữ liệu giáo dân.
+    /// Giao diện phải cảnh báo rõ ràng ngay tại nút tải (xem SaoLuuPage.tsx) — đừng vô tình nới
+    /// lỏng cảnh báo này khi sửa lại hàm bên dưới.
+    /// </summary>
+    public async Task<(string? duongDan, string? loi)> LayDuongDanTaiVe(
+        Guid maCongViec, CancellationToken ct)
+    {
+        var cv = await db.CongViecSaoLuu.AsNoTracking().FirstOrDefaultAsync(x => x.Id == maCongViec, ct);
+        if (cv is null) return (null, null); // 404 tron, khong tiet lo gi them
+
+        if (cv.Loai != LoaiCongViecSaoLuu.TaiVe)
+            return (null, "Công việc này không phải là lượt chuẩn bị tệp tải về.");
+
+        if (cv.TrangThai != TrangThaiCongViec.Xong)
+            return (null, "Tệp chưa chuẩn bị xong. Chờ công việc chạy xong rồi tải lại trang.");
+
+        // maCongViec la Guid (khong phai chuoi tu nguoi dung), nen ToString() khong the chua
+        // "..", "/" hay ky tu dieu huong duong dan — Path.Combine o day an toan voi duong dan
+        // duoi thu muc spool.
+        var thuMuc = Path.Combine(ThuMucSpool, maCongViec.ToString());
+        var tep = Directory.Exists(thuMuc)
+            ? Directory.EnumerateFiles(thuMuc, "*.dump.tar.gz").FirstOrDefault()
+            : null;
+        if (tep is null)
+            return (null, "Tệp tải về đã bị dọn (tệp trong spool chỉ giữ 24 giờ). " +
+                          "Hãy tạo lại một lượt tải về mới.");
+
+        return (tep, null);
+    }
 }
