@@ -364,7 +364,7 @@ Bốn lớp, cố ý gây khó chịu:
 2. **Chọn snapshot có ngữ cảnh**: bảng snapshot hiện thời điểm, nhãn, kích thước và **số bản ghi
    `giao_dan`/`gia_dinh` tại thời điểm đó** (runner ghi vào metadata mỗi lần sao lưu). Người dùng
    phải thấy rõ "phục hồi về đây nghĩa là quay lại 2050 giáo dân, mất 3 người mới nhập".
-3. **Gõ tay chuỗi xác nhận** đúng `PHUC HOI <tên giáo xứ>`. Không dùng hộp thoại "bạn có chắc
+3. **Gõ tay chuỗi xác nhận** đúng `PHUC HOI TOAN BO`. Cố ý KHÔNG gắn tên một giáo xứ: phạm vi phục hồi là toàn máy chủ, gắn tên một giáo xứ sẽ gây hiểu nhầm rằng chỉ giáo xứ đó bị ảnh hưởng. Không dùng hộp thoại "bạn có chắc
    không?" — người dùng bấm OK theo phản xạ.
 4. **Bảng đối chiếu trước–sau** ngay trước nút cuối: số bản ghi hiện tại cạnh số bản ghi trong
    snapshot, tô đỏ những dòng sẽ giảm.
@@ -491,7 +491,7 @@ này ngay tại nút tải; tên file có dấu thời gian để không đè nh
 | `GET /api/sao-luu/tai-ve/{maCongViec}` | stream file từ spool |
 
 Tất cả yêu cầu `LoaiTaiKhoan=9`, kiểm ở tầng API. Job loại `phuc_hoi` bắt buộc kèm trường
-`xacNhan` đúng chuỗi `PHUC HOI <tên giáo xứ>`, **kiểm lại ở server** — không tin rằng frontend đã
+`xacNhan` đúng chuỗi `PHUC HOI TOAN BO`, **kiểm lại ở server** — không tin rằng frontend đã
 hỏi.
 
 Bảng đệm danh sách snapshot là một đánh đổi có chủ đích: API *có thể* gọi `restic snapshots
@@ -547,7 +547,7 @@ container dùng một lần, **không bao giờ chạy trên máy người dùng
 
 | Rủi ro | Giảm nhẹ |
 |---|---|
-| Mất Thẻ phục hồi → mất vĩnh viễn khả năng đọc bản sao lưu | Script in thẻ và bắt xác nhận đã cất ra ngoài; tài liệu riêng cảnh báo; giao diện admin hiện nhắc nhở nếu `/etc/qlgx/the-phuc-hoi.txt` vẫn còn trên máy chủ sau 7 ngày |
+| Mất Thẻ phục hồi → mất vĩnh viễn khả năng đọc bản sao lưu | Script in thẻ và bắt xác nhận đã cất ra ngoài; tài liệu riêng cảnh báo; `qlgx status` báo KHÔNG ĐẠT nếu `/etc/qlgx/the-phuc-hoi.txt` vẫn còn trên máy chủ quá 7 ngày |
 | Admin bấm phục hồi nhầm | Bốn lớp rào ở mục 7.2, sao lưu bắt buộc trước, giữ CSDL cũ 7 ngày |
 | Chỉ một bucket R2 → phụ thuộc một nhà cung cấp | Khuyến nghị bật versioning + Object Lock; `qlgx backup --repo <khác>` cho phép thêm đích thứ hai về sau mà không đổi thiết kế |
 | Đĩa đầy do CSDL tạm khi phục hồi/diễn tập | Kiểm dung lượng trống trước bước 2; diễn tập xoá CSDL tạm bằng `trap` kể cả khi lỗi |
