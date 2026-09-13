@@ -217,6 +217,43 @@ public class ChuanHoaDuLieuTests(QlgxApiFactory app) : IClassFixture<QlgxApiFact
         (await kiemTra.GiaDinh.SingleAsync(g => g.Id == gdinh.Id)).TenGiaDinh.Should().Be("Gia Đình Văn A");
     }
 
+    /// <summary>
+    /// Ghi thật chia thành nhiều lô (CoLo = 200 trong ChuanHoaDuLieuService) để không giữ khoá
+    /// dòng đếm hiệu lực suốt cả lượt chuẩn hoá. Test này dựng 250 bản ghi — vượt qua ranh giới
+    /// lô — và đòi CẢ 250 đều được chuẩn hoá: nếu phân trang sai (thiếu Skip, hoặc Skip nhầm
+    /// chỗ) thì lô thứ hai sẽ bị bỏ sót hoặc lặp lại lô đầu, và test đỏ.
+    /// </summary>
+    [Fact]
+    public async Task Ghi_that_vuot_qua_mot_lo_van_chuan_hoa_het_moi_ban_ghi()
+    {
+        const int soBanGhi = 250;
+        await using (var db = app.TaoContextThuan())
+        {
+            for (var i = 0; i < soBanGhi; i++)
+                db.GiaoDan.Add(new GiaoDan
+                {
+                    GiaoXuId = app.GiaoXuId,
+                    MaGiaoDanCu = 94100 + i,
+                    HoTen = "chia lô " + i.ToString("D3"),
+                });
+            await db.SaveChangesAsync();
+        }
+
+        var client = app.CreateAuthClient();
+        var res = await client.PostAsync("/api/cong-cu-du-lieu/chuan-hoa/giao-dan", null);
+        res.EnsureSuccessStatusCode();
+        var kq = await res.Content.ReadFromJsonAsync<ChuanHoaKetQua>();
+        kq!.SoBanGhiDaDoi.Should().BeGreaterThanOrEqualTo(soBanGhi);
+
+        await using var kiemTra = app.TaoContextThuan();
+        var ds = await kiemTra.GiaoDan
+            .Where(g => g.MaGiaoDanCu >= 94100 && g.MaGiaoDanCu < 94100 + soBanGhi)
+            .ToListAsync();
+        ds.Should().HaveCount(soBanGhi);
+        ds.Should().OnlyContain(g => g.HoTen.StartsWith("Chia Lô "),
+            "moi ban ghi deu phai duoc chuan hoa, ke ca cac lo sau lo dau");
+    }
+
     [Fact]
     public async Task Nguoi_chua_dang_nhap_bi_chan_401()
     {

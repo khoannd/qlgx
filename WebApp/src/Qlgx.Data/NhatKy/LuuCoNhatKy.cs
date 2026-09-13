@@ -56,14 +56,33 @@ public static class QlgxDbContextNhatKyExtensions
         }
         catch
         {
-            if (giaoDich is not null) await giaoDich.RollbackAsync(ct);
-
-            // Gỡ các dòng nhật ký vừa xếp vào ChangeTracker. CSDL đã quay lui, nhưng EF vẫn giữ
-            // chúng ở trạng thái Added — người gọi nào bắt DbUpdateConcurrencyException rồi thử
-            // lưu lại trên CÙNG một DbContext (GiaDinhService, GiaoDanService có làm) sẽ chèn
-            // lại đúng những dòng đó với số thứ tự đã cũ, tạo trùng số trong chuỗi hieu_luc.
-            // Các thực thể nghiệp vụ thì để nguyên: lần lưu sau sinh lại nhật ký từ đầu.
+            // Gỡ TRƯỚC khi quay lui. Gỡ các dòng nhật ký vừa xếp vào ChangeTracker: CSDL sẽ quay
+            // lui, nhưng EF vẫn giữ chúng ở trạng thái Added — người gọi nào bắt
+            // DbUpdateConcurrencyException rồi thử lưu lại trên CÙNG một DbContext
+            // (GiaDinhService, GiaoDanService có làm) sẽ chèn lại đúng những dòng đó với số thứ
+            // tự đã cũ, tạo trùng số trong chuỗi hieu_luc. Các thực thể nghiệp vụ thì để nguyên:
+            // lần lưu sau sinh lại nhật ký từ đầu.
+            //
+            // Thứ tự quan trọng: RollbackAsync có thể tự ném (mất kết nối, hoặc ct đã bị huỷ khi
+            // người dùng đóng tab). Nếu gỡ sau, đúng hai việc khối này sinh ra để làm đều không
+            // xảy ra — lỗi gốc bị thay bằng lỗi rollback, và ChangeTracker còn nguyên rác.
             GoDongDaXep(db, dong);
+
+            if (giaoDich is not null)
+            {
+                try
+                {
+                    // CancellationToken.None: quay lui phải chạy được ngay cả khi ct đã bị huỷ —
+                    // đó chính là một trong những lý do khiến ta rơi vào đây.
+                    await giaoDich.RollbackAsync(CancellationToken.None);
+                }
+                catch
+                {
+                    // Nuốt lỗi phụ CÓ CHỦ Ý: lỗi gốc (vì sao việc lưu hỏng) mới là thứ người gọi
+                    // cần thấy. Không quay lui được thì giao dịch vẫn bị huỷ khi kết nối đóng —
+                    // dữ liệu không bao giờ lọt vào CSDL, nên không có gì âm thầm hỏng ở đây.
+                }
+            }
             throw;
         }
         finally

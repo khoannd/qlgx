@@ -565,6 +565,41 @@ public class GiaoLyTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
         (await dbSau.GiaoDan.CountAsync(g => g.HoTen == "Nguyen Van Moi Tinh")).Should().Be(1);
     }
 
+    /// <summary>
+    /// Cả đợt nhập chỉ MỘT lần lưu (không còn lưu từng dòng để "lấy Id thật"), nên phải chắc
+    /// hai điều vẫn đúng: nhiều giáo dân mới trong cùng một tệp đều được tạo và mỗi người một
+    /// MaGiaoDanCu riêng (SinhMaService cấp nguyên tử, không phụ thuộc bản ghi đã lưu chưa), và
+    /// hai dòng cùng một người trong cùng tệp vẫn bị bỏ qua một dòng (seTaoTrongDot, không dựa
+    /// vào việc lưu sớm rồi tra lại CSDL).
+    /// </summary>
+    [Fact]
+    public async Task Nhap_nhieu_hoc_vien_moi_trong_mot_tep_chi_luu_mot_lan_van_dung()
+    {
+        var client = app.CreateAuthClient();
+        var nguoiQuanLyId = await TaoGiaoDan("Quan ly nhap mot lan");
+        var khoiId = await TaoKhoi(client, "Khối nhập một lần", nguoiQuanLyId);
+        var lopId = await TaoLop(client, khoiId, "Lớp nhập một lần");
+
+        var tep = TaoExcelHocVien(
+            (null, null, "Le Van Mot Lan A", "Nam", "01/02/2013", null, null, null),
+            (null, null, "Le Van Mot Lan B", "Nam", "02/02/2013", null, null, null),
+            (null, null, "Le Van Mot Lan C", "Nu", "03/02/2013", null, null, null),
+            // Trùng ĐÚNG dòng đầu — phải bị bỏ qua, không tạo người thứ hai cùng tên.
+            (null, null, "Le Van Mot Lan A", "Nam", "01/02/2013", null, null, null));
+
+        var ghiRes = await client.PostAsync($"/api/giao-ly/lop/{lopId}/nhap-hoc-vien", TaoFormTep(tep));
+        ghiRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var ketQua = await ghiRes.Content.ReadFromJsonAsync<NhapKetQuaDto>();
+        ketQua!.SoDaNhap.Should().Be(3);
+        ketQua.SoBiBoQua.Should().Be(1);
+
+        await using var dbSau = app.TaoContextThuan();
+        var moi = await dbSau.GiaoDan.Where(g => g.HoTen.StartsWith("Le Van Mot Lan")).ToListAsync();
+        moi.Should().HaveCount(3);
+        moi.Select(g => g.MaGiaoDanCu).Distinct().Should().HaveCount(3, "moi nguoi mot ma rieng");
+        (await dbSau.GiaoDan.CountAsync(g => g.HoTen == "Le Van Mot Lan A")).Should().Be(1);
+    }
+
     [Fact]
     public async Task Nhap_hoc_vien_tu_tep_khong_phai_excel_thi_bao_loi_dinh_dang()
     {

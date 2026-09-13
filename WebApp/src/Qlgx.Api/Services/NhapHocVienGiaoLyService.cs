@@ -280,8 +280,25 @@ public class NhapHocVienGiaoLyService(QlgxDbContext db, SinhMaService sinhMa, IB
                     HoTen = h.HoTen, TenThanh = h.TenThanh, Phai = h.Phai, NgaySinh = h.NgaySinh,
                     GiaoHoId = giaoHoIdMoi, DaCoGiaDinh = false,
                 };
+                // KHÔNG lưu ở đây — cả đợt nhập chỉ một LuuCoNhatKy ở cuối vòng lặp.
+                //
+                // Chú thích cũ "cần Id thật trước khi dùng làm khoá ngoại bên dưới" là hiểu
+                // nhầm: Id của thực thể do C# sinh sẵn (Guid.NewGuid lúc khởi tạo ThucTheCoSo),
+                // không phải CSDL cấp, nên khoá ngoại dùng được ngay. Mã cũ (MaGiaoDanCu) cũng
+                // không cần: SinhMaService cấp phát nguyên tử bằng một câu UPSERT trên bo_dem_ma
+                // với GREATEST, không phụ thuộc bản ghi đã lưu hay chưa.
+                //
+                // VÌ SAO phải bỏ: lưu từng dòng nghĩa là mỗi học viên mới một LayDaiSo — dòng
+                // đếm hiệu lực của giáo xứ bị khoá ngay từ dòng Excel ĐẦU TIÊN và giữ tới lúc
+                // commit (cùng một giao dịch), nên suốt thời gian nhập một tệp 500 dòng, mọi
+                // người khác trong giáo xứ bấm Lưu đều dính lock_timeout. Cộng thêm ~3 lượt đi
+                // về CSDL thừa cho mỗi dòng.
+                //
+                // Việc chống trùng trong cùng một đợt KHÔNG dựa vào lưu sớm: seTaoTrongDot giữ
+                // đúng bộ khoá mà DoiChieuGiaoDan dùng để đối chiếu, nên hai dòng Excel cùng
+                // một người vẫn bị bỏ qua đúng như trước — và giờ ThucHien chạy đúng cùng logic
+                // với XemTruoc, vốn chưa bao giờ lưu giữa chừng.
                 db.GiaoDan.Add(g);
-                await db.LuuCoNhatKy(ct); // cần Id thật trước khi dùng làm khoá ngoại bên dưới
                 giaoDanId = g.Id;
                 idDaCoTrongLop.Add(giaoDanId); // phòng trường hợp Mã GD của một dòng sau trùng người vừa tạo
             }

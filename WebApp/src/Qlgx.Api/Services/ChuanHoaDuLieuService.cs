@@ -13,8 +13,11 @@ namespace Qlgx.Api.Services;
 /// docs/superpowers/specs/man-hinh/cong-cu-du-lieu.md mục 5.1) — thay
 /// <c>frmMain.chuanHoaDuLieu</c> + <c>UpdateProcess.AutoUpperCaseFirstCharGiaoDan/GiaDinh</c> +
 /// <c>CMemory.AutoUpperFirstChar</c>. CÔNG CỤ SỬA DỮ LIỆU HÀNG LOẠT — áp dụng đúng 4 nguyên tắc
-/// an toàn của nhiệm vụ (xem trước → xác nhận với con số cụ thể → MỘT transaction → không mở
+/// an toàn của nhiệm vụ (xem trước → xác nhận với con số cụ thể → ghi có giao dịch → không mở
 /// rộng phạm vi so với desktop).
+///
+/// Nguyên tắc thứ ba trước đây là "MỘT transaction bao trọn". Nay ghi theo TỪNG LÔ, mỗi lô một
+/// giao dịch — xem <see cref="ChuanHoaTheoLo{T}"/> để biết vì sao đổi và đánh đổi là gì.
 ///
 /// THUẬT TOÁN (CMemory.cs:1091-1155, tái hiện ĐÚNG phần lõi luôn hiển thị cho người dùng —
 /// nguyên văn hộp thoại xác nhận desktop: "viết hoa chữ cái đầu tiên mỗi từ, các ký tự khác
@@ -59,6 +62,10 @@ namespace Qlgx.Api.Services;
 public class ChuanHoaDuLieuService(QlgxDbContext db)
 {
     private const int SoMauToiDa = 30;
+
+    /// <summary>Số bản ghi mỗi lô khi ghi thật — xem <see cref="ChuanHoaTheoLo{T}"/>.</summary>
+    private const int CoLo = 200;
+
     private static readonly char[] KyTuDacBiet = ['(', ')', '{', '}', '[', ']', '<', '>'];
 
     /// <summary>Đúng thuật toán <c>CMemory.AutoUpperFirstChar</c> phần lõi — xem tài liệu lớp.</summary>
@@ -144,15 +151,8 @@ public class ChuanHoaDuLieuService(QlgxDbContext db)
         return TinhXemTruoc(ds, CotGiaoDan, g => g.HoTen == "" ? "(chưa có họ tên)" : g.HoTen, g => g.Id);
     }
 
-    public async Task<ChuanHoaKetQua> ChuanHoaGiaoDan(CancellationToken ct)
-    {
-        await using var giaoTac = await db.Database.BeginTransactionAsync(ct);
-        var ds = await db.GiaoDan.ToListAsync(ct);
-        var soDoi = ApDung(ds, CotGiaoDan);
-        await db.LuuCoNhatKy(ct);
-        await giaoTac.CommitAsync(ct);
-        return new ChuanHoaKetQua(soDoi);
-    }
+    public async Task<ChuanHoaKetQua> ChuanHoaGiaoDan(CancellationToken ct) =>
+        new(await ChuanHoaTheoLo(db.GiaoDan.OrderBy(x => x.Id), CotGiaoDan, ct));
 
     public async Task<ChuanHoaXemTruocKetQua> XemTruocGiaDinh(CancellationToken ct)
     {
@@ -160,14 +160,55 @@ public class ChuanHoaDuLieuService(QlgxDbContext db)
         return TinhXemTruoc(ds, CotGiaDinh, g => g.TenGiaDinh ?? "(chưa có tên gia đình)", g => g.Id);
     }
 
-    public async Task<ChuanHoaKetQua> ChuanHoaGiaDinh(CancellationToken ct)
+    public async Task<ChuanHoaKetQua> ChuanHoaGiaDinh(CancellationToken ct) =>
+        new(await ChuanHoaTheoLo(db.GiaDinh.OrderBy(x => x.Id), CotGiaDinh, ct));
+
+    /// <summary>
+    /// Chuẩn hoá theo TỪNG LÔ, mỗi lô một <c>LuuCoNhatKy</c> riêng.
+    ///
+    /// VÌ SAO không còn một giao dịch bao trọn (nguyên tắc "MỘT transaction" ở tài liệu lớp đã
+    /// được sửa lại ở đây một cách có cân nhắc): từ khi mỗi lần lưu sinh nhật ký mức ô, một
+    /// giáo xứ ~4.000 giáo dân × 2-5 ô bị chuẩn hoá là 8.000-20.000 dòng nhật ký. Ghi chừng ấy
+    /// trong MỘT giao dịch nghĩa là giữ khoá dòng đếm hiệu lực của giáo xứ suốt thời gian đó —
+    /// và vì LuuCoNhatKy đặt lock_timeout 5 giây, MỌI người khác trong giáo xứ bấm Lưu ở bất
+    /// cứ màn hình nào lúc ấy sẽ chờ rồi nhận lỗi 55P03 họ không hiểu. Cha xứ bấm "Chuẩn hoá
+    /// dữ liệu" một cái là cả văn phòng tê liệt mà không ai biết vì sao. Chia lô giữ khoá ngắn
+    /// từng đợt.
+    ///
+    /// ĐÁNH ĐỔI ĐÃ BIẾT: lỗi giữa chừng giờ để lại một phần đã chuẩn hoá, một phần chưa —
+    /// KHÔNG quay lui toàn bộ như trước. Chấp nhận được vì chuẩn hoá là thao tác CHẠY LẠI ĐƯỢC
+    /// (idempotent): chạy lần nữa chỉ sửa nốt phần còn lại, các dòng đã chuẩn rồi thì
+    /// ChuanHoaChuoi trả đúng giá trị cũ nên không đổi gì và không sinh dòng nhật ký nào. Không
+    /// có trạng thái "nửa vời" nào không hợp lệ — khác hẳn với việc huỷ giữa một giao dịch
+    /// nghiệp vụ có ràng buộc giữa nhiều bảng.
+    ///
+    /// Phân lô bằng Skip/Take theo Id (khác mẫu ThayTheTheoLo của Task 5, nơi bản ghi tự rời
+    /// khỏi điều kiện lọc sau khi sửa nên chỉ cần Take): ở đây điều kiện là "mọi bản ghi", sửa
+    /// xong vẫn khớp, nên phải nhớ vị trí. OrderBy(Id) cho thứ tự ổn định giữa các lô.
+    /// </summary>
+    private async Task<int> ChuanHoaTheoLo<T>(
+        IOrderedQueryable<T> truyVan,
+        List<(string Ten, Func<T, string?> Doc, Action<T, string?> Ghi)> cot,
+        CancellationToken ct) where T : class
     {
-        await using var giaoTac = await db.Database.BeginTransactionAsync(ct);
-        var ds = await db.GiaDinh.ToListAsync(ct);
-        var soDoi = ApDung(ds, CotGiaDinh);
-        await db.LuuCoNhatKy(ct);
-        await giaoTac.CommitAsync(ct);
-        return new ChuanHoaKetQua(soDoi);
+        var soDoi = 0;
+        var daXet = 0;
+        while (true)
+        {
+            var lo = await truyVan.Skip(daXet).Take(CoLo).ToListAsync(ct);
+            if (lo.Count == 0) break;
+
+            soDoi += ApDung(lo, cot);
+            await db.LuuCoNhatKy(ct);
+            daXet += lo.Count;
+
+            if (lo.Count < CoLo) break;
+
+            // Nhả các thực thể của lô vừa xong khỏi ChangeTracker — giữ cả 4.000 bản ghi trong
+            // bộ nhớ tới cuối chỉ làm mỗi lần SaveChanges quét chậm dần.
+            db.ChangeTracker.Clear();
+        }
+        return soDoi;
     }
 
     private static ChuanHoaXemTruocKetQua TinhXemTruoc<T>(
