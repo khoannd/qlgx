@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using FluentAssertions;
+using Qlgx.Api.Anh;
 using Qlgx.Domain.Entities;
 using SkiaSharp;
 
@@ -71,14 +72,19 @@ public class AnhDaiDienTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
 
         var resXem = await client.GetAsync($"/api/giao-dan/{id}/anh-dai-dien");
         resXem.StatusCode.Should().Be(HttpStatusCode.OK);
-        resXem.Content.Headers.ContentType!.MediaType.Should().Be("image/jpeg");
+        resXem.Content.Headers.ContentType!.MediaType.Should().Be(XuLyAnh.LoaiNoiDungDauRa);
         var bytes = await resXem.Content.ReadAsByteArrayAsync();
-        // Chữ ký JPEG chuẩn (FF D8 FF) — bằng chứng ảnh đã được XuLyAnh giải mã + nén lại
-        // thật sự, không phải lưu nguyên văn một chuỗi bất kỳ.
-        bytes.Length.Should().BeGreaterThan(0);
-        bytes[0].Should().Be(0xFF);
-        bytes[1].Should().Be(0xD8);
-        bytes[2].Should().Be(0xFF);
+        // Chữ ký RIFF/WebP chuẩn ("RIFF"...."WEBP") — bằng chứng ảnh đã được XuLyAnh giải mã +
+        // nén lại thật sự, không phải lưu nguyên văn một chuỗi bất kỳ.
+        bytes.Length.Should().BeGreaterThan(12);
+        bytes[0].Should().Be((byte)'R');
+        bytes[1].Should().Be((byte)'I');
+        bytes[2].Should().Be((byte)'F');
+        bytes[3].Should().Be((byte)'F');
+        bytes[8].Should().Be((byte)'W');
+        bytes[9].Should().Be((byte)'E');
+        bytes[10].Should().Be((byte)'B');
+        bytes[11].Should().Be((byte)'P');
     }
 
     [Fact]
@@ -186,7 +192,7 @@ public class AnhDaiDienTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
 
         var resXem = await client.GetAsync($"/api/gia-dinh/{id}/anh-dai-dien");
         resXem.StatusCode.Should().Be(HttpStatusCode.OK);
-        resXem.Content.Headers.ContentType!.MediaType.Should().Be("image/jpeg");
+        resXem.Content.Headers.ContentType!.MediaType.Should().Be(XuLyAnh.LoaiNoiDungDauRa);
 
         var resXoa = await client.DeleteAsync($"/api/gia-dinh/{id}/anh-dai-dien");
         resXoa.StatusCode.Should().Be(HttpStatusCode.OK);

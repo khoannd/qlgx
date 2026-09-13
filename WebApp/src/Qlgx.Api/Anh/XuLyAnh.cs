@@ -17,11 +17,13 @@ public sealed record AnhDaXuLy(byte[] DuLieu, string LoaiNoiDung);
 ///      — một tệp .exe/.zip đổi tên thành ảnh.jpg sẽ giải mã THẤT BẠI ở đây, bị từ chối bất kể
 ///      tên tệp. `SKCodec.Create` còn cho biết ĐỊNH DẠNG THẬT đã giải mã (EncodedFormat), dùng
 ///      để chặn định dạng ảnh hợp lệ nhưng KHÔNG nằm trong danh sách cho phép (Gif/Bmp/Ico…).
-///   3. Sau khi giải mã thành công, LUÔN thu nhỏ về một khung tối đa rồi nén lại thành JPEG —
+///   3. Sau khi giải mã thành công, LUÔN thu nhỏ về một khung tối đa rồi nén lại thành WebP —
 ///      ảnh chân dung 3x4 in ra chỉ cần vài trăm pixel, trong khi ảnh chụp điện thoại có thể
 ///      tới 12MP/vài chục MB; không thu nhỏ thì CSDL phình rất nhanh (2050 giáo dân × nhiều MB)
-///      và tải trang chậm. Chuẩn hoá về CHUNG một định dạng (JPEG) đơn giản hoá nơi dùng (data
-///      URI trong mẫu in, Content-Type khi trả về) — không cần giữ định dạng gốc.
+///      và tải trang chậm. Chuẩn hoá về CHUNG một định dạng (WebP, Task 4B — nhỏ hơn JPEG cùng
+///      chất lượng thị giác, xem lý do chọn ở chỗ mã hoá bên dưới) đơn giản hoá nơi dùng (data
+///      URI trong mẫu in, Content-Type khi trả về) cho ảnh MỚI — ảnh cũ đã lưu dạng JPEG vẫn giữ
+///      nguyên định dạng của nó (không migration), không cần giữ định dạng gốc của tệp tải lên.
 /// </summary>
 public static class XuLyAnh
 {
@@ -33,7 +35,16 @@ public static class XuLyAnh
     /// ở 300dpi (kích thước in thật chỉ khoảng 354×472px) và cho khung xem trên màn hình.</summary>
     private const int ChieuDaiToiDa = 640;
 
-    private const int ChatLuongJpeg = 85;
+    private const int ChatLuongWebp = 80;
+
+    /// <summary>Kiểu nội dung (Content-Type/MIME) của ảnh MỚI sau xử lý — dùng cả khi lưu CSDL
+    /// lẫn khi test cần khẳng định mà không viết cứng chuỗi "image/webp" ở nhiều nơi.</summary>
+    public const string LoaiNoiDungDauRa = "image/webp";
+
+    /// <summary>Ngân sách dung lượng cho MỘT ảnh sau xử lý. Có test giữ ngưỡng này
+    /// (XuLyAnhNganSachTests) — ảnh chiếm khoảng 95% khối lượng sao lưu ở quy mô lớn, nên một
+    /// thay đổi vô tình ở tham số nén sẽ nhân đôi kích thước CSDL mà không ai thấy.</summary>
+    public const int NganSachByteMoiAnh = 60 * 1024;
 
     public sealed record LoiXuLyAnh(string ThongBao);
 
@@ -94,11 +105,26 @@ public static class XuLyAnh
             canvas.DrawBitmap(daThuNho, 0, 0);
         }
 
+        // WebP thay cho JPEG: đã ĐO THẬT trên ảnh mẫu 1200x1600 (chuyển sắc + nhiễu, cùng đường
+        // xử lý thu nhỏ 640px + nền trắng ở trên) trước khi chọn, không giả định — vì bộ mã hoá
+        // SkiaSharp trên build này đã từng trả null cho JPEG với Rgb888x (xem ghi chú ở khối nền
+        // trắng phía trên), nên WebP hoàn toàn có thể vấp lỗi tương tự. Kết quả: JPEG85=52473B,
+        // JPEG80=42500B, WebP80=31036B, WebP85=38654B — WebP80 KHÔNG trả null và nhỏ hơn JPEG85
+        // ~41%, nhỏ hơn JPEG80 ~27%, nằm gọn dưới ngân sách 60KB/ảnh. Số byte này ghi trong commit
+        // giới thiệu thay đổi này (Task 4B).
+        //
+        // KHÔNG đổi ảnh cũ đã lưu: cột AnhDaiDienLoaiNoiDung vốn lưu kiểu nội dung theo TỪNG bản
+        // ghi, nên ảnh JPEG cũ vẫn đọc và in bình thường bên cạnh ảnh WebP mới — không cần
+        // migration, không cần chuyển đổi hàng loạt.
+        //
+        // Nền trắng ở bước trên vẫn cần giữ dù WebP hỗ trợ kênh alpha: ảnh chân dung 3x4 luôn in
+        // trên nền giấy trắng của mẫu in, giữ nền trắng cho nhất quán với ảnh JPEG cũ và tránh nền
+        // trong suốt hiển thị khác nhau tuỳ trình xem/trình duyệt.
         using var anhMaHoa = SKImage.FromBitmap(mat);
-        using var duLieuNen = anhMaHoa.Encode(SKEncodedImageFormat.Jpeg, ChatLuongJpeg);
+        using var duLieuNen = anhMaHoa.Encode(SKEncodedImageFormat.Webp, ChatLuongWebp);
         if (duLieuNen is null)
             return (null, new LoiXuLyAnh("Không nén được ảnh sau khi xử lý — vui lòng thử một ảnh khác."));
 
-        return (new AnhDaXuLy(duLieuNen.ToArray(), "image/jpeg"), null);
+        return (new AnhDaXuLy(duLieuNen.ToArray(), LoaiNoiDungDauRa), null);
     }
 }
