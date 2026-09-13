@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using FluentAssertions;
 
 namespace Qlgx.Data.Tests;
@@ -85,10 +86,23 @@ public class MoiDuongGhiDeuGhiNhatKyTests
             "moi cho dung chung phai tu ghi nhat ky va duoc liet ke o day");
     }
 
-    private static string TimThuMucGoc()
+    /// <summary>
+    /// Neo vào ĐƯỜNG DẪN FILE NGUỒN, không phải thư mục build.
+    ///
+    /// Bản trước đi lên từ <c>AppContext.BaseDirectory</c>. Cả quy trình thi công của dự án này
+    /// build ra thư mục riêng bằng <c>-o</c> (để không khoá <c>bin/Debug</c> khi có phiên khác
+    /// đang chạy máy chủ dev), và thư mục đó nằm NGOÀI kho — nên vòng lặp leo tới gốc ổ đĩa rồi
+    /// ném. Hậu quả: hai kiểm thử kiến trúc này, thứ cưỡng chế "mọi đường ghi đều đi qua nhật ký",
+    /// **đã tắt suốt cả một kế hoạch** mà trông như một lỗi môi trường vô hại.
+    ///
+    /// Một lá chắn ném ngoại lệ vì không tìm được chỗ đứng trông y hệt một lá chắn hỏng. Đường dẫn
+    /// file nguồn thì do trình biên dịch chèn vào lúc dịch, nên nó đúng bất kể build ra đâu.
+    /// </summary>
+    private static string TimThuMucGoc([CallerFilePath] string duongDanFileNay = "")
     {
-        var d = new DirectoryInfo(AppContext.BaseDirectory);
+        var d = new DirectoryInfo(Path.GetDirectoryName(duongDanFileNay)!);
         while (d is not null && !File.Exists(Path.Combine(d.FullName, "Qlgx.sln"))) d = d.Parent;
-        return d?.FullName ?? throw new InvalidOperationException("Khong tim thay thu muc goc WebApp");
+        return d?.FullName ?? throw new InvalidOperationException(
+            $"Khong tim thay Qlgx.sln khi di len tu '{duongDanFileNay}'");
     }
 }
