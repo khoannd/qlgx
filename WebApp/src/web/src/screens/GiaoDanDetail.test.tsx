@@ -103,6 +103,36 @@ describe('GiaoDanDetail', () => {
     render(<GiaoDanDetail duLieu={chiTiet()} />)
 
     expect(screen.queryByText('Thay đổi chưa được lưu')).toBeNull()
+    expect(screen.getByText('Chưa có thay đổi')).toBeDefined()
+  })
+
+  // Chieu NGUOC LAI cua bai tren, quan trong khong kem: sua roi ma van bao "Chua co thay doi"
+  // thi quy cha/quy so tuong thao tac chua an, roi man hinh ma khong bam "Cap nhat" -> mat phan
+  // vua nhap (phat hien khi kiem thu qua trinh duyet that 2026-09-13).
+  it('go vao mot o thi bao Co thay doi chua luu', async () => {
+    render(<GiaoDanDetail duLieu={chiTiet()} />)
+
+    await userEvent.type(screen.getByLabelText('Nơi sinh'), 'Phan Thiết')
+
+    expect(screen.getByText('Có thay đổi chưa lưu')).toBeDefined()
+    expect(screen.queryByText('Chưa có thay đổi')).toBeNull()
+  })
+
+  it('tick o danh dau (Tan tong) cung bao Co thay doi chua luu', async () => {
+    render(<GiaoDanDetail duLieu={chiTiet()} />)
+
+    await userEvent.click(screen.getByLabelText('Tân tòng'))
+
+    expect(screen.getByText('Có thay đổi chưa lưu')).toBeDefined()
+  })
+
+  it('bam Cap nhat thi thoi bao Co thay doi chua luu (nhuong cho thong bao cua luot luu)', async () => {
+    render(<GiaoDanDetail duLieu={chiTiet()} onLuu={vi.fn()} />)
+
+    await userEvent.type(screen.getByLabelText('Nơi sinh'), 'Phan Thiết')
+    await userEvent.click(screen.getByRole('button', { name: 'Cập nhật' }))
+
+    expect(screen.queryByText('Có thay đổi chưa lưu')).toBeNull()
   })
 
   it('nut Quay ve va Danh sach goi ham mo danh sach giao dan', async () => {

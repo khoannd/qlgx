@@ -711,6 +711,22 @@ export function GiaoDanDetail({
     setNgayMoc((cu) => ({ ...cu, [khoa]: iso || null }))
   const canhBaoNgay = tinhCanhBaoNgayThang(ngayMoc)
 
+  // Chỉ báo "có thay đổi chưa lưu". TRƯỚC ĐÂY dòng chữ ở thanh lệnh LUÔN ghi "Chưa có thay đổi"
+  // kể cả khi người dùng vừa sửa xong — với quý cha/quý sơ không rành máy tính, nhìn thấy câu đó
+  // rất dễ hiểu là thao tác chưa ăn, rồi rời màn hình mà không bấm "Cập nhật" và MẤT phần vừa
+  // nhập (phát hiện khi kiểm thử qua trình duyệt thật 2026-09-13).
+  //
+  // Bắt thay đổi ở HAI đường vì form này không giữ một object state duy nhất:
+  //   (1) sự kiện DOM nổi bọt lên thẻ <form> — bao mọi ô nhập/checkbox/select thường;
+  //   (2) các state React đổi KHÔNG qua sự kiện DOM — chọn cha/mẹ bằng picker, đổi giáo họ,
+  //       tick qua đổi trạng thái (doiQuaDoi/doiConHoc), đổi loại chuyển xứ.
+  const [daSua, setDaSua] = useState(false)
+  const boQuaLanDau = useRef(true)
+  useEffect(() => {
+    if (boQuaLanDau.current) { boQuaLanDau.current = false; return }
+    setDaSua(true)
+  }, [tenCha, chaId, tenMe, meId, giaoHoId, quaDoi, conHoc, giaoDanAo, loaiChuyenXu, ngayMoc])
+
   const doiQuaDoi = (v: boolean) => { setQuaDoi(v); if (v) setConHoc(false) }
   const doiConHoc = (v: boolean) => { setConHoc(v); if (v) setQuaDoi(false) }
   const doiGiaoDanAo = (v: boolean) => { setGiaoDanAo(v); if (v) setGiaoHoId(null) }
@@ -1222,6 +1238,9 @@ export function GiaoDanDetail({
   function xuLySubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!onLuu || !formRef.current) return
+    // Đã gửi đi thì không còn là "thay đổi chưa lưu" — từ đây dòng chữ nhường chỗ cho thông báo
+    // thật của lượt lưu ("Đang lưu…", "Đã lưu thành công.", hoặc lỗi).
+    setDaSua(false)
     onLuu(dungPayloadTuForm(new FormData(formRef.current)))
   }
 
@@ -1240,7 +1259,16 @@ export function GiaoDanDetail({
   }, [loaiThongBao])
 
   return (
-    <form className="page detail-page" ref={formRef} onSubmit={xuLySubmit}>
+    <form
+      className="page detail-page"
+      ref={formRef}
+      onSubmit={xuLySubmit}
+      // CHỈ onChange, KHÔNG onInput: sự kiện input bắn TRƯỚC onChange của từng ô, nên việc đặt
+      // state ở đây sẽ render lại giữa chừng và React gán lại giá trị cũ cho các ô có kiểm soát
+      // (select "Thông tin hiện tại" mất lựa chọn vừa chọn — GiaoDanDetail.test.tsx bắt đúng lỗi
+      // này). onChange bắn SAU khi ô đã cập nhật state của nó nên an toàn.
+      onChange={() => setDaSua(true)}
+    >
       <div className="page-head detail-head">
         <button type="button" className="btn btn-sm btn-quiet" onClick={() => moDanhSachGiaoDan?.()}>
           ← Danh sách
@@ -1265,17 +1293,26 @@ export function GiaoDanDetail({
       />
 
       <div className="cmdbar">
+        {/* "Có thay đổi chưa lưu" ĐÈ LÊN cả thông báo của lượt lưu trước ("Đã lưu thành công.")
+            — sau khi lưu xong mà người dùng sửa tiếp thì trạng thái đúng phải là "chưa lưu", để
+            nguyên chữ "Đã lưu thành công." sẽ khiến người dùng yên tâm nhầm. */}
         <span
-          className={'hint' + (thongBaoLuu && loaiThongBao ? ` hint-${loaiThongBao}` : '')}
-          role={thongBaoLuu ? 'status' : undefined}
+          className={'hint' + (daSua ? ' hint-canhbao'
+            : thongBaoLuu && loaiThongBao ? ` hint-${loaiThongBao}` : '')}
+          role={daSua || thongBaoLuu ? 'status' : undefined}
         >
-          {thongBaoLuu ?? (moi ? 'Bản nháp chưa lưu' : 'Chưa có thay đổi')}
+          {daSua ? 'Có thay đổi chưa lưu'
+            : thongBaoLuu ?? (moi ? 'Bản nháp chưa lưu' : 'Chưa có thay đổi')}
         </span>
         <div className="spacer" />
-        <button type="button" className="btn" disabled={!p.giaDinhId} onClick={() => p.giaDinhId && moGiaDinh?.(p.giaDinhId)}>
+        {/* Cùng dùng `.btn-quiet` như "Quay về" — cả ba đều là hành động PHỤ, phải nhẹ hơn nút
+            "Cập nhật" một mức. Trước đây "Xem gia đình"/"In lý lịch cá nhân" dùng `.btn` (kiểu
+            nổi, viền + đổ bóng) khiến chúng nổi ngang "Cập nhật" trong khi "Quay về" lại mờ đi,
+            phá vỡ nguyên tắc chỉ một hành động chính mỗi màn hình (UX review 2026-09-08 mục 5). */}
+        <button type="button" className="btn btn-quiet" disabled={!p.giaDinhId} onClick={() => p.giaDinhId && moGiaDinh?.(p.giaDinhId)}>
           Xem gia đình
         </button>
-        <button type="button" className="btn" disabled={!onIn || dangIn} onClick={() => onIn?.()}>
+        <button type="button" className="btn btn-quiet" disabled={!onIn || dangIn} onClick={() => onIn?.()}>
           {dangIn ? 'Đang tạo PDF…' : 'In lý lịch cá nhân'}
         </button>
         <button type="button" className="btn btn-quiet" onClick={() => moDanhSachGiaoDan?.()}>Quay về</button>
