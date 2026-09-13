@@ -111,6 +111,7 @@ thư mục). Các tham số khác: `-DryRun` (xem trước), `-SkipBuild`, `-Ski
 | 6d | Dịch giao diện bộ cài sang tiếng Việt | xem ghi chú dưới |
 | 6e | Nạp bản điều khoản sử dụng | không |
 | 6f | Dọn dấu vết bản Inno cũ | không |
+| **6g** | **Chặn cài đặt nếu GiaoXu.exe đang chạy** (`chan_cai_khi_dang_chay.ps1`) | **TUYỆT ĐỐI KHÔNG** |
 | 7–8 | Gom file, tạo gói cập nhật `.zip` | không |
 | 9 | Gộp `setup.exe` + `.msi` thành **một** file `.exe` | không |
 | 9b | Chép sang `D:\Working\QLGX\qlgx_bin\Release` | không |
@@ -434,6 +435,71 @@ lối tắt cũ, tuyệt đối không đụng tới file trong thư mục cài 
   đường nâng cấp hỏng và máy người dùng sẽ có hai bản song song.
 
 Bước 5 của `release.ps1` tự làm và tự kiểm tra lại cả hai.
+
+### 11. Cài đè lên máy đang mở sẵn chương trình → file bị khoá, hoãn thay đến khi khởi động lại
+
+**Triệu chứng (báo cáo thật từ người dùng, 13-09-2026):** cài bản mới đè lên máy đang
+chạy GiaoXu.exe, bộ cài báo **"cài đặt thành công"**, nhưng mở chương trình lên
+**không chạy được**. Gỡ bản cũ rồi cài lại bản mới thì chạy được. Chép đè tay các file
+từ `BIN\` (không bị khoá gì) lên thư mục cài đặt cũng sửa được ngay — dấu hiệu rõ ràng
+cho thấy vấn đề nằm ở việc MỘT SỐ file không được thay đúng cách, không phải ở nội dung
+file.
+
+**Nguyên nhân:** Windows Installer cần ghi đè GiaoXu.exe và các DLL nó nạp vào bộ nhớ.
+Nếu GiaoXu.exe đang chạy, các file này đang bị khoá. Bộ cài (Visual Studio Installer
+Projects tự sinh) có sẵn hộp thoại "Tập tin đang được sử dụng" (FilesInUse) với nút
+**"Tiếp tục"** — bấm vào đó thì bộ cài chạy tiếp NHƯNG chỉ HOÃN việc thay các file bị
+khoá đến LẦN KHỞI ĐỘNG LẠI MÁY TIẾP THEO, vẫn báo cài đặt thành công. Người dùng không
+rành máy tính bấm "Tiếp tục", mở chương trình ngay (không khởi động lại máy) → chạy với
+HỖN HỢP file cũ (bị khoá, chưa thay) và file mới → mất khớp phiên bản giữa các DLL →
+crash ngay khi mở.
+
+**Đã loại các giả thuyết khác bằng cách kiểm chứng thật** trước khi tìm ra nguyên nhân
+này: so sánh GUID Component giữa hai bản build khác nhau (ổn định, không phải lỗi
+"component rule violation"), so sánh danh sách file (giống hệt nhau), kiểm tra
+`giaoxu.mdb` (không nằm trong bộ cài).
+
+**Cách sửa:** `chan_cai_khi_dang_chay.ps1` (bước 6g) thêm một Custom Action chạy RẤT
+SỚM (thứ tự 150, trước `InstallFiles` ở 4000), phát hiện GiaoXu.exe đang chạy thì
+**HIỂN THỊ THÔNG BÁO RÕ RÀNG rồi HUỶ VIỆC CÀI ĐẶT NGAY** — không cho đi tới màn hình
+"Tiếp tục" nguy hiểm kia nữa. Không tự động đóng (kill) chương trình thay vì huỷ cài
+đặt, vì GiaoXu.exe đang mở kết nối tới `giaoxu.mdb` (Access/Jet) — buộc đóng bằng
+`taskkill /F` có thể cắt ngang một lần ghi dữ liệu, làm hỏng file .mdb.
+
+**Đã kiểm chứng bằng cài đặt MSI thật** (không phải suy đoán): mở GiaoXu.exe, chạy
+`msiexec /i ... /qn` → cài đặt bị huỷ (mã thoát 1603), không file nào bị đụng tới. Đóng
+GiaoXu.exe rồi cài lại → thành công bình thường.
+
+### 12. Custom Action Type 37 (JScript) bị nhầm với Type 38 (VBScript)
+
+**Triệu chứng:** MSI báo lỗi khó hiểu như `JavaScript compilation error: Expected ';'`
+ngay tại dòng đầu của một đoạn script rõ ràng là VBScript hợp lệ (`On Error Resume
+Next`). Hoặc tệ hơn — KHÔNG báo lỗi gì cả nếu Custom Action đó có cờ "tiếp tục khi lỗi"
+(64) — script âm thầm không bao giờ chạy được, và không ai biết.
+
+**Nguyên nhân:** trong bảng `CustomAction` của Windows Installer, khi mã kịch bản nằm
+NGAY TRONG cột `Target` (không tra cứu qua bảng Binary/File): **Type 37 = JScript**,
+**Type 38 = VBScript**. Rất dễ nhầm hai số này. `go_dau_vet_ban_cu.ps1` (chức năng dọn
+dấu vết bản Inno cũ, có từ bản 4.0.1) dùng nhầm 37 cho nội dung VBScript suốt nhiều bản
+phát hành — vì custom action đó có cờ "tiếp tục khi lỗi" (64, xem
+[bẫy #9](#9-không-bao-giờ-gọi-trình-gỡ-cài-đặt-của-inno)), lỗi biên dịch bị NUỐT ÂM
+THẦM, không làm hỏng bản cài nhưng cũng KHÔNG BAO GIỜ CHẠY ĐƯỢC — nghĩa là chức năng dọn
+dấu vết bản Inno cũ **chưa từng hoạt động trên bất kỳ máy nào** từ bản 4.0.1 đến trước
+khi phát hiện lỗi này (13-09-2026). Đã sửa và kiểm chứng lại bằng cscript.exe và bằng
+một lần cài đặt MSI thật.
+
+**Một cái bẫy liên quan, cùng lúc phát hiện:** `On Error Resume Next` nuốt **TẤT CẢ**
+lỗi, kể cả `Err.Raise` do CHÍNH MÌNH gọi để cố tình huỷ cài đặt! Khi viết
+`chan_cai_khi_dang_chay.ps1` (bẫy #11), lần thử đầu tiên phát hiện đúng GiaoXu.exe đang
+chạy nhưng lệnh `Err.Raise` để huỷ cài đặt bị nuốt mất bởi `On Error Resume Next` ở đầu
+script — cài đặt vẫn chạy tiếp bình thường như không có gì xảy ra! Cách sửa: chỉ bọc
+`On Error Resume Next` quanh phần DÒ TÌM (chấp nhận WMI có thể lỗi trên vài máy,
+fail-open), rồi gọi `On Error Goto 0` TRƯỚC KHI gọi `Err.Raise` để lệnh huỷ chắc chắn
+có hiệu lực.
+
+**Cách tránh tái diễn:** cả hai script trên giờ tự kiểm tra ngay lúc chạy (không đợi
+đến lúc cài đặt mới phát hiện) rằng hằng số kiểu Custom Action đúng là dựa trên nền 38,
+không phải 37.
 
 ---
 

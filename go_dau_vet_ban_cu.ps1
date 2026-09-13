@@ -49,12 +49,27 @@ $TEN_CA      = 'QLGX_GoDauVetBanCu'
 $KHOA_INNO   = 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{695008D3-7C22-4103-9CA6-107D525C82C5}_is1'
 $MSITRANSACT = 1
 
-# Kieu custom action = 37 + 1024 + 2048 + 64
-#   37   : ma VBScript nam ngay trong cot Target
+# Kieu custom action = 38 + 1024 + 2048 + 64
+#   38   : VBScript nam ngay trong cot Target (khong tra cuu bang Binary/File)
 #   1024 : hoan lai (deferred) - chay trong luc cai that su, khong phai luc chuan bi
 #   2048 : khong mao danh (no impersonate) - can quyen he thong de xoa khoa HKLM
 #   64   : gap loi thi bo qua, cai tiep - don dep that bai khong duoc lam hong ca ban cai
-$KIEU_CA = 37 + 1024 + 2048 + 64
+#
+# LOI DA CO THAT (phat hien 13-09-2026 khi dieu tra bug khac): truoc day ghi nham la
+# 37, ma do LA JSCRIPT chu khong phai VBScript (37 = JScript inline, 38 = VBScript
+# inline - rat de nham). Vi co co "64 = gap loi thi bo qua", loi bien dich JScript/VBS
+# sai cu phap nay bi NUOT AM THAM, khong lam hong ca ban cai nhung cung khong bao gio
+# CHAY DUOC - nghia la chuc nang "don dau vet ban Inno cu" CHUA TUNG hoat dong tren bat
+# ky may nao tu ban 4.0.1 den truoc ban vien nay. Da kiem chung lai: doi sang 38 thi
+# script chay dung (thu bang chinh cscript.exe va bang mot lan cai dat MSI that).
+$KIEU_CA = 38 + 1024 + 2048 + 64
+
+# Chan chinh minh khoi tai dien loi 37/38: kiem tra ngay luc chay script, khong doi
+# den luc cai dat that moi phat hien. (($KIEU_CA - 64 - 2048 - 1024) phai la 38).
+if (($KIEU_CA - 64 - 2048 - 1024) -ne 38) {
+    Write-Host 'LOI LAP TRINH: KIEU_CA khong phai VBScript inline (can = 38 + cac co). Xem lai gia tri.'
+    exit 1
+}
 
 # Chay sau InstallInitialize (1500) va TRUOC CreateShortcuts (4500). Neu chay sau
 # thi se xoa nham chinh loi tat vua tao, vi ban moi cung dat ten la "GiaoXu".

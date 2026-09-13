@@ -655,6 +655,34 @@ else {
     Write-Ok 'GIU NGUYEN moi file trong thu muc cai dat - khong dung toi giaoxu.mdb'
 }
 
+# --------------------------------------------- 6g. Chan cai dat khi dang chay
+Write-Buoc '6g. Chan cai dat khi GiaoXu.exe dang chay'
+if ($SkipInstaller -or $DryRun) { Write-Canh 'Bo qua' }
+else {
+    # LOI THAT DA GAP: cai ban moi de len may dang chay GiaoXu.exe thi bo cai bao
+    # THANH CONG nhung mo chuong trinh len KHONG CHAY DUOC (hon hop file cu/moi vi
+    # cac file bi khoa duoc Windows Installer hoan lai den luc khoi dong may). Buoc
+    # nay chan viec cai dat NGAY TU DAU neu phat hien GiaoXu.exe dang chay, buoc
+    # nguoi dung dong chuong trinh truoc - an toan hon nhieu so voi tu dong dong
+    # (ep dong co the lam hong giaoxu.mdb dang mo).
+    $scriptChan = Join-Path $Root 'chan_cai_khi_dang_chay.ps1'
+    if (-not (Test-Path $scriptChan)) { Write-Loi "Khong tim thay $scriptChan"; exit 1 }
+
+    $kqChan = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptChan -Msi $msiPath 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Loi 'Them buoc chan cai dat khi dang chay that bai:'
+        $kqChan | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        exit 1
+    }
+    $kqChan2 = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptChan -Msi $msiPath -ChiKiemChung 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Loi 'Kiem chung buoc chan cai dat khi dang chay that bai:'
+        $kqChan2 | ForEach-Object { Write-Host "        $_" -ForegroundColor Red }
+        exit 1
+    }
+    Write-Ok 'Neu GiaoXu.exe dang chay: huy cai dat va bao ro cho nguoi dung, TRUOC khi dung toi bat ky file nao'
+}
+
 # ---------------------------------------------------------- 7. Gom file (staging)
 Write-Buoc '7. Gom file cho goi cap nhat'
 if ($DryRun) { Write-Canh 'DryRun: bo qua' }

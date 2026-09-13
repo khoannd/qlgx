@@ -35,7 +35,7 @@ commit và đẩy cả hai kho (`qlgx` và `qlgx_bin`). Máy chủ cập nhật 
 Riêng nội dung marketing trên trang chủ (`landing/`) vẫn phải sửa tay và deploy riêng —
 xem `QUY_TRINH_PHAT_HANH.md` mục 5.2.
 
-Năm điều tuyệt đối không được quên:
+Sáu điều tuyệt đối không được quên:
 
 1. **Số phiên bản phải tăng mỗi lần phát hành.** Windows Installer chỉ chép đè file khi
    file mới có số phiên bản lớn hơn. Không tăng thì máy người dùng cài xong vẫn chạy bản
@@ -51,6 +51,12 @@ Năm điều tuyệt đối không được quên:
    được ép sang `https`. Máy chạy bản 3.3.7 trở về trước (phần lớn người dùng) và bản
    4.0.0–4.0.1 nằm cứng các địa chỉ này — hỏng chỗ nào là máy đó vĩnh viễn không tự cập
    nhật được nữa. Xem `HOP_DONG_MAY_CHU_CAP_NHAT.md`.
+6. **Bộ cài phải chặn (không tự động đóng) khi thấy `GiaoXu.exe` đang chạy trên máy
+   người dùng.** Cài đè lên khi chương trình đang mở làm Windows Installer hoãn thay
+   các file bị khoá tới lần khởi động lại máy — bộ cài vẫn báo "thành công" nhưng
+   chương trình sau đó không mở lên được (đã xảy ra thật, xem
+   `QUY_TRINH_PHAT_HANH.md` bẫy #11). Không tự kill tiến trình để tránh làm hỏng
+   `giaoxu.mdb` đang mở.
 
 ## Vài điều hay vấp khi sửa mã
 
@@ -60,6 +66,9 @@ Năm điều tuyệt đối không được quên:
 - Thao tác với file `.mdb` (Jet/ACE) phải chạy bằng PowerShell **32-bit**
   (`C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe`).
 - Trong mảng PowerShell, nối chuỗi phải bọc ngoặc đơn: `,@('a','b', ($X + 'y'))`.
+- Custom Action của MSI có script nằm ngay trong Target: **Type 37 = JScript, Type 38 =
+  VBScript** — rất dễ nhầm. Và `On Error Resume Next` nuốt cả `Err.Raise` của chính
+  mình, nên muốn huỷ cài đặt phải `On Error Goto 0` trước khi gọi `Err.Raise`.
 - Có thể có **phiên Claude khác làm việc song song** trên cùng thư mục này ở nhánh khác.
   Kiểm tra `git branch --show-current` trước khi làm; không `git checkout`, dùng
   `git worktree` khi cần commit sang nhánh khác.
