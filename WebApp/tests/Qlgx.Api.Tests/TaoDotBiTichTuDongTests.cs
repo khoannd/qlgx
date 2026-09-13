@@ -4,6 +4,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Qlgx.Api.Dtos;
+using Qlgx.Api.Services;
 using Qlgx.Domain;
 using Qlgx.Domain.Entities;
 
@@ -200,6 +201,62 @@ public class TaoDotBiTichTuDongTests(QlgxApiFactory app) : IClassFixture<QlgxApi
             "khong duoc phep co 2 dot trung linh muc/ngay du bao nhieu request chay dong thoi");
         (await kiemTra.BiTichChiTiet.CountAsync(c => c.DotBiTich!.LinhMuc == "Cha Dong Thoi"))
             .Should().Be(2, "ca 2 giao dan khop dieu kien deu phai duoc them, khong thieu khong trung");
+    }
+
+    /// <summary>
+    /// Phủ chính điểm chia-lô của <c>TaoTuDong</c>: tạo đủ giáo dân để danh sách công việc vượt
+    /// một lô (mỗi đợt mới = 1 dòng đợt + 1 dòng chi tiết, nên CoLo + 50 giáo dân mỗi người một
+    /// ngày riêng cho ra hơn hai lô). Nếu ai đó lỡ làm hỏng bước tiến vị trí trong vòng lặp lô
+    /// (quên tăng viTri, hoặc lấy lại đúng lô đầu như GetRange sai chỉ số), hoặc lô thứ hai trở
+    /// đi bị bỏ qua, tổng số đợt/chi tiết sẽ sai — test bắt đúng chỗ đó. Đặt hạn 15 giây để nếu
+    /// vòng lặp không tiến thì test THẤT BẠI NHANH (HttpClient huỷ token → RequestAborted) thay
+    /// vì treo cả bộ test suite vô thời hạn.
+    /// </summary>
+    [Fact]
+    public async Task Nhieu_lo_van_tao_du_dot_khong_bo_sot_giao_dan_nao_o_lo_sau()
+    {
+        var soGiaoDan = TaoDotBiTichTuDongService.CoLo + 50;
+        var ngayDau = new DateOnly(2015, 1, 1);
+        var giaoDanIds = new List<Guid>();
+
+        await using (var db = app.TaoContextThuan())
+        {
+            for (var i = 0; i < soGiaoDan; i++)
+            {
+                // Mỗi người một NGÀY riêng và một LINH MỤC riêng → mỗi người một đợt mới riêng,
+                // không ai bị gộp nhóm với ai: tổng số đợt phải bằng đúng số giáo dân.
+                var g = new GiaoDan
+                {
+                    GiaoXuId = app.GiaoXuId,
+                    MaGiaoDanCu = 96000 + i,
+                    HoTen = $"Nguoi nhieu lo {i}",
+                    NgayRuaToi = ngayDau.AddDays(i),
+                    ChaRuaToi = $"Cha nhieu lo {i}",
+                };
+                db.GiaoDan.Add(g);
+                giaoDanIds.Add(g.Id);
+            }
+            await db.SaveChangesAsync();
+        }
+
+        using var hetHan = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var client = app.CreateAuthClient();
+        var res = await client.PostAsJsonAsync("/api/cong-cu-du-lieu/tao-dot-bi-tich",
+            new TaoDotBiTichTuDongRequest(LoaiBiTich.RuaToi, null, null, ngayDau, ngayDau.AddDays(soGiaoDan)),
+            hetHan.Token);
+        res.EnsureSuccessStatusCode();
+
+        var kq = await res.Content.ReadFromJsonAsync<TaoDotBiTichTuDongKetQua>(hetHan.Token);
+        kq!.SoDotDaTao.Should().Be(soGiaoDan, "phai tao het, khong duoc bo sot dot nao o lo thu hai tro di");
+        kq.SoGiaoDanDaThem.Should().Be(soGiaoDan);
+
+        await using var kiemTra = app.TaoContextThuan();
+        var daCoChiTiet = await kiemTra.BiTichChiTiet
+            .Where(c => giaoDanIds.Contains(c.GiaoDanId))
+            .Select(c => c.GiaoDanId)
+            .ToListAsync(hetHan.Token);
+        daCoChiTiet.Should().BeEquivalentTo(giaoDanIds,
+            "moi giao dan phai co dung mot chi tiet bi tich, ke ca nhung nguoi roi vao lo cuoi");
     }
 
     [Fact]

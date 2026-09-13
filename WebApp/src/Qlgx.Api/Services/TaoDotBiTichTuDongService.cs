@@ -13,8 +13,9 @@ namespace Qlgx.Api.Services;
 /// docs/superpowers/specs/man-hinh/cong-cu-du-lieu.md mục 5.2) — thay
 /// <c>frmTaoDotBiTich.cs</c> + <c>GenerateDotBiTichProcess.cs</c>. CÔNG CỤ SINH DỮ LIỆU HÀNG
 /// LOẠT trên khối lớn nhất CSDL (1108 đợt bí tích, 6150 chi tiết) — áp dụng đúng 4 nguyên tắc
-/// an toàn bắt buộc: xem trước → xác nhận với con số cụ thể → MỘT transaction → không mở rộng
-/// phạm vi so với desktop.
+/// an toàn bắt buộc: xem trước → xác nhận với con số cụ thể → ghi có giao dịch → không mở rộng
+/// phạm vi so với desktop. Nguyên tắc thứ ba trước đây là "MỘT transaction bao trọn"; nay ghi
+/// theo TỪNG LÔ, mỗi lô một giao dịch — xem <see cref="TaoTuDong"/> để biết vì sao đổi.
 ///
 /// CHỈ hỗ trợ Rửa tội/Rước lễ/Thêm sức (LoaiBiTich 0/1/2) — ĐÚNG giới hạn đã có sẵn của
 /// <see cref="DotBiTichService"/> ("Danh sách sổ bí tích", xem so-bi-tich.md), không phải giới
@@ -67,6 +68,18 @@ public class TaoDotBiTichTuDongService(QlgxDbContext db, SinhMaService sinhMa, I
         return new TaoDotBiTichXemTruocKetQua(kq.TongGiaoDanKhop, kq.DotMoi.Count, soGiaoDanMoi, mau);
     }
 
+    /// <summary>Số DÒNG (đợt + chi tiết) tối đa mỗi lô khi ghi thật — xem <see cref="TaoTuDong"/>.
+    /// Cùng cỡ với ChuanHoaDuLieuService.CoLo / TimThayTheService.CoLo / ChuyenHoService.CoLo.</summary>
+    internal const int CoLo = 200;
+
+    /// <summary>
+    /// Một đơn vị ghi KHÔNG ĐƯỢC CẮT NHỎ HƠN: hoặc một đợt MỚI kèm toàn bộ chi tiết của chính
+    /// nó (<c>DotBiTichId</c> null), hoặc các chi tiết thêm vào một đợt ĐÃ CÓ. Đợt mới và chi
+    /// tiết của nó phải cùng vào hoặc cùng không — chi tiết mồ côi trỏ tới một đợt không tồn
+    /// tại là dữ liệu hỏng, khác hẳn "làm một nửa" vốn chấp nhận được giữa hai lô.
+    /// </summary>
+    private sealed record CongViecGhi(Guid? DotBiTichId, DateOnly Ngay, string? LinhMuc, string? Noi, List<Guid> GiaoDanIds);
+
     /// <summary>
     /// Trả về (KetQua, Loi) thay vì chỉ KetQua: chống trùng ở TinhToan chỉ nằm ở tầng ứng dụng
     /// (SELECT rồi INSERT trong cùng transaction, mức cô lập mặc định READ COMMITTED) — hai
@@ -77,59 +90,114 @@ public class TaoDotBiTichTuDongService(QlgxDbContext db, SinhMaService sinhMa, I
     /// an toàn CUỐI: request thua trong cuộc đua nhận PostgresException 23505 bọc trong
     /// DbUpdateException — bắt riêng để trả thông báo tiếng Việt rõ ràng thay vì lộ lỗi 500 thô,
     /// và để người dùng biết cần tải lại trang xem đợt bí tích thay vì bấm lại mù quáng.
+    ///
+    /// GHI THEO TỪNG LÔ, mỗi lô một giao dịch riêng — KHÔNG còn MỘT transaction bao trọn như
+    /// nguyên tắc 3 ở tài liệu lớp mô tả (dòng đó nay phải đọc là "mỗi lô một transaction").
+    /// VÌ SAO đổi: đây là khối lớn nhất CSDL (1108 đợt, 6150 chi tiết) và mỗi dòng ghi nay sinh
+    /// nhật ký mức ô, nên ghi trọn một lượt nghĩa là giữ khoá dòng đếm <c>bo_dem_hieu_luc</c>
+    /// của giáo xứ suốt thời gian đó. Vì LuuCoNhatKy đặt <c>lock_timeout = 5s</c>, MỌI người
+    /// khác trong giáo xứ bấm Lưu ở bất cứ màn hình nào lúc ấy sẽ chờ rồi nhận lỗi 55P03 không
+    /// hiểu nổi — cha xứ bấm một nút là cả văn phòng tê liệt. Đúng thắt cổ chai đã sửa ở
+    /// ChuanHoaDuLieuService (Task 4), TimThayTheService (Task 5), ChuyenHoService (Task 6).
+    ///
+    /// KHÔNG dùng Take hay Skip/Take: khác ba chỗ trên, tập hợp cần ghi ở đây KHÔNG phải một
+    /// truy vấn nạp lại từng lô mà là kết quả TinhToan đã tính TRỌN trong bộ nhớ trước khi ghi
+    /// (phải vậy: gộp nhóm theo linh mục/ngày cần nhìn toàn bộ tập). Nên chia lô bằng cách đi
+    /// theo CHỈ SỐ trên danh sách công việc, như ChuyenHoGiaDinh dùng GetRange — không có
+    /// truy vấn nào để Skip cả. Biên lô rơi đúng giữa hai <see cref="CongViecGhi"/>.
+    ///
+    /// ĐÁNH ĐỔI ĐÃ BIẾT: lỗi giữa chừng để lại một phần đợt đã tạo, phần còn lại chưa. Chấp
+    /// nhận được vì công cụ này CHẠY LẠI ĐƯỢC: nó CHỈ THÊM MỚI và bỏ qua mọi đợt/chi tiết đã
+    /// tồn tại (xem TinhToan), nên bấm lại chỉ làm nốt phần còn thiếu — đúng điều test
+    /// "Chay_lai_lan_2_khong_tao_trung_dot_va_khong_tao_trung_chi_tiet" khoá lại.
     /// </summary>
     public async Task<(TaoDotBiTichTuDongKetQua? KetQua, string? Loi)> TaoTuDong(TaoDotBiTichTuDongRequest yc, CancellationToken ct)
     {
         var giaoXuId = boiCanh.GiaoXuId;
-        await using var giaoTac = await db.Database.BeginTransactionAsync(ct);
 
+        // Tính toàn bộ TRƯỚC, ngoài mọi giao dịch ghi: đây chỉ là đọc, không cần giữ khoá nào.
         var kq = await TinhToan(yc, ct);
-        var soDotDaTao = 0;
-        var soGiaoDanDaThem = 0;
         var maHienTai = await db.DotBiTich.MaxAsync(x => (int?)x.MaDotBiTichCu, ct) ?? 0;
 
-        foreach (var (ngay, linhMuc, noi, giaoDanIds) in kq.DotMoi)
+        var congViec = kq.DotMoi
+            .Select(d => new CongViecGhi(null, d.Ngay, d.LinhMuc, d.Noi, d.GiaoDanIds))
+            .Concat(kq.DotDaCo.Select(d => new CongViecGhi(d.DotBiTichId, default, null, null, d.GiaoDanIds)))
+            .ToList();
+
+        var soDotDaTao = 0;
+        var soGiaoDanDaThem = 0;
+        var viTri = 0;
+
+        while (viTri < congViec.Count)
         {
-            maHienTai = await sinhMa.LayMaTiepTheo(giaoXuId, "dot_bi_tich", maHienTai, ct);
-            var dot = new DotBiTich
+            // Giao dịch tường minh cho từng lô, KHÔNG để LuuCoNhatKy tự mở: trong lô này ta khoá
+            // dòng đếm mã cũ (bo_dem_ma, qua SinhMaService) TRƯỚC rồi mới tới dòng đếm hiệu lực
+            // (bo_dem_hieu_luc, qua LuuCoNhatKy) — đúng thứ tự khoá của mọi chỗ gọi khác, xem ghi
+            // chú ở CapSoHieuLuc. Đặt chung một giao dịch còn để mã cũ đã cấp được quay lui cùng
+            // lô khi lô đó hỏng, không để lại lỗ hổng trong chuỗi MaDotBiTichCu.
+            await using var giaoTac = await db.Database.BeginTransactionAsync(ct);
+
+            var soDotLo = 0;
+            var soGiaoDanLo = 0;
+            var soDongLo = 0;
+
+            // Nhận thêm công việc tới khi đủ CoLo DÒNG. Điều kiện kiểm ở ĐẦU vòng nên một công
+            // việc lớn hơn CoLo vẫn được nhận trọn (không bao giờ cắt đôi một đợt và chi tiết
+            // của nó), chỉ khiến riêng lô đó to hơn dự kiến.
+            while (viTri < congViec.Count && soDongLo < CoLo)
             {
-                GiaoXuId = giaoXuId,
-                LoaiBiTich = yc.LoaiBiTich,
-                NgayBiTich = ngay,
-                LinhMuc = linhMuc,
-                NoiBiTich = noi,
-                MoTa = TaoMoTa(ngay),
-                MaDotBiTichCu = maHienTai,
-            };
-            db.DotBiTich.Add(dot);
-            soDotDaTao++;
-            foreach (var giaoDanId in giaoDanIds)
-            {
-                db.BiTichChiTiet.Add(new BiTichChiTiet { GiaoXuId = giaoXuId, DotBiTichId = dot.Id, GiaoDanId = giaoDanId });
-                soGiaoDanDaThem++;
+                var cv = congViec[viTri];
+                if (cv.DotBiTichId is { } dotDaCoId)
+                {
+                    foreach (var giaoDanId in cv.GiaoDanIds)
+                        db.BiTichChiTiet.Add(new BiTichChiTiet { GiaoXuId = giaoXuId, DotBiTichId = dotDaCoId, GiaoDanId = giaoDanId });
+                    soDongLo += cv.GiaoDanIds.Count;
+                }
+                else
+                {
+                    maHienTai = await sinhMa.LayMaTiepTheo(giaoXuId, "dot_bi_tich", maHienTai, ct);
+                    var dot = new DotBiTich
+                    {
+                        GiaoXuId = giaoXuId,
+                        LoaiBiTich = yc.LoaiBiTich,
+                        NgayBiTich = cv.Ngay,
+                        LinhMuc = cv.LinhMuc,
+                        NoiBiTich = cv.Noi,
+                        MoTa = TaoMoTa(cv.Ngay),
+                        MaDotBiTichCu = maHienTai,
+                    };
+                    db.DotBiTich.Add(dot);
+                    soDotLo++;
+                    foreach (var giaoDanId in cv.GiaoDanIds)
+                        db.BiTichChiTiet.Add(new BiTichChiTiet { GiaoXuId = giaoXuId, DotBiTichId = dot.Id, GiaoDanId = giaoDanId });
+                    soDongLo += 1 + cv.GiaoDanIds.Count;
+                }
+                soGiaoDanLo += cv.GiaoDanIds.Count;
+                viTri++;
             }
-        }
-        foreach (var (dotBiTichId, giaoDanIds) in kq.DotDaCo)
-        {
-            foreach (var giaoDanId in giaoDanIds)
+
+            try
             {
-                db.BiTichChiTiet.Add(new BiTichChiTiet { GiaoXuId = giaoXuId, DotBiTichId = dotBiTichId, GiaoDanId = giaoDanId });
-                soGiaoDanDaThem++;
+                await db.LuuCoNhatKy(ct);
+                await giaoTac.CommitAsync(ct);
             }
+            catch (DbUpdateException ex) when (LaViPhamRangBuocNhomTrung(ex))
+            {
+                await giaoTac.RollbackAsync(ct);
+                return (null, "Không tạo được trọn vẹn: một yêu cầu khác vừa tạo đợt bí tích trùng cùng " +
+                    "linh mục/ngày trong lúc thao tác này đang chạy (có thể do bấm \"Xác nhận tạo\" nhiều " +
+                    "lần). Một phần đợt có thể đã được tạo xong. Hãy tải lại trang để xem đợt bí tích hiện " +
+                    "có, rồi chạy lại nếu còn thiếu — chạy lại không tạo trùng.");
+            }
+
+            soDotDaTao += soDotLo;
+            soGiaoDanDaThem += soGiaoDanLo;
+
+            // Nhả thực thể của lô vừa xong khỏi ChangeTracker — giữ hết tới cuối chỉ làm mỗi lần
+            // SaveChanges quét chậm dần.
+            db.ChangeTracker.Clear();
         }
 
-        try
-        {
-            await db.LuuCoNhatKy(ct);
-            await giaoTac.CommitAsync(ct);
-        }
-        catch (DbUpdateException ex) when (LaViPhamRangBuocNhomTrung(ex))
-        {
-            await giaoTac.RollbackAsync(ct);
-            return (null, "Không tạo được: một yêu cầu khác vừa tạo đợt bí tích trùng cùng linh mục/ngày " +
-                "trong lúc thao tác này đang chạy (có thể do bấm \"Xác nhận tạo\" nhiều lần). " +
-                "Hãy tải lại trang để xem đợt bí tích hiện có trước khi thử lại.");
-        }
         return (new TaoDotBiTichTuDongKetQua(soDotDaTao, soGiaoDanDaThem), null);
     }
 
