@@ -22,6 +22,13 @@ public static class SinhDongNhatKy
             if (muc.State is not (EntityState.Added or EntityState.Modified)) continue;
 
             var bang = muc.Metadata.ClrType.Name;
+
+            // Không phải mọi thực thể kế thừa ThucTheCoSo đều nên vào nhật ký — TaiKhoan mang
+            // mật khẩu băm và bộ đếm đăng nhập, ghi lại sẽ phát xuống máy con thứ không nên rời
+            // máy chủ (xem PhanLoaiThucThe). Quyết định này tường minh theo tên bảng, không suy
+            // luận ngầm từ việc kế thừa.
+            if (!PhanLoaiThucThe.DuocGhiNhatKy(bang)) continue;
+
             var thucThe = muc.Entity;
 
             if (muc.State == EntityState.Added)

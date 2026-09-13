@@ -46,6 +46,47 @@ public class SinhDongNhatKyTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLie
     }
 
     [Fact]
+    public async Task Tao_giao_dan_co_anh_thi_jsonb_khong_chua_anh()
+    {
+        await using var ctx = db.TaoContext();
+        ctx.GiaoDan.Add(new GiaoDan
+        {
+            GiaoXuId = db.GiaoXuId, MaGiaoDanCu = 9105, HoTen = "Co anh luc tao",
+            AnhDaiDienDuLieu = new byte[4096], AnhDaiDienLoaiNoiDung = "image/png",
+        });
+
+        var dong = SinhDongNhatKy.Tu(ctx.ChangeTracker, null, DateTimeOffset.UtcNow, Guid.NewGuid());
+
+        // Khac voi test "sua" ben duoi: nhanh "tao" gop CA BAN GHI vao mot jsonb (xem
+        // SinhDongNhatKy.Tu), nen neu ai do sau nay sua nhanh nay cho gon (vi du doi sang
+        // muc.CurrentValues.ToObject()) ma quen loai anh, anh base64 se lot vao ma test "sua"
+        // khong bat duoc — phai co test rieng cho nhanh nay.
+        dong.Should().ContainSingle();
+        dong[0].GiaTri.Should().NotContain("AnhDaiDienDuLieu",
+            "nhanh tao gop ca ban ghi vao jsonb — neu khong loai truoc, anh se nam trong do");
+        dong[0].GiaTri!.Length.Should().BeLessThan(2000,
+            "jsonb cua dong tao khong duoc phinh len vi anh base64 (anh that la 4096 byte)");
+    }
+
+    [Fact]
+    public async Task Tao_gia_dinh_co_anh_thi_jsonb_khong_chua_anh()
+    {
+        await using var ctx = db.TaoContext();
+        ctx.GiaDinh.Add(new GiaDinh
+        {
+            GiaoXuId = db.GiaoXuId, TenGiaDinh = "Gia dinh co anh",
+            AnhDaiDienDuLieu = new byte[4096], AnhDaiDienLoaiNoiDung = "image/png",
+        });
+
+        var dong = SinhDongNhatKy.Tu(ctx.ChangeTracker, null, DateTimeOffset.UtcNow, Guid.NewGuid());
+
+        dong.Should().ContainSingle();
+        dong[0].GiaTri.Should().NotContain("AnhDaiDienDuLieu");
+        dong[0].GiaTri!.Length.Should().BeLessThan(2000,
+            "jsonb cua dong tao khong duoc phinh len vi anh base64 (anh that la 4096 byte)");
+    }
+
+    [Fact]
     public async Task Anh_dai_dien_khong_bao_gio_vao_nhat_ky()
     {
         Guid id;
