@@ -70,7 +70,8 @@ public class LocTheoGiaoXuTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieu
              "CauHinh", "DuLieuChung", "VaiTro", "TenLoaiTaiKhoan", "TaiKhoan",
              "DotBiTich", "BiTichChiTiet", "ChuyenXu", "RaoHonPhoi", "TanHien", "LinhMuc",
              "KhoiGiaoLy", "LopGiaoLy", "ChiTietLopGiaoLy", "GiaoLyVien", "HoiDoan", "ChiTietHoiDoan",
-             "MauInTuyChinh", "CachHienThiDungSai", "ThayDoi", "HieuLuc", "BoDemHieuLuc"],
+             "MauInTuyChinh", "CachHienThiDungSai", "ThayDoi", "HieuLuc", "BoDemHieuLuc",
+             "MocO", "ThaoTacDaNhan"],
             "danh sach bang co GiaoXuId phai duoc ra soat co y thuc moi khi thay doi, khong duoc troi qua im lang");
 
         // HAI bang MauInTuyChinh va CachHienThiDungSai la NGOAI LE CO CHU DICH: cot GiaoXuId cho phep NULL voi

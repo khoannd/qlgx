@@ -16,4 +16,17 @@ public class BoDemHieuLuc
     public Guid GiaoXuId { get; set; }
     public long SoTiepTheo { get; set; } = 1;
     public Guid Epoch { get; set; } = Guid.NewGuid();
+
+    /// <summary>
+    /// Sau khi máy chủ được khôi phục từ bản sao lưu, quản trị viên phải CHỌN: "lấy lại dữ liệu
+    /// các máy con còn giữ mà máy chủ đã mất" (true) hay "quay lui có chủ ý, bỏ hẳn phần đã mất"
+    /// (false) — xem thiết kế mục 4.8. Mặc định false là lựa chọn AN TOÀN: chưa có khôi phục nào
+    /// xảy ra thì không máy con nào được phép đẩy dữ liệu bù lên, tránh một máy con lâu ngày mới
+    /// nối mạng vô tình được coi là "đang bù lại" trong khi thực ra máy chủ chưa từng mất gì.
+    /// </summary>
+    public bool ChoPhepBuLai { get; set; }
+
+    /// <summary>Thời điểm lần xoay <see cref="Epoch"/> gần nhất — dùng để phân biệt các đợt
+    /// khôi phục liên tiếp và ghi lại lúc cửa sổ "cho phép bù lại" ở trên được mở/đóng.</summary>
+    public DateTimeOffset? XoayEpochLuc { get; set; }
 }

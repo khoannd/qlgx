@@ -65,6 +65,16 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
     /// "QuanTriHeThong", luôn dùng QlgxDbContext mở bằng chuỗi kết nối quản trị (bỏ qua RLS).</summary>
     public DbSet<NhapDuLieuJob> NhapDuLieuJob => Set<NhapDuLieuJob>();
 
+    /// <summary>Hàng đợi công việc sao lưu/phục hồi (xem CongViecSaoLuu.cs) — không có bộ lọc
+    /// GiaoXuId, cùng lý do với NhapDuLieuJob: chỉ đọc/ghi được qua policy "QuanTriHeThong".</summary>
+    public DbSet<CongViecSaoLuu> CongViecSaoLuu => Set<CongViecSaoLuu>();
+
+    /// <summary>Bảng đệm danh sách bản sao lưu do bộ chạy trên host cập nhật (xem BanSaoLuu.cs).</summary>
+    public DbSet<BanSaoLuu> BanSaoLuu => Set<BanSaoLuu>();
+
+    /// <summary>Đúng một dòng, nguồn cho đèn trạng thái sao lưu (xem TrangThaiSaoLuu.cs).</summary>
+    public DbSet<TrangThaiSaoLuu> TrangThaiSaoLuu => Set<TrangThaiSaoLuu>();
+
     // --- Theo giáo xứ, có bộ lọc tenant bên dưới ---
     public DbSet<CauHinh> CauHinh => Set<CauHinh>();
     public DbSet<DuLieuChung> DuLieuChung => Set<DuLieuChung>();
@@ -93,6 +103,10 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
     public DbSet<ThayDoi> ThayDoi => Set<ThayDoi>();
     /// <summary>Chuỗi phát xuống, chỉ chứa thay đổi đã thắng, mang số thứ tự (xem HieuLuc.cs).</summary>
     public DbSet<HieuLuc> HieuLuc => Set<HieuLuc>();
+    /// <summary>Mốc từng ô, quyết thắng thua khi máy con ghi lên (xem MocO.cs).</summary>
+    public DbSet<MocO> MocO => Set<MocO>();
+    /// <summary>Sổ chống xử lý trùng thao tác đã nhận (xem ThaoTacDaNhan.cs).</summary>
+    public DbSet<ThaoTacDaNhan> ThaoTacDaNhan => Set<ThaoTacDaNhan>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -129,6 +143,8 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
         b.Entity<ChiTietHoiDoan>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         b.Entity<ThayDoi>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         b.Entity<HieuLuc>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<MocO>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<ThaoTacDaNhan>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         // GiaoPhan và GiaoHat KHÔNG có bộ lọc — chúng nằm trên cấp giáo xứ (xem GiaoPhan.cs).
 
         DatTenSnakeCase(b);
