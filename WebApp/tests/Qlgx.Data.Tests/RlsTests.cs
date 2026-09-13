@@ -36,12 +36,23 @@ public class RlsTests : IAsyncLifetime
     public async Task DisposeAsync()
     {
         // Xoá vai trò TRƯỚC khi fixture xoá database — role còn quyền tham chiếu tới database
-        // này (privilege đã cấp) nên xoá theo thứ tự ngược lại lúc tạo.
+        // này (privilege đã cấp) nên xoá theo thứ tự ngược lại lúc tạo. Boc trong DO $$ ... $$
+        // vì bai test quet bang (Moi_bang_co_giao_xu_id_...) chi doc catalog qua vai tro
+        // superuser, KHONG tao _tenVaiTro — "DROP OWNED BY" mot role chua ton tai se nem loi
+        // 42704 va lam hong DisposeAsync cua chinh bai test khong lien quan.
         await using (var superuser = new NpgsqlConnection(_fixture.ChuoiKetNoi))
         {
             await superuser.OpenAsync();
             await using var lenh = new NpgsqlCommand(
-                $"DROP OWNED BY \"{_tenVaiTro}\"; DROP ROLE IF EXISTS \"{_tenVaiTro}\";", superuser);
+                $"""
+                DO $$
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '{_tenVaiTro}') THEN
+                        EXECUTE 'DROP OWNED BY "{_tenVaiTro}"';
+                        EXECUTE 'DROP ROLE "{_tenVaiTro}"';
+                    END IF;
+                END $$;
+                """, superuser);
             await lenh.ExecuteNonQueryAsync();
         }
 
@@ -586,5 +597,65 @@ public class RlsTests : IAsyncLifetime
             await giaoDich.CommitAsync();
             Assert.Equal(4, soDauLan2); // 1 + 3 (da cap lan dau) = 4
         }
+    }
+
+    /// <summary>
+    /// LƯỚI AN TOÀN cho RLS, đúng vai trò mà <c>LocTheoGiaoXuTests.Moi_thuc_the_co_cot_GiaoXuId_deu_da_duoc_gan_bo_loc</c>
+    /// đã làm cho bộ lọc EF (lớp phòng thủ thứ NHẤT): quét TOÀN BỘ <c>ctx.Model</c> thay vì viết
+    /// tay một fact riêng cho từng bảng mới. Trước bài test này, mỗi bảng có GiaoXuId phải được
+    /// một người NHỚ viết một fact RLS thủ công (xem các fact phía trên) — quên là không ai biết,
+    /// đúng như đã xảy ra với thao_tac_da_nhan trước vòng sửa này (có moc_o, không có
+    /// thao_tac_da_nhan, dù cả hai bật RLS trong CÙNG một vòng lặp migration).
+    ///
+    /// Test này CHỈ kiểm TỒN TẠI (có RLS bật + có đúng policy tên loc_theo_giao_xu) ở tầng
+    /// catalog PostgreSQL — không đi qua vai trò không BYPASSRLS, không kiểm HÀNH VI cách ly có
+    /// đúng hay không. Các fact phía trên (Vai_tro_..., Bang_nhat_ky_..., Bang_moc_o_...,
+    /// QlgxDbContext_that_..., CapSoHieuLuc_...) vẫn giữ nguyên vì chúng kiểm HÀNH VI thật của
+    /// policy qua một vai trò CSDL thật — hai việc bổ sung cho nhau, không thay thế nhau.
+    /// </summary>
+    [Fact]
+    public async Task Moi_bang_co_giao_xu_id_deu_duoc_bat_rls_va_co_policy_loc_theo_giao_xu()
+    {
+        using var ctx = _fixture.TaoContext();
+
+        var tenBang = ctx.Model.GetEntityTypes()
+            .Where(t => t.FindProperty("GiaoXuId") is not null)
+            .Select(t => t.GetTableName()!)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+
+        // Neu danh sach rong thi ban than dieu kien loc o tren da hong (doi ten thuoc tinh, doi
+        // quy uoc anh xa...) va test se xanh gia khong kiem tra duoc gi - phai chan truoc.
+        Assert.NotEmpty(tenBang);
+
+        await using var superuser = new NpgsqlConnection(_fixture.ChuoiKetNoi);
+        await superuser.OpenAsync();
+
+        var thieuRls = new List<string>();
+        var thieuPolicy = new List<string>();
+
+        foreach (var bang in tenBang)
+        {
+            await using (var docRls = new NpgsqlCommand(
+                "SELECT relrowsecurity FROM pg_class WHERE oid = @bang::regclass", superuser))
+            {
+                docRls.Parameters.AddWithValue("bang", bang);
+                var batRls = (bool)(await docRls.ExecuteScalarAsync())!;
+                if (!batRls) thieuRls.Add(bang);
+            }
+
+            await using (var docPolicy = new NpgsqlCommand(
+                "SELECT count(*) FROM pg_policies WHERE tablename = @bang AND policyname = 'loc_theo_giao_xu'",
+                superuser))
+            {
+                docPolicy.Parameters.AddWithValue("bang", bang);
+                var soPolicy = (long)(await docPolicy.ExecuteScalarAsync())!;
+                if (soPolicy == 0) thieuPolicy.Add(bang);
+            }
+        }
+
+        Assert.Empty(thieuRls);
+        Assert.Empty(thieuPolicy);
     }
 }

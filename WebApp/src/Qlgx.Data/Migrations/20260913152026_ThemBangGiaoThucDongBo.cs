@@ -57,6 +57,7 @@ namespace Qlgx.Data.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("pk_thao_tac_da_nhan", x => new { x.giao_xu_id, x.ma_thao_tac });
+                    table.CheckConstraint("ck_thao_tac_da_nhan_nguon_goc_day_du", "(nguon_goc_epoch IS NULL) = (nguon_goc_so_thu_tu IS NULL)");
                 });
 
             migrationBuilder.CreateIndex(
@@ -64,7 +65,7 @@ namespace Qlgx.Data.Migrations
                 table: "thao_tac_da_nhan",
                 columns: new[] { "giao_xu_id", "nguon_goc_epoch", "nguon_goc_so_thu_tu" },
                 unique: true,
-                filter: "nguon_goc_epoch IS NOT NULL");
+                filter: "nguon_goc_epoch IS NOT NULL AND nguon_goc_so_thu_tu IS NOT NULL");
 
             // Lớp phòng thủ thứ hai, y hệt các bảng nghiệp vụ. moc_o không chứa giá trị nhưng
             // chứa BẢN ĐỒ dữ liệu (bảng nào, bản ghi nào, ô nào tồn tại và đổi lúc nào) — rò rỉ

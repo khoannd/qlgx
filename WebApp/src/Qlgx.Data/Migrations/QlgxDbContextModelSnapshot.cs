@@ -2550,9 +2550,12 @@ namespace Qlgx.Data.Migrations
                     b.HasIndex("GiaoXuId", "NguonGocEpoch", "NguonGocSoThuTu")
                         .IsUnique()
                         .HasDatabaseName("ix_thao_tac_da_nhan_giao_xu_id_nguon_goc_epoch_nguon_goc_so_th~")
-                        .HasFilter("nguon_goc_epoch IS NOT NULL");
+                        .HasFilter("nguon_goc_epoch IS NOT NULL AND nguon_goc_so_thu_tu IS NOT NULL");
 
-                    b.ToTable("thao_tac_da_nhan");
+                    b.ToTable("thao_tac_da_nhan", t =>
+                        {
+                            t.HasCheckConstraint("ck_thao_tac_da_nhan_nguon_goc_day_du", "(nguon_goc_epoch IS NULL) = (nguon_goc_so_thu_tu IS NULL)");
+                        });
                 });
 
             modelBuilder.Entity("Qlgx.Domain.Entities.ThayDoi", b =>
