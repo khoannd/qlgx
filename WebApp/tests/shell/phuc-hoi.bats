@@ -132,6 +132,40 @@ EOF
   [ "$status" -eq 0 ]
 }
 
+# Vong review 1, Important 3: "cho toi da sau khi hoan doi" la thoi gian giao xu KHONG dung duoc
+# phan mem, phai NGAN hon nhieu so voi cho luc khoi dong binh thuong. Chot lai bang test de khong
+# ai vo tinh gop hai con so nay lam mot.
+@test "cho sau hoan doi phai ngan hon nhieu so voi cho khoi dong binh thuong" {
+  [ "$CHO_SAN_SANG_GIAY" -eq 300 ]
+  [ "$CHO_SAN_SANG_SAU_HOAN_DOI_GIAY" -eq 90 ]
+  [ "$CHO_SAN_SANG_SAU_HOAN_DOI_GIAY" -lt "$CHO_SAN_SANG_GIAY" ]
+}
+
+@test "cho_api_san_sang nhan gioi han qua tham so va that bai khi khong bao gio san sang" {
+  # Ghi de lenh goi ra ngoai de test khong dung toi Docker: dc() gia luon that bai.
+  dc() { return 1; }
+  sleep() { :; }
+  run cho_api_san_sang 2
+  [ "$status" -ne 0 ]
+}
+
+# Vong review 1 (phat hien tu kich ban 3b): khi CSDL moi hong that, container api crash-restart va
+# MOI lan tham do `dc exec` mat nhieu giay. Neu gioi han duoc dem theo SO VONG LAP thi "90" hoa ra
+# hang chuc phut -- dung trong luc giao xu mat dich vu. Test nay chot lai rang gioi han la SO GIAY
+# THAT: mot ham `dc` gia "cham" (moi lan 1 giay) van phai lam ham tra ve trong khoang gioi han,
+# chu khong phai gioi-han-nhan-thoi-gian-moi-lan.
+@test "cho_api_san_sang do bang DONG HO, khong phai bang so vong lap" {
+  dc() { sleep 1; return 1; }   # moi lan tham do "ton" 1 giay
+  bat_dau=$(date +%s)
+  run cho_api_san_sang 3
+  het=$(date +%s)
+  [ "$status" -ne 0 ]
+  troi_qua=$(( het - bat_dau ))
+  # Neu dem theo vong lap thi phai mat >= 6 giay (3 vong x (1 giay dc + 1 giay sleep)).
+  [ "$troi_qua" -lt 6 ]
+  [ "$troi_qua" -ge 3 ]
+}
+
 @test "gia_tri_dong_the giu nguyen moi dau hai cham trong gia tri" {
   printf 'KHO SAO LUU : s3:https://a.b/c:d\n' > "$BATS_TEST_TMPDIR/x.txt"
   [ "$(gia_tri_dong_the "$BATS_TEST_TMPDIR/x.txt" 'KHO SAO LUU')" = "s3:https://a.b/c:d" ]

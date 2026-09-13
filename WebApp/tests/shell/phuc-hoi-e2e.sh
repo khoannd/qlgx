@@ -161,7 +161,24 @@ chay_restore() { "$GOC_UNG_DUNG/scripts/qlgx-restore.sh" "$@"; }
 
 echo ""
 echo "=== Chuan bi du lieu moc va mot ban sao luu THAT ==="
+# Mot bang moc de nhan ra "du lieu da quay lai", VA du lieu nghiep vu THAT (1 giao dan, 1 gia
+# dinh). Du lieu nghiep vu that la BAT BUOC cho vong review 1: buoc sao luu bat buoc chi co y
+# nghia khi CO so sach de mat (xem co_du_lieu_can_bao_ve), va phep doi chieu "so giao dan nap
+# duoc" voi tag cua snapshot chi thuc su duoc kiem khi con so khac 0.
 psql_db "$TEN_DB" "CREATE TABLE moc(v text); INSERT INTO moc VALUES ('con-nguyen');" >/dev/null
+GX_ID=$(psql_db "$TEN_DB" "SELECT id FROM giao_xu LIMIT 1")
+them_du_lieu_nghiep_vu() {
+  psql_db "$TEN_DB" "
+    INSERT INTO gia_dinh (id, ma_gia_dinh_cu, da_xoa, da_chuyen_xu, khong_thong_ke, giao_xu_id,
+                          created_at, updated_at)
+    VALUES (gen_random_uuid(), 1, false, false, false, '$GX_ID', now(), now());
+    INSERT INTO giao_dan (id, ma_giao_dan_cu, ho_ten, con_hoc, da_co_gia_dinh, tan_tong,
+                          khong_thong_ke, qua_doi, da_xoa, giao_xu_id, created_at, updated_at)
+    VALUES (gen_random_uuid(), 1, 'Nguyen Van Thu', false, false, false, false, false, false,
+            '$GX_ID', now(), now());" >/dev/null
+}
+them_du_lieu_nghiep_vu
+[ "$(psql_db "$TEN_DB" "SELECT count(*) FROM giao_dan")" = "1" ] || that_bai "khong chen duoc giao dan thu"
 "$GOC_UNG_DUNG/scripts/qlgx-runner.sh" sao-luu --nhan thu-cong
 SN_GOC=$(snapshot_moi_nhat)
 [ -n "$SN_GOC" ] || that_bai "khong lay duoc id snapshot vua tao"
@@ -190,6 +207,40 @@ printf '%s\n' "$ra_1" | grep -qi "Them --apply" || that_bai "ke hoach khong nhac
 echo "    DAT: khong doi du lieu, khong doi danh sach CSDL, khong doi container, khong them snapshot"
 
 echo ""
+echo "=== Kich ban 1b (Critical 1): runner bao THANH CONG nhung KHONG tao snapshot -- phai TU CHOI phuc hoi ==="
+# Tai sao kich ban nay ton tai: qlgx-runner.sh's gianh_khoa_hoac_bo_qua CO Y `exit 0` khi khong
+# gianh duoc flock (mot luot sao luu khac -- cron dem, hay install.sh cap_nhat -- dang chay). Voi
+# qlgx-restore.sh thi ma 0 do la mot LOI NOI DOI: "sao luu bat buoc" bi bo qua ma khong ai thay,
+# roi ta di thang vao hoan doi ma khong con duong lui. Thay tam qlgx-runner.sh bang mot ban gia
+# mo phong DUNG hanh vi do (in canh bao, exit 0, khong tao snapshot nao).
+cp "$GOC_UNG_DUNG/scripts/qlgx-runner.sh" "$SCRATCH/qlgx-runner.that.sh"
+cat > "$GOC_UNG_DUNG/scripts/qlgx-runner.sh" <<'EOF'
+#!/usr/bin/env bash
+# BAN GIA (chi dung trong kiem thu): mo phong nhanh "dang co luot khac giu khoa" cua
+# gianh_khoa_hoac_bo_qua -- ghi canh bao roi thoat 0 MA KHONG tao snapshot nao.
+echo "[!] Dang co mot luot 'sao-luu' khac chay -- bo qua luot nay (khong phai loi)." >&2
+exit 0
+EOF
+chmod +x "$GOC_UNG_DUNG/scripts/qlgx-runner.sh"
+sn_truoc=$(so_snapshot)
+set +e
+ra_1b=$(chay_restore --snapshot "$SN_GOC" --apply 2>&1)
+ma_1b=$?
+set -e
+cp "$SCRATCH/qlgx-runner.that.sh" "$GOC_UNG_DUNG/scripts/qlgx-runner.sh"
+printf '%s\n' "$ra_1b" | tail -4
+[ "$ma_1b" -ne 0 ] || that_bai "phuc hoi van chay tiep du buoc sao luu bat buoc khong tao ra snapshot nao"
+printf '%s\n' "$ra_1b" | grep -qi "KHONG co them ban sao" \
+  || that_bai "khong bao dung ly do (thieu snapshot moi sau khi sao luu)"
+[ "$(so_snapshot)" = "$sn_truoc" ] || that_bai "so snapshot doi trong kich ban nay (khong the)"
+[ "$(psql_db "$TEN_DB" "SELECT count(*) FROM pg_tables WHERE tablename='moc'")" = "0" ]   || that_bai "da phuc hoi du KHONG co ban sao luu an toan"
+if danh_sach_db | grep -q "^${TEN_DB}_truoc_phuc_hoi_"; then
+  that_bai "da hoan doi CSDL du KHONG co ban sao luu an toan"
+fi
+cho_san_sang 120 || that_bai "he thong hong sau kich ban 1b"
+echo "    DAT: tu choi phuc hoi khi khong xac minh duoc ban sao luu moi, he thong nguyen ven"
+
+echo ""
 echo "=== Kich ban 2: phuc hoi THAT -- du lieu quay lai, CSDL cu duoc GIU, he thong van chay ==="
 sn_truoc=$(so_snapshot)
 chay_restore --snapshot "$SN_GOC" --apply || that_bai "phuc hoi that bai"
@@ -197,6 +248,8 @@ chay_restore --snapshot "$SN_GOC" --apply || that_bai "phuc hoi that bai"
   || that_bai "du lieu KHONG quay lai sau khi phuc hoi"
 [ "$(psql_db "$TEN_DB" "SELECT count(*) FROM giao_xu")" -ge 1 ] \
   || that_bai "CSDL sau phuc hoi khong con giao xu nao"
+[ "$(psql_db "$TEN_DB" "SELECT count(*) FROM giao_dan")" = "1" ] \
+  || that_bai "so giao dan sau phuc hoi khong khop ban sao (kiem doi chieu voi tag snapshot)"
 db_luu=$(danh_sach_db | grep "^${TEN_DB}_truoc_phuc_hoi_" | head -1)
 [ -n "$db_luu" ] || { danh_sach_db; that_bai "KHONG giu lai CSDL cu de quay lui"; }
 echo "    CSDL cu duoc giu lai: $db_luu"
@@ -225,7 +278,10 @@ ra_3=$(bash -c "
   source '$GOC_UNG_DUNG/scripts/qlgx-restore.sh'
   unset QLGX_CHI_NAP_HAM
   cho_api_san_sang() { return 1; }
-  CHO_SAN_SANG_GIAY=3
+  # THAM SO TEST: rut ngan de kich ban chay nhanh. Mac dinh THAT la 90 giay (xem
+  # CHO_SAN_SANG_SAU_HOAN_DOI_GIAY trong qlgx-restore.sh) -- kich ban 3b duoi day chay voi
+  # DUNG mac dinh do, khong rut ngan.
+  CHO_SAN_SANG_SAU_HOAN_DOI_GIAY=3
   main_phuc_hoi --snapshot '$SN_GOC' --apply
 " 2>&1)
 ma_3=$?
@@ -243,14 +299,59 @@ cho_san_sang 120 || that_bai "he thong khong chay lai duoc sau khi dao nguoc"
 echo "    DAT: tu dao nguoc, he thong chay lai voi DU LIEU CU nguyen ven ($(psql_db "$TEN_DB" "SELECT count(*) FROM moc") dong moc)"
 
 echo ""
+echo "=== Kich ban 3b (Important 4): lam CSDL moi HONG THAT -- cho_api_san_sang phai TU phat hien ==="
+# Kich ban 3 chung minh "neu phat hien that bai thi dao nguoc dung", nhung no MOCK hang
+# cho_api_san_sang nen KHONG chung minh duoc "phat hien dung khi CSDL moi that su hong". O day
+# KHONG mock hang do: chi chen mot hu hai THAT vao CSDL moi (xoa bang lich su migration cua EF
+# Core) SAU khi kiem chung va TRUOC khi hoan doi. Hau qua that: API chay migration luc khoi dong
+# thay toan bo migration "chua ap dung", di tao lai cac bang da ton tai roi chet, va
+# /api/suc-khoe/san-sang khong bao gio tra ve san-sang (xem Program.cs). Cho toi da o day dung
+# MAC DINH THAT (90 giay), khong rut ngan -- so giay do luong duoc la so giay that.
+psql_db "$TEN_DB" "INSERT INTO moc VALUES ('truoc-kich-ban-3b');" >/dev/null
+so_moc_truoc_3b=$(psql_db "$TEN_DB" "SELECT count(*) FROM moc")
+t0_3b=$(date +%s)
+set +e
+ra_3b=$(bash -c "
+  set -euo pipefail
+  QLGX_CHI_NAP_HAM=1
+  source '$GOC_UNG_DUNG/scripts/qlgx-restore.sh'
+  unset QLGX_CHI_NAP_HAM
+  # Boc kiem_chung_csdl_moi: chay ban THAT truoc (phai DAT), roi moi pha CSDL moi. KHONG dong
+  # toi cho_api_san_sang -- hang phat hien van la hang that.
+  eval \"\$(declare -f kiem_chung_csdl_moi | sed '1s/^kiem_chung_csdl_moi /kiem_chung_that /')\"
+  kiem_chung_csdl_moi() {
+    kiem_chung_that \"\$1\" || return 1
+    ghi_log canh-bao 'KIEM THU: co y xoa bang lich su migration cua CSDL moi de no HONG THAT.'
+    pg -d \"\$1\" -c 'DROP TABLE \"__EFMigrationsHistory\";'
+  }
+  main_phuc_hoi --snapshot '$SN_GOC' --apply
+" 2>&1)
+ma_3b=$?
+set -e
+t1_3b=$(date +%s)
+printf '%s\n' "$ra_3b" | grep -vE "^ Container" | tail -10
+echo "    (mat $((t1_3b - t0_3b)) giay, voi gioi han cho MAC DINH 90 giay)"
+[ "$ma_3b" -ne 0 ] || that_bai "phuc hoi bao thanh cong du CSDL moi that su hong"
+printf '%s\n' "$ra_3b" | grep -qi "KHONG len duoc sau khi hoan doi" \
+  || that_bai "cho_api_san_sang KHONG tu phat hien duoc CSDL moi hong"
+printf '%s\n' "$ra_3b" | grep -qi "DAO NGUOC" || that_bai "khong dao nguoc khi CSDL moi hong that"
+[ "$(psql_db "$TEN_DB" "SELECT count(*) FROM moc")" = "$so_moc_truoc_3b" ] \
+  || that_bai "sau dao nguoc, du lieu dang phuc vu khong con nguyen ven"
+[ "$(psql_db "$TEN_DB" "SELECT count(*) FROM moc WHERE v='truoc-kich-ban-3b'")" = "1" ] \
+  || that_bai "sau dao nguoc, CSDL dang phuc vu KHONG phai du lieu cu"
+cho_san_sang 180 || that_bai "he thong khong chay lai duoc sau khi dao nguoc (hong that)"
+echo "    DAT: phat hien hong THAT (khong mock), tu dao nguoc, he thong chay lai voi du lieu cu"
+
+echo ""
 echo "=== Kich ban 4: snapshot KHONG TON TAI -- phai dung lai, he thong van chay nguyen ven ==="
+so_moc_truoc_4=$(psql_db "$TEN_DB" "SELECT count(*) FROM moc")
 set +e
 ra_4=$(chay_restore --snapshot khong_ton_tai_zzz --apply 2>&1)
 ma_4=$?
 set -e
 echo "$ra_4" | tail -5
 [ "$ma_4" -ne 0 ] || that_bai "phuc hoi tu snapshot khong ton tai ma van bao thanh cong"
-[ "$(psql_db "$TEN_DB" "SELECT count(*) FROM moc")" = "2" ] \
+[ "$(psql_db "$TEN_DB" "SELECT count(*) FROM moc")" = "$so_moc_truoc_4" ] \
   || that_bai "phuc hoi that bai da lam hong du lieu dang chay"
 cho_san_sang 120 || that_bai "phuc hoi that bai da lam hong he thong dang chay"
 echo "    DAT: dung lai dung cho, du lieu va dich vu nguyen ven"
@@ -258,12 +359,13 @@ echo "    DAT: dung lai dung cho, du lieu va dich vu nguyen ven"
 echo ""
 echo "=== Kich ban 5: --dien-tap -- nap that, kiem chung that, roi XOA, KHONG hoan doi ==="
 db_truoc_5=$(danh_sach_db)
+so_moc_truoc_5=$(psql_db "$TEN_DB" "SELECT count(*) FROM moc")
 ra_5=$(chay_restore --dien-tap --snapshot "$SN_GOC" 2>&1) || that_bai "dien tap that bai"
 echo "$ra_5" | tail -6
 printf '%s\n' "$ra_5" | grep -qi "DIEN TAP DAT" || that_bai "dien tap khong bao ket qua dat"
 [ "$(danh_sach_db)" = "$db_truoc_5" ] \
   || { danh_sach_db; that_bai "dien tap de lai CSDL hoac doi danh sach CSDL"; }
-[ "$(psql_db "$TEN_DB" "SELECT count(*) FROM moc")" = "2" ] \
+[ "$(psql_db "$TEN_DB" "SELECT count(*) FROM moc")" = "$so_moc_truoc_5" ] \
   || that_bai "dien tap da dong vao du lieu dang phuc vu"
 [ "$(psql_db "$TEN_DB" "SELECT dien_tap_dat FROM trang_thai_sao_luu WHERE id=1")" = "t" ] \
   || that_bai "dien tap khong ghi ket qua vao trang_thai_sao_luu"
@@ -301,6 +403,35 @@ THU_MUC_CAU_HINH="$SCRATCH/etc-rong" QLGX_GOC_UNG_DUNG="$GOC_UNG_DUNG" \
 find "$SCRATCH/cau-hinh-lay-ve" -name .env | grep -q . \
   || that_bai "khong thay .env trong cau hinh lay ve tu ban sao"
 echo "    DAT: chay duoc chi voi The phuc hoi, va lay lai duoc .env cu tu ban sao"
+
+echo ""
+echo "=== Kich ban 6b (Critical 2): --card --apply THAT tren mot may 'trang' ==="
+# Mo phong dung kich ban tham hoa: may chu giao xu chay, chi con The phuc hoi. Nguoi van hanh cai
+# lai bo ung dung tu GitHub (o day: he thong dang chay san), roi XOA HET so sach hien co de mo
+# phong "ban cai moi tinh chua co du lieu", va nap du lieu cu ve CHI bang The phuc hoi:
+#   - THU_MUC_CAU_HINH tro vao mot thu muc RONG (khong co backup.env -- dung nhu may trang),
+#   - nen buoc sao luu bat buoc KHONG THE chay qua qlgx-runner.sh; script phai tu nhan ra
+#     "khong co so sach nao de mat" va bo qua co ghi nhat ky, thay vi dung lai va bao loi.
+psql_db "$TEN_DB" "DELETE FROM giao_dan; DELETE FROM gia_dinh; DROP TABLE IF EXISTS moc;" >/dev/null
+[ "$(psql_db "$TEN_DB" "SELECT count(*) FROM giao_dan")" = "0" ] || that_bai "chua xoa duoc du lieu"
+sn_truoc_6b=$(so_snapshot)
+set +e
+ra_6b=$(THU_MUC_CAU_HINH="$SCRATCH/etc-rong" QLGX_GOC_UNG_DUNG="$GOC_UNG_DUNG" \
+        chay_restore --card "$SCRATCH/the-phuc-hoi.txt" --snapshot "$SN_GOC" --apply 2>&1)
+ma_6b=$?
+set -e
+printf '%s\n' "$ra_6b" | grep -vE "^ Container" | tail -12
+[ "$ma_6b" -eq 0 ] || that_bai "--card --apply THAT BAI tren may trang (day la ly do ton tai cua script)"
+printf '%s\n' "$ra_6b" | grep -qi "BO QUA sao luu truoc phuc hoi" \
+  || that_bai "khong thay ghi nhan ly do bo qua buoc sao luu tren may trang"
+[ "$(so_snapshot)" = "$sn_truoc_6b" ] \
+  || that_bai "da tao snapshot du khong co gi de sao luu (khong the, backup.env khong ton tai)"
+[ "$(psql_db "$TEN_DB" "SELECT v FROM moc")" = "con-nguyen" ] \
+  || that_bai "du lieu cu KHONG quay ve tren duong may trang"
+[ "$(psql_db "$TEN_DB" "SELECT count(*) FROM giao_dan")" = "1" ] \
+  || that_bai "so giao dan KHONG quay ve tren duong may trang"
+cho_san_sang 180 || that_bai "API khong san sang sau khi phuc hoi tren duong may trang"
+echo "    DAT: chi voi The phuc hoi va mot thu muc cau hinh RONG, du lieu giao xu da quay ve day du"
 
 echo ""
 echo "=== Kich ban 7: CSDL cu con trong han giu thi KHONG bi don ==="

@@ -32,7 +32,17 @@ LAY_CAU_HINH=""
 GOC_UNG_DUNG_THAM_SO=""
 TAM_PH=""
 GIU_CSDL_CU_NGAY="${QLGX_GIU_CSDL_CU_NGAY:-7}"
+# HAI khai niem "cho API len" KHAC NHAU, co y tach rieng:
+#   - CHO_SAN_SANG_GIAY: cho luc khoi dong BINH THUONG (khong co ai dang doi), rong rai duoc.
+#   - CHO_SAN_SANG_SAU_HOAN_DOI_GIAY: cho NGAY SAU khi hoan doi ten, tuc la trong dung khoang
+#     thoi gian giao xu KHONG dung duoc phan mem. Moi giay cho o day la mot giay ngung phuc vu
+#     tren mot CSDL co the dang hong, nen phai NGAN hon nhieu -- 90 giay du de phan biet "dang
+#     khoi dong cham" voi "hong that" (API nay khoi dong het khoang 10-20 giay khi khoe manh),
+#     va la tran tren cho thoi gian phat hien truoc khi bat dau dao nguoc.
 CHO_SAN_SANG_GIAY="${QLGX_CHO_SAN_SANG_GIAY:-300}"
+CHO_SAN_SANG_SAU_HOAN_DOI_GIAY="${QLGX_CHO_SAN_SANG_SAU_HOAN_DOI_GIAY:-90}"
+# Nhanh dung de tu tai chung.sh khi chay tu MOT tep duy nhat (xem nap_thu_vien_ph).
+NHANH_MAC_DINH="${QLGX_NHANH:-webapp-phase-1}"
 # Dung CHUNG tep khoa voi qlgx-runner.sh: phuc hoi va sao luu deu ghi vao kho restic, vao thu
 # muc tam trong container postgres, va vao bang ban_sao_luu/trang_thai_sao_luu -- hai viec do
 # chay chong nhau la giam dap len nhau. Cho phep ghi de qua bien moi truong de kiem chung tren
@@ -43,10 +53,31 @@ KHOA_RUNNER="${KHOA_RUNNER:-/var/lock/qlgx-runner.lock}"
 readonly DAI_TOI_DA_TEN_DB=63
 readonly HAU_TO_LUU="_truoc_phuc_hoi_"
 
+# The phuc hoi huong dan nguoi van hanh tai DUNG MOT tep qlgx-restore.sh ve mot may TRANG bang
+# curl -- luc do chung.sh KHONG nam canh no va `source` se chet ngay dong dau, tren dung may ma
+# phan mem nay ton tai de cuu. Vi vay: co thi nap tai cho, khong co thi tu tai ve thu muc tam
+# (dung cach install.sh's nap_thu_vien da lam). Kiem ma thoat cua curl RIENG de bao loi ro rang
+# khi mat mang, thay vi de bash bao mot loi cu phap kho hieu luc source phai mot trang 404.
 nap_thu_vien_ph() {
   local d; d="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  if [ -f "$d/chung.sh" ]; then
+    # shellcheck source=/dev/null
+    source "$d/chung.sh"
+    return
+  fi
+  local tam goc_raw
+  tam=$(mktemp -d)
+  goc_raw="https://raw.githubusercontent.com/khoannd/qlgx/$NHANH_MAC_DINH/WebApp/scripts"
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "[X] Khong thay chung.sh canh $0 va cung khong co lenh curl de tai ve." >&2
+    exit 1
+  fi
+  if ! curl -fsSL "$goc_raw/chung.sh" -o "$tam/chung.sh"; then
+    echo "[X] Khong tai duoc chung.sh tu $goc_raw -- kiem tra mang hoac dat QLGX_NHANH." >&2
+    exit 1
+  fi
   # shellcheck source=/dev/null
-  source "$d/chung.sh"
+  source "$tam/chung.sh"
 }
 nap_thu_vien_ph
 
@@ -176,10 +207,25 @@ nap_cau_hinh_ph() {
 # nap vao. Tren mot VPS trang, viec nay phai lam bang install.sh TRUOC (bo cai dung ma nguon
 # GitHub, khong nam trong ban sao luu), roi moi chay lenh nay voi --card de nap du lieu ve.
 kiem_ung_dung_da_co() {
-  [ -f "$GOC_UNG_DUNG/docker-compose.yml" ] \
-    || bao_loi_va_thoat "Khong thay $GOC_UNG_DUNG/docker-compose.yml. Tren may TRANG: chay install.sh de dung bo ung dung truoc, roi chay lai lenh nay voi --card. Neu ung dung nam cho khac, dung --goc <thu muc>."
-  [ -f "$GOC_UNG_DUNG/.env" ] \
-    || bao_loi_va_thoat "Khong thay $GOC_UNG_DUNG/.env (chua cai dat xong). Xem them: $0 --card <the> --lay-cau-hinh <thu muc> de lay lai .env cu tu chinh ban sao luu."
+  if [ ! -f "$GOC_UNG_DUNG/docker-compose.yml" ] || [ ! -f "$GOC_UNG_DUNG/.env" ]; then
+    ghi_log loi "Chua co bo ung dung dang chay tai $GOC_UNG_DUNG."
+    cat >&2 <<EOF
+
+PHUC HOI TU MOT MAY TRANG -- lam theo dung thu tu nay:
+  1. Cai bo ung dung trang (ma nguon nam tren GitHub, KHONG nam trong ban sao luu):
+       curl -fsSL https://raw.githubusercontent.com/khoannd/qlgx/$NHANH_MAC_DINH/WebApp/scripts/install.sh | sudo bash
+     Khi duoc hoi kho R2, nhap lai dung KHO SAO LUU / R2 KEY ID / R2 SECRET tren The phuc hoi.
+  2. Xem ke hoach phuc hoi (khong doi gi):
+       sudo bash $0 --card <the-phuc-hoi.txt> --snapshot latest
+  3. Nap du lieu cu ve:
+       sudo bash $0 --card <the-phuc-hoi.txt> --snapshot latest --apply
+  (Tuy chon) Lay lai cac tep cau hinh cu tu chinh ban sao luu:
+       sudo bash $0 --card <the-phuc-hoi.txt> --lay-cau-hinh /root/cau-hinh-cu
+  Neu bo ung dung nam o thu muc khac, them: --goc <thu muc>
+
+EOF
+    bao_loi_va_thoat "Dung lai: chua co gi de nap du lieu vao."
+  fi
 }
 
 dc() { docker compose --project-directory "$GOC_UNG_DUNG" \
@@ -191,11 +237,110 @@ pg() { dc exec -T postgres psql -tAX -v ON_ERROR_STOP=1 -U "$(env_ung_dung POSTG
 # khong gap "8\r" khong phai so.
 pg1() { pg "$@" | tr -d ' \r'; }
 
+# MOI truy van restic CHI DOC deu phai co --no-lock. Ly do (da gap that trong kiem thu dau-cuoi):
+# `restic check` va `restic forget --prune` cua qlgx-runner.sh giu khoa DOC QUYEN tren kho, va
+# `--retry-lock` cua restic MAC DINH la 0 -- mot lenh doc chay ngay sau do se THAT BAI TUC THI
+# voi "repository is already locked" chu khong cho. Neu ta lai nuot loi do (2>/dev/null) thi ket
+# qua rong se bi hieu nham thanh "khong co snapshot nao", tuc la bao dong gia ngay giua mot lan
+# phuc hoi. --no-lock bo han viec xin khoa (an toan cho lenh chi doc), con loi (neu con) duoc GHI
+# RA nhat ky thay vi nuot.
+TEP_LOI_RESTIC=""
+restic_doc() {
+  [ -n "$TEP_LOI_RESTIC" ] || TEP_LOI_RESTIC=$(mktemp "${TMPDIR:-/var/tmp}/qlgx-restic-loi.XXXXXX")
+  restic "$@" --no-lock 2>"$TEP_LOI_RESTIC" || true
+}
+in_loi_restic_gan_nhat() {
+  [ -n "$TEP_LOI_RESTIC" ] && [ -s "$TEP_LOI_RESTIC" ] || return 0
+  ghi_log canh-bao "restic bao: $(tr '\n' ' ' < "$TEP_LOI_RESTIC" | cut -c1-300)"
+}
+
+# CO Y KHONG dung `restic snapshots --latest N`. Da tu kiem chung tren kho that: `--latest` nhom
+# theo (host, PATHS) va tra ve N snapshot moi nhat CUA TUNG NHOM. qlgx-runner.sh sao luu tu mot
+# thu muc tam MOI moi lan chay (mktemp), nen MOI snapshot roi vao mot nhom rieng -- `--latest 1`
+# tra ve MOT DONG CHO MOI SNAPSHOT va `head -1` nhat phai ban CU. Hau qua that da quan sat duoc
+# trong kiem thu dau-cuoi: buoc xac minh ben duoi tuong 'khong co snapshot moi' va tu choi phuc
+# hoi du ban sao luu vua tao thanh cong. Vi vay doc TOAN BO danh sach (restic in theo thu tu
+# thoi gian tang dan).
+json_toan_bo_snapshot() { restic_doc snapshots --json; }
+id_snapshot_cuoi_cung() { grep -o '"short_id":"[0-9a-f]*"' | tail -1 | cut -d'"' -f4; }
+# Dem so snapshot mang mot nhan -- day moi la thuoc tinh ta thuc su can ("co THEM mot ban sao
+# truoc-phuc-hoi hay khong"), khong phu thuoc vao cach restic nhom hay sap xep.
+dem_snapshot_theo_nhan() {
+  local nhan="$1" so
+  so=$(json_toan_bo_snapshot | grep -o "nhan=${nhan}\"" | grep -c . || true)
+  printf '%s' "${so:-0}"
+}
+
+# Co du lieu giao xu nao se bi ghi de khong? Tra ve 0 (co) / 1 (khong co gi de mat).
+# Dung de quyet dinh buoc sao luu bat buoc co y nghia hay khong -- KHONG phai de "cho phep bo
+# qua cho tien". Hai tinh huong that KHONG co gi de mat: (a) CSDL chua ton tai tren cum, (b) ban
+# cai vua dung xong tren mot VPS TRANG (0 giao dan, 0 gia dinh) dang doi nap du lieu cu ve. Doc
+# khong duoc thi COI NHU CO du lieu (an toan ve phia sao luu).
+co_du_lieu_can_bao_ve() {
+  local db="$1" co_db gd gdinh
+  co_db=$(pg1 -d postgres -c "SELECT count(*) FROM pg_database WHERE datname = '${db//\'/\'\'}'" 2>/dev/null || echo '')
+  if [ "${co_db:-0}" != "1" ]; then
+    ghi_log thong-tin "CSDL '$db' chua ton tai tren cum -- khong co du lieu nao bi ghi de."
+    return 1
+  fi
+  gd=$(pg1 -d "$db" -c 'SELECT count(*) FROM giao_dan' 2>/dev/null || echo 'loi')
+  gdinh=$(pg1 -d "$db" -c 'SELECT count(*) FROM gia_dinh' 2>/dev/null || echo 'loi')
+  # Bat ky gia tri nao KHONG phai mot so (rong, 'loi', thong diep la) deu duoc coi la "khong biet"
+  # -> nga ve phia AN TOAN: van sao luu.
+  case "$gd" in ''|*[!0-9]*) gd='loi' ;; esac
+  case "$gdinh" in ''|*[!0-9]*) gdinh='loi' ;; esac
+  if [ "$gd" = 'loi' ] || [ "$gdinh" = 'loi' ]; then
+    ghi_log canh-bao "Khong dem duoc giao dan/gia dinh cua '$db' -- COI NHU CO du lieu, van sao luu."
+    return 0
+  fi
+  if [ "$gd" -eq 0 ] && [ "$gdinh" -eq 0 ]; then
+    ghi_log thong-tin "CSDL '$db' khong co giao dan/gia dinh nao (ban cai moi chua co so sach)."
+    return 1
+  fi
+  return 0
+}
+
+# Buoc [1/7]. KHONG tin vao mot minh ma thoat cua qlgx-runner.sh: khi mot luot sao luu khac dang
+# giu flock, `gianh_khoa_hoac_bo_qua` cua runner CO Y `exit 0` (bo qua luot nay la hanh vi dung
+# cua no, vi day la cron chay lai duoc). Nhung o day thi khac han: ma 0 do se bi hieu nham la
+# "da sao luu xong" va ta di thang vao hoan doi, trong khi ban sao restic -- duong lui DUY NHAT
+# khi mat may chu -- vua bi bo qua ma khong ai nhin thay. Vi vay xac minh bang SU THAT: phai co
+# mot snapshot MOI, mang dung nhan truoc-phuc-hoi, xuat hien trong kho.
+sao_luu_bat_buoc() {
+  local db_hien="$1"
+  if ! co_du_lieu_can_bao_ve "$db_hien"; then
+    ghi_log canh-bao "BO QUA sao luu truoc phuc hoi: khong co so sach giao xu nao bi ghi de. " \
+                     "(Day la duong 'may trang': vua cai xong, dang nap du lieu cu ve.)"
+    return 0
+  fi
+  local so_truoc so_sau id_moi i
+  so_truoc=$(dem_snapshot_theo_nhan truoc-phuc-hoi)
+  "$GOC_UNG_DUNG/scripts/qlgx-runner.sh" sao-luu --nhan truoc-phuc-hoi --nguon truoc_phuc_hoi \
+    || bao_loi_va_thoat "Khong sao luu duoc trang thai hien tai -- DUNG, KHONG phuc hoi. He thong giu nguyen."
+  # Thu lai vai lan: kho co the vua duoc mot lenh khac nha khoa, hoac chi muc chua kip hien ra.
+  for i in 1 2 3; do
+    so_sau=$(dem_snapshot_theo_nhan truoc-phuc-hoi)
+    [ "${so_sau:-0}" -gt "${so_truoc:-0}" ] && break
+    in_loi_restic_gan_nhat
+    sleep 2
+  done
+  if [ "${so_sau:-0}" -le "${so_truoc:-0}" ]; then
+    in_loi_restic_gan_nhat
+    bao_loi_va_thoat "qlgx-runner.sh bao thanh cong nhung kho KHONG co them ban sao " \
+                     "truoc-phuc-hoi nao ($so_truoc -> $so_sau) -- rat co the mot luot sao luu " \
+                     "khac dang giu khoa nen luot nay bi bo qua lang le. DUNG, KHONG phuc hoi: " \
+                     "khong co duong lui thi khong ghi de."
+  fi
+  id_moi=$(json_toan_bo_snapshot | id_snapshot_cuoi_cung)
+  ghi_log thong-tin "Da xac nhan ban sao luu truoc phuc hoi ton tai that trong kho" \
+                    "(so ban truoc-phuc-hoi: $so_truoc -> $so_sau, ban moi nhat: ${id_moi:-?})."
+}
+
 # Doc mot tag cua snapshot (vd giao_dan=2050) -- dung de doi chieu "hien tai" voi "trong ban sao"
 # trong ke hoach, va de kiem chung sau khi nap. In '?' khi khong doc duoc.
 doc_tag_snapshot() {
   local khoa="$1" ra=""
-  ra=$(restic snapshots --json "$SNAPSHOT" 2>/dev/null | tr ',' '\n' \
+  ra=$(restic_doc snapshots --json "$SNAPSHOT" | tr ',' '\n' \
        | grep -o "\"${khoa}=[^\"]*\"" | head -1 | sed "s/^\"${khoa}=//; s/\"\$//") || true
   printf '%s' "${ra:-?}"
 }
@@ -267,9 +412,16 @@ kiem_chung_csdl_moi() {
 
 # Tach rieng thanh ham de bo kiem thu dau-cuoi ghi de duoc (gia lap "API len nhung hong") va
 # chung minh duong DAO NGUOC that su chay.
+# Gioi han la SO GIAY THAT (han chot theo dong ho), KHONG phai so vong lap. Khac biet nay khong
+# phai chuyen chu nghia: khi CSDL moi hong that, container api roi vao vong crash-restart, va moi
+# lan `dc exec` vao mot container dang khoi dong lai mat NHIEU GIAY chu khong phai tuc thi -- dem
+# theo vong lap thi "90" hoa ra 10-25 phut, dung trong khoang thoi gian giao xu khong dung duoc
+# phan mem va ta dang cho de quyet dinh dao nguoc. Da quan sat that trong kiem thu kich ban 3b
+# (api o trang thai "Restarting (139)"). Han chot theo dong ho cho dung dieu da hua.
 cho_api_san_sang() {
-  local i
-  for i in $(seq 1 "$CHO_SAN_SANG_GIAY"); do
+  local gioi_han="${1:-$CHO_SAN_SANG_GIAY}" het_han
+  het_han=$(( $(date +%s) + gioi_han ))
+  while [ "$(date +%s)" -lt "$het_han" ]; do
     if dc exec -T api curl -fsS http://localhost:8080/api/suc-khoe/san-sang >/dev/null 2>&1; then
       return 0
     fi
@@ -385,19 +537,32 @@ nap_snapshot_vao_csdl_moi() {
 }
 
 # Ghi ket qua vao bang cong viec CUA CSDL DANG PHUC VU. Goi SAU khi hoan doi: ban ghi trong CSDL
-# cu da di theo CSDL cu. Ten cot la snake_case THAT trong CSDL (id, trang_thai, nhat_ky,
-# ket_thuc_luc) -- doi chieu truc tiep voi migration ThemBangSaoLuu.cs, khong doan.
+# cu da di theo CSDL cu. Ten cot la snake_case THAT trong CSDL (id, loai, trang_thai, nhat_ky,
+# tao_luc, ket_thuc_luc) -- doi chieu truc tiep voi migration ThemBangSaoLuu.cs, khong doan.
+#
+# PHAI la INSERT ... ON CONFLICT chu KHONG duoc la UPDATE thuan: CSDL vua hoan doi vao la ban
+# chup CU, no KHONG THE chua dong cong viec ma API tao ra SAU thoi diem chup. Mot UPDATE o day
+# khop 0 dong va im lang khong lam gi -- man hinh quan tri se treo mai o "dang chay" du viec da
+# xong tu lau (se lo ngay khi noi voi hang doi cong viec o Task 15/17).
 ghi_ket_qua_cong_viec() {
-  local db="$1" trang_thai="$2" nhat_ky="$3"
+  local db="$1" trang_thai="$2" nhat_ky="$3" ket_qua
   [ -n "$MA_JOB" ] || return 0
   case "$MA_JOB" in
     [0-9a-fA-F]*-*-*-*-*) : ;;
     *) ghi_log canh-bao "--ma-job '$MA_JOB' khong phai uuid -- bo qua buoc ghi bang cong viec."; return 0 ;;
   esac
-  pg -d "$db" -c "UPDATE cong_viec_sao_luu
-                  SET trang_thai = '${trang_thai//\'/\'\'}', ket_thuc_luc = now(),
-                      nhat_ky = '${nhat_ky//\'/\'\'}'
-                  WHERE id = '$MA_JOB';" >/dev/null 2>&1 || true
+  ket_qua=$(pg1 -d "$db" -c "
+    INSERT INTO cong_viec_sao_luu (id, loai, trang_thai, nhat_ky, tao_luc, bat_dau_luc, ket_thuc_luc)
+    VALUES ('$MA_JOB', 'phuc_hoi', '${trang_thai//\'/\'\'}', '${nhat_ky//\'/\'\'}', now(), now(), now())
+    ON CONFLICT (id) DO UPDATE
+      SET trang_thai = EXCLUDED.trang_thai,
+          nhat_ky    = EXCLUDED.nhat_ky,
+          ket_thuc_luc = EXCLUDED.ket_thuc_luc
+    RETURNING id;" 2>/dev/null || true)
+  if [ -z "$ket_qua" ]; then
+    ghi_log canh-bao "Khong ghi duoc ket qua cong viec '$MA_JOB' vao CSDL moi -- man hinh quan tri" \
+                     "co the hien sai trang thai. Viec phuc hoi VAN da hoan tat (xem nhat ky)."
+  fi
 }
 
 ghi_ket_qua_dien_tap() {
@@ -424,6 +589,14 @@ gianh_khoa_phuc_hoi() {
 }
 nha_khoa_phuc_hoi() { exec 9>&- 2>/dev/null || true; }
 
+# Don sach moi thu tam cua lan chay nay. Bien tham chieu phai la bien TOAN CUC (khong `local`):
+# ham nay chay tu trap, co the SAU KHI ham tao ra chung da tra ve -- luc do pham vi `local` da
+# mat va `set -u` se lam trap chet ma khong don duoc gi.
+don_dep_ph() {
+  rm -rf "${TAM_PH:-}" 2>/dev/null || true
+  rm -f "${TEP_LOI_RESTIC:-}" 2>/dev/null || true
+}
+
 phuc_hoi_that() {
   local db_hien="$1" db_moi="$2"
   kiem_ten_db_an_toan "$db_hien"; kiem_ten_db_an_toan "$db_moi"
@@ -440,8 +613,7 @@ phuc_hoi_that() {
     ghi_log thong-tin "[1/4] DIEN TAP: bo qua buoc sao luu (khong co gi bi ghi de)."
   else
     ghi_log thong-tin "[1/7] Sao luu trang thai hien tai truoc khi ghi de (BAT BUOC)"
-    "$GOC_UNG_DUNG/scripts/qlgx-runner.sh" sao-luu --nhan truoc-phuc-hoi --nguon truoc_phuc_hoi \
-      || bao_loi_va_thoat "Khong sao luu duoc trang thai hien tai -- DUNG, KHONG phuc hoi. He thong giu nguyen."
+    sao_luu_bat_buoc "$db_hien"
   fi
   gianh_khoa_phuc_hoi
 
@@ -454,7 +626,7 @@ phuc_hoi_that() {
   TAM_PH=$(mktemp -d "${TMPDIR:-/var/tmp}/qlgx-ph.XXXXXX"); chmod 700 "$TAM_PH"
   # Ban dump THO chua toan bo du lieu giao dan, chua ma hoa -- khong bao gio de no nam lai tren
   # dia. Bat ca bon tin hieu (EXIT mot minh KHONG bat SIGTERM/SIGHUP -- xem qlgx-runner.sh).
-  trap 'rm -rf "${TAM_PH:-}" 2>/dev/null || true' EXIT INT TERM HUP
+  trap don_dep_ph EXIT INT TERM HUP
   restic restore "$SNAPSHOT" --target "$TAM_PH" --include '*/qlgx-dump' --include '*/globals.sql' \
     || bao_loi_va_thoat "Khong lay duoc snapshot '$SNAPSHOT' -- he thong hien tai KHONG bi dong toi."
 
@@ -493,15 +665,18 @@ phuc_hoi_that() {
     bao_loi_va_thoat "Da tra lai trang thai cu. Khong phuc hoi duoc lan nay."
   fi
 
-  ghi_log thong-tin "[7/7] Khoi dong api va cho san sang (toi da $CHO_SAN_SANG_GIAY giay)"
+  ghi_log thong-tin "[7/7] Khoi dong api va cho san sang (toi da $CHO_SAN_SANG_SAU_HOAN_DOI_GIAY giay -- het gio la DAO NGUOC)"
   dc up -d api || ghi_log loi "Khong khoi dong duoc container api."
-  if ! cho_api_san_sang; then
+  if ! cho_api_san_sang "$CHO_SAN_SANG_SAU_HOAN_DOI_GIAY"; then
     ghi_log loi "He thong KHONG len duoc sau khi hoan doi -- DAO NGUOC ve CSDL cu."
     dc stop api || true
     local db_hong="${db_moi}_hong"
     if doi_ten_db "$db_hien" "$db_hong" && doi_ten_db "$db_luu" "$db_hien"; then
       dc up -d api || true
-      if cho_api_san_sang; then
+      # Duong CUU HO: o day cho rong rai (CHO_SAN_SANG_GIAY, mac dinh 300) chu khong con siet nhu
+      # luc quyet dinh dao nguoc -- he thong da tro ve CSDL cu, viec con lai chi la doi no len,
+      # va bao "chua len" som o day se lam nguoi van hanh hoang mang vo co.
+      if cho_api_san_sang "$CHO_SAN_SANG_GIAY"; then
         ghi_log thong-tin "Da dao nguoc: he thong chay lai voi DU LIEU CU. Ban nap hong giu o '$db_hong' de xem xet."
       else
         ghi_log loi "Da dao nguoc ten CSDL nhung API van chua len -- xem: docker compose logs api"
@@ -545,6 +720,7 @@ don_csdl_cu() {
 
 main_phuc_hoi() {
   phan_tich_tham_so_phuc_hoi "$@"
+  trap don_dep_ph EXIT INT TERM HUP
   nap_cau_hinh_ph
   [ -n "$SNAPSHOT" ] || SNAPSHOT="latest"
 
