@@ -267,14 +267,17 @@ giữa "phát hiện được" và "im lặng sai".
 **Chính sách lưu giữ phải ghi thành con số** trong kế hoạch thi công, và mục 11 phải nói rõ: "nhật
 ký giữ lịch sử nên khôi phục được" chỉ đúng trong thời hạn lưu giữ.
 
-**Đã thi công (Đợt 1):** `BoDemHieuLuc.Epoch` đã tồn tại trong CSDL (sinh một lần bằng
-`gen_random_uuid()` lúc tạo dòng đếm), nhưng **chưa có đường nào đổi nó** — con số lưu giữ cũng
-chưa được chốt. Đây là điều kiện tiên quyết bắt buộc của đầu nhận-về ở Đợt 2, và việc xoay `epoch`
-phải móc vào đường phục hồi sao lưu (một tính năng nằm ở nhánh công việc khác) — cần thiết kế
-phối hợp riêng, không tự làm được trong nội bộ kế hoạch nhật ký. Cùng nhóm vấn đề: công cụ nhập
-Access (`ChuyenDoiDuLieu`) không đụng tới `bo_dem_hieu_luc`/`epoch` khi ghi hàng nghìn dòng — một
-lần nhập đè lên giáo xứ đang chạy web sẽ làm mọi máy con không bao giờ biết có dữ liệu mới, không
-một dấu hiệu nào báo trước.
+**Trạng thái thi công:** `BoDemHieuLuc.Epoch` đã tồn tại trong CSDL từ Đợt 1 (sinh một lần bằng
+`gen_random_uuid()` lúc tạo dòng đếm), nhưng đường **xoay** nó — và toàn bộ cơ chế bù lại dữ liệu
+mà máy chủ đã mất — được thiết kế ở **mục 4.8** và thi công ở Đợt 2. Con số thời hạn lưu giữ nhật
+ký cũng chốt ở đó (30 ngày cho sổ đã nhận phía máy con).
+
+Một vấn đề cùng nhóm, chưa giải: công cụ nhập Access (`ChuyenDoiDuLieu`) ghi hàng nghìn dòng mà
+không đụng tới `bo_dem_hieu_luc`/`epoch`. Một lần nhập đè lên giáo xứ đang chạy web sẽ làm mọi máy
+con không bao giờ biết có dữ liệu mới, không một dấu hiệu nào báo trước. Cách giải cùng khuôn với
+4.8: đường nhập phải **xoay `epoch`** khi kết thúc, buộc mọi máy con tải lại toàn bộ. Thuộc phạm
+vi Đợt 3 (nhập từ desktop), nhưng phải làm **trước** khi cho phép nhập đè lên giáo xứ đang dùng
+web.
 
 ### 4.6 Định danh bản ghi
 
@@ -307,6 +310,131 @@ Ba việc:
 3. `DatLaiUpdatedAt` (`ChuyenDoiDuLieu.cs:1098-1107`) dùng `ExecuteUpdateAsync` + sửa thẳng
    `OriginalValue` để chống lại chính `SaveChanges`. Khi thêm ghi nhật ký, đoạn này sẽ hành xử khó
    đoán — phải xem lại cùng lúc.
+
+### 4.8 Khôi phục dữ liệu khi máy chủ bị lùi về bản sao lưu
+
+Đây là tình huống mà **toàn bộ hướng offline-first tồn tại để giải**, và cũng là chỗ dễ làm hỏng
+nhất nếu vội. Máy chủ hỏng, được khôi phục từ bản sao lưu 8 giờ trước. Tám giờ dữ liệu biến mất
+khỏi máy chủ — nhưng **các máy con vẫn còn giữ**. Câu hỏi: lấy lại bằng cách nào, và có phải lúc
+nào cũng nên lấy lại không?
+
+#### 4.8.1 Sau khi khôi phục, máy con đang giữ ba loại dữ liệu khác nhau
+
+| Loại | Máy chủ sau khôi phục | Máy con | Xử lý |
+|---|---|---|---|
+| **A. Đã đồng bộ trước mốc sao lưu** | Có | Có | Không sao, hai bên khớp |
+| **B. Chưa gửi lên (còn trong hàng chờ)** | Không bao giờ có | Có, trong hàng chờ | Tự khỏi: hàng chờ độc lập với máy chủ, gửi lại như bình thường |
+| **C. Đã gửi lên và máy chủ đã nhận, nhưng nằm trong 8 giờ bị mất** | **Mất** | Có, trong kho đọc | **Đây là ca khó — mục này giải nó** |
+
+Loại B là thứ người ta hay nghĩ tới, nhưng nó tự khỏi và không cần thiết kế gì thêm. **Loại C mới
+là chỗ mất dữ liệu thật**: máy con tưởng đã gửi xong nên không giữ trong hàng chờ nữa; máy chủ thì
+không còn. Nếu không làm gì, lần đồng bộ kế tiếp máy con sẽ kéo trạng thái cũ của máy chủ về và
+**tự ghi đè lên bản tốt của chính nó** — mất vĩnh viễn, im lặng.
+
+#### 4.8.2 Máy con phải giữ sổ đã nhận, không chỉ giữ kết quả
+
+Để khôi phục được loại C, máy con phải trả lời được câu "tôi đã nhận những dòng `hieu_luc` nào".
+Chỉ giữ **kết quả** (trạng thái bản ghi hiện tại) là không đủ — nó không cho biết *dòng nào* đến
+trong khoảng thời gian máy chủ đã mất.
+
+Nên máy con giữ thêm một **sổ đã nhận**: bản sao các dòng `hieu_luc` nó đã áp, kèm `epoch` và
+`so_thu_tu` gốc. Thời hạn giữ mặc định **30 ngày** — đủ bao mọi kịch bản khôi phục từ bản sao lưu
+gần, và với một giáo xứ cỡ vừa thì dung lượng không đáng kể (nhật ký là văn bản, không có ảnh).
+
+Hệ quả có lợi: mỗi máy con là **một bản sao dự phòng độc lập** của lịch sử gần đây. Dữ liệu do máy
+A tạo ra, máy B nhận được, thì máy B cũng khôi phục lại được — không phụ thuộc máy A còn sống hay
+không.
+
+#### 4.8.3 Hai kiểu khôi phục, và vì sao **bắt buộc** phải hỏi
+
+Đây là điểm dễ sai nhất của cả mục này:
+
+- **Khôi phục sau sự cố** — ổ cứng hỏng, máy chủ chết, khôi phục để lấy lại. Ta **muốn** máy con
+  đẩy dữ liệu loại C trở lên.
+- **Quay lui có chủ ý** — ai đó làm hỏng dữ liệu (xoá nhầm hàng loạt, nhập sai một mớ), quản trị
+  viên khôi phục để **bỏ hẳn** những gì đã xảy ra sau mốc đó. Ta **tuyệt đối không** muốn máy con
+  tự đẩy đống hỏng đó ngược lên — làm thế là vô hiệu hoá chính thao tác quay lui.
+
+Máy chủ **không thể tự đoán** đang ở trường hợp nào. Nên quy trình khôi phục **bắt buộc** hỏi
+quản trị viên một câu, bằng lời thường:
+
+> Máy chủ vừa được đưa về bản lưu lúc **10:00 ngày 13/9**.
+> Những thay đổi sau mốc đó hiện không còn trên máy chủ, nhưng **các máy đã dùng có thể còn giữ**.
+>
+> [ **Lấy lại những thay đổi đó** ] — chọn khi máy chủ vừa gặp sự cố
+> [ **Bỏ hẳn, không lấy lại** ] — chọn khi đang cố ý quay lui để huỷ những thay đổi sai
+
+Không có lựa chọn mặc định, không có nút nào được bấm sẵn. Đây là một trong rất ít chỗ trong toàn
+hệ thống **buộc người dùng phải quyết định** — vì cả hai hướng đều có thể đúng, và đoán sai thì
+hỏng theo hai kiểu ngược nhau.
+
+Kể cả khi chọn "Bỏ hẳn", máy con **không xoá trắng** sổ đã nhận của mình: nó gói phần bị bỏ vào
+kho lưu (đúng cơ chế "Cất lại" ở mục 7.7) để nếu quyết định sai thì còn đường lấy lại.
+
+#### 4.8.4 Phát hiện: hai lớp, không dựa vào một cái
+
+**Lớp 1 — `epoch` đổi (tường minh).** Quy trình khôi phục gọi một thao tác xoay `epoch` của giáo
+xứ, kèm theo lựa chọn ở 4.8.3. Máy con thấy `epoch` khác với cái mình đang giữ → biết có khôi
+phục.
+
+**Lớp 2 — `so_thu_tu` đi lùi (ngầm, lưới an toàn).** Nếu ai đó khôi phục CSDL bằng tay mà quên
+xoay `epoch`, lớp 1 im lặng. Nhưng máy con vẫn phát hiện được: con trỏ của nó là 5000 trong khi
+máy chủ báo số lớn nhất hiện có là 4900 **với cùng một `epoch`** — điều này không bao giờ xảy ra
+khi vận hành bình thường. Máy con dừng đồng bộ, chuyển thanh trạng thái sang 🔴 và báo quản trị
+viên, thay vì âm thầm chạy tiếp.
+
+Lớp 2 quan trọng vì lớp 1 phụ thuộc vào việc con người nhớ làm đúng quy trình, còn dữ liệu giáo xứ
+thì không được phép phụ thuộc vào trí nhớ của ai.
+
+#### 4.8.5 Cách bù lại dữ liệu loại C
+
+Khi đã xác định là "lấy lại":
+
+1. Máy con so con trỏ cũ `(epoch_cũ, 5000)` với trạng thái mới của máy chủ `(epoch_mới, tối đa 4900)`.
+2. Nó lọc trong **sổ đã nhận** những dòng thuộc `epoch_cũ` có `so_thu_tu > 4900` — đó chính xác là
+   phần máy chủ đã mất mà nó còn giữ.
+3. Nó gửi những dòng đó lên như **thao tác ghi bình thường**, nhưng mang theo **danh tính gốc**
+   (`epoch_gốc` + `so_thu_tu_gốc`) và **giữ nguyên mốc đồng hồ gốc** — không đóng dấu lại thành
+   "vừa sửa xong", vì đó là sự thật lịch sử chứ không phải thay đổi mới.
+4. Máy chủ áp chúng dưới `epoch` mới, cấp `so_thu_tu` mới. Các máy khác kéo về như dữ liệu bình
+   thường.
+
+**Chống trùng giữa nhiều máy con.** Ba máy cùng giữ một dòng bị mất sẽ cùng gửi lại. Máy chủ dựa
+vào **danh tính gốc** để nhận ra: dòng đầu tiên được áp, hai dòng sau là không-làm-gì. Lưu ý bảng
+`thao_tac_da_nhan` (chống trùng thông thường) cũng bị lùi theo bản sao lưu nên **không** nhớ các
+thao tác trong khoảng đã mất — đó lại là điều tốt, vì nhờ vậy các lần gửi lại mới được chấp nhận
+thay vì bị nhầm là trùng.
+
+**Xung đột với người đã sửa sau khi khôi phục.** Giữa lúc khôi phục và lúc bù lại, có thể có người
+đã sửa chính bản ghi đó trên máy chủ (đang nhìn dữ liệu cũ mà không biết). Vì dòng bù mang mốc
+**gốc** (cũ hơn), luật gộp mức trường sẽ cho lần sửa sau thắng ở ô đó. Nhưng người sửa sau đang
+nhìn dữ liệu thiếu 8 giờ, nên "mới hơn thắng" ở đây không chắc đúng ý — vì vậy với các **ô nhạy
+cảm** (mục 8.1), tình huống này **luôn** vào hộp cần xem lại thay vì tự quyết.
+
+#### 4.8.6 Người dùng thấy gì
+
+Trong lúc bù, thanh trạng thái hiện 🟡 kèm câu nói rõ việc đang xảy ra:
+
+> **Máy chủ vừa được khôi phục. Đang gửi lại 47 thay đổi mà máy này còn giữ.**
+
+Xong thì về 🟢 với một dòng tổng kết ở bảng chi tiết: *"Đã gửi lại 47 thay đổi. 3 mục cần anh/chị
+xem lại."* Những mục cần xem lại đi vào đúng hộp cần xem lại quen thuộc (mục 9.2), không phải một
+màn hình lạ.
+
+Nếu phát hiện qua lớp 2 (máy chủ lùi mà không ai xoay `epoch`), thanh trạng thái chuyển 🔴 với:
+
+> **Máy chủ có dấu hiệu vừa bị đưa về bản cũ.** Máy này đang tạm dừng gửi dữ liệu để tránh làm
+> hỏng thêm. Xin báo người hỗ trợ.
+
+#### 4.8.7 Điểm nối với tính năng sao lưu
+
+Việc xoay `epoch` phải nằm **trong** quy trình khôi phục, không phải một bước rời người ta có thể
+quên. Cụ thể: sau khi nạp xong bản sao lưu và trước khi mở lại cho người dùng, quy trình khôi phục
+gọi một thao tác duy nhất — xoay `epoch` cho mọi giáo xứ bị ảnh hưởng, kèm lựa chọn "lấy lại" hay
+"bỏ hẳn" mà quản trị viên đã chọn ở 4.8.3.
+
+Đây là **ranh giới giữa hai nhánh công việc** (đồng bộ và sao lưu), nên phải là một giao diện hẹp,
+rõ ràng, có kiểm thử ở cả hai phía — không phải hai bên tự giả định về nhau.
 
 ## 5. Ràng buộc bắt buộc
 
@@ -885,20 +1013,21 @@ hệ thống làm được, sau khi đã sao lưu.
 
 ## 12. Thứ tự triển khai
 
-**Đợt 1 — nền tảng máy chủ.** Bảng `thay_doi` và `hieu_luc` (kèm RLS), bộ đếm và ba ràng buộc cấp
-số, bảng `thao_tac_da_nhan`, `epoch`, ghi nhật ký ở **mọi** đường ghi kể cả 32 chỗ hàng loạt, xoá
-mềm cho các bảng còn xoá cứng, hai đầu vào nhận-về/gửi-lên, bảng `thiet_bi` và vé dài hạn. Sửa
-`AuthContext.tsx`. Bản web vẫn chạy online như cũ nhưng đã sinh nhật ký đầy đủ và đã có sổ
-ai-sửa-gì-lúc-nào.
+Chia thành các **kế hoạch thi công** độc lập, mỗi kế hoạch tự cho ra phần mềm chạy được và kiểm
+thử được. Tệp kế hoạch nằm ở `docs/superpowers/plans/`.
 
-**Đợt 2 — PWA offline-first.** Kho IndexedDB và các ràng buộc mục 5, hàng chờ, bộ gửi/nhận, bầu
-chủ một tab, tìm kiếm trong máy, thanh trạng thái, hộp cần xem lại, cờ offline theo tài khoản, file
-dự phòng, cập nhật tự động, xử lý máy ngủ đông, đối chiếu mã băm.
+| # | Kế hoạch | Nội dung | Trạng thái |
+|---|---|---|---|
+| 1 | `2026-09-13-nhat-ky-thay-doi.md` | Bảng `thay_doi`/`hieu_luc` kèm RLS, bộ đếm và ba ràng buộc cấp số, ghi nhật ký mức ô ở **mọi** đường ghi kể cả các chỗ hàng loạt, khoá chính `Guid` cho hai bảng nối, đường đọc lịch sử | ✅ Xong, đã kiểm chứng trên dữ liệu thật và qua trình duyệt |
+| 2 | Xoá mềm toàn diện | 17 chỗ xoá cứng thành xoá mềm, rà cả cascade khoá ngoại, `da_xoa` thành ô chịu luật gộp (mục 4.4) | Chưa làm |
+| 3 | Thiết bị và phiên dài hạn | Bảng `thiet_bi`, vé dài hạn, sửa `AuthContext.tsx`, cờ cho phép lưu offline (mục 6) | Chưa làm |
+| 4 | `2026-09-13-giao-thuc-dong-bo.md` | Đồng hồ lai và hiệu chỉnh, `thao_tac_da_nhan`, hai đầu vào nhận-về/gửi-lên, luật gộp mức trường, hộp cần xem lại, đơn vị gộp và bộ kiểm bất biến, **xoay `epoch` và bù dữ liệu sau khôi phục** (mục 4.8) | Đang làm |
+| 5 | `2026-09-13-pwa-offline.md` | Kho IndexedDB và các ràng buộc mục 5, sổ đã nhận, hàng chờ, bộ gửi/nhận, bầu chủ một tab, tìm kiếm trong máy, thanh trạng thái, file dự phòng, cập nhật tự động, máy ngủ đông, đối chiếu mã băm | Đang làm |
+| 6 | Nhập từ desktop (phase sau) | Ghi đè toàn bộ có xác nhận dựa trên `xem-truoc` đã có; xoay `epoch` khi kết thúc; nếu làm bản tự động thì thêm công tắc chế độ ghi (mục 10) | Chưa làm |
 
-**Đợt 3 (phase sau) — nhập từ desktop.** Màn hình ghi đè có xác nhận dựa trên `xem-truoc` đã có;
-nếu làm bản tự động thì thêm công tắc chế độ ghi và các ràng buộc mục 10.
-
-Kế hoạch thi công chi tiết sẽ do bước lập kế hoạch tạo ra.
+**Phụ thuộc bắt buộc:** kế hoạch 4 phải xong trước 5 (máy con cần giao thức để nói chuyện). Kế
+hoạch 2 nên xong trước khi bật đồng bộ thật cho giáo xứ, vì tới lúc đó nhật ký mới ghi được thao
+tác xoá — nhưng 4 và 5 không bị chặn bởi nó, chỉ là chưa đồng bộ được việc xoá.
 
 ## 13. Những gì đã sửa sau review
 
