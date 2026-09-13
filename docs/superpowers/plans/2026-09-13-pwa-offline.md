@@ -43,10 +43,18 @@ loại hỏng tệ nhất trong hệ thống này, vì nó chỉ lộ ra sau nhi
 bên nào đúng.
 
 - **Thứ tự Guid là dạng chuỗi `"D"` chữ thường, so ordinal** (`a < b` theo mã điểm). **Tuyệt đối không**
-  so theo byte, theo `BigInt`, hay theo bất kỳ dạng nào khác. Lý do: .NET so trường `_a` như số nguyên
-  little-endian, Postgres so `uuid` bằng `memcmp` big-endian, TypeScript so chuỗi — **ba thứ tự khác
-  nhau**. Chuỗi chữ thường là dạng duy nhất cả ba nơi biểu diễn được y hệt, và cũng là dạng máy con
-  thật sự lưu trong IndexedDB.
+  so theo mảng byte (`Uint8Array`), theo `BigInt`, hay theo bất kỳ dạng nào khác.
+
+  Lý do, đã đo thật trên 300.000 cặp Guid ngẫu nhiên (kết quả này khác với bản ghi đầu tiên của ràng
+  buộc — bản đó đoán sai và đã được sửa): `Guid.CompareTo` của .NET, `memcmp` của Postgres trên byte
+  canonical, và so chuỗi của JavaScript **đều khớp nhau, 0 cặp lệch**. Cách duy nhất lệch là **so mảng
+  byte thô**: `Guid.ToByteArray()` của .NET đảo little-endian ba trường đầu, nên lệch **149.958/300.000
+  cặp (~50%)**.
+
+  Nghĩa là bẫy không nằm ở chỗ bạn tưởng. Nó nằm đúng ở chỗ một người viết TypeScript rất dễ sa vào:
+  dựng `Uint8Array` từ UUID rồi so từng byte "cho nhanh". Làm vậy là hai bản sao phá hoà khác nhau và
+  phân kỳ vĩnh viễn **mà không một lỗi nào hiện ra**. Cứ so chuỗi — nó đã là dạng máy con lưu trong
+  IndexedDB, không cần chuyển đổi gì.
 - **`ThietBiId` null xếp TRƯỚC mọi giá trị có danh tính** (null = ghi từ máy chủ). Không quy null về
   `Guid.Empty` / chuỗi rỗng.
 - **Mốc vật lý cắt về micro giây ngay lúc dựng dấu**, không phải lúc lưu. `Date.getTime()` của JS chỉ có

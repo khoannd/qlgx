@@ -136,6 +136,42 @@ public class DongHoLaiTests
     }
 
     [Fact]
+    public void So_mang_byte_tho_LECH_voi_thu_tu_da_chot_day_moi_la_bay_that()
+    {
+        // Hàng rào thay cho assertion sai đã bỏ ở test trên. Chủ kế hoạch đã đo lại: trên 300.000
+        // cặp Guid ngẫu nhiên, `Guid.CompareTo` lệch 0 cặp so với chuỗi ordinal (nó ép uint và so
+        // theo TRƯỜNG nên trùng khớp, kể cả ở biên bit dấu 7fffffff/80000000), nhưng so MẢNG BYTE
+        // của `Guid.ToByteArray()` lệch 149.958/300.000 cặp — gần một nửa.
+        //
+        // Vì sao đây mới là bẫy thật: .NET lưu ba trường đầu little-endian trong mảng byte, còn
+        // dạng chuỗi in chúng big-endian. Postgres so `uuid` bằng memcmp trên byte CANONICAL
+        // (big-endian) nên khớp chuỗi. Nghĩa là cách duy nhất phá vỡ thoả thuận là ai đó dựng
+        // `Uint8Array`/`byte[]` rồi so trực tiếp — đúng cái một người viết TypeScript ở kế hoạch 5
+        // rất dễ làm khi muốn "so cho nhanh". Lệch thứ tự phá hoà = hai bản sao phân kỳ vĩnh viễn
+        // mà không lỗi nào hiện ra.
+        //
+        // Test này khẳng định hai cách THẬT SỰ khác nhau, để không ai thay `SoSanhGuid` bằng so
+        // mảng byte với lý do "tương đương mà nhanh hơn".
+        var a = Guid.Parse("00000002-0000-0000-0000-000000000000");
+        var b = Guid.Parse("00000100-0000-0000-0000-000000000000");
+
+        static int SoMangByte(Guid x, Guid y)
+        {
+            var bx = x.ToByteArray();
+            var by = y.ToByteArray();
+            for (var i = 0; i < 16; i++)
+                if (bx[i] != by[i]) return bx[i] < by[i] ? -1 : 1;
+            return 0;
+        }
+
+        Math.Sign(SoMangByte(a, b)).Should().Be(1,
+            "mang byte cua .NET dao little-endian: 02 di sau 00 o byte dau");
+        Math.Sign(DongHoLai.SoSanhGuid(a, b)).Should().Be(-1);
+        Math.Sign(a.CompareTo(b)).Should().Be(-1,
+            "Guid.CompareTo an toan - no so theo TRUONG voi ep uint, khong so mang byte");
+    }
+
+    [Fact]
     public void Thiet_bi_null_xep_truoc_moi_thiet_bi_co_danh_tinh()
     {
         DongHoLai.SoSanhGuid(null, Guid.Empty).Should().BeNegative();

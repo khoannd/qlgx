@@ -404,14 +404,15 @@ public class DongHoLaiTests
     [Fact]
     public void So_sanh_thiet_bi_dung_dang_chuoi_thuong_chu_khong_phai_Guid_CompareTo()
     {
-        // Ràng buộc liên ngôn ngữ: .NET so Guid theo _a little-endian, Postgres theo memcmp
-        // big-endian, TypeScript theo chuỗi. Ba thứ tự KHÁC NHAU. Ta chốt một thứ tự duy nhất:
-        // chuỗi "D" chữ thường, so ordinal. Test này cố tình chọn cặp mà hai cách cho kết quả
-        // NGƯỢC nhau, để không ai "tối ưu" ngược về Guid.CompareTo sau này.
+        // Ràng buộc liên ngôn ngữ. ĐÃ ĐO (300.000 cặp ngẫu nhiên): Guid.CompareFo của .NET,
+        // memcmp của Postgres trên byte canonical, và so chuỗi của TypeScript đều KHỚP nhau.
+        // Cách duy nhất lệch là so MẢNG BYTE THÔ (Guid.ToByteArray / Uint8Array) — lệch
+        // 149.958/300.000 cặp, vì .NET đảo little-endian ba trường đầu trong mảng byte.
+        // Hàm SoSanhGuid tồn tại để chốt một thứ tự có tên và có test, chống việc ai đó thay
+        // bằng so mảng byte với lý do "tương đương mà nhanh hơn". Xem test kế bên.
         var a = Guid.Parse("00000002-0000-0000-0000-000000000000");
         var b = Guid.Parse("00000100-0000-0000-0000-000000000000");
 
-        a.CompareTo(b).Should().BePositive("Guid.CompareTo doc _a la so nguyen little-endian");
         Math.Sign(DongHoLai.SoSanhGuid(a, b))
             .Should().Be(-1, "dang chuoi thi 00000002... di truoc 00000100...");
     }
@@ -559,12 +560,21 @@ public static class DongHoLai
     /// <summary>
     /// Thứ tự Guid DUY NHẤT của hệ thống — dạng chuỗi "D" chữ thường, so ordinal.
     ///
-    /// Bắt buộc phải là dạng này, không được dùng <c>Guid.CompareTo</c>. .NET so trường `_a` như
-    /// một số nguyên little-endian; Postgres so `uuid` bằng memcmp 16 byte big-endian;
-    /// TypeScript so chuỗi. Ba thứ tự KHÁC NHAU. Nếu máy chủ và máy con phá hoà khác nhau, hai
-    /// bản sao phân kỳ vĩnh viễn mà không có bất kỳ lỗi nào hiện ra. Dạng chuỗi chữ thường là
-    /// dạng duy nhất cả ba nơi biểu diễn được y hệt, và cũng là dạng máy con thật sự lưu trong
-    /// IndexedDB. Ràng buộc này áp cho cả bản TypeScript ở kế hoạch 5.
+    /// Ba cách so KHỚP nhau và một cách LỆCH — biết rõ cái nào là cái nào mới tránh được bẫy:
+    ///
+    /// - <c>Guid.CompareTo</c> của .NET: KHỚP. Nó so theo TRƯỜNG và ép <c>uint</c>, nên đồng
+    ///   nhất với chuỗi, kể cả ở biên bit dấu (7fffffff / 80000000). Đo thật: 0/300.000 cặp lệch.
+    /// - Postgres so <c>uuid</c> bằng memcmp trên byte CANONICAL (big-endian): KHỚP.
+    /// - TypeScript so chuỗi: KHỚP (đây chính là dạng máy con lưu trong IndexedDB).
+    /// - **So MẢNG BYTE THÔ** (<c>Guid.ToByteArray()</c>, hoặc <c>Uint8Array</c> dựng tương
+    ///   đương trong JS): **LỆCH ~50%** — đo thật 149.958/300.000 cặp. .NET lưu ba trường đầu
+    ///   little-endian trong mảng byte, còn dạng chuỗi in chúng big-endian.
+    ///
+    /// Vậy hàm này KHÔNG tồn tại để sửa <c>Guid.CompareTo</c> (cái đó vốn đúng), mà để chốt MỘT
+    /// thứ tự tường minh, có tên, có test — để không ai thay nó bằng so mảng byte với lý do
+    /// "tương đương mà nhanh hơn". Lệch thứ tự phá hoà = hai bản sao phân kỳ vĩnh viễn, không
+    /// một lỗi nào hiện ra, và chỉ lộ sau nhiều tháng khi đã hết cách biết bên nào đúng.
+    /// Ràng buộc này áp cho cả bản TypeScript ở kế hoạch 5.
     /// </summary>
     public static int SoSanhGuid(Guid? a, Guid? b)
     {
