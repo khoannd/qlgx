@@ -167,6 +167,106 @@ public class RlsTests : IAsyncLifetime
     }
 
     /// <summary>
+    /// Hai bảng "có dòng cấp hệ thống" (<c>mau_in_tuy_chinh</c>, <c>cach_hien_thi_dung_sai</c>)
+    /// dùng policy RIÊNG nhận biết NULL (migration BatRlsChoBangCoDongHeThong) vì
+    /// <c>giao_xu_id IS NULL</c> ở đây mang nghĩa "áp dụng cho MỌI giáo xứ chưa tự tuỳ chỉnh".
+    /// Bài test phải chứng minh ĐỒNG THỜI hai điều ngược chiều nhau — bỏ sót vế nào cũng hỏng:
+    ///   (1) vẫn CÁCH LY được dòng riêng: giáo xứ A không đọc được dòng của giáo xứ B;
+    ///   (2) vẫn ĐỌC ĐƯỢC dòng hệ thống: nếu policy chung <c>giao_xu_id::text = ...</c> được áp
+    ///       nhầm vào đây thì dòng NULL bị giấu mất và tính năng "Quản trị hệ thống đặt mẫu in /
+    ///       câu chữ dùng chung" sẽ im lặng ngừng hoạt động với mọi giáo xứ.
+    /// </summary>
+    [Fact]
+    public async Task Bang_co_dong_he_thong_cach_ly_dong_rieng_nhung_van_cho_doc_dong_he_thong()
+    {
+        var giaoXuA = _fixture.GiaoXuId;
+        var giaoXuB = Guid.NewGuid();
+
+        await using (var ctx = _fixture.TaoContext())
+        {
+            ctx.GiaoXu.Add(new GiaoXu { Id = giaoXuB, TenGiaoXu = "Giao xu B (dong he thong)", MaGiaoXuCu = 4 });
+            await ctx.SaveChangesAsync();
+        }
+
+        // Chuẩn bị dữ liệu + vai trò bằng superuser (bỏ qua RLS) — phần KIỂM CHỨNG bên dưới mới
+        // dùng vai trò không BYPASSRLS.
+        await using (var superuser = new NpgsqlConnection(_fixture.ChuoiKetNoi))
+        {
+            await superuser.OpenAsync();
+
+            await using (var chen = new NpgsqlCommand(
+                """
+                INSERT INTO mau_in_tuy_chinh (id, giao_xu_id, ten_mau, noi_dung_html, created_at, updated_at)
+                VALUES (gen_random_uuid(), @a,    'LyLichCaNhan', 'rieng-A',  now(), now()),
+                       (gen_random_uuid(), @b,    'LyLichCaNhan', 'rieng-B',  now(), now()),
+                       (gen_random_uuid(), NULL,  'LyLichCaNhan', 'he-thong', now(), now());
+                INSERT INTO cach_hien_thi_dung_sai (id, giao_xu_id, ten_bien, khi_dung, khi_sai, created_at, updated_at)
+                VALUES (gen_random_uuid(), @a,   'TanTong', 'rieng-A',  NULL, now(), now()),
+                       (gen_random_uuid(), @b,   'TanTong', 'rieng-B',  NULL, now(), now()),
+                       (gen_random_uuid(), NULL, 'TanTong', 'he-thong', NULL, now(), now());
+                """, superuser))
+            {
+                chen.Parameters.AddWithValue("a", giaoXuA);
+                chen.Parameters.AddWithValue("b", giaoXuB);
+                await chen.ExecuteNonQueryAsync();
+            }
+
+            await using var taoVaiTro = new NpgsqlCommand(
+                $"""
+                CREATE ROLE "{_tenVaiTro}" LOGIN PASSWORD '{MatKhauVaiTro}' NOSUPERUSER NOBYPASSRLS;
+                GRANT SELECT, INSERT, UPDATE, DELETE ON mau_in_tuy_chinh TO "{_tenVaiTro}";
+                GRANT SELECT, INSERT, UPDATE, DELETE ON cach_hien_thi_dung_sai TO "{_tenVaiTro}";
+                """, superuser);
+            await taoVaiTro.ExecuteNonQueryAsync();
+        }
+
+        var chuoiVaiTro = new NpgsqlConnectionStringBuilder(_fixture.ChuoiKetNoi)
+        {
+            Username = _tenVaiTro,
+            Password = MatKhauVaiTro,
+        }.ConnectionString;
+
+        async Task<List<string>> Doc(string bang, string cot, Guid? datThamSoPhien)
+        {
+            await using var ketNoi = new NpgsqlConnection(chuoiVaiTro);
+            await ketNoi.OpenAsync();
+            if (datThamSoPhien is { } id)
+            {
+                await using var datPhien = new NpgsqlCommand(
+                    "SELECT set_config('app.giao_xu_id', @v, false)", ketNoi);
+                datPhien.Parameters.AddWithValue("v", id.ToString("D"));
+                await datPhien.ExecuteNonQueryAsync();
+            }
+
+            var ketQua = new List<string>();
+            await using var truyVan = new NpgsqlCommand($"SELECT {cot} FROM {bang}", ketNoi);
+            await using var reader = await truyVan.ExecuteReaderAsync();
+            while (await reader.ReadAsync()) ketQua.Add(reader.GetString(0));
+            return ketQua;
+        }
+
+        foreach (var (bang, cot) in new[]
+                 { ("mau_in_tuy_chinh", "noi_dung_html"), ("cach_hien_thi_dung_sai", "khi_dung") })
+        {
+            var choA = await Doc(bang, cot, giaoXuA);
+            Assert.Contains("rieng-A", choA);
+            Assert.Contains("he-thong", choA); // vế (2) — dòng dùng chung phải đọc được
+            Assert.DoesNotContain("rieng-B", choA); // vế (1) — vẫn cách ly giáo xứ
+
+            var choB = await Doc(bang, cot, giaoXuB);
+            Assert.Contains("rieng-B", choB);
+            Assert.Contains("he-thong", choB);
+            Assert.DoesNotContain("rieng-A", choB);
+
+            // Kết nối thô quên đặt tham số phiên: chỉ còn thấy dòng dùng chung, TUYỆT ĐỐI không
+            // thấy dòng riêng của giáo xứ nào — dòng hệ thống vốn không phải bí mật (mẫu in mặc
+            // định dùng chung), nhưng dữ liệu riêng của giáo xứ thì vẫn phải đóng.
+            var khongDatGi = await Doc(bang, cot, datThamSoPhien: null);
+            Assert.Equal(["he-thong"], khongDatGi);
+        }
+    }
+
+    /// <summary>
     /// Task VIEC-TIEP-THEO.md mục 2.2 — hai test phía trên chứng minh RLS có tác dụng ở TẦNG
     /// DATABASE bằng Npgsql thô, nhưng "tách vai trò CSDL chạy thật" nghĩa là chính
     /// <c>QlgxDbContext</c> (DbContext nghiệp vụ THẬT dùng ở Program.cs/mọi Service) phải hoạt
