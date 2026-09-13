@@ -34,6 +34,17 @@
 # bai binh thuong. Day la "gia lap moi truong Linux that" cho DUNG MOT dieu kien khong the dat
 # duoc tren Windows, khong che giau bat ky loi logic that nao cua cap_nhat()/quay_lui().
 #
+# SUA LOI VONG REVIEW 1 (bon loi Important, xem task-12-report.md muc "Sua loi vong 1"):
+#   1. quay_lui() gio XOA .phien-ban-truoc sau khi quay lui thanh cong (kiem o Kich ban 3).
+#   2. quay_lui() ghi commit vua roi khoi vao .phien-ban-hong; cap_nhat() kiem tep nay TRUOC khi
+#      so sanh HEAD/origin, tu choi thu lai neu origin trung ban da biet hong (Kich ban 3b: goi
+#      lai cap_nhat NGAY SAU kich ban 3, chung minh KHONG build lai, KHONG doi container, dung
+#      trong vai giay -- bang chung truc tiep cho viec KHONG lap crash-loop vo han).
+#   3. quay_lui() gio boc `dc build api && dc up -d api && cho_san_sang 300` trong `if ! ( ... )`
+#      thay vi de tran duoi set -euo pipefail, tranh errexit nuot mat thong diep cuu ho.
+#   4. Kich ban 2 gio bam hash .env TRUOC/SAU cap_nhat, xac nhan khong doi (bat bien quan trong
+#      nhat: khong bao gio sinh lai bi mat tren mot he thong dang song).
+#
 # BA GIOI HAN bat buoc (giong Task 11):
 #   1. KHONG bind cong 80/443 that cua host. (Khong can o day: cap_nhat chi dung/xay lai "api",
 #      dc() dung ca docker-compose.prod.yml -- file do RESET cong api ve rong ("ports: !reset []")
@@ -188,6 +199,13 @@ tu_kiem_chung() {
   [ "$la_khac" -eq 0 ]
 }
 
+# Loi 4 (vong review 1): .env la bat bien quan trong nhat cua toan bo script -- cap_nhat() goi
+# sinh_env() tren duong cap nhat, va sinh_env chi dung dat_neu_chua_co (khong ghi de bi mat cu).
+# Bam hash NGAY TRUOC va NGAY SAU cap_nhat de bat duoc hoi quy neu sau nay ai do lo doi
+# dat_neu_chua_co thanh set_env_kv o mot dong nao do -- so sanh CHUOI KY TU (khong chi ten bien)
+# de bat ca truong hop gia tri bi doi ma ten bien van giu nguyen.
+env_hash_truoc_b=$(sha256sum "$GOC_UNG_DUNG/.env")
+
 ra_2=$(cap_nhat 2>&1); ma_2=$?
 echo "$ra_2"
 echo "    Ma thoat: $ma_2"
@@ -197,13 +215,17 @@ printf '%s\n' "$ra_2" | grep -qi "cap nhat xong" \
 printf '%s\n' "$ra_2" | grep -qi "quay lui" \
   && { echo "THAT BAI: cap_nhat thanh cong ma van nhac den quay lui" >&2; exit 1; }
 
+env_hash_sau_b=$(sha256sum "$GOC_UNG_DUNG/.env")
+[ "$env_hash_truoc_b" = "$env_hash_sau_b" ] \
+  || { echo "THAT BAI: .env bi doi noi dung qua mot lan cap_nhat thanh cong (vi pham bat bien 'khong sinh lai bi mat')" >&2; exit 1; }
+
 head_sau_b=$(git -C "$GOC_CHECKOUT" rev-parse HEAD)
 [ "$head_sau_b" = "$moi_commit_b" ] \
   || { echo "THAT BAI: HEAD cua checkout khong tien len ban moi ($head_sau_b != $moi_commit_b)" >&2; exit 1; }
 [ "$(cat "$GOC_UNG_DUNG/.phien-ban-truoc")" = "$cu_commit" ] \
   || { echo "THAT BAI: .phien-ban-truoc khong ghi dung commit cu truoc khi cap nhat" >&2; exit 1; }
 cho_san_sang 60 || { echo "THAT BAI: he thong khong san sang ngay sau khi bao cap nhat xong" >&2; exit 1; }
-echo "    DAT: HEAD tien len ${head_sau_b:0:8}, .phien-ban-truoc ghi dung ${cu_commit:0:8}, API san sang, KHONG quay lui"
+echo "    DAT: HEAD tien len ${head_sau_b:0:8}, .phien-ban-truoc ghi dung ${cu_commit:0:8}, .env khong doi, API san sang, KHONG quay lui"
 
 # Khoi phuc lai tu_kiem_chung THAT truoc khi sang Kich ban 3 (du duong build-hong khong bao gio
 # goi toi no, khoi phuc de doan ma con lai trung thuc voi ham that su cua Task 11).
@@ -230,8 +252,19 @@ printf '%s\n' "$ra_3" | grep -qi "khong len duoc\|khong bi mat\|khong xay dung\|
 head_sau_c=$(git -C "$GOC_CHECKOUT" rev-parse HEAD)
 [ "$head_sau_c" = "$moi_commit_b" ] \
   || { echo "THAT BAI: sau quay lui, HEAD khong tro ve dung ban truoc do (mong ${moi_commit_b:0:8}, thuc te ${head_sau_c:0:8})" >&2; exit 1; }
-[ "$(cat "$GOC_UNG_DUNG/.phien-ban-truoc")" = "$moi_commit_b" ] \
-  || { echo "THAT BAI: .phien-ban-truoc khong ghi dung commit truoc lan cap nhat hong" >&2; exit 1; }
+
+# Loi 1 (vong review 1): sau quay lui, .phien-ban-truoc PHAI bi xoa -- neu con, no dang tro DUNG
+# ve commit vua quay ve, va mot lan `qlgx rollback` ke tiep se checkout/rebuild/restart VO ICH
+# ve chinh ban dang chay roi bao "thanh cong" du khong lui di dau ca.
+[ ! -f "$GOC_UNG_DUNG/.phien-ban-truoc" ] \
+  || { echo "THAT BAI: .phien-ban-truoc VAN CON sau quay lui (se lam 'qlgx rollback' ke tiep tuong sai la con ban de lui)" >&2; exit 1; }
+# Loi 2 (vong review 1): commit HONG vua roi khoi (moi_commit_c) phai duoc ghi vao
+# .phien-ban-hong -- day la co che ghim de cap_nhat KHONG tu dong thu lai dung ban da biet hong
+# o lan chay ke tiep (kiem chung ngay duoi day).
+[ -f "$GOC_UNG_DUNG/.phien-ban-hong" ] \
+  || { echo "THAT BAI: khong thay .phien-ban-hong sau khi quay lui -- thieu co che ghim ban hong" >&2; exit 1; }
+[ "$(cat "$GOC_UNG_DUNG/.phien-ban-hong")" = "$moi_commit_c" ] \
+  || { echo "THAT BAI: .phien-ban-hong khong ghi dung commit HONG (mong ${moi_commit_c:0:8}, thuc te $(cat "$GOC_UNG_DUNG/.phien-ban-hong" | cut -c1-8))" >&2; exit 1; }
 
 echo "    Xac nhan he thong CHAY DUOC that su sau khi quay lui (khong chi doi ma nguon)"
 dc ps -q api | grep -q . || { echo "THAT BAI: khong con container api nao dang chay sau quay lui" >&2; exit 1; }
@@ -247,6 +280,35 @@ if [ "$so_la" -ne 0 ]; then
   exit 1
 fi
 echo "    DAT: HEAD ve dung ${head_sau_c:0:8}, container api chay lai, API san sang, bang tu kiem chung sach (tru 2 muc quyen tep -- gioi han Windows)"
+
+echo ""
+echo "=== Kich ban 3b (Loi 2, vong review 1): goi lai cap_nhat NGAY SAU -- KHONG duoc tu thu lai ban da biet HONG ==="
+# origin/webapp-phase-1 van la moi_commit_c (chua co ban moi nao khac tren "GitHub" gia). Neu
+# Loi 2 CHUA sua, cap_nhat se lai thay origin "moi hon" HEAD dang detached, merge len, BUILD LAI
+# dung ban da biet hong, roi tu quay lui lan nua -- moi vong ton vai phut cho cho_san_sang(300)
+# het gio. Do luong thoi gian + ID container de chung minh KHONG co chuyen do xay ra.
+id_truoc_3b=$(dc ps -q api)
+thoi_diem_truoc_3b=$(date +%s)
+set +e
+ra_3b=$(cap_nhat 2>&1); ma_3b=$?
+set -e
+thoi_diem_sau_3b=$(date +%s)
+echo "$ra_3b"
+echo "    Ma thoat: $ma_3b (mat $((thoi_diem_sau_3b - thoi_diem_truoc_3b)) giay)"
+[ "$ma_3b" -ne 0 ] || { echo "THAT BAI: cap_nhat bao thanh cong o lan goi lai du ban tren GitHub van la ban da biet HONG" >&2; exit 1; }
+printf '%s\n' "$ra_3b" | grep -qi "da bi danh dau HONG" \
+  || { echo "THAT BAI: khong thay canh bao 'da bi danh dau HONG' -- co ve cap_nhat da thu build lai ban hong" >&2; exit 1; }
+printf '%s\n' "$ra_3b" | grep -qi "quay lui" \
+  && { echo "THAT BAI: lan goi lai nay KHONG duoc dung toi quay_lui (phai dung LAI TRUOC ca merge)" >&2; exit 1; }
+id_sau_3b=$(dc ps -q api)
+[ "$id_truoc_3b" = "$id_sau_3b" ] \
+  || { echo "THAT BAI: container api bi khoi dong lai o lan goi cap_nhat thu hai (dang le phai dung som, khong dam toi build/up)" >&2; exit 1; }
+[ "$((thoi_diem_sau_3b - thoi_diem_truoc_3b))" -lt 30 ] \
+  || { echo "THAT BAI: lan goi lai mat qua 30 giay -- nghi ngo co cho_san_sang(300) that su chay (tuc la co build/up that, khong chi dung som)" >&2; exit 1; }
+head_sau_3b=$(git -C "$GOC_CHECKOUT" rev-parse HEAD)
+[ "$head_sau_3b" = "$moi_commit_b" ] \
+  || { echo "THAT BAI: HEAD bi doi o lan goi cap_nhat thu hai du dang le phai dung truoc merge" >&2; exit 1; }
+echo "    DAT: goi lai cap_nhat khong tu thu build ban da biet HONG -- dung nhanh (${thoi_diem_sau_3b}-${thoi_diem_truoc_3b}s), khong doi container, khong doi HEAD"
 
 echo ""
 echo "=== Kich ban phu: khong QLGX_BO_QUA_R2 -- cap_nhat PHAI thu goi qlgx-runner.sh (chua ton tai) va DUNG lai, KHONG cap nhat lang le ==="

@@ -461,20 +461,51 @@ quay_lui() {
   local commit="${1:-}"
   [ -n "$commit" ] || commit=$(cat "$GOC_UNG_DUNG/.phien-ban-truoc" 2>/dev/null || true)
   [ -n "$commit" ] || bao_loi_va_thoat "Khong biet quay lui ve dau (thieu .phien-ban-truoc)."
+  # Ghi lai commit dang chay TRUOC khi checkout doi huong -- day chinh la "commit hong" ta dang
+  # ROI KHOI (du goi tu cap_nhat ngay sau mot lan merge that bai, hay goi tay qua CLI sau nay) --
+  # dung de danh dau .phien-ban-hong ben duoi, tranh cap_nhat tu dong thu lai dung ban da biet
+  # hong o lan chay ke tiep (xem giai thich o cap_nhat).
+  local commit_hong
+  commit_hong=$(git -C "$GOC_CHECKOUT" rev-parse HEAD)
   ghi_log canh-bao "Quay lui ve $commit"
   git -C "$GOC_CHECKOUT" checkout -q "$commit" --
-  dc build api && dc up -d api
-  cho_san_sang 300 \
-    || bao_loi_va_thoat "Quay lui roi ma he thong VAN khong len duoc. Dung 'qlgx restore' voi " \
-                        "ban sao 'truoc-cap-nhat' vua tao."
+  # Boc chung dc build/up trong `if ! ( ... )` (giong cach cap_nhat da lam voi build ban moi o
+  # duoi) thay vi de tran duoi set -euo pipefail: neu KHONG boc, `dc up -d api` that bai se bi
+  # errexit giet script NGAY, bo qua ca cho_san_sang lan cau huong dan "dung qlgx restore" ben
+  # duoi -- dung luc giao xu mat dich vu va can chi dan nhat thi thong diep lai bi nuot mat.
+  if ! (dc build api && dc up -d api && cho_san_sang 300); then
+    bao_loi_va_thoat "Quay lui roi ma he thong VAN khong len duoc. Dung 'qlgx restore' voi " \
+                      "ban sao 'truoc-cap-nhat' vua tao."
+  fi
+  # Quay lui THANH CONG: .phien-ban-truoc khong con dung nua (no dang tro DUNG ve commit vua
+  # quay ve -- neu de nguyen, mot lan `qlgx rollback` ke tiep se checkout/rebuild/restart vo ich
+  # ve chinh ban dang chay roi bao "thanh cong" trong khi khong lui di dau ca). Xoa no di de lan
+  # `qlgx rollback` sau bao dung loi "khong con gi de quay lui" (xem kiem tra dau ham nay).
+  rm -f "$GOC_UNG_DUNG/.phien-ban-truoc"
+  # Danh dau commit VUA ROI KHOI la "da biet hong", de cap_nhat khong tu dong thu lai no o lan
+  # chay ke tiep (xem kiem tra .phien-ban-hong dau cap_nhat).
+  echo "$commit_hong" > "$GOC_UNG_DUNG/.phien-ban-hong"
   ghi_log thong-tin "Da quay lui thanh cong ve $commit."
 }
 
 cap_nhat() {
-  local hien_tai moi
+  local hien_tai moi ban_hong
   git -C "$GOC_CHECKOUT" fetch --quiet origin "$NHANH"
   hien_tai=$(git -C "$GOC_CHECKOUT" rev-parse HEAD)
   moi=$(git -C "$GOC_CHECKOUT" rev-parse "origin/$NHANH")
+
+  # Ban moi nhat tren GitHub trung voi mot ban DA TUNG bi quay lui vi hong -- KHONG tu dong thu
+  # lai. Thieu kiem tra nay, Task 15 (systemd timer goi cap_nhat dinh ky) se lap VO HAN: moi lan
+  # chay lai deu thay origin/$NHANH "moi hon" HEAD dang detached o ban cu, merge len, build lai
+  # DUNG ban da biet hong, crash, tu quay lui, roi lap lai y het o lan ke tiep -- moi vong ngung
+  # dich vu vai phut cho cho_san_sang that bai.
+  ban_hong=$(cat "$GOC_UNG_DUNG/.phien-ban-hong" 2>/dev/null || true)
+  if [ -n "$ban_hong" ] && [ "$moi" = "$ban_hong" ]; then
+    ghi_log canh-bao "Ban moi nhat tren GitHub ($(echo "$moi" | cut -c1-8)) da bi danh dau HONG" \
+                     "o lan cap nhat truoc — khong tu dong thu lai. Xoa .phien-ban-hong neu" \
+                     "muon thu lai thu cong, hoac cho ban va moi hon."
+    return 1
+  fi
 
   if [ "$hien_tai" = "$moi" ]; then
     ghi_log thong-tin "Da la ban moi nhat ($(echo "$hien_tai" | cut -c1-8)) — khong lam gi."
