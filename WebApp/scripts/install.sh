@@ -276,21 +276,39 @@ khoi_tao_giao_xu_va_admin() {
   mat_khau=$(hoi_hoac_bien QLGX_ADMIN_MAT_KHAU "Mat khau (toi thieu 8 ky tu)")
   ho_ten=$(hoi_hoac_bien QLGX_ADMIN_HO_TEN "Ho ten hien thi")
 
-  # Chay lai voi cung ten tai khoan se bao "da ton tai" -- coi la THANH CONG, khong phai loi,
-  # vi script duoc thiet ke de chay lai nhieu lan.
-  if dc exec -T \
+  # Goi CLI de THU tao. KHONG dua vao ma thoat hay so khop chuoi trong log cua no de quyet
+  # dinh idempotent -- thong bao "da ton tai" trong TaoTaiKhoanQuanTri.cs hien khong dau, nhung
+  # phan con lai cua ma nguon (TaiKhoanService.cs, QuanLyGiaoXuEndpoints.cs) dung "đã tồn tại"
+  # CO DAU cho cung y nghia; chi mot lan ai do thong nhat lai chinh ta la grep nay vo lang lang
+  # (dung lop loi Task 6/7 da tung mac: phan biet trang thai bang chuoi hien thi thay vi kiem
+  # trang thai THAT). Vi vay: chay CLI, RIENG BIET tu hoi lai CSDL xem tai khoan co that hay
+  # khong -- do moi la nguon su that duy nhat.
+  dc exec -T \
       -e QLGX_ADMIN_GIAO_XU_TEN="$ten_giao_xu" \
       -e QLGX_ADMIN_TAO_GIAO_XU_NEU_CHUA_CO=true \
       -e QLGX_ADMIN_TEN_TAI_KHOAN="$ten_tk" \
       -e QLGX_ADMIN_MAT_KHAU="$mat_khau" \
       -e QLGX_ADMIN_HO_TEN="$ho_ten" \
       -e QLGX_ADMIN_LOAI_TAI_KHOAN=9 \
-      api dotnet Qlgx.Api.dll tao-tai-khoan-quan-tri 2>&1 | tee /tmp/qlgx-tao-admin.log; then
-    ghi_log thong-tin "Da tao tai khoan quan tri he thong '$ten_tk'."
-  elif grep -q "da ton tai" /tmp/qlgx-tao-admin.log; then
-    ghi_log thong-tin "Tai khoan '$ten_tk' da co san -- bo qua."
+      api dotnet Qlgx.Api.dll tao-tai-khoan-quan-tri >/tmp/qlgx-tao-admin.log 2>&1 || true
+  cat /tmp/qlgx-tao-admin.log
+
+  local db user ten_giao_xu_sql ten_tk_sql da_co
+  db=$(doc_env_kv "$GOC_UNG_DUNG/.env" POSTGRES_DB)
+  user=$(doc_env_kv "$GOC_UNG_DUNG/.env" POSTGRES_USER)
+  # Thoat dau nhay don kieu SQL (nhan doi) truoc khi ghep truc tiep vao cau lenh -- ten giao xu/
+  # tai khoan la du lieu nguoi van hanh nhap, co the chua dau nhay don.
+  ten_giao_xu_sql=$(printf '%s' "$ten_giao_xu" | sed "s/'/''/g")
+  ten_tk_sql=$(printf '%s' "$ten_tk" | sed "s/'/''/g")
+  da_co=$(dc exec -T postgres psql -tAX -U "$user" -d "$db" -c \
+    "SELECT count(*) FROM tai_khoan t JOIN giao_xu g ON g.id = t.giao_xu_id
+     WHERE g.ten_giao_xu = '$ten_giao_xu_sql' AND t.ten_tai_khoan = '$ten_tk_sql'
+       AND NOT t.da_xoa;" 2>/dev/null | tr -d ' \r')
+
+  if [ "${da_co:-0}" -ge 1 ] 2>/dev/null; then
+    ghi_log thong-tin "Tai khoan '$ten_tk' da san sang trong CSDL (moi tao hoac da co san tu truoc)."
   else
-    bao_loi_va_thoat "Khong tao duoc tai khoan quan tri. Xem /tmp/qlgx-tao-admin.log"
+    bao_loi_va_thoat "Khong tao duoc tai khoan quan tri (CSDL xac nhan tai khoan KHONG ton tai). Xem /tmp/qlgx-tao-admin.log"
   fi
 }
 
@@ -299,9 +317,16 @@ cau_hinh_https() {
     TEN_MIEN=$(hoi_hoac_bien QLGX_TEN_MIEN "Ten mien (de trong neu chua co)")
   fi
   if [ -z "$TEN_MIEN" ]; then
+    # KHONG hua "chay lai script voi --domain=..." -- luc do .env da co san nen la_cai_moi tra
+    # false, main() di vao nhanh cap_nhat (hien la stub chua lam gi, xem Task 12), Caddyfile
+    # KHONG BAO GIO duoc sinh lai va giao xu se chay HTTP mai mai ma khong ai biet. Thong diep
+    # phai trung thuc voi nhung gi lam duoc HOM NAY.
     ghi_log canh-bao "CHUA CO TEN MIEN -- he thong se chay qua HTTP THUAN, khong ma hoa duong " \
                      "truyen. Du lieu giao dan (ho ten, ngay sinh, so can cuoc) di qua mang o " \
-                     "dang doc duoc. Chay lai script voi --domain=<ten mien> ngay khi co."
+                     "dang doc duoc. Khi co ten mien, can cau hinh lai HTTPS THU CONG (xem tai " \
+                     "lieu van hanh) -- chay lai install.sh --domain=<ten mien> luc nay CHUA co " \
+                     "tac dung (di vao duong cap nhat, hien chua xu ly lai HTTPS); tinh nang tu " \
+                     "dong cau hinh lai qua --domain se co o ban cap nhat sau."
     cat > "$GOC_UNG_DUNG/Caddyfile" <<'EOF'
 :80 {
 	reverse_proxy api:8080
@@ -386,6 +411,17 @@ tu_kiem_chung() {
 
   bang_bang() { [ "$(psql_hoi "$1")" = "$2" ]; }
   it_nhat()   { [ "$(psql_hoi "$1")" -ge "$2" ] 2>/dev/null; }
+  # QUAN TRONG (dung `set -o pipefail` nhu ca script): "! lenh | grep" la BAY fail-open -- neu
+  # `dc exec` that bai (container khong chay), pipeline tra khac 0, dau "!" DAO thanh 0 -> in
+  # DAT du chang kiem duoc gi. Vi vay tach RIENG hai dieu kien: (1) doc duoc bien moi truong cua
+  # container api PHAI thanh cong, (2) trong do KHONG duoc co AWS_SECRET_ACCESS_KEY -- ca hai
+  # deu phai dung thi moi DAT.
+  api_khong_lo_khoa_r2() {
+    local tep="/tmp/qlgx-env-api.$$"
+    if ! dc exec -T api env > "$tep" 2>/dev/null; then rm -f "$tep"; return 1; fi
+    if grep -q '^AWS_SECRET_ACCESS_KEY=' "$tep"; then rm -f "$tep"; return 1; fi
+    rm -f "$tep"
+  }
 
   echo "--- Bang tu kiem chung ---"
   bao "Container postgres dang chay"  eval 'dc ps --status running postgres | grep -q postgres'
@@ -401,8 +437,7 @@ tu_kiem_chung() {
   bao "Tep .env quyen 600"            test "$(stat -c '%a' "$env")" = "600"
   bao "backup.env quyen 600, chu root" \
       test "$(stat -c '%a:%U' "$THU_MUC_CAU_HINH/backup.env")" = "600:root"
-  bao "Container API KHONG biet khoa R2" \
-      eval '! dc exec -T api env | grep -q AWS_SECRET_ACCESS_KEY'
+  bao "Container API KHONG biet khoa R2" api_khong_lo_khoa_r2
   bao "In duoc PDF (Chromium co trong image)" \
       dc exec -T api sh -c 'find "$PLAYWRIGHT_BROWSERS_PATH" \( -name headless_shell -o -name chrome \) | head -1 | grep -q .'
   # The phuc hoi con nam tren chinh may chu sau 7 ngay nghia la no chua duoc cat ra ngoai --
@@ -459,9 +494,16 @@ main() {
     "$GOC_UNG_DUNG/scripts/qlgx-runner.sh" sao-luu --nhan "cai-dat-lan-dau"
     "$GOC_UNG_DUNG/scripts/qlgx-runner.sh" kiem-tra
   fi
-  tu_kiem_chung
+  # KHONG de `set -e` giet script neu tu_kiem_chung tra loi -- luu lai ma thoat THAY VI thoat
+  # ngay, vi Thẻ phục hồi BAT BUOC phai duoc in ra du bang kiem chung co mot muc phu KHONG DAT
+  # (vd Chromium thieu). Neu thoat truoc khi in the: .env da co san nen lan chay lai se di vao
+  # nhanh cap_nhat (stub, chua lam gi) -- khong con duong nao lay lai the ngoai doc tay
+  # backup.env. Dung if/else (khong phai `tu_kiem_chung || ...`) de tranh -e can thiep dang khac.
+  local ket_qua_kiem_chung
+  if tu_kiem_chung; then ket_qua_kiem_chung=0; else ket_qua_kiem_chung=1; fi
   in_the_phuc_hoi
   ghi_log thong-tin "HOAN TAT. Mo: ${TEN_MIEN:+https://$TEN_MIEN}${TEN_MIEN:-http://<dia-chi-ip-may-chu>}"
+  exit "$ket_qua_kiem_chung"
 }
 
 # Cho phep bo test nap file nay ma khong chay gi.
