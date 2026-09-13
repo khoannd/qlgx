@@ -1,0 +1,18 @@
+[Unit]
+Description=QLGX -- kiem hang doi cong viec moi phut
+
+[Timer]
+# Cho may khoi dong xong (docker len, container postgres san sang) roi hay chay luot dau.
+OnBootSec=2min
+# OnUnitActiveSec (KHONG phai OnUnitInactiveSec): dem tu luc luot truoc BAT DAU. Voi mot service
+# chi chay vai giay khi hang doi rong, hai cach gan nhu nhau; voi mot luot phuc hoi keo dai, cach
+# nay bao dam luot ke tiep duoc len lich ngay chu khong doi them mot phut nua.
+OnUnitActiveSec=1min
+AccuracySec=10s
+# Timer nay chi de "bam nut tren web thi trong mot phut co nguoi lam" -- lo mat vai luot luc may
+# tat khong co y nghia gi, cong viec van nam trong bang. Persistent=true se lam no chay bu hang
+# loat luot sau khi bat may, hoan toan vo ich o day.
+Persistent=false
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,15 @@
+[Unit]
+Description=QLGX -- dien tap phuc hoi hang tuan
+Documentation=https://github.com/khoannd/qlgx
+After=docker.service
+Requires=docker.service
+ConditionPathExists=/opt/qlgx/WebApp/scripts/qlgx-runner.sh
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/qlgx/backup.env
+# dien-tap nap ban sao vao mot CSDL RIENG (qlgx_dien_tap_<thoi diem>), kiem chung, roi xoa. No
+# KHONG dong toi CSDL that. Khoa do qlgx-restore.sh tu gianh -- xem gianh_khoa_phuc_hoi.
+ExecStart=/opt/qlgx/WebApp/scripts/qlgx-runner.sh dien-tap
+TimeoutStartSec=7200
+TimeoutStopSec=60

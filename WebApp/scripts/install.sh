@@ -539,13 +539,96 @@ cap_nhat() {
   fi
 
   tu_kiem_chung || { ghi_log loi "Kiem chung sau cap nhat KHONG DAT — quay lui."; quay_lui "$hien_tai"; return 1; }
+
+  # Lam moi CAC TEP unit va CLI `qlgx` theo ban vua merge -- ban moi co the doi lenh, doi duong
+  # dan, hoac them mot timer. KHONG goi cai_dat_systemd (ham do hoi/bat/tat timer): lua chon bat
+  # hay tat sao luu tu dong la cua nguoi van hanh, mot lan cap nhat khong duoc phep lat lai.
+  # `|| true`: may khong co systemd van cap nhat binh thuong, chi khong co timer.
+  cai_tep_systemd || true
+
   ghi_log thong-tin "Cap nhat xong: $(echo "$moi" | cut -c1-8)"
 }
 
-# Task 15 se thay the ham nay bang logic tao don vi systemd that de he thong tu khoi dong lai
-# dich vu sau khi may chu reboot. Tam thoi day chi la cho giu cho.
+# Chep cac tep unit va CLI `qlgx` vao he thong. KHONG bat/tat timer nao -- tach rieng de goi
+# duoc tu ca duong CAI MOI (sau do moi hoi va bat timer) lan duong CAP NHAT (chi lam moi tep,
+# TUYET DOI khong dung toi lua chon bat/tat ma nguoi van hanh da tu quyet dinh truoc do).
+#
+# Cac tep unit ghi cung duong dan /opt/qlgx/WebApp (duong dan that khi cai binh thuong). Bo test
+# tro GOC_CHECKOUT sang thu muc tam, nen phai thay lai cho khop -- neu khong, unit se tro toi mot
+# duong dan khong ton tai ma khong ai phat hien cho toi luc timer chay lan dau.
+# /run/systemd/system la cach kiem chuan cua chinh systemd de biet no DANG CHAY (khac voi "goi
+# systemd co cai dat"). Can no vi bo kiem thu dau-cuoi chay install.sh BEN TRONG mot container
+# khong co systemd: neu khong co kiem tra nay, `systemctl daemon-reload` that bai va `set -e`
+# giet ca lan cai, lam hong mot bo test von khong lien quan gi toi timer.
+co_systemd() { command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; }
+
+cai_tep_systemd() {
+  # CLI `qlgx` cai bat ke co systemd hay khong -- no chi goi lai cac script, khong can timer.
+  install -m 755 "$GOC_UNG_DUNG/scripts/qlgx" /usr/local/bin/qlgx
+
+  co_systemd || {
+    ghi_log canh-bao "May nay khong chay systemd -- BO QUA cai timer. Sao luu tu dong va hang" \
+                     "doi cong viec (nut bam tren giao dien web) se KHONG chay."
+    return 1
+  }
+
+  local thu_muc_unit="${THU_MUC_UNIT_SYSTEMD:-/etc/systemd/system}"
+  local nguon="$GOC_UNG_DUNG/scripts/systemd"
+  [ -d "$nguon" ] || bao_loi_va_thoat "Khong tim thay thu muc unit systemd: $nguon"
+  mkdir -p "$thu_muc_unit"
+
+  local tep ten
+  for tep in "$nguon"/*.service "$nguon"/*.timer; do
+    [ -f "$tep" ] || continue
+    ten="$(basename "$tep")"
+    if [ "$GOC_UNG_DUNG" = "/opt/qlgx/WebApp" ]; then
+      install -m 644 "$tep" "$thu_muc_unit/$ten"
+    else
+      # Dung '|' lam dau phan cach cua sed vi duong dan chua '/'. Duong dan co chua '|' thi tu
+      # choi han thay vi sinh ra mot unit hong am tham.
+      case "$GOC_UNG_DUNG" in
+        *'|'*) bao_loi_va_thoat "Duong dan ung dung chua ky tu '|' -- khong thay the duoc trong unit systemd." ;;
+      esac
+      sed "s|/opt/qlgx/WebApp|$GOC_UNG_DUNG|g" "$tep" > "$thu_muc_unit/$ten"
+      chmod 644 "$thu_muc_unit/$ten"
+    fi
+  done
+
+  # daemon-reload BAT BUOC sau moi lan doi noi dung unit: systemd giu ban da phan tich trong bo
+  # nho, khong tu doc lai tep. Thieu buoc nay thi `systemctl enable` ben duoi bat DUNG ban cu.
+  systemctl daemon-reload
+}
+
 cai_dat_systemd() {
-  ghi_log canh-bao "cai_dat_systemd: chua cai dat (se lam o Task 15)"
+  local bat_sao_luu="y"
+  if [ "$KHONG_TUONG_TAC" -eq 0 ]; then
+    read -rp "Bat sao luu tu dong 4 lan/ngay len R2? [Y/n]: " bat_sao_luu </dev/tty
+    bat_sao_luu="${bat_sao_luu:-y}"
+  fi
+
+  # Khong co systemd thi khong con gi de bat/tat -- cai_tep_systemd da bao roi.
+  cai_tep_systemd || return 0
+
+  case "$bat_sao_luu" in
+    [Yy]*|'')
+      systemctl enable --now qlgx-runner.timer qlgx-backup.timer qlgx-verify.timer
+      ghi_log thong-tin "Da bat: hang doi cong viec (moi phut), sao luu 4 lan/ngay," \
+                        "dien tap phuc hoi hang tuan."
+      ;;
+    *)
+      # Van bat runner.timer: khong co no thi nut bam tren giao dien web se khong bao gio chay --
+      # nguoi dung bam "Sao luu ngay", dong cong viec nam mai o trang thai 'cho' va khong ai biet
+      # tai sao. runner.timer khong tu sao luu gi, no chi lam viec da duoc yeu cau.
+      systemctl enable --now qlgx-runner.timer
+      ghi_log canh-bao "CHUA bat sao luu tu dong. Bat sau bang:" \
+                       "systemctl enable --now qlgx-backup.timer qlgx-verify.timer"
+      ;;
+  esac
+
+  # Cap nhat tu dong MAC DINH TAT: cap nhat khong giam sat tren du lieu so sach giao xu la rui
+  # ro khong dang. Bat tay bang: systemctl enable --now qlgx-update.timer
+  systemctl disable qlgx-update.timer >/dev/null 2>&1 || true
+  ghi_log thong-tin "Cap nhat tu dong dang TAT. Bat bang: systemctl enable --now qlgx-update.timer"
 }
 
 main() {

@@ -1,0 +1,13 @@
+[Unit]
+Description=QLGX -- sao luu 4 lan moi ngay (00:00, 06:00, 12:00, 18:00 gio VN)
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:00:00 Asia/Ho_Chi_Minh
+# Tranh dung phut tron -- neu nhieu may chu cung lich thi khong cung luc day len R2.
+RandomizedDelaySec=300
+# Persistent=true: may chu giao xu hay bi tat dien. Sau khi bat lai, neu da lo mot moc thi chay
+# bu NGAY thay vi doi toi moc sau -- 6 gio so sach khong duoc sao luu la 6 gio khong lay lai duoc.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

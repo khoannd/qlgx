@@ -342,6 +342,245 @@ gianh_khoa_hoac_bo_qua() {
   fi
 }
 
+# ---------------------------------------------------------------------------------------------
+# VONG LAY CONG VIEC -- noi bang cong_viec_sao_luu (nut bam tren giao dien web) voi cac lenh o
+# tren. Giao dien web CHI biet INSERT mot dong vao bang; moi viec that xay ra o day.
+# ---------------------------------------------------------------------------------------------
+
+# Bao lau khong co tien trien thi coi mot cong viec 'dang_chay' la MO COI. 2 gio: du dai de mot
+# luot sao luu/phuc hoi that hoan tat tren may chu cham nhat, du ngan de khong de lo vo thoi han.
+GIO_JOB_QUA_HAN="${QLGX_GIO_JOB_QUA_HAN:-2}"
+
+# CHU Y COT: ten cot THAT trong CSDL la snake_case chu thuong (id, loai, trang_thai,
+# tham_so_json, tao_luc, bat_dau_luc, ket_thuc_luc, nhat_ky) -- da doi chieu truc tiep voi
+# Migrations/20260913071238_ThemBangSaoLuu.cs truoc khi viet, khong doan. Dinh danh dat trong
+# ngoac kep kieu "TrangThai" se KHONG khop cot that va cau lenh se loi ngay.
+#
+# FOR UPDATE SKIP LOCKED bao dam hai luot chay chong nhau (timer no khi luot truoc con chay)
+# khong the lay TRUNG mot job: luot thu hai bo qua dong da bi khoa thay vi cho, va vi ta LIMIT 1
+# nen no don gian khong lay duoc gi va thoat. Dieu kien "AND trang_thai = 'cho'" o menh de WHERE
+# NGOAI la lop chan thu hai: neu mot tien trinh khac vua commit xong viec gianh dung dong do
+# ngay giua hai buoc, UPDATE nay khop 0 dong thay vi cuop job dang chay cua ho.
+#
+# replace(..., E'\n', ' '): phia goi doc ket qua bang `head -1` + `IFS=$'\t' read`, nen mot
+# tham_so_json lo co xuong dong se cat mat phan duoi. Ep ve mot dong ngay trong SQL.
+#
+# VI SAO BOC TRONG "WITH ... SELECT" chu khong UPDATE ... RETURNING tran (da tu kiem chung tren
+# mot Postgres that, KHONG doan): `psql -tA -c "UPDATE ... RETURNING ..."` in ra CA cac dong
+# RETURNING LAN dong the lenh "UPDATE 1"/"UPDATE 0" o cuoi -- che do tuples-only chi bo tieu de
+# cot, khong bo the lenh. Hau qua that: khi hang doi RONG, dau ra khong phai chuoi rong ma la
+# "UPDATE 0", nen `[ -n "$dong" ]` van dung va bo chay lao vao xu ly mot "cong viec" ma ma so la
+# chuoi "UPDATE 0" -- moi phut mot lan, mai mai. Boc trong mot CTE roi SELECT thi lenh CUOI la
+# SELECT, psql in dung cac dong (khong co dong nao thi khong in gi).
+sql_gianh_job() {
+  cat <<'SQL'
+WITH gianh AS (
+  UPDATE cong_viec_sao_luu SET trang_thai = 'dang_chay', bat_dau_luc = now()
+  WHERE id = (SELECT id FROM cong_viec_sao_luu WHERE trang_thai = 'cho'
+              ORDER BY tao_luc LIMIT 1 FOR UPDATE SKIP LOCKED)
+    AND trang_thai = 'cho'
+  RETURNING id, loai, tham_so_json)
+SELECT id::text || E'\t' || loai || E'\t'
+       || replace(coalesce(tham_so_json, '{}'), E'\n', ' ')
+FROM gianh;
+SQL
+}
+
+# VI SAO HAM NAY TON TAI -- doc ky truoc khi bo di:
+# Guard "khong xep hang hai cong viec chong nhau" trong SaoLuuService.TaoCongViec (C#) coi BAT KY
+# dong nao dang o 'cho' HOAC 'dang_chay' la du de TU CHOI tao cong viec moi. Neu bo chay tren host
+# chet giua chung (mat dien, kill -9, OOM, systemd het TimeoutStartSec) thi mot dong 'dang_chay'
+# se nam lai VINH VIEN, va tu do tro di khong ai tao duoc cong viec sao luu hay phuc hoi nao nua --
+# khong co nut bam nao sua duoc, chi co vao thang CSDL go tay, ma nguoi van hanh that (quy cha,
+# quy so) khong tu lam duoc. Do la mot cach mat du lieu so sach giao xu am tham: he thong tu bao
+# "dang ban" trong nhieu thang.
+# Vi vay: moi luot chay-job (systemd timer goi moi phut) tu quet va danh dau 'loi' cho cac dong
+# ket qua han, KEM nhat ky giai thich de nguoi van hanh doc duoc tren giao dien.
+sql_don_job_mo_coi() {
+  local gio="${1:-$GIO_JOB_QUA_HAN}"
+  # So gio di THANG vao cau lenh SQL -- chi chap nhan so nguyen, moi thu khac ve mac dinh 2.
+  case "$gio" in ''|*[!0-9]*) gio=2 ;; esac
+  [ "$gio" -gt 0 ] 2>/dev/null || gio=2
+  # Boc CTE vi dung ly do da giai thich o sql_gianh_job: UPDATE tran lam psql in them dong
+  # "UPDATE 0" va bien "khong co job mo coi nao" thanh "co mot job mo coi ten 'UPDATE 0'" --
+  # cu the hon, no lam ghi_trang_thai_loi chay MOI PHUT va man hinh quan tri do vinh vien.
+  cat <<SQL
+WITH don AS (
+  UPDATE cong_viec_sao_luu
+  SET trang_thai = 'loi', ket_thuc_luc = now(),
+      nhat_ky = coalesce(nhat_ky || E'\n', '')
+                || 'cong viec bi bo do, tu dong danh dau loi sau $gio gio khong co tien trien'
+  WHERE trang_thai = 'dang_chay'
+    AND coalesce(bat_dau_luc, tao_luc) < now() - make_interval(hours => $gio)
+  RETURNING id)
+SELECT id::text FROM don;
+SQL
+}
+
+la_uuid() { case "$1" in [0-9a-fA-F]*-*-*-*-*) return 0 ;; *) return 1 ;; esac; }
+
+don_job_mo_coi() {
+  local ket_qua ma so=0
+  ket_qua=$(psql_quan_tri -c "$(sql_don_job_mo_coi)" 2>/dev/null || true)
+  [ -n "$ket_qua" ] || return 0
+  while IFS= read -r ma; do
+    # Chi dem/bao nhung dong THAT SU la ma cong viec. Mot dong rac (loi psql, the lenh) khong
+    # duoc phep lam man hinh quan tri do len -- xem ghi chu ve "UPDATE 0" o sql_gianh_job.
+    la_uuid "$ma" || continue
+    so=$((so + 1))
+    ghi_log canh-bao "Cong viec $ma ket o 'dang_chay' qua $GIO_JOB_QUA_HAN gio -- tu dong danh" \
+                     "dau 'loi' de hang doi khong bi chan vinh vien."
+  done <<< "$ket_qua"
+  [ "$so" -gt 0 ] || return 0
+  ghi_trang_thai_loi "Co cong viec sao luu bi bo do giua chung (bo chay bi ngat?), da tu dong danh dau loi."
+}
+
+# Doc snapshotId tu tham_so_json. CO Y khong dung python3/jq: gia tri nay di THANG vao dong lenh
+# restic va qlgx-restore.sh, nen buoc quan trong khong phai la "phan tich JSON that chuan" ma la
+# CHI CHO QUA mot ma snapshot hop le (chu va so). Moi thu khac -- dau nhay, dau cach, ';', JSON
+# hong, khoa vang mat, gia tri null -- deu tra ve chuoi rong, va phia goi coi do la loi tham so.
+doc_snapshot_tu_tham_so() {
+  local json="${1:-}" gia_tri=""
+  gia_tri=$(printf '%s' "$json" \
+    | grep -o '"snapshotId"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 || true)
+  gia_tri="${gia_tri%\"}"    # bo dau nhay dong cuoi
+  gia_tri="${gia_tri##*\"}"  # bo moi thu toi dau nhay mo cua gia tri
+  case "$gia_tri" in
+    ''|*[!A-Za-z0-9]*) printf '' ;;
+    *)                 printf '%s' "$gia_tri" ;;
+  esac
+}
+
+# ket_thuc_job <ma> <trang_thai> <nhat_ky>
+# Escape theo dung cach da dung o ghi_trang_thai_loi: nhan doi dau nhay don roi bao trong nhay
+# don. TUYET DOI khong dung dollar-quoting ($$...$$) trong chuoi bash co ngoac kep -- bash doi
+# "$$" thanh PID cua chinh no ngay trong ngoac kep (xem ghi chu o ghi_trang_thai_loi).
+ket_thuc_job() {
+  local ma="$1" trang_thai="$2" nhat_ky="${3:-}"
+  la_uuid "$ma" \
+    || { ghi_log canh-bao "Ma cong viec '$ma' khong phai uuid -- bo qua buoc ghi ket qua."; return 0; }
+  nhat_ky="${nhat_ky//\'/\'\'}"
+  psql_quan_tri -c "UPDATE cong_viec_sao_luu
+    SET trang_thai = '$trang_thai', ket_thuc_luc = now(), nhat_ky = '$nhat_ky'
+    WHERE id = '$ma';" >/dev/null 2>&1 || true
+}
+
+# Gianh khoa runner NHUNG khong thoat khi ban (khac gianh_khoa_hoac_bo_qua, ham do goi `exit 0`).
+# Vong lay job can biet "dang ban" de BO QUA luot nay ma KHONG gianh job -- de job nam lai trang
+# thai 'cho', phut sau timer goi lai va lay tiep.
+gianh_khoa_neu_ranh() {
+  command -v flock >/dev/null 2>&1 || {
+    ghi_log canh-bao "May khong co lenh 'flock' -- vong lay job chay KHONG khoa."
+    return 0
+  }
+  mkdir -p "$(dirname "$KHOA_RUNNER")" 2>/dev/null || true
+  exec 9>"$KHOA_RUNNER" || return 1
+  flock -n 9 || return 1
+}
+
+# Dong fd 9 => nha khoa. PHAI goi TRUOC khi chay qlgx-restore.sh: script do tu gianh chinh
+# $KHOA_RUNNER nay, va con goi lai qlgx-runner.sh sao-luu (buoc sao luu bat buoc truoc phuc hoi)
+# nhu mot tien trinh con -- tien trinh do cung can khoa. Giu khoa o day se lam ca hai that bai.
+nha_khoa_runner() { exec 9>&- 2>/dev/null || true; }
+
+lenh_chay_job() {
+  # BUOC DAU TIEN, truoc ca viec gianh khoa va gianh job: xem sql_don_job_mo_coi de biet vi sao
+  # day phai la viec dau tien chu khong phai mot lenh rieng ai do nho chay.
+  don_job_mo_coi
+
+  if ! gianh_khoa_neu_ranh; then
+    ghi_log thong-tin "Dang co luot sao luu/phuc hoi khac chay -- de cong viec lai hang doi," \
+                      "phut sau lay tiep."
+    return 0
+  fi
+
+  local dong
+  dong=$(psql_quan_tri -c "$(sql_gianh_job)" 2>/dev/null | head -1 || true)
+  [ -n "$dong" ] || { nha_khoa_runner; return 0; }   # khong co viec gi -- truong hop binh thuong nhat
+
+  local ma loai tham_so snapshot
+  IFS=$'\t' read -r ma loai tham_so <<< "$dong"
+  # Lop chan cuoi: khong bao gio coi mot dong khong phai uuid la cong viec (xem ghi chu "UPDATE 0"
+  # o sql_gianh_job). Tha khong lam gi con hon tao ra tep nhat ky ten la va bao loi gia moi phut.
+  if ! la_uuid "$ma"; then
+    ghi_log canh-bao "Dau ra la tu cau gianh job, khong phai ma cong viec: '$dong' -- bo qua."
+    nha_khoa_runner; return 0
+  fi
+  ghi_log thong-tin "Nhan cong viec $loai ($ma)"
+
+  local nhat_ky_tep="$THU_MUC_LOG/job-$ma.log"
+  local ma_thoat=0
+  case "$loai" in
+    sao_luu)           lenh_sao_luu --nhan thu-cong --nguon thu_cong >"$nhat_ky_tep" 2>&1 || ma_thoat=$? ;;
+    kiem_tra)          lenh_kiem_tra                                 >"$nhat_ky_tep" 2>&1 || ma_thoat=$? ;;
+    dong_bo_danh_sach) lenh_dong_bo_danh_sach                        >"$nhat_ky_tep" 2>&1 || ma_thoat=$? ;;
+    tai_ve)
+      snapshot="$(doc_snapshot_tu_tham_so "$tham_so")"
+      if [ -z "$snapshot" ]; then
+        ma_thoat=1
+        echo "Thieu (hoac khong hop le) snapshotId trong tham so cong viec." >"$nhat_ky_tep"
+      else
+        lenh_tai_ve "$snapshot" "$ma" >"$nhat_ky_tep" 2>&1 || ma_thoat=$?
+      fi ;;
+    dien_tap)
+      nha_khoa_runner
+      lenh_dien_tap >"$nhat_ky_tep" 2>&1 || ma_thoat=$? ;;
+    phuc_hoi)
+      nha_khoa_runner
+      snapshot="$(doc_snapshot_tu_tham_so "$tham_so")"
+      if [ -z "$snapshot" ]; then
+        ma_thoat=1
+        echo "Thieu (hoac khong hop le) snapshotId trong tham so cong viec." >"$nhat_ky_tep"
+      else
+        # qlgx-restore.sh tu ghi ket qua vao bang cong viec cua CSDL MOI sau khi hoan doi -- ban
+        # ghi trong CSDL cu bien mat cung CSDL do, nen KHONG goi ket_thuc_job o day khi thanh cong.
+        "$GOC_UNG_DUNG/scripts/qlgx-restore.sh" \
+          --snapshot "$snapshot" --ma-job "$ma" --apply >"$nhat_ky_tep" 2>&1 || ma_thoat=$?
+        if [ "$ma_thoat" -eq 0 ]; then
+          ghi_log thong-tin "Cong viec phuc hoi $ma xong (ket qua do qlgx-restore.sh ghi vao CSDL moi)."
+          lenh_don_spool
+          return 0
+        fi
+      fi ;;
+    *) ma_thoat=1; printf 'Loai cong viec khong hieu: %s\n' "$loai" >"$nhat_ky_tep" ;;
+  esac
+
+  # Chi giu 8000 byte CUOI: nhat ky nay hien nguyen van tren man hinh quan tri, va phan huu ich
+  # khi that bai luon nam o cuoi.
+  local noi_dung; noi_dung=$(tail -c 8000 "$nhat_ky_tep" 2>/dev/null || echo "")
+  if [ "$ma_thoat" -eq 0 ]; then
+    ket_thuc_job "$ma" xong "$noi_dung"
+    ghi_log thong-tin "Cong viec $ma ($loai) xong."
+  else
+    ket_thuc_job "$ma" loi "$noi_dung"
+    ghi_trang_thai_loi "Cong viec $loai that bai"
+    ghi_log loi "Cong viec $ma that bai (ma $ma_thoat). Xem $nhat_ky_tep"
+  fi
+  lenh_don_spool
+}
+
+lenh_dien_tap() {
+  # Ranh gioi giua "co sao luu" va "co kha nang phuc hoi": mot ban sao chua tung duoc phuc hoi
+  # thu chi la mot gia dinh.
+  #
+  # qlgx-restore.sh tu ghi dien_tap_gan_nhat/dien_tap_dat khi no chay toi buoc kiem chung
+  # (ghi_ket_qua_dien_tap). Nhung neu no chet SOM hon the -- khong tai duoc snapshot, kho R2 hong,
+  # het dia -- thi KHONG dong nao duoc ghi va man hinh quan tri se hien so lieu dien tap CU nhu
+  # the khong co gi xay ra. Vi vay o day van ghi lai mot lan nua: ghi de bang cung gia tri khi
+  # thanh cong (vo hai), va bit dung lo hong "that bai truoc khi kip ghi".
+  if "$GOC_UNG_DUNG/scripts/qlgx-restore.sh" --snapshot latest --dien-tap; then
+    psql_quan_tri -c "UPDATE trang_thai_sao_luu
+      SET dien_tap_gan_nhat = now(), dien_tap_dat = true WHERE id = 1;" >/dev/null
+    ghi_log thong-tin "Dien tap phuc hoi DAT."
+  else
+    psql_quan_tri -c "UPDATE trang_thai_sao_luu
+      SET dien_tap_gan_nhat = now(), dien_tap_dat = false,
+          loi_gan_nhat = 'Dien tap phuc hoi that bai' WHERE id = 1;" >/dev/null
+    ghi_log loi "Dien tap phuc hoi THAT BAI."
+    return 1
+  fi
+}
+
 main_runner() {
   nap_cau_hinh
   local lenh="${1:-}"; shift || true
@@ -351,7 +590,13 @@ main_runner() {
     dong-bo-danh-sach) gianh_khoa_hoac_bo_qua "$lenh"; lenh_dong_bo_danh_sach ;;
     tai-ve)            lenh_tai_ve "$@" ;;
     don-spool)         lenh_don_spool ;;
-    *) bao_loi_va_thoat "Lenh khong hieu: '$lenh'. Dung: sao-luu|kiem-tra|dong-bo-danh-sach|tai-ve|don-spool" ;;
+    # chay-job/dien-tap KHONG goi gianh_khoa_hoac_bo_qua o day: chay-job tu quan ly khoa (phai
+    # nha truoc khi goi qlgx-restore.sh), con dien-tap chay qlgx-restore.sh -- script do tu gianh
+    # dung tep khoa nay.
+    chay-job)          lenh_chay_job ;;
+    dien-tap)          lenh_dien_tap ;;
+    *) bao_loi_va_thoat "Lenh khong hieu: '$lenh'." \
+         "Dung: sao-luu|kiem-tra|dong-bo-danh-sach|tai-ve|don-spool|chay-job|dien-tap" ;;
   esac
 }
 

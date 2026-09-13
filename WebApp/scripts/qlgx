@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# CLI van hanh QLGX. CHI la mot bo dieu phoi mong -- moi viec that nam o cac script chuyen trach
+# (install.sh, qlgx-runner.sh, qlgx-restore.sh). Co y KHONG cai dat them logic nao o day: mot
+# quy tac nghiep vu viet o hai cho la mot quy tac se lech nhau.
+set -euo pipefail
+
+GOC="${QLGX_GOC_UNG_DUNG:-/opt/qlgx/WebApp}"
+
+huong_dan() {
+  cat <<'EOF'
+Cach dung: qlgx <lenh>
+
+  status              In bang tu kiem chung toan he thong
+  backup [--nhan X]   Sao luu ngay
+  check               Kiem tra tinh toan ven kho sao luu
+  verify              Dien tap phuc hoi (khong dong toi du lieu that)
+  restore --snapshot <id> [--apply]
+                      Phuc hoi. KHONG co --apply thi chi in ke hoach.
+  update              Kiem va cai ban moi (tu sao luu truoc, tu quay lui neu hong)
+  rollback            Quay ve phien ban truoc
+  jobs                20 cong viec gan nhat
+  logs [dich-vu]      Xem log (mac dinh: api)
+EOF
+}
+
+# doc_env_kv cat dung mot lan o dau '=' dau tien -- mat khau/khoa co the chua dau '='. KHONG dung
+# `cut -d= -f2` o day vi ly do do. Nap tu chung.sh thay vi chep lai: mot ban chep la mot ban se
+# lech khi chung.sh duoc sua.
+nap_chung() {
+  [ -r "$GOC/scripts/chung.sh" ] \
+    || { echo "[X] Khong doc duoc $GOC/scripts/chung.sh -- QLGX da duoc cai o $GOC chua?" >&2; exit 1; }
+  # shellcheck source=/dev/null
+  source "$GOC/scripts/chung.sh"
+}
+
+dc() {
+  docker compose --project-directory "$GOC" \
+    -f "$GOC/docker-compose.yml" -f "$GOC/docker-compose.prod.yml" "$@"
+}
+
+case "${1:-}" in
+  status)   exec bash "$GOC/scripts/install.sh" --status ;;
+  update)   shift; exec bash "$GOC/scripts/install.sh" --non-interactive "$@" ;;
+  # Nap install.sh o che do chi-dinh-nghia-ham roi goi thang quay_lui. quay_lui tu doc commit
+  # can quay ve tu $GOC/.phien-ban-truoc va tu dung dc/cho_san_sang da dinh nghia trong do.
+  # Dung `export` (khong phai tien to `VAR=1 source ...`) cho ro rang va chac chan.
+  rollback) exec bash -c 'export QLGX_CHI_NAP_HAM=1; source "$1/scripts/install.sh"; quay_lui' _ "$GOC" ;;
+  backup)   shift; exec bash "$GOC/scripts/qlgx-runner.sh" sao-luu "$@" ;;
+  verify)   exec bash "$GOC/scripts/qlgx-runner.sh" dien-tap ;;
+  check)    exec bash "$GOC/scripts/qlgx-runner.sh" kiem-tra ;;
+  restore)  shift; exec bash "$GOC/scripts/qlgx-restore.sh" "$@" ;;
+  jobs)
+    nap_chung
+    # KHONG `exec dc ...`: dc la mot HAM shell, `exec` chi thay the tien trinh bang mot TEP thuc
+    # thi -- `exec ten_ham` bao "not found" va thoat 127.
+    dc exec -T postgres psql -X \
+      -U "$(doc_env_kv "$GOC/.env" POSTGRES_USER)" \
+      -d "$(doc_env_kv "$GOC/.env" POSTGRES_DB)" \
+      -c 'SELECT tao_luc, loai, trang_thai, buoc_hien_tai
+            FROM cong_viec_sao_luu ORDER BY tao_luc DESC LIMIT 20;' ;;
+  logs)
+    shift
+    # ${@:-api}: khong truyen ten dich vu thi xem log api. Duoi `set -u` cach viet nay van an
+    # toan khi $@ rong.
+    dc logs -f "${@:-api}" ;;
+  help|--help|-h)
+    huong_dan ;;
+  *)
+    # Lenh khong hieu (hoac khong co lenh nao): in huong dan ro rang chu KHONG de bash bao mot
+    # loi cu phap tho -- nguoi doc man hinh nay thuong la quy cha/quy so, khong phai lap trinh vien.
+    [ -n "${1:-}" ] && echo "[X] Lenh khong hieu: '$1'" >&2
+    huong_dan >&2
+    exit 1 ;;
+esac

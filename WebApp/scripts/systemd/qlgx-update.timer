@@ -1,0 +1,13 @@
+[Unit]
+Description=QLGX -- kiem ban cap nhat hang tuan (MAC DINH TAT)
+
+[Timer]
+# MAC DINH TAT. install.sh co y `systemctl disable qlgx-update.timer` sau khi cai: cap nhat khong
+# giam sat tren du lieu so sach giao xu la rui ro khong dang, du install.sh co duong tu quay lui.
+# Bat tay khi nguoi van hanh thuc su muon:  systemctl enable --now qlgx-update.timer
+OnCalendar=Mon *-*-* 04:00:00 Asia/Ho_Chi_Minh
+RandomizedDelaySec=1800
+Persistent=true
+
+[Install]
+WantedBy=timers.target

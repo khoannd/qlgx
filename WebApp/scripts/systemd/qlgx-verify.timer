@@ -1,0 +1,12 @@
+[Unit]
+Description=QLGX -- dien tap phuc hoi Chu nhat 03:00 gio VN
+
+[Timer]
+# 03:00 Chu nhat: gio it nguoi dung nhat, va truoc gio le sang. Dien tap khong dung CSDL that
+# nhung van an dia va CPU nen khong dat vao gio lam viec.
+OnCalendar=Sun *-*-* 03:00:00 Asia/Ho_Chi_Minh
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

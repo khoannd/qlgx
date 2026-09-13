@@ -1,0 +1,17 @@
+[Unit]
+Description=QLGX -- cap nhat phan mem
+Documentation=https://github.com/khoannd/qlgx
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+ConditionPathExists=/opt/qlgx/WebApp/scripts/install.sh
+
+[Service]
+Type=oneshot
+# install.sh o che do --non-interactive: tu sao luu TRUOC khi cap nhat, tu kiem chung sau khi
+# cap nhat, va TU QUAY LUI neu ban moi khong len duoc (xem ham cap_nhat/quay_lui trong install.sh).
+ExecStart=/opt/qlgx/WebApp/scripts/install.sh --non-interactive
+# Cap nhat gom: sao luu bat buoc + git merge + docker build + doi API san sang (toi 300 giay) +
+# tu kiem chung, va co the con them mot vong quay lui nua. 2 gio la du rong cho ca duong xau nhat.
+TimeoutStartSec=7200
+TimeoutStopSec=60
