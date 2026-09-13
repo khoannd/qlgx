@@ -45,10 +45,15 @@ public static class SaoLuuEndpoints
             CancellationToken ct) =>
         {
             var (duongDan, loi) = await dv.LayDuongDanTaiVe(maCongViec, ct);
-            if (loi is not null)
-                return loi.Contains("đã bị dọn")
-                    ? Results.NotFound(new { thongBao = loi })
-                    : Results.BadRequest(new { thongBao = loi });
+            // Chon ma HTTP bang SWITCH TREN ENUM, khong bao gio so khop chuoi thong bao — thong
+            // bao la van ban hien thi, co the doi cau chu bat cu luc nao; ma HTTP la hop dong API.
+            if (loi is { } l)
+            {
+                var thongBao = SaoLuuService.ThongBaoLoiTaiVe(l);
+                return l == LoiTaiVe.TepDaBiDon
+                    ? Results.NotFound(new { thongBao })
+                    : Results.BadRequest(new { thongBao });
+            }
             if (duongDan is null) return Results.NotFound();
 
             return Results.File(duongDan, "application/octet-stream",

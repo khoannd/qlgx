@@ -8,6 +8,26 @@ using Qlgx.Domain.Entities;
 namespace Qlgx.Api.Services;
 
 /// <summary>
+/// Mã lỗi định danh cho <see cref="SaoLuuService.LayDuongDanTaiVe"/> — endpoint quyết định mã
+/// HTTP (400/404) bằng cách switch trên ENUM này, KHÔNG BAO GIỜ so khớp chuỗi thông báo tiếng
+/// Việt. Lý do: thông báo là văn bản hiển thị cho người dùng, có thể đổi câu chữ bất cứ lúc nào;
+/// nếu mã HTTP phụ thuộc từ ngữ của nó thì sửa câu chữ sẽ âm thầm đổi luôn hợp đồng API mà không
+/// compiler nào cảnh báo.
+/// </summary>
+public enum LoiTaiVe
+{
+    /// <summary>Công việc tồn tại nhưng không phải loại "tai_ve".</summary>
+    SaiLoaiCongViec,
+
+    /// <summary>Công việc đúng loại nhưng bộ chạy trên host chưa chạy xong.</summary>
+    ChuaXong,
+
+    /// <summary>Công việc đã xong nhưng tệp trong spool không còn (đã bị dọn sau 24 giờ, hoặc
+    /// bộ chạy chưa kịp ghi).</summary>
+    TepDaBiDon,
+}
+
+/// <summary>
 /// Nghiệp vụ màn hình "Sao lưu &amp; Phục hồi". CỐ Ý rất mỏng: dịch vụ này KHÔNG gọi restic,
 /// KHÔNG chạy pg_dump, KHÔNG đụng tới hệ thống tệp. Nó chỉ ghi một dòng vào hàng đợi công việc
 /// và đọc lại trạng thái mà bộ chạy trên host ghi về (xem CongViecSaoLuu.cs để biết vì sao ranh
@@ -111,29 +131,43 @@ public class SaoLuuService(QlgxDbContext db, IConfiguration cauHinh)
     /// Giao diện phải cảnh báo rõ ràng ngay tại nút tải (xem SaoLuuPage.tsx) — đừng vô tình nới
     /// lỏng cảnh báo này khi sửa lại hàm bên dưới.
     /// </summary>
-    public async Task<(string? duongDan, string? loi)> LayDuongDanTaiVe(
+    public async Task<(string? duongDan, LoiTaiVe? loi)> LayDuongDanTaiVe(
         Guid maCongViec, CancellationToken ct)
     {
         var cv = await db.CongViecSaoLuu.AsNoTracking().FirstOrDefaultAsync(x => x.Id == maCongViec, ct);
         if (cv is null) return (null, null); // 404 tron, khong tiet lo gi them
 
         if (cv.Loai != LoaiCongViecSaoLuu.TaiVe)
-            return (null, "Công việc này không phải là lượt chuẩn bị tệp tải về.");
+            return (null, LoiTaiVe.SaiLoaiCongViec);
 
         if (cv.TrangThai != TrangThaiCongViec.Xong)
-            return (null, "Tệp chưa chuẩn bị xong. Chờ công việc chạy xong rồi tải lại trang.");
+            return (null, LoiTaiVe.ChuaXong);
 
         // maCongViec la Guid (khong phai chuoi tu nguoi dung), nen ToString() khong the chua
         // "..", "/" hay ky tu dieu huong duong dan — Path.Combine o day an toan voi duong dan
         // duoi thu muc spool.
         var thuMuc = Path.Combine(ThuMucSpool, maCongViec.ToString());
+        // OrderBy tat dinh: neu spool lo co nhieu tep khop mau (khong nen xay ra o van hanh
+        // binh thuong), ket qua khong duoc phep phu thuoc thu tu tra ve cua he thong tep (thu
+        // tu do KHONG duoc dam bao boi Directory.EnumerateFiles).
         var tep = Directory.Exists(thuMuc)
-            ? Directory.EnumerateFiles(thuMuc, "*.dump.tar.gz").FirstOrDefault()
+            ? Directory.EnumerateFiles(thuMuc, "*.dump.tar.gz")
+                .OrderBy(x => x, StringComparer.Ordinal).FirstOrDefault()
             : null;
-        if (tep is null)
-            return (null, "Tệp tải về đã bị dọn (tệp trong spool chỉ giữ 24 giờ). " +
-                          "Hãy tạo lại một lượt tải về mới.");
+        if (tep is null) return (null, LoiTaiVe.TepDaBiDon);
 
         return (tep, null);
     }
+
+    /// <summary>Câu thông báo tiếng Việt hiển thị cho quản trị viên ứng với từng <see
+    /// cref="LoiTaiVe"/>. Tách riêng khỏi endpoint để nội dung câu chữ và mã lỗi định danh nằm
+    /// cùng một chỗ — sửa câu chữ ở đây không ảnh hưởng gì tới việc endpoint chọn mã HTTP nào.</summary>
+    public static string ThongBaoLoiTaiVe(LoiTaiVe loi) => loi switch
+    {
+        LoiTaiVe.SaiLoaiCongViec => "Công việc này không phải là lượt chuẩn bị tệp tải về.",
+        LoiTaiVe.ChuaXong => "Tệp chưa chuẩn bị xong. Chờ công việc chạy xong rồi tải lại trang.",
+        LoiTaiVe.TepDaBiDon => "Tệp tải về đã bị dọn (tệp trong spool chỉ giữ 24 giờ). " +
+                               "Hãy tạo lại một lượt tải về mới.",
+        _ => throw new ArgumentOutOfRangeException(nameof(loi)),
+    };
 }
