@@ -457,10 +457,58 @@ tu_kiem_chung() {
   ghi_log thong-tin "Toan bo muc kiem chung DAT."
 }
 
-# Task 12 se thay the ham nay bang logic cap nhat that (dung, chuyen sang ban moi, tu quay lui
-# neu that bai). Tam thoi day chi la cho giu cho de main() chay duoc het duong "cap nhat".
+quay_lui() {
+  local commit="${1:-}"
+  [ -n "$commit" ] || commit=$(cat "$GOC_UNG_DUNG/.phien-ban-truoc" 2>/dev/null || true)
+  [ -n "$commit" ] || bao_loi_va_thoat "Khong biet quay lui ve dau (thieu .phien-ban-truoc)."
+  ghi_log canh-bao "Quay lui ve $commit"
+  git -C "$GOC_CHECKOUT" checkout -q "$commit" --
+  dc build api && dc up -d api
+  cho_san_sang 300 \
+    || bao_loi_va_thoat "Quay lui roi ma he thong VAN khong len duoc. Dung 'qlgx restore' voi " \
+                        "ban sao 'truoc-cap-nhat' vua tao."
+  ghi_log thong-tin "Da quay lui thanh cong ve $commit."
+}
+
 cap_nhat() {
-  ghi_log canh-bao "cap_nhat: chua cai dat (se lam o Task 12)"
+  local hien_tai moi
+  git -C "$GOC_CHECKOUT" fetch --quiet origin "$NHANH"
+  hien_tai=$(git -C "$GOC_CHECKOUT" rev-parse HEAD)
+  moi=$(git -C "$GOC_CHECKOUT" rev-parse "origin/$NHANH")
+
+  if [ "$hien_tai" = "$moi" ]; then
+    ghi_log thong-tin "Da la ban moi nhat ($(echo "$hien_tai" | cut -c1-8)) — khong lam gi."
+    return 0
+  fi
+  ghi_log thong-tin "Co ban moi: $(echo "$hien_tai" | cut -c1-8) -> $(echo "$moi" | cut -c1-8)"
+
+  # Sao luu BAT BUOC truoc khi cap nhat. Day la luoi an toan cuoi cung neu migration cua ban
+  # moi lam hong lieu do — pg_advisory_lock chi chong hai tien trinh chay migration cung luc,
+  # KHONG chong duoc mot migration sai.
+  if [ "$BO_QUA_SAO_LUU" -eq 0 ] && [ "${QLGX_BO_QUA_R2:-0}" != "1" ]; then
+    ghi_log thong-tin "Sao luu truoc khi cap nhat"
+    "$GOC_UNG_DUNG/scripts/qlgx-runner.sh" sao-luu --nhan "truoc-cap-nhat" --nguon truoc_cap_nhat \
+      || bao_loi_va_thoat "Sao luu truoc cap nhat THAT BAI — dung cap nhat. Sua sao luu truoc."
+  else
+    ghi_log canh-bao "BO QUA sao luu truoc cap nhat theo yeu cau."
+  fi
+
+  echo "$hien_tai" > "$GOC_UNG_DUNG/.phien-ban-truoc"
+
+  git -C "$GOC_CHECKOUT" merge --ff-only "origin/$NHANH" \
+    || bao_loi_va_thoat "Khong merge fast-forward duoc — ban checkout da bi sua tay?"
+
+  # Bo sung khoa .env moi neu ban moi can, KHONG dung toi khoa cu (xem sinh_env).
+  sinh_env "$GOC_UNG_DUNG/.env"
+
+  if ! (dc build api && dc up -d api && cho_san_sang 300); then
+    ghi_log loi "Ban moi khong len duoc — dang quay lui."
+    quay_lui "$hien_tai"
+    return 1
+  fi
+
+  tu_kiem_chung || { ghi_log loi "Kiem chung sau cap nhat KHONG DAT — quay lui."; quay_lui "$hien_tai"; return 1; }
+  ghi_log thong-tin "Cap nhat xong: $(echo "$moi" | cut -c1-8)"
 }
 
 # Task 15 se thay the ham nay bang logic tao don vi systemd that de he thong tu khoi dong lai
