@@ -104,13 +104,46 @@ ghi_trang_thai_loi() {
     >/dev/null 2>&1 || true
 }
 
+# Dung THAY CHO bao_loi_va_thoat o BEN TRONG lenh_sao_luu: bao_loi_va_thoat goi `exit` truc
+# tiep, ma `exit` tuong minh KHONG lam `trap ... ERR` chay (da tu kiem chung) -- neu chi dua vao
+# ERR trap cua lenh_sao_luu (bat loi cua LENH BEN NGOAI that bai), cac diem tu kiem tra trong
+# ham (thieu toc.dat, globals.sql rong, tham so sai) se thoat MA KHONG ghi loi_gan_nhat, man
+# hinh quan tri (Task 6) khong bao gio bao do o dung nhung truong hop nay. Ham nay ghi truoc roi
+# moi thoat, dam bao MOI duong loi trong lenh_sao_luu deu qua duoc mot trong hai: ERR trap (lenh
+# ngoai that bai) hoac ham nay (tu kiem tra that bai).
+that_bai_sao_luu() {
+  ghi_trang_thai_loi "$1"
+  bao_loi_va_thoat "$1"
+}
+
+# Don dep dung cho lenh_sao_luu -- tach thanh ham rieng de dung LAM CHUNG cho ca trap don thu
+# muc tam TREN HOST lan don thu muc dump TRONG CONTAINER, goi duoc tu nhieu tin hieu (xem ly do
+# EXIT khong du o duoi). Bien tham chieu (TAM_DUMP_SAO_LUU, TEN_DUMP_CONTAINER) la bien TOAN CUC
+# (khong phai `local` cua lenh_sao_luu) vi ham nay co the duoc goi tu trap SAU KHI lenh_sao_luu
+# da tra ve -- neu bien la `local`, pham vi da mat, doc lai duoi `set -u` se loi "unbound
+# variable" va KHONG con lam gi ca (chinh la loi that da tu kiem chung va sua trong ban truoc).
+don_dep_sao_luu() {
+  rm -rf "${TAM_DUMP_SAO_LUU:-}" 2>/dev/null || true
+  [ -n "${TEN_DUMP_CONTAINER:-}" ] && dc exec -T postgres rm -rf "/tmp/$TEN_DUMP_CONTAINER" \
+    >/dev/null 2>&1 || true
+}
+
 lenh_sao_luu() {
+  # Bat truoc ca viec doc tham so: MOI duong loi trong ham nay (ke ca tham so sai) phai lam
+  # trang_thai_sao_luu.loi_gan_nhat sang do -- day la o duy nhat man hinh quan tri doc de bao
+  # sao luu hong (Task 6). `trap ... ERR` bat duoc LENH BEN NGOAI THAT BAI (pg_dump, restic,
+  # psql,... tra ve khac 0 duoi `set -e`), nhung KHONG bat duoc `exit` tuong minh cua
+  # bao_loi_va_thoat (da tu kiem chung: ERR trap khong chay khi ham goi `exit` truc tiep) --
+  # vi vay cac diem goi bao_loi_va_thoat trong ham nay duoc doi sang that_bai_sao_luu o duoi,
+  # ham do tu ghi loi_gan_nhat TRUOC khi thoat. Ca hai duong cong lai moi phu het "MOI duong loi".
+  trap 'ghi_trang_thai_loi "sao luu that bai (lenh cuoi cung tra ve loi, xem log tren may chu de biet chi tiet)"' ERR
+
   local nhan="" nguon=""
   while [ $# -gt 0 ]; do
     case "$1" in
       --nhan)  nhan="$2"; shift 2 ;;
       --nguon) nguon="$2"; shift 2 ;;
-      *) bao_loi_va_thoat "Tham so khong hieu: $1" ;;
+      *) that_bai_sao_luu "Tham so khong hieu: $1" ;;
     esac
   done
   [ -n "$nguon" ] || nguon=$(tinh_nguon_tu_nhan "$nhan")
@@ -118,18 +151,28 @@ lenh_sao_luu() {
   # ${TMPDIR:-/var/tmp}: /var/tmp la thu muc that tren moi may Linux muc tieu (khong doi hanh
   # vi that). Chi cho phep ghi de qua TMPDIR de kiem chung tren may dev khong co /var/tmp that
   # (vd Windows qua Git Bash).
-  #
-  # CHU Y BIEN TOAN CUC (khong phai loi go nham `local`): trap EXIT chi THAT SU chay luc TIEN
-  # TRINH thoat, tuc la SAU KHI ham nay da tra ve tu lau. Neu bien giu duong dan thu muc tam la
-  # `local`, pham vi cua no da bi huy khi trap chay -- duoi `set -u` viec doc lai bien se bao
-  # loi "unbound variable" va CAU LENH rm -rf KHONG BAO GIO duoc thuc thi, de lai nguyen anh dump
-  # CSDL CHUA MA HOA tren dia MAI MAI (da tu kiem chung that bang mot ham bash toi gian, day la
-  # loi that trong ban dau cua brief nay). Vi vay TAM_DUMP_SAO_LUU phai la bien TOAN CUC.
   TAM_DUMP_SAO_LUU=$(mktemp -d "${TMPDIR:-/var/tmp}/qlgx-sao-luu.XXXXXX")
   chmod 700 "$TAM_DUMP_SAO_LUU"
+  # Ten thu muc dump BEN TRONG container postgres: lay chinh hau to ngau nhien cua thu muc tam
+  # tren host lam hau to -- vua bao dam DUY NHAT cho moi lan chay (khong con la duong dan CO
+  # DINH /tmp/qlgx-dump nhu ban truoc) nen hai lan chay CHONG NHAU (cron dem + "sao luu truoc
+  # cap nhat" goi tu install.sh:521,573) khong con dung chung mot thu muc trong container --
+  # vua khong can sinh them nguon ngau nhien rieng.
+  TEN_DUMP_CONTAINER="qlgx-dump-$(basename "$TAM_DUMP_SAO_LUU")"
   # Ban dump THO chua toan bo du lieu giao dan, chua ma hoa -- khong bao gio de no nam lai tren
-  # dia. trap xoa ca khi loi hoac bi ngat (Ctrl-C, cron kill, mat ket noi SSH).
-  trap 'rm -rf "$TAM_DUMP_SAO_LUU"' EXIT
+  # dia (ca ban tren host lan ban trong container). trap tren CA BON tin hieu: EXIT (thoat binh
+  # thuong hoac qua `exit`/loi duoi set -e) KHONG tu bat SIGTERM (cron kill, `systemctl stop`)
+  # hay SIGHUP (rot SSH) -- phai khai bao rieng INT/TERM/HUP thi bash moi chay trap khi tien
+  # trinh nhan cac tin hieu do (da tu kiem chung: EXIT don thuan bo lot ca hai kich ban nay).
+  trap don_dep_sao_luu EXIT INT TERM HUP
+
+  # Don rac CUA LAN CHAY TRUOC neu co, TRONG CONTAINER, truoc khi pg_dump: neu lan truoc bi ngat
+  # giua chung (mat mang, cron bi kill) va khong kip don, pg_dump -Fd se TU CHOI ghi vao thu muc
+  # da ton tai va khong rong -- moi lan sao luu SAU DO se hong cho toi khi ai do vao container
+  # don tay. Vi ten thu muc gio DA MANG hau to rieng cho tung lan chay, moi "qlgx-dump-*" con sot
+  # lai luc nay chac chan la rac cua lan truoc (khong the la cua LAN NAY, ten LAN NAY con chua
+  # sinh ra).
+  dc exec -T postgres sh -c 'rm -rf /tmp/qlgx-dump-*' >/dev/null 2>&1 || true
 
   ghi_log thong-tin "Dump CSDL"
   # -Fd -Z0 (thu muc, KHONG tu nen) chu KHONG phai -Fc: -Fc nen san, mot byte doi o dau lam
@@ -138,17 +181,20 @@ lenh_sao_luu() {
   # khac biet lon: de restic tu nen va khu trung lap theo khoi. -j4 dump song song 4 bang mot
   # luc. Xem thiet ke muc 13.3.
   dc exec -T postgres pg_dump -Fd -Z0 -j4 -U "$(env_ung_dung POSTGRES_USER)" \
-      -d "$(env_ung_dung POSTGRES_DB)" -f /tmp/qlgx-dump
-  dc exec -T postgres tar -cf - -C /tmp qlgx-dump | tar -xf - -C "$TAM_DUMP_SAO_LUU"
-  dc exec -T postgres rm -rf /tmp/qlgx-dump
+      -d "$(env_ung_dung POSTGRES_DB)" -f "/tmp/$TEN_DUMP_CONTAINER"
+  dc exec -T postgres tar -cf - -C /tmp "$TEN_DUMP_CONTAINER" | tar -xf - -C "$TAM_DUMP_SAO_LUU"
+  # Doi ten lai thanh "qlgx-dump" co dinh TREN HOST (chi ten trong container la ngau nhien) de
+  # phan con lai cua ham nay va lenh_tai_ve (glob `*/qlgx-dump`) khong doi.
+  mv "$TAM_DUMP_SAO_LUU/$TEN_DUMP_CONTAINER" "$TAM_DUMP_SAO_LUU/qlgx-dump"
+  dc exec -T postgres rm -rf "/tmp/$TEN_DUMP_CONTAINER"
   [ -s "$TAM_DUMP_SAO_LUU/qlgx-dump/toc.dat" ] \
-    || bao_loi_va_thoat "pg_dump khong tao ra muc luc (toc.dat) -- DUNG, khong sao luu."
+    || that_bai_sao_luu "pg_dump khong tao ra muc luc (toc.dat) -- DUNG, khong sao luu."
 
   ghi_log thong-tin "Dump vai tro va quyen toan cuc"
   dc exec -T postgres pg_dumpall --globals-only -U "$(env_ung_dung POSTGRES_USER)" \
       > "$TAM_DUMP_SAO_LUU/globals.sql"
   [ -s "$TAM_DUMP_SAO_LUU/globals.sql" ] \
-    || bao_loi_va_thoat "pg_dumpall --globals-only tao ra tep rong -- DUNG."
+    || that_bai_sao_luu "pg_dumpall --globals-only tao ra tep rong -- DUNG."
 
   ghi_log thong-tin "Gom tep cau hinh"
   mkdir -p "$TAM_DUMP_SAO_LUU/cau-hinh"
@@ -171,8 +217,9 @@ lenh_sao_luu() {
 
   # Da day len kho restic xong -- xoa NGAY anh dump tho tren dia thay vi cho toi khi ham ket
   # thuc hay tien trinh thoat. Giam toi thieu thoi gian du lieu CHUA MA HOA ton tai tren dia.
+  # (Thu muc ben trong container da duoc xoa ngay sau buoc tar o tren.)
   rm -rf "$TAM_DUMP_SAO_LUU"
-  trap - EXIT
+  trap - EXIT INT TERM HUP
 
   ghi_log thong-tin "Kiem tra toan ven truoc khi don ban cu"
   restic check --read-data-subset=5%
@@ -180,13 +227,21 @@ lenh_sao_luu() {
   # THU TU CUNG: backup -> check -> forget. Khong bao gio xoa ban cu truoc khi ban moi duoc
   # xac nhan doc duoc.
   ghi_log thong-tin "Don ban cu theo chinh sach giu"
+  # --group-by host (KHONG con "host,paths" mac dinh cua restic): moi lan chay dung mot thu muc
+  # tam MOI (mktemp sinh hau to ngau nhien khac nhau) nen truong `paths` trong snapshot KHAC NHAU
+  # MOI LAN -- neu de restic tu nhom theo ca "paths" nhu mac dinh, MOI snapshot roi vao MOT nhom
+  # rieng chi co dung 1 phan tu, va --keep-last/--keep-daily/... se "giu" TAT CA vi moi nhom chi
+  # co 1 thanh vien de giu -- chinh sach giu ban COI NHU KHONG TON TAI, kho R2 phinh vo han. Moi
+  # snapshot QLGX deu cung MOT "host" logic (host cung dinh "qlgx" o lenh backup phia tren) du
+  # duong dan tam khac nhau, nen nhom theo host la dung.
   # shellcheck disable=SC2086
-  restic forget $GIU_LAI --prune
+  restic forget $GIU_LAI --group-by host --prune
 
   lenh_dong_bo_danh_sach
   psql_quan_tri -c "UPDATE trang_thai_sao_luu
                     SET sao_luu_gan_nhat = now(), loi_gan_nhat = NULL WHERE id = 1;" >/dev/null
   ghi_log thong-tin "Sao luu xong ($so_gd giao dan, $so_gdinh gia dinh)."
+  trap - ERR
 }
 
 lenh_kiem_tra() {
@@ -216,9 +271,18 @@ lenh_dong_bo_danh_sach() {
     echo "BEGIN;"
     echo "DELETE FROM ban_sao_luu;"
     loc_snapshot_json "$tam" | while IFS=$'\t' read -r id thoi_diem nhan byte gd gdinh; do
+      # Nhan doi dau nhay don TRONG NOI DUNG truoc khi bao vao nhay don SQL -- giong het cach
+      # ghi_trang_thai_loi da lam o tren, ap dung LAI o day cho NHAT QUAN. `nhan` la noi dung tag
+      # restic ma quan tri vien co the dat tuy y qua `--nhan` (ke ca goi tu giao dien qua Task
+      # 6/17) -- ban truoc thieu buoc nay: mot nhan nhu "Truoc le Cha So's" da du pha vo cau
+      # lenh SQL, co y thi la chen SQL chay duoi quyen chu CSDL qua `psql -f -`. id/thoi_diem lay
+      # tu chinh restic (khong phai dau vao nguoi dung) nhung van escape cho chac, dong bo/nguon
+      # suy tu enum co dinh (tinh_nguon_tu_nhan) nen von an toan nhung van escape cho nhat quan.
+      local id_e="${id//\'/\'\'}" thoi_diem_e="${thoi_diem//\'/\'\'}" nhan_e="${nhan//\'/\'\'}"
+      local nguon_e; nguon_e="$(tinh_nguon_tu_nhan "$nhan")"; nguon_e="${nguon_e//\'/\'\'}"
       printf "INSERT INTO ban_sao_luu (id,thoi_diem,nhan,kich_thuoc_byte,so_giao_dan,so_gia_dinh,nguon) VALUES ('%s','%s',%s,%s,%s,%s,'%s');\n" \
-        "$id" "$thoi_diem" "$([ -n "$nhan" ] && printf "'%s'" "$nhan" || echo NULL)" \
-        "${byte:-0}" "${gd:-0}" "${gdinh:-0}" "$(tinh_nguon_tu_nhan "$nhan")"
+        "$id_e" "$thoi_diem_e" "$([ -n "$nhan_e" ] && printf "'%s'" "$nhan_e" || echo NULL)" \
+        "${byte:-0}" "${gd:-0}" "${gdinh:-0}" "$nguon_e"
     done
     echo "COMMIT;"
   } | psql_quan_tri -f - >/dev/null
