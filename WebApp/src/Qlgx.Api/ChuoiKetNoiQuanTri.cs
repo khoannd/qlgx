@@ -18,10 +18,10 @@ namespace Qlgx.Api;
 /// giáo xứ nên phải dùng một vai trò KHÁC, có BYPASSRLS, cấu hình ở khoá riêng
 /// "ConnectionStrings:QlgxQuanTri".
 ///
-/// Mặc định (không đặt khoá riêng) dùng LẠI "ConnectionStrings:Qlgx" — giữ nguyên hoạt động cho
-/// môi trường dev/test hiện tại (một vai trò `postgres` superuser duy nhất, tự động bỏ qua RLS
-/// bất kể chính sách gì). Triển khai thật với từ hai giáo xứ trở lên BẮT BUỘC đặt hai vai trò
-/// khác nhau — xem TRIEN-KHAI.md.
+/// Mặc định (không đặt khoá riêng) dùng LẠI "ConnectionStrings:Qlgx" — CHỈ còn hợp lệ ở môi
+/// trường dev/test (một vai trò `postgres` superuser duy nhất, tự động bỏ qua RLS bất kể chính
+/// sách gì). Ở môi trường sản xuất, fallback này bị chặn cứng lúc khởi động: xem
+/// KiemTraCauHinh.LoiCauHinhSanXuat và WebApp/docs/CAI-DAT-MAY-CHU.md.
 /// </summary>
 public static class ChuoiKetNoiQuanTri
 {

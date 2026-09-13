@@ -111,6 +111,13 @@ builder.Services.AddScoped<MauInService>();
 
 var app = builder.Build();
 
+// Chặn cứng cấu hình thiếu an toàn ở môi trường sản xuất TRƯỚC khi phục vụ yêu cầu nào — xem
+// KiemTraCauHinh.cs để biết vì sao đây phải là lỗi khởi động chứ không phải cảnh báo.
+var loiCauHinh = KiemTraCauHinh.LoiCauHinhSanXuat(
+    builder.Configuration, app.Environment.IsProduction());
+if (loiCauHinh is not null)
+    throw new InvalidOperationException("Cấu hình sản xuất không hợp lệ: " + loiCauHinh);
+
 // Chay migration CSDL luc khoi dong — CHI KHI bat rieng qua cau hinh "Qlgx:ChayMigrationKhiKhoiDong"
 // (bien moi truong Qlgx__ChayMigrationKhiKhoiDong=true), mac dinh TAT. Ly do tat mac dinh: rat
 // nhieu tinh huong khoi dong host (moi test dung WebApplicationFactory<Program> thuan, mot host
