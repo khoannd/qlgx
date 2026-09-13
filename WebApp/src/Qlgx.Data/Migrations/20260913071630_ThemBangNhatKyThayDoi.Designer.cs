@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Qlgx.Data;
@@ -11,9 +12,11 @@ using Qlgx.Data;
 namespace Qlgx.Data.Migrations
 {
     [DbContext(typeof(QlgxDbContext))]
-    partial class QlgxDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260913071630_ThemBangNhatKyThayDoi")]
+    partial class ThemBangNhatKyThayDoi
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,6 +24,43 @@ namespace Qlgx.Data.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Qlgx.Domain.Entities.BanSaoLuu", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<long>("KichThuocByte")
+                        .HasColumnType("bigint")
+                        .HasColumnName("kich_thuoc_byte");
+
+                    b.Property<string>("Nguon")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("nguon");
+
+                    b.Property<string>("Nhan")
+                        .HasColumnType("text")
+                        .HasColumnName("nhan");
+
+                    b.Property<int>("SoGiaDinh")
+                        .HasColumnType("integer")
+                        .HasColumnName("so_gia_dinh");
+
+                    b.Property<int>("SoGiaoDan")
+                        .HasColumnType("integer")
+                        .HasColumnName("so_giao_dan");
+
+                    b.Property<DateTimeOffset>("ThoiDiem")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("thoi_diem");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ban_sao_luu");
+
+                    b.ToTable("ban_sao_luu");
+                });
 
             modelBuilder.Entity("Qlgx.Domain.Entities.BiTichChiTiet", b =>
                 {
@@ -446,6 +486,57 @@ namespace Qlgx.Data.Migrations
                         .HasDatabaseName("ix_chuyen_xu_giao_xu_id_ma_chuyen_xu_cu");
 
                     b.ToTable("chuyen_xu");
+                });
+
+            modelBuilder.Entity("Qlgx.Domain.Entities.CongViecSaoLuu", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("BatDauLuc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("bat_dau_luc");
+
+                    b.Property<string>("BuocHienTai")
+                        .HasColumnType("text")
+                        .HasColumnName("buoc_hien_tai");
+
+                    b.Property<DateTimeOffset?>("KetThucLuc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ket_thuc_luc");
+
+                    b.Property<string>("Loai")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("loai");
+
+                    b.Property<Guid?>("NguoiTaoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("nguoi_tao_id");
+
+                    b.Property<string>("NhatKy")
+                        .HasColumnType("text")
+                        .HasColumnName("nhat_ky");
+
+                    b.Property<DateTimeOffset>("TaoLuc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("tao_luc");
+
+                    b.Property<string>("ThamSoJson")
+                        .HasColumnType("text")
+                        .HasColumnName("tham_so_json");
+
+                    b.Property<string>("TrangThai")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("trang_thai");
+
+                    b.HasKey("Id")
+                        .HasName("pk_cong_viec_sao_luu");
+
+                    b.ToTable("cong_viec_sao_luu");
                 });
 
             modelBuilder.Entity("Qlgx.Domain.Entities.DotBiTich", b =>
@@ -2384,6 +2475,37 @@ namespace Qlgx.Data.Migrations
                         .HasDatabaseName("ix_thay_doi_giao_xu_id_bang_ban_ghi_id_dong_ho_vat_ly");
 
                     b.ToTable("thay_doi");
+                });
+
+            modelBuilder.Entity("Qlgx.Domain.Entities.TrangThaiSaoLuu", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("DienTapDat")
+                        .HasColumnType("boolean")
+                        .HasColumnName("dien_tap_dat");
+
+                    b.Property<DateTimeOffset?>("DienTapGanNhat")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("dien_tap_gan_nhat");
+
+                    b.Property<string>("LoiGanNhat")
+                        .HasColumnType("text")
+                        .HasColumnName("loi_gan_nhat");
+
+                    b.Property<DateTimeOffset?>("SaoLuuGanNhat")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sao_luu_gan_nhat");
+
+                    b.HasKey("Id")
+                        .HasName("pk_trang_thai_sao_luu");
+
+                    b.ToTable("trang_thai_sao_luu");
                 });
 
             modelBuilder.Entity("Qlgx.Domain.Entities.VaiTro", b =>

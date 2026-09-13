@@ -88,6 +88,12 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
     public DbSet<HoiDoan> HoiDoan => Set<HoiDoan>();
     public DbSet<ChiTietHoiDoan> ChiTietHoiDoan => Set<ChiTietHoiDoan>();
 
+    // --- Nhật ký thay đổi mức trường, theo giáo xứ, có bộ lọc tenant bên dưới ---
+    /// <summary>Sổ kiểm toán mọi ý định sửa, kể cả ý định thua cuộc gộp (xem ThayDoi.cs).</summary>
+    public DbSet<ThayDoi> ThayDoi => Set<ThayDoi>();
+    /// <summary>Chuỗi phát xuống, chỉ chứa thay đổi đã thắng, mang số thứ tự (xem HieuLuc.cs).</summary>
+    public DbSet<HieuLuc> HieuLuc => Set<HieuLuc>();
+
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.ApplyConfigurationsFromAssembly(typeof(QlgxDbContext).Assembly);
@@ -121,6 +127,8 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
         b.Entity<GiaoLyVien>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         b.Entity<HoiDoan>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         b.Entity<ChiTietHoiDoan>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<ThayDoi>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<HieuLuc>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         // GiaoPhan và GiaoHat KHÔNG có bộ lọc — chúng nằm trên cấp giáo xứ (xem GiaoPhan.cs).
 
         DatTenSnakeCase(b);

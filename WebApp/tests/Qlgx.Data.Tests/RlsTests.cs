@@ -351,4 +351,84 @@ public class RlsTests : IAsyncLifetime
         var khongThayGi = await ctxKhongBoiCanh.GiaoHo.Select(h => h.TenGiaoHo).ToListAsync();
         Assert.Empty(khongThayGi);
     }
+
+    /// <summary>
+    /// Nhật ký thay đổi (migration ThemBangNhatKyThayDoi) chứa NGUYÊN VĂN giá trị các ô dữ liệu,
+    /// nên rò rỉ ở đây tương đương rò rỉ toàn bộ sổ sách giáo xứ — phải kiểm chứng ở TẦNG
+    /// DATABASE bằng Npgsql thô, đúng lối các test RLS phía trên, không đi qua EF Core.
+    /// </summary>
+    [Fact]
+    public async Task Bang_nhat_ky_chiu_rls_nhu_bang_nghiep_vu()
+    {
+        var giaoXuA = _fixture.GiaoXuId;
+        var giaoXuB = Guid.NewGuid();
+
+        await using (var ctx = _fixture.TaoContext())
+        {
+            ctx.GiaoXu.Add(new GiaoXu { Id = giaoXuB, TenGiaoXu = "Giao xu Thanh Gia", MaGiaoXuCu = 3 });
+            ctx.ThayDoi.AddRange(
+                new ThayDoi
+                {
+                    GiaoXuId = giaoXuA, Bang = "GiaoDan", BanGhiId = Guid.NewGuid(),
+                    Truong = "HoTen", GiaTri = "\"Nguoi cua xu A\"", Loai = "sua",
+                    DongHoVatLy = DateTimeOffset.UtcNow, MaThaoTac = Guid.NewGuid(),
+                    GiaoDichId = Guid.NewGuid(),
+                },
+                new ThayDoi
+                {
+                    GiaoXuId = giaoXuB, Bang = "GiaoDan", BanGhiId = Guid.NewGuid(),
+                    Truong = "HoTen", GiaTri = "\"Nguoi cua xu B\"", Loai = "sua",
+                    DongHoVatLy = DateTimeOffset.UtcNow, MaThaoTac = Guid.NewGuid(),
+                    GiaoDichId = Guid.NewGuid(),
+                });
+            await ctx.SaveChangesAsync();
+        }
+
+        await using (var superuser = new NpgsqlConnection(_fixture.ChuoiKetNoi))
+        {
+            await superuser.OpenAsync();
+            await using var taoVaiTro = new NpgsqlCommand(
+                $"""
+                CREATE ROLE "{_tenVaiTro}" LOGIN PASSWORD '{MatKhauVaiTro}' NOSUPERUSER NOBYPASSRLS;
+                GRANT SELECT, INSERT, UPDATE, DELETE ON thay_doi TO "{_tenVaiTro}";
+                """, superuser);
+            await taoVaiTro.ExecuteNonQueryAsync();
+        }
+
+        var builder = new NpgsqlConnectionStringBuilder(_fixture.ChuoiKetNoi)
+        {
+            Username = _tenVaiTro,
+            Password = MatKhauVaiTro,
+        };
+
+        async Task<List<string>> DocGiaTri(Guid? datThamSoPhien)
+        {
+            await using var ketNoi = new NpgsqlConnection(builder.ConnectionString);
+            await ketNoi.OpenAsync();
+            if (datThamSoPhien is { } id)
+            {
+                await using var datPhien = new NpgsqlCommand(
+                    "SELECT set_config('app.giao_xu_id', @v, false)", ketNoi);
+                datPhien.Parameters.AddWithValue("v", id.ToString("D"));
+                await datPhien.ExecuteNonQueryAsync();
+            }
+
+            var ketQua = new List<string>();
+            await using var truyVan = new NpgsqlCommand("SELECT gia_tri::text FROM thay_doi", ketNoi);
+            await using var reader = await truyVan.ExecuteReaderAsync();
+            while (await reader.ReadAsync()) ketQua.Add(reader.GetString(0));
+            return ketQua;
+        }
+
+        var choA = await DocGiaTri(giaoXuA);
+        Assert.Single(choA);
+        Assert.Contains("xu A", choA[0]);
+
+        var choB = await DocGiaTri(giaoXuB);
+        Assert.Single(choB);
+        Assert.Contains("xu B", choB[0]);
+
+        // Kết nối thô "quên" gọi set_config -> đóng mặc định, không rò một dòng nào.
+        Assert.Empty(await DocGiaTri(datThamSoPhien: null));
+    }
 }

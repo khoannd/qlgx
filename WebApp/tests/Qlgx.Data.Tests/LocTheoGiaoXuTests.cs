@@ -70,7 +70,7 @@ public class LocTheoGiaoXuTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieu
              "CauHinh", "DuLieuChung", "VaiTro", "TenLoaiTaiKhoan", "TaiKhoan",
              "DotBiTich", "BiTichChiTiet", "ChuyenXu", "RaoHonPhoi", "TanHien", "LinhMuc",
              "KhoiGiaoLy", "LopGiaoLy", "ChiTietLopGiaoLy", "GiaoLyVien", "HoiDoan", "ChiTietHoiDoan",
-             "MauInTuyChinh", "CachHienThiDungSai"],
+             "MauInTuyChinh", "CachHienThiDungSai", "ThayDoi", "HieuLuc", "BoDemHieuLuc"],
             "danh sach bang co GiaoXuId phai duoc ra soat co y thuc moi khi thay doi, khong duoc troi qua im lang");
 
         // HAI bang MauInTuyChinh va CachHienThiDungSai la NGOAI LE CO CHU DICH: cot GiaoXuId cho phep NULL voi
@@ -85,7 +85,11 @@ public class LocTheoGiaoXuTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieu
         // CachHienThiDungSai (cau chu tuy chinh cho cac bien in dung/sai) dung y het khuon do:
         // GiaoXuId NULL = "anh xa cap he thong", CachHienThiDungSaiService va
         // InAnService.LayBangCachHienThi tu loc tuong minh. Xem CachHienThiDungSai.cs.
-        string[] ngoaiLeCoDongCapHeThong = ["MauInTuyChinh", "CachHienThiDungSai"];
+        // BoDemHieuLuc la ngoai le khac han: GiaoXuId o day la KHOA CHINH (khong nullable), chi
+        // duoc doc/ghi bang SQL tho trong CapSoHieuLuc voi dieu kien loc tuong minh theo
+        // giao_xu_id, va van chiu RLS o tang CSDL — gan them bo loc EF se khong sai nhung thua,
+        // vi khong co truy van LINQ nao qua DbSet nay ca. Xem BoDemHieuLuc.cs.
+        string[] ngoaiLeCoDongCapHeThong = ["MauInTuyChinh", "CachHienThiDungSai", "BoDemHieuLuc"];
         var thieuBoLoc = ungVien
             .Where(t => t.GetDeclaredQueryFilters().Count == 0)
             .Select(t => t.ClrType.Name)
