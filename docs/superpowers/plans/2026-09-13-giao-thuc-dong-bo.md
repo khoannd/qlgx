@@ -1715,10 +1715,17 @@ Expected: FAIL — `moc.Should().NotBeNull()` đỏ, vì đường ghi web chưa
 
 - [ ] **Step 3: Nối `MocO` vào `LuuCoNhatKy`**
 
-Trong cùng vòng lặp đã sinh dòng `ThayDoi`/`HieuLuc`, với mỗi ô: `MocO` khoá
-`(GiaoXuId, Bang, BanGhiId, Truong)`, bốn cột mốc lấy **đúng dấu đã dùng cho dòng `hieu_luc`**
-(mốc máy chủ đã nâng qua `NangDau`, `ThietBiId = null` vì là ghi từ chính máy chủ). Ghi đè nếu đã
-có — mốc mới nhất thắng. Cùng giao dịch, không `SaveChanges` riêng.
+**Mã thật đã thay đổi kể từ khi task này được viết lần đầu** (Task 6 đã cài xong việc nâng đồng hồ
+máy chủ) — đọc `WebApp/src/Qlgx.Data/NhatKy/LuuCoNhatKy.cs` trước khi sửa. Vị trí cần sửa là hàm
+`GhiDongTuongMinh`, bên trong vòng lặp theo giáo xứ, ngay sau đoạn tính `(vatLy, logic)` qua
+`DongHoLai.NangDau`.
+
+Chỉ ghi `MocO` cho ô có `Truong` khác rỗng (`Loai == "sua"`) — bản ghi vừa **tạo mới**
+(`Loai == "tao"`) không đặt `MocO`, đúng quy ước Task 6 đã dùng ở `ApThaoTacTao`: "bản ghi vừa ra
+đời thì chưa có cuộc đua nào để ghi lại". Với mỗi ô đủ điều kiện: khoá `(GiaoXuId, Bang, BanGhiId,
+Truong)`, bốn cột mốc lấy đúng dấu vừa dùng cho dòng `HieuLuc` của ô đó (`vatLy`, `logic`,
+`ThietBiId = null`, `MaThaoTac = Guid.Empty` — khớp `DauDongHo` dùng cho `ChotDaiSo`). Ghi đè
+không điều kiện nếu đã có. Cùng giao dịch, không `SaveChanges` riêng.
 
 - [ ] **Step 4: Chạy test — PASS**
 
