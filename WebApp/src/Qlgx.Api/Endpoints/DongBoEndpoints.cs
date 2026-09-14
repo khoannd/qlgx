@@ -38,30 +38,22 @@ public static class DongBoEndpoints
         nhom.MapPost("/gui-len", async (
             DongBoService dv, GuiLenYeuCau yeuCau, CancellationToken ct) =>
         {
-            try
-            {
-                var ketQua = await dv.GuiLen(yeuCau, ct);
+            var ketQua = await dv.GuiLen(yeuCau, ct);
 
-                // Cùng ngữ nghĩa với /thay-doi: epoch không khớp thì 410 Gone TƯỜNG MINH. Nhận
-                // bừa một lô thuộc lịch sử đã bị khôi phục đè lên là trộn hai lịch sử vào nhau,
-                // và không ai gỡ ra được nữa.
-                return ketQua is null
-                    ? Results.Problem(statusCode: StatusCodes.Status410Gone,
-                        title: "Con trỏ đồng bộ không còn hợp lệ",
-                        detail: "Epoch không khớp — tải lại toàn bộ qua /api/dong-bo/toan-bo.")
-                    : Results.Ok(ketQua);
-            }
-            catch (InvalidOperationException ex) when (ex is not LoiKhongTimThayBanGhi)
-            {
-                // VI PHẠM RÀO CHẮN (bảng cấm, cột cấm, sai giáo xứ, khoá ngoại trỏ sang giáo xứ
-                // khác). Cả lô bị quay lui và KHÔNG có gì lọt vào sổ sách — đây là chỗ PHẢI đổ
-                // vỡ tường minh thay vì nuốt rồi đi tiếp. Khác hẳn "bản ghi không còn" hay "dữ
-                // liệu một dòng hỏng": hai loại đó chỉ từ chối đúng thao tác của nó và lô vẫn
-                // chạy tiếp (xem LoiKhongTimThayBanGhi.cs).
-                return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
-                    title: "Lô đồng bộ vi phạm rào chắn",
-                    detail: ex.Message);
-            }
+            // Cùng ngữ nghĩa với /thay-doi: epoch không khớp thì 410 Gone TƯỜNG MINH. Nhận bừa
+            // một lô thuộc lịch sử đã bị khôi phục đè lên là trộn hai lịch sử vào nhau, và không
+            // ai gỡ ra được nữa.
+            //
+            // KHÔNG bắt InvalidOperationException ở đây (khác bản trước). Vi phạm rào chắn nay
+            // là lỗi TẤT ĐỊNH của đúng một thao tác: nó bị từ chối, được ghi vào sổ chống trùng,
+            // và lô vẫn trả 200 kèm kết quả "tu_choi" cho riêng thao tác đó (xem ILoiTatDinh.cs).
+            // Còn lại mọi ngoại lệ nào lọt tới đây đều là lỗi HỆ THỐNG thật — để nó thành 500
+            // đúng bản chất, đừng dán nhãn 400 cho một lỗi của máy chủ.
+            return ketQua is null
+                ? Results.Problem(statusCode: StatusCodes.Status410Gone,
+                    title: "Con trỏ đồng bộ không còn hợp lệ",
+                    detail: "Epoch không khớp — tải lại toàn bộ qua /api/dong-bo/toan-bo.")
+                : Results.Ok(ketQua);
         });
     }
 }

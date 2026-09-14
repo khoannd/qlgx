@@ -365,14 +365,70 @@ public class DongBoGuiLenTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
             giaoHoXuKhac = gh.Id;
         }
 
-        var phanHoi = await client.PostAsJsonAsync("/api/dong-bo/gui-len",
-            new GuiLenYeuCau(Guid.NewGuid(), DateTimeOffset.UtcNow, null, 0,
-            [Sua(id, "GiaoHoId", JsonSerializer.Serialize(giaoHoXuKhac), MocGoc)]));
+        var kq = await Gui(client, Guid.NewGuid(), 0,
+            Sua(id, "GiaoHoId", JsonSerializer.Serialize(giaoHoXuKhac), MocGoc));
 
-        phanHoi.StatusCode.Should().Be(HttpStatusCode.BadRequest,
+        kq.KetQua[0].KetQua.Should().Be("tu_choi",
             "khoa ngoai KHONG kiem giao xu, nen mot GiaoHoId cua xu khac se duoc nhan em ru va " +
             "giao dan do bien khoi moi danh sach giao ho cua xu minh, khong mot loi nao hien ra");
-        (await DocGiaoDan(id)).GiaoHoId.Should().BeNull();
+        (await DocGiaoDan(id)).GiaoHoId.Should().BeNull(
+            "tu choi nghia la KHONG co gi cua thao tac do lot vao so sach");
+    }
+
+    /// <summary>
+    /// Trục phân loại lỗi của đường đồng bộ là "THỬ LẠI CÓ GIÚP GÌ KHÔNG", không phải "loại
+    /// ngoại lệ nào". Một vi phạm rào chắn bị thử lại vẫn là một vi phạm rào chắn, nên quay lui
+    /// cả lô không mua được gì — chỉ làm giáo xứ kẹt vĩnh viễn vì sổ chống trùng cũng quay lui
+    /// theo và máy con gửi lại đúng lô ấy mãi mãi.
+    ///
+    /// Ba vế, vế cuối mới là vế chứng minh giáo xứ không kẹt.
+    /// </summary>
+    [Fact]
+    public async Task Vi_pham_rao_chan_bi_tu_choi_RIENG_va_duoc_ghi_so_de_may_con_thoi_gui_lai()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9121, "Goc Hai Muoi Mot");
+        var moc = MocGoc;
+
+        // MaNhanDang nằm trong CotCamDongBo — khoá nhận dạng để đồng bộ hai chiều với bản
+        // desktop, máy con đổi nó thì liên kết đứt âm thầm.
+        var viPham = Sua(id, "MaNhanDang", "\"tu y doi khoa nhan dang\"", moc);
+        var lanhLan = Sua(id, "GhiChu", "\"thao tac lanh manh\"", moc);
+
+        var lan1 = await Gui(client, Guid.NewGuid(), 0, lanhLan, viPham,
+            Sua(id, "DiaChi", "\"dia chi lanh manh\"", moc));
+
+        // (a) Các thao tác còn lại VẪN ĐƯỢC ÁP.
+        lan1.KetQua.Select(x => x.KetQua).ToList().Should().Equal(
+            new List<string> { "ap", "tu_choi", "ap" });
+        var sau = await DocGiaoDan(id);
+        sau.GhiChu.Should().Be("thao tac lanh manh");
+        sau.DiaChi.Should().Be("dia chi lanh manh");
+        sau.MaNhanDang.Should().BeNull("vi pham rao chan KHONG duoc lot vao so sach");
+
+        // (b) Thao tác vi phạm CÓ MẶT trong sổ chống trùng với kết quả từ chối.
+        DateTimeOffset nhanLuc;
+        await using (var db = f.TaoContextThuan())
+        {
+            var so = await db.ThaoTacDaNhan.AsNoTracking()
+                .SingleAsync(x => x.MaThaoTac == viPham.MaThaoTac);
+            so.KetQua.Should().Be("tu_choi");
+            nhanLuc = so.NhanLuc;
+        }
+
+        // (c) Gửi lại ĐÚNG lô đó lần hai: thao tác vi phạm KHÔNG bị xử lý lại.
+        var lan2 = await Gui(client, Guid.NewGuid(), 0, lanhLan, viPham,
+            Sua(id, "DiaChi", "\"dia chi lanh manh\"", moc));
+        lan2.KetQua[1].KetQua.Should().Be("tu_choi");
+
+        await using (var db = f.TaoContextThuan())
+        {
+            var so = await db.ThaoTacDaNhan.AsNoTracking()
+                .SingleAsync(x => x.MaThaoTac == viPham.MaThaoTac);
+            so.NhanLuc.Should().Be(nhanLuc,
+                "xu ly lai se ghi de mot moc NhanLuc moi — no phai nguyen ven, day la ve chung " +
+                "minh giao xu khong ket vinh vien trong vong lap gui lai");
+        }
     }
 
     [Fact]

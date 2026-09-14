@@ -10,7 +10,7 @@ namespace Qlgx.Data.DongBo;
 /// GÃY CẢ LÔ ĐỒNG BỘ CỦA CẢ GIÁO XỨ, lặp lại mãi mỗi lần thử lại — giáo xứ đó vĩnh viễn không
 /// đồng bộ được và không ai hiểu vì sao.
 /// </summary>
-public sealed class LoiApThaoTac : Exception
+public sealed class LoiApThaoTac : Exception, ILoiTatDinh
 {
     public string Bang { get; }
     public string Truong { get; }

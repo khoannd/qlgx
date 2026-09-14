@@ -16,10 +16,14 @@ namespace Qlgx.Data.DongBo;
 ///   lại của lô đi tiếp, và sổ chống trùng ghi lại để máy con thôi gửi lại.
 ///
 /// Vẫn kế thừa <see cref="InvalidOperationException"/> để mọi chỗ bắt theo loại cũ (các test
-/// của Task 4) không đổi nghĩa.
+/// của Task 4) không đổi nghĩa, và mang <see cref="ILoiTatDinh"/> vì gửi lại y hệt sẽ hỏng y hệt.
+///
+/// Lưu ý cho người đọc sau: loại này KHÁC <see cref="LoiRaoChan"/> về mặt ý nghĩa (đây không phải
+/// vi phạm gì cả), nhưng GIỐNG nhau về cách xử — cả hai đều tất định theo từng thao tác. Giữ hai
+/// loại riêng để thông điệp lỗi và việc chẩn đoán về sau không bị trộn làm một.
 /// </summary>
 public sealed class LoiKhongTimThayBanGhi(string bang, Guid banGhiId)
-    : InvalidOperationException($"Khong tim thay ban ghi {banGhiId} trong bang '{bang}'.")
+    : InvalidOperationException($"Khong tim thay ban ghi {banGhiId} trong bang '{bang}'."), ILoiTatDinh
 {
     public string Bang { get; } = bang;
     public Guid BanGhiId { get; } = banGhiId;

@@ -476,13 +476,11 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
 
             await ApThaoTac.TaoBanGhi(db, tt.Bang, tt.BanGhiId, giaoXuId, giaTri, ct);
         }
-        catch (LoiApThaoTac ex)
+        catch (Exception ex) when (ex is ILoiTatDinh)
         {
-            ketQua[tt.MaThaoTac] = new KetQuaThaoTacDto(tt.MaThaoTac, "tu_choi", ex.Message);
-            return;
-        }
-        catch (LoiKhongTimThayBanGhi ex)
-        {
+            // TẤT ĐỊNH theo từng thao tác: gửi lại y hệt sẽ hỏng y hệt, nên quay lui cả lô không
+            // mua được gì — chỉ làm giáo xứ kẹt vĩnh viễn. Từ chối đúng nó; Bước 3 ghi kết quả
+            // vào thao_tac_da_nhan để máy con thôi gửi lại. Xem ILoiTatDinh.cs.
             ketQua[tt.MaThaoTac] = new KetQuaThaoTacDto(tt.MaThaoTac, "tu_choi", ex.Message);
             return;
         }
@@ -545,12 +543,16 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
             }
             catch (LoiKhongTimThayBanGhi ex)
             {
+                // Bản ghi không còn thì MỌI ô của nhóm đều vô phương — từ chối cả nhóm rồi đi
+                // tiếp, chứ không phải lần lượt hỏng từng ô.
                 foreach (var (y, _) in cungNhom)
                     ketQua[y.MaThaoTac] = new KetQuaThaoTacDto(y.MaThaoTac, "tu_choi", ex.Message);
                 return;
             }
-            catch (LoiApThaoTac ex)
+            catch (Exception ex) when (ex is ILoiTatDinh)
             {
+                // Cột cấm, bảng cấm, sai giáo xứ, giá trị hỏng — tất cả đều tất định và thuộc về
+                // đúng ô này. Xem ILoiTatDinh.cs vì sao KHÔNG được làm gãy cả lô.
                 ketQua[tt.MaThaoTac] = new KetQuaThaoTacDto(tt.MaThaoTac, "tu_choi", ex.Message);
             }
         }
@@ -587,10 +589,11 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
                 await ApThaoTac.ApMotO(db, giaoXuId, bang, banGhiId, tt.Truong,
                     giaTriMoi[tt.MaThaoTac], ct);
             }
-            catch (LoiApThaoTac ex)
+            catch (Exception ex) when (ex is ILoiTatDinh)
             {
-                // Dữ liệu của ĐÚNG ô này hỏng (ngày sinh "32/13/2005" trên một máy con cũ).
-                // Từ chối đúng nó, các ô còn lại của nhóm vẫn áp.
+                // Dữ liệu của ĐÚNG ô này hỏng (ngày sinh "32/13/2005" trên một máy con cũ), hoặc
+                // ô này vi phạm rào chắn (khoá ngoại trỏ sang giáo xứ khác). Cả hai đều tất định:
+                // từ chối đúng nó, các ô còn lại của nhóm vẫn áp.
                 ketQua[tt.MaThaoTac] = new KetQuaThaoTacDto(tt.MaThaoTac, "tu_choi", ex.Message);
                 continue;
             }
@@ -696,15 +699,38 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
             // mô hình EF, không phải một danh sách tên cột chép tay.
             if (kieu.FindProperty(truong) is not { IsNullable: true }) continue;
 
+            try
+            {
+                await XoaMotO(bc, bang, banGhiId, truong, daiDien, ct);
+            }
+            catch (Exception ex) when (ex is ILoiTatDinh)
+            {
+                // Một ô của nhóm không xoá được (cột nằm trong danh sách cấm chẳng hạn) là lỗi
+                // tất định của riêng ô đó. Bỏ qua nó chứ KHÔNG làm gãy cả lô — nhưng ghi cảnh
+                // báo, vì đây là trạng thái lai còn sót lại chứ không phải chuyện bình thường.
+                nhatKy.LogWarning(ex,
+                    "Dong bo: khong xoa duoc o '{Bang}.{Truong}' cua ban ghi {BanGhiId} theo nhom — " +
+                    "ban ghi co the con o trang thai lai.", bang, truong, banGhiId);
+            }
+        }
+    }
+
+    /// <summary>Xoá trắng MỘT ô của nhóm và ghi biên nhận — xem <see cref="XoaOConLaiCuaNhom"/>
+    /// cho toàn bộ lý lẽ.</summary>
+    private async Task XoaMotO(
+        BoiCanhLo bc, string bang, Guid banGhiId, string truong,
+        (ThaoTacDto Tt, DauDongHo Dau) daiDien, CancellationToken ct)
+    {
+        {
             var moc = await db.MocO.FirstOrDefaultAsync(
                 m => m.GiaoXuId == bc.GiaoXuId && m.Bang == bang && m.BanGhiId == banGhiId
                      && m.Truong == truong, ct);
             // Chưa ai tranh ô này qua đường đồng bộ, hoặc mốc của nó KHÔNG cũ hơn thao tác vừa
             // thắng — không đụng tới.
-            if (moc is null || DongHoLai.SoSanh(DauCua(moc), daiDien.Dau) >= 0) continue;
+            if (moc is null || DongHoLai.SoSanh(DauCua(moc), daiDien.Dau) >= 0) return;
 
             var giaTriCu = await ApThaoTac.DocO(db, bc.GiaoXuId, bang, banGhiId, truong, ct);
-            if (giaTriCu is null) continue;  // vốn đã rỗng, không có gì để xoá
+            if (giaTriCu is null) return;  // vốn đã rỗng, không có gì để xoá
 
             await ApThaoTac.ApMotO(db, bc.GiaoXuId, bang, banGhiId, truong, null, ct);
             GhiCapNhatKy(bc, bang, banGhiId, truong, null, "sua", daiDien.Tt, daiDien.Dau);

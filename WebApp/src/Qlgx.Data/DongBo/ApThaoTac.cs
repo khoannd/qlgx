@@ -64,11 +64,11 @@ public static class ApThaoTac
         QlgxDbContext db, string bang)
     {
         if (!PhanLoaiThucThe.DuocGhiNhatKy(bang))
-            throw new InvalidOperationException(
+            throw new LoiRaoChan(
                 $"Bang '{bang}' khong nam trong danh sach duoc dong bo (PhanLoaiThucThe.DuocGhi).");
 
         var kieu = db.Model.GetEntityTypes().FirstOrDefault(t => t.ClrType.Name == bang)
-            ?? throw new InvalidOperationException($"Khong tim thay thuc the '{bang}'.");
+            ?? throw new LoiRaoChan($"Khong tim thay thuc the '{bang}'.");
         return kieu;
     }
 
@@ -78,11 +78,11 @@ public static class ApThaoTac
     private static void KiemCot(string bang, string truong)
     {
         if (CotLoaiTru.BiLoai(truong))
-            throw new InvalidOperationException(
+            throw new LoiRaoChan(
                 $"Cot '{bang}.{truong}' nam trong CotLoaiTru — khong di qua nhat ky nen cung khong " +
                 "duoc di qua duong dong bo.");
         if (CotCamDongBo.Contains(truong))
-            throw new InvalidOperationException(
+            throw new LoiRaoChan(
                 $"Cot '{bang}.{truong}' nam trong CotCamDongBo — may con khong duoc phep dat truc " +
                 "tiep cot nay qua duong dong bo (cot van duoc ghi nhat ky binh thuong o cac duong khac).");
     }
@@ -95,13 +95,13 @@ public static class ApThaoTac
     private static void KiemDungGiaoXu(EntityEntry entry, Guid giaoXuId, string bang, Guid banGhiId)
     {
         var oGiaoXu = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "GiaoXuId")
-            ?? throw new InvalidOperationException(
+            ?? throw new LoiRaoChan(
                 $"Thuc the '{bang}' khong co cot GiaoXuId — khong the kiem ranh gioi giao xu, " +
                 "tu choi ap thao tac de an toan.");
 
         var giaoXuThat = (Guid?)oGiaoXu.CurrentValue;
         if (giaoXuThat != giaoXuId)
-            throw new InvalidOperationException(
+            throw new LoiRaoChan(
                 $"Ban ghi {banGhiId} cua bang '{bang}' thuoc giao xu khac voi giao xu dang gui " +
                 "thao tac len — tu choi de mot may con khong the sua so sach cua giao xu khac.");
     }
@@ -182,7 +182,7 @@ public static class ApThaoTac
                 $"khoa ngoai tro toi ban ghi {id} cua bang '{kieuCha.ClrType.Name}' khong ton tai");
 
         if (cua[0] != giaoXuId)
-            throw new InvalidOperationException(
+            throw new LoiRaoChan(
                 $"Cot '{bang}.{truong}' tro toi ban ghi {id} cua bang '{kieuCha.ClrType.Name}' " +
                 "thuoc GIAO XU KHAC — tu choi de mot may con khong the doi hong danh sach cua " +
                 "giao xu minh lan giao xu kia.");
