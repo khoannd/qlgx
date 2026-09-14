@@ -80,8 +80,9 @@ export function SaoLuuPage() {
   const hoLaiRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const soLoiLienTiepRef = useRef(0)
   const [banSaoDangPhucHoi, setBanSaoDangPhucHoi] = useState<BanSaoLuu | null>(null)
-  // Ma cong viec "tai_ve" gan nhat — dung de biet khi nao hien duoc lien ket tai tep.
+  // Ma cong viec "tai_ve" gan nhat — dung de biet khi nao hien duoc nut tai tep.
   const [maTaiVe, setMaTaiVe] = useState<string | null>(null)
+  const [dangTaiTep, setDangTaiTep] = useState(false)
 
   const tai = useCallback(() => {
     setDangTai(true); setLoi(null)
@@ -146,6 +147,19 @@ export function SaoLuuPage() {
       theoDoi(id)
       setMaTaiVe(id)
     } catch (e) { setLoiThaoTac(e instanceof Error ? e.message : String(e)) }
+  }
+
+  async function taiTepDaChuanBi() {
+    if (!maTaiVe) return
+    setLoiThaoTac(null)
+    setDangTaiTep(true)
+    try {
+      await api.saoLuu.taiBanSaoVe(maTaiVe)
+    } catch (e) {
+      setLoiThaoTac(e instanceof Error ? e.message : String(e))
+    } finally {
+      setDangTaiTep(false)
+    }
   }
 
   const cot: ColDef<BanSaoLuu>[] = [
@@ -232,9 +246,9 @@ export function SaoLuuPage() {
           )}
 
           {maTaiVe && dangChay?.id === maTaiVe && dangChay.trangThai === 'xong' && (
-            <a className="btn" href={api.saoLuu.duongDanTaiVe(maTaiVe)}>
-              Tải tệp đã chuẩn bị xong
-            </a>
+            <button type="button" className="btn" disabled={dangTaiTep} onClick={() => void taiTepDaChuanBi()}>
+              {dangTaiTep ? 'Đang tải…' : 'Tải tệp đã chuẩn bị xong'}
+            </button>
           )}
         </div>
       </section>

@@ -133,6 +133,19 @@ export THU_MUC_LOG="$SCRATCH/log"
 export QLGX_CHI_NAP_HAM=1
 # shellcheck source=/dev/null
 source "$CHECKOUT/WebApp/scripts/install.sh"
+# QUAN TRONG: BO XUAT ngay sau khi nap xong. `export QLGX_CHI_NAP_HAM=1` o tren la CHO CHINH LAN
+# `source` nay -- neu de nguyen EXPORTED, no RO RI vao moi tien trinh con ma script nay goi sau
+# do, ke ca "$GOC_UNG_DUNG/scripts/qlgx-runner.sh" ma sao_luu_bat_buoc_cap_nhat() (Finding 2, vong
+# review cuoi cung) goi THAT qua runner_cmd() o Kich ban phu ben duoi. qlgx-runner.sh co CUNG mot
+# dong `[ "${QLGX_CHI_NAP_HAM:-0}" = "1" ] && return 0` o cuoi tep no -- khi bien do ro ri toi, no
+# thu `return` trong khi dang chay nhu MOT TIEN TRINH RIENG (khong phai duoc source), sinh loi that
+# cua chinh bash "return: can only `return' from a function or sourced script" ra stderr (da quan
+# sat that trong lan chay dau tien cua Kich ban phu). Loi do KHONG lam hong ket qua kich ban (lenh
+# `return` that bai roi boi qua, main_runner van chay tiep va tu that bai dung ly do that -- khong
+# ket noi duoc kho restic gia), nhung la tieng on gay nham lan khi doc log va la mot RO RI moi
+# truong that su cua chinh bo kiem thu nay -- khong dinh dang gi voi qlgx-runner.sh/install.sh san
+# xuat (o do bien nay khong bao gio duoc dat). unset o day thay vi de no song het doi script.
+unset QLGX_CHI_NAP_HAM
 # Ghi de dc() SAU khi nap: them -p (ten du an rieng) -- xem ly do o dinh nghia TEN_DU_AN_THU.
 dc() { dc_thu "$@"; }
 
@@ -311,12 +324,23 @@ head_sau_3b=$(git -C "$GOC_CHECKOUT" rev-parse HEAD)
 echo "    DAT: goi lai cap_nhat khong tu thu build ban da biet HONG -- dung nhanh (${thoi_diem_sau_3b}-${thoi_diem_truoc_3b}s), khong doi container, khong doi HEAD"
 
 echo ""
-echo "=== Kich ban phu: khong QLGX_BO_QUA_R2 -- cap_nhat PHAI thu goi qlgx-runner.sh (chua ton tai) va DUNG lai, KHONG cap nhat lang le ==="
-# qlgx-runner.sh la san pham cua Task 13, chua ton tai o day. `$(cap_nhat ...)` da tu tao mot
-# subshell rieng nen `exit` (tu bao_loi_va_thoat) o trong cap_nhat khong lam hong tien trinh
-# chinh. Boc them mot lop `( ... )` o day CHI de gioi han `unset QLGX_BO_QUA_R2` va cac lenh
-# `exit 1` kiem tra ket qua bên trong nam gon trong mot khoi rieng, khong lam bien moi truong
-# QLGX_BO_QUA_R2 bi mat vinh vien khoi phan con lai cua kich ban.
+echo "=== Kich ban phu: khong QLGX_BO_QUA_R2 -- cap_nhat PHAI thu sao luu that (qua sao_luu_bat_buoc_cap_nhat/qlgx-runner.sh) va DUNG lai, KHONG cap nhat lang le ==="
+# CAP NHAT GHI CHU (vong review cuoi cung, Finding 2): kich ban nay VIET TU Task 12, luc
+# qlgx-runner.sh (san pham Task 13) CHUA ton tai -- goi thang duong dan do khi do that bai voi
+# loi "command not found" cua chinh bash, va chuoi loi do TINH CO chua san "qlgx-runner" nen
+# assertion cu dua vao dung chi tiet do. Tu Task 13 tro di qlgx-runner.sh DA la mot tep that trong
+# kho (duoc cp -r vao GOC_GIA cung voi phan con lai cua WebApp), va R2 endpoint gia
+# ("http://khong-dung-that") o day khong tro toi restic/mang that -- lenh se that bai vi mot ly do
+# KHAC (restic khong ket noi duoc, hoac khong co san tren may chay e2e nay), khong con chac chan
+# in ra chu "qlgx-runner" nua. Vi vay o day chi con kiem hai dieu THAT SU can dung: (a) cap_nhat co
+# THAT SU buoc vao nhanh sao luu bat buoc (dong ghi_log "Sao luu truoc khi cap nhat" luon in TRUOC
+# ca khi goi runner_cmd, bat ke thanh cong hay that bai), va (b) toan bo buoc do THAT BAI ro rang
+# (ma thoat khac 0) thay vi am tham bo qua va di tiep vao merge/build.
+#
+# `$(cap_nhat ...)` da tu tao mot subshell rieng nen `exit` (tu bao_loi_va_thoat) o trong cap_nhat
+# khong lam hong tien trinh chinh. Boc them mot lop `( ... )` o day CHI de gioi han
+# `unset QLGX_BO_QUA_R2` va cac lenh `exit 1` kiem tra ket qua bên trong nam gon trong mot khoi
+# rieng, khong lam bien moi truong QLGX_BO_QUA_R2 bi mat vinh vien khoi phan con lai cua kich ban.
 echo 'ENTRYPOINT ["false", "them-mot-dong"]' >> "$GOC_GIA/WebApp/Dockerfile"
 git -C "$GOC_GIA" add -A
 git -C "$GOC_GIA" commit -q -m "them mot ban nua de kich ban phu co gi ma cap nhat"
@@ -326,14 +350,15 @@ git -C "$GOC_GIA" commit -q -m "them mot ban nua de kich ban phu co gi ma cap nh
   ra_phu=$(cap_nhat 2>&1); ma_phu=$?
   echo "$ra_phu"
   echo "    Ma thoat (subshell): $ma_phu"
-  printf '%s\n' "$ra_phu" | grep -qi "sao luu truoc cap nhat\|qlgx-runner" \
-    || { echo "THAT BAI: khong thay dau hieu cap_nhat co thu sao luu truoc" >&2; exit 1; }
-  [ "$ma_phu" -ne 0 ] || { echo "THAT BAI: cap_nhat thanh cong du khong the sao luu (qlgx-runner.sh chua ton tai)" >&2; exit 1; }
+  printf '%s\n' "$ra_phu" | grep -qi "sao luu truoc khi cap nhat" \
+    || { echo "THAT BAI: khong thay dau hieu cap_nhat co vao nhanh sao luu bat buoc truoc cap nhat" >&2; exit 1; }
+  [ "$ma_phu" -ne 0 ] \
+    || { echo "THAT BAI: cap_nhat bao thanh cong (ma thoat 0) du khong the sao luu that (moi truong e2e nay khong co restic/R2 that hoat dong)" >&2; exit 1; }
 )
 head_sau_phu=$(git -C "$GOC_CHECKOUT" rev-parse HEAD)
 [ "$head_sau_phu" = "$moi_commit_b" ] \
   || { echo "THAT BAI: kich ban phu (sao luu that bai) van lam HEAD di chuyen -- phai dung LAI TRUOC khi merge" >&2; exit 1; }
-echo "    DAT: khi khong QLGX_BO_QUA_R2, cap_nhat dung lai o buoc sao luu (qlgx-runner.sh chua co o Task 12), KHONG merge/cap nhat lang le"
+echo "    DAT: khi khong QLGX_BO_QUA_R2, cap_nhat dung lai o buoc sao luu bat buoc (khong sao luu that duoc), KHONG merge/cap nhat lang le"
 
 echo ""
 echo "==> Kiem tra dung luong dia sau khi chay"

@@ -261,6 +261,37 @@ lenh_kiem_tra() {
   fi
 }
 
+# "dem-snapshot-nhan <nhan>" -- in ra SO snapshot trong kho restic mang dung tag "nhan=<nhan>".
+# Them subcommand nay (vong review cuoi cung, Finding 2) de LAM MOT NOI DUY NHAT biet cach doc
+# ban dem restic dung KHOA THAT (qua nap_cau_hinh o tren, an toan voi QLGX_GIU_LAI nhieu tu -- xem
+# ghi chu o nap_cau_hinh), thay vi de tung noi can "co that su sao luu moi khong" (install.sh's
+# cap_nhat, qlgx-restore.sh's sao_luu_bat_buoc) tu doc backup.env/goi restic rieng va co nguy co
+# mot ban trong so do troi ra khoi ban da hardened (dung loai loi da tung xay ra: sao_luu_bat_buoc
+# da duoc vong review truoc va Task 14 sua ky, nhung install.sh's cap_nhat lai chua duoc sua theo
+# vi no dong TRUOC khi loi do duoc phat hien).
+#
+# --no-lock: day la truy van CHI DOC, chay CO THE trung luc mot lenh sao-luu/kiem-tra/forget khac
+# dang giu khoa GHI tren kho -- neu khong co --no-lock, restic tu choi ngay voi "repository is
+# already locked" (retry-lock mac dinh la 0), gioi han nay da gap that trong qlgx-restore.sh (xem
+# restic_doc o do). --no-lock bo qua viec xin khoa, an toan cho lenh chi doc.
+#
+# CO Y de restic TU BAO LOI (khong nuot bang `|| true` o day) neu chinh no khong mo duoc kho (sai
+# khoa, mat mang, kho khong ton tai) -- nguoc lai mot cau lenh dem "0 snapshot" se khong phan biet
+# duoc voi "kho hong hoan toan khong doc duoc gi", va noi goi (install.sh's cap_nhat) se tuong nham
+# "dem duoc 0, dem lai van 0, khong tang -> DUNG cap nhat" trong khi ly do that la kho khong mo
+# duoc tu dau -- van la DUNG dung (an toan), nhung thong diep loi se sai, gay kho gian khi go loi.
+lenh_dem_snapshot_nhan() {
+  local nhan="${1:-}"
+  [ -n "$nhan" ] || bao_loi_va_thoat "dem-snapshot-nhan can mot tham so <nhan>."
+  local json
+  json=$(restic snapshots --json --no-lock) \
+    || bao_loi_va_thoat "Khong doc duoc danh sach snapshot tu kho restic (kho khong mo duoc," \
+                        "sai khoa, hoac mat mang) -- xem log restic o tren."
+  local so
+  so=$(printf '%s' "$json" | grep -o "nhan=${nhan}\"" | grep -c . || true)
+  printf '%s\n' "${so:-0}"
+}
+
 lenh_dong_bo_danh_sach() {
   local tam; tam=$(mktemp)
   # Tu huy trap NGAY khi no chay: `trap ... RETURN` cua bash KHONG tu dong het hieu luc sau
@@ -595,8 +626,12 @@ main_runner() {
     # dung tep khoa nay.
     chay-job)          lenh_chay_job ;;
     dien-tap)          lenh_dien_tap ;;
+    # dem-snapshot-nhan CHI DOC (--no-lock) -- KHONG gianh_khoa_hoac_bo_qua, chay dung luc mot
+    # lenh khac dang giu khoa GHI la tinh huong BINH THUONG can xu ly duoc (vd install.sh's
+    # cap_nhat dang doi xac nhan snapshot vua tao boi chinh lenh_sao_luu no goi ngay truoc do).
+    dem-snapshot-nhan) lenh_dem_snapshot_nhan "$@" ;;
     *) bao_loi_va_thoat "Lenh khong hieu: '$lenh'." \
-         "Dung: sao-luu|kiem-tra|dong-bo-danh-sach|tai-ve|don-spool|chay-job|dien-tap" ;;
+         "Dung: sao-luu|kiem-tra|dong-bo-danh-sach|tai-ve|don-spool|chay-job|dien-tap|dem-snapshot-nhan" ;;
   esac
 }
 

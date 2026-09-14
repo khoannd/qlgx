@@ -814,9 +814,22 @@ export const api = {
     }),
     congViec: (id: string) => goi<CongViecSaoLuu>(`/api/sao-luu/cong-viec/${id}`),
     congViecGanDay: () => goi<CongViecSaoLuu[]>('/api/sao-luu/cong-viec'),
-    /** Trả về ĐƯỜNG DẪN, không phải nội dung — nơi gọi mở bằng thẻ <a download> để trình duyệt
-     * tự tải, tránh nạp cả tệp dump (có thể hàng trăm MB) vào bộ nhớ trang. */
+    /** Đường dẫn thô của tệp — KHÔNG dùng để điều hướng trình duyệt trực tiếp (route đòi
+     * `Authorization: Bearer`, một thẻ `<a href>`/điều hướng thường không đính header đó nên sẽ
+     * luôn nhận 401). Chỉ còn giữ lại phòng khi có chỗ khác cần đúng chuỗi đường dẫn (ví dụ ghi
+     * log/hiển thị); muốn TẢI THẬT về máy hãy gọi `taiBanSaoVe` bên dưới. */
     duongDanTaiVe: (maCongViec: string) => `/api/sao-luu/tai-ve/${maCongViec}`,
+    /** Tải một bản sao lưu đã chuẩn bị xong (job loại `tai_ve`) về máy — dùng LẠI đúng cơ chế
+     * `taiTepIn` (fetch kèm header Bearer → đọc `blob` → `<a download>` giả) như mọi tệp PDF/
+     * Excel khác trong ứng dụng này, THAY vì một `<a href>` trần điều hướng thẳng tới route: route
+     * đó đòi policy "QuanTriHeThong" (`Authorization: Bearer`), mà điều hướng trình duyệt thường
+     * không tự đính header đó nên sẽ luôn 401 (xem SaoLuuTaiVeTests.cs — chỉ test backend tự set
+     * header mới "qua" được, chưa từng có ai bấm thử trên trình duyệt thật). Chấp nhận cùng đánh
+     * đổi bộ nhớ với mọi export khác trong app (nạp cả tệp dump vào bộ nhớ trang trước khi lưu) —
+     * lựa chọn có chủ đích, giống cách ảnh đại diện chấp nhận lưu BYTEA thay vì đối tượng ngoài ở
+     * giai đoạn này; xem lại khi kích thước bản sao lưu thật sự thành vấn đề. */
+    taiBanSaoVe: (maCongViec: string) =>
+      taiTepIn(`/api/sao-luu/tai-ve/${maCongViec}`, `BanSaoLuu_${maCongViec}.dump`),
   },
   /** Màn hình "Thống kê chung" + "Biểu đồ" — xem
    * docs/superpowers/specs/man-hinh/thong-ke-bieu-do.md. */

@@ -464,8 +464,19 @@ tu_kiem_chung() {
       eval "[ ! -f '$THU_MUC_CAU_HINH/the-phuc-hoi.txt' ] || \
             [ -z \"\$(find '$THU_MUC_CAU_HINH/the-phuc-hoi.txt' -mtime +7)\" ]"
   if [ "${QLGX_BO_QUA_R2:-0}" != "1" ]; then
+    # Finding 4 (Minor, vong review cuoi cung): ban truoc `source`/`eval` thang backup.env
+    # ("set -a; . '$THU_MUC_CAU_HINH/backup.env'; set +a") -- DUNG chinh mau ma ca qlgx-runner.sh
+    # lan qlgx-restore.sh CO GHI CHU CANH BAO ky (xem nap_cau_hinh o hai script do): QLGX_GIU_LAI
+    # la mot gia tri NHIEU TU khong co dau nhay bao quanh, `source` no duoi `set -euo pipefail` se
+    # lam bash hieu tu thu hai tro di la MOT LENH rieng va thoat ngay voi "8: command not found"
+    # (chi "chay dung" truoc day vi cac khoa RESTIC_*/AWS_* dung TRUOC QLGX_GIU_LAI trong tep --
+    # doi thu tu ghi la vo tinh hong ma khong ai biet, loi bi `eval`/`bao` nuot mat). Gio goi lai
+    # dung subcommand moi dem-snapshot-nhan cua qlgx-runner.sh -- NOI DUY NHAT doc backup.env an
+    # toan (qua nap_cau_hinh, tung khoa mot bang doc_env_kv) -- chi can no chay duoc (ma thoat 0)
+    # la du de chung minh kho mo duoc, khong quan tam dem ra bao nhieu (dung mot nhan chac chan
+    # khong ai dat that lam "mui do").
     bao "Kho restic mo duoc" \
-      eval "set -a; . '$THU_MUC_CAU_HINH/backup.env'; set +a; restic snapshots --json >/dev/null"
+      "$GOC_UNG_DUNG/scripts/qlgx-runner.sh" dem-snapshot-nhan _qlgx_tu_kiem_chung_ping_
   fi
   echo "--------------------------"
   if [ "$so_loi" -gt 0 ]; then
@@ -506,6 +517,67 @@ quay_lui() {
   ghi_log thong-tin "Da quay lui thanh cong ve $commit."
 }
 
+# Boc goi qlgx-runner.sh -- tach thanh ham RIENG (thay vi goi thang duong dan tai cho dung) de bo
+# test thay the duoc bang mot ham cung ten (giong cach `dc()` da lam voi docker compose o tren),
+# khong can dung toi mot qlgx-runner.sh that (Docker/Postgres/restic that).
+runner_cmd() { "$GOC_UNG_DUNG/scripts/qlgx-runner.sh" "$@"; }
+
+# Sao luu BAT BUOC truoc cap nhat, xac minh bang SU THAT thay vi tin vao ma thoat cua
+# qlgx-runner.sh -- cung mot loai loi va cung mot cach sua nhu sao_luu_bat_buoc() trong
+# qlgx-restore.sh (Task 14, xem ghi chu dai o do): gianh_khoa_hoac_bo_qua CO Y `exit 0` khi mot
+# luot sao-luu/kiem-tra/dong-bo-danh-sach KHAC dang giu khoa runner (dung cho cron -- "bo qua luot
+# nay" la hanh vi MONG DOI, khong phai loi) -- nhung "cap nhat" o day thi khac han: neu dung dua
+# vao ma thoat 0 do de coi la "da co ban sao truoc-cap-nhat that", mot lan `qlgx update` trung
+# dung luc timer sao-luu/kiem-tra dang chay se AM THAM bo qua ban sao an toan duy nhat truoc khi
+# ghi de CSDL bang migration cua ban moi.
+#
+# VONG REVIEW CUOI CUNG (Finding 2, Important): ham nay tung KHONG TON TAI -- cap_nhat() truoc day
+# goi thang qlgx-runner.sh sao-luu roi tin ngay ma thoat cua no, dung LO HONG y het cai da duoc
+# phat hien va sua o qlgx-restore.sh boi Task 14 -- chi khac la Task 12 (noi cap_nhat() duoc
+# viet) dong TRUOC khi Task 14 phat hien va sua loi do, nen khong duoc thua huong ban sua.
+#
+# TAI SAO DUNG "dem-snapshot-nhan" CUA qlgx-runner.sh THAY VI TU DOC backup.env/goi restic O DAY:
+# qlgx-runner.sh la NOI DUY NHAT an toan doc /etc/qlgx/backup.env (QLGX_GIU_LAI la mot gia tri
+# NHIEU TU khong co dau nhay bao quanh -- `source` thang tep do duoi `set -euo pipefail` se lam
+# bash hieu tu thu hai tro di la MOT LENH rieng va thoat ngay voi "8: command not found", xem
+# nap_cau_hinh trong qlgx-runner.sh). Tu viet lai buoc doc khoa/goi restic O DAY se la BAN THU HAI
+# cua chinh nguy co da duoc ghi chu ky trong ca hai script kia -- de subcommand moi nay la NOI
+# DUY NHAT biet dem snapshot, ca install.sh lan qlgx-restore.sh (neu sau nay can) deu goi lai no.
+#
+# KHONG hop nhat vao chinh sao_luu_bat_buoc() cua qlgx-restore.sh: ham do con phai chay duoc tren
+# MOT VPS TRANG chi voi The phuc hoi (--card, KHONG co /etc/qlgx/backup.env, xem nap_cau_hinh_ph) --
+# ep no goi qua qlgx-runner.sh (von LUON doi hoi backup.env qua nap_cau_hinh) se pha vo duong
+# phuc hoi tren may trang. install.sh chi chay tren mot may DA CAI (luon co backup.env) nen khong
+# vuong gioi han do.
+sao_luu_bat_buoc_cap_nhat() {
+  local nhan="truoc-cap-nhat" so_truoc so_sau
+  so_truoc=$(runner_cmd dem-snapshot-nhan "$nhan") \
+    || bao_loi_va_thoat "Khong dem duoc snapshot hien co (truoc khi sao luu) -- DUNG, khong cap" \
+                        "nhat. Kiem tra kho restic/backup.env truoc khi thu lai."
+  case "$so_truoc" in ''|*[!0-9]*) so_truoc=0 ;; esac
+
+  runner_cmd sao-luu --nhan "$nhan" --nguon truoc_cap_nhat \
+    || bao_loi_va_thoat "Sao luu truoc cap nhat THAT BAI — dung cap nhat. Sua sao luu truoc."
+
+  # Thu lai vai lan: kho co the vua duoc mot lenh khac (timer sao-luu/kiem-tra) nha khoa, hoac
+  # chi muc restic chua kip hien snapshot vua day len (cung ly do/cung so lan thu nhu
+  # sao_luu_bat_buoc() trong qlgx-restore.sh).
+  for _ in 1 2 3; do
+    so_sau=$(runner_cmd dem-snapshot-nhan "$nhan") || so_sau=""
+    case "$so_sau" in ''|*[!0-9]*) so_sau=0 ;; esac
+    [ "$so_sau" -gt "$so_truoc" ] && break
+    sleep 2
+  done
+  [ "${so_sau:-0}" -gt "$so_truoc" ] \
+    || bao_loi_va_thoat "qlgx-runner.sh bao thanh cong nhung kho KHONG co them ban sao" \
+                        "'$nhan' nao ($so_truoc -> ${so_sau:-0}) -- rat co the mot luot sao luu" \
+                        "khac (timer) dang giu khoa runner nen luot nay bi bo qua lang le (xem" \
+                        "gianh_khoa_hoac_bo_qua trong qlgx-runner.sh). DUNG cap nhat: khong co" \
+                        "ban sao that thi khong co duong lui."
+  ghi_log thong-tin "Da xac nhan ban sao luu truoc cap nhat ton tai that trong kho" \
+                    "(so ban '$nhan': $so_truoc -> $so_sau)."
+}
+
 cap_nhat() {
   local hien_tai moi ban_hong
   git -C "$GOC_CHECKOUT" fetch --quiet origin "$NHANH"
@@ -536,8 +608,7 @@ cap_nhat() {
   # KHONG chong duoc mot migration sai.
   if [ "$BO_QUA_SAO_LUU" -eq 0 ] && [ "${QLGX_BO_QUA_R2:-0}" != "1" ]; then
     ghi_log thong-tin "Sao luu truoc khi cap nhat"
-    "$GOC_UNG_DUNG/scripts/qlgx-runner.sh" sao-luu --nhan "truoc-cap-nhat" --nguon truoc_cap_nhat \
-      || bao_loi_va_thoat "Sao luu truoc cap nhat THAT BAI — dung cap nhat. Sua sao luu truoc."
+    sao_luu_bat_buoc_cap_nhat
   else
     ghi_log canh-bao "BO QUA sao luu truoc cap nhat theo yeu cau."
   fi

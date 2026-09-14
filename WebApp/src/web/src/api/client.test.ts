@@ -50,4 +50,31 @@ describe('api.saoLuu', () => {
   it('duongDanTaiVe gan ma cong viec vao duong dan', () => {
     expect(api.saoLuu.duongDanTaiVe('ma-1')).toBe('/api/sao-luu/tai-ve/ma-1')
   })
+
+  it('taiBanSaoVe dinh header Authorization thay vi dieu huong <a href> tran (Finding 1 — 401 tren trinh duyet that)', async () => {
+    authStore.datToken('token-gia')
+    const fetchGia = vi.fn().mockResolvedValue(new Response('du-lieu', {
+      status: 200,
+      headers: { 'Content-Disposition': 'attachment; filename="BanSaoLuu_ma-1.dump"' },
+    }))
+    vi.stubGlobal('fetch', fetchGia)
+    vi.stubGlobal('URL', { createObjectURL: vi.fn().mockReturnValue('blob:gia'), revokeObjectURL: vi.fn() })
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+
+    await api.saoLuu.taiBanSaoVe('ma-1')
+
+    const [duongDan, tuyChon] = fetchGia.mock.calls[0]!
+    expect(String(duongDan)).toBe('/api/sao-luu/tai-ve/ma-1')
+    expect((tuyChon.headers as Record<string, string>).Authorization).toBe('Bearer token-gia')
+    expect(click).toHaveBeenCalled()
+
+    authStore.xoaToken()
+    click.mockRestore()
+  })
+
+  it('taiBanSaoVe nem loi ro rang khi het phien (401)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 401 })))
+
+    await expect(api.saoLuu.taiBanSaoVe('ma-1')).rejects.toThrow('Phiên đăng nhập đã hết hạn')
+  })
 })

@@ -11,6 +11,7 @@ vi.mock('../api/client', () => ({
     tinhTrang: vi.fn(), danhSach: vi.fn(), congViecGanDay: vi.fn(),
     taoCongViec: vi.fn(), congViec: vi.fn(),
     duongDanTaiVe: (id: string) => `/api/sao-luu/tai-ve/${id}`,
+    taiBanSaoVe: vi.fn(),
   } },
 }))
 
@@ -27,6 +28,7 @@ beforeEach(() => {
   vi.mocked(api.saoLuu.tinhTrang).mockResolvedValue(tinhTrangXanh)
   vi.mocked(api.saoLuu.danhSach).mockResolvedValue([motBanSao])
   vi.mocked(api.saoLuu.congViecGanDay).mockResolvedValue([])
+  vi.mocked(api.saoLuu.taiBanSaoVe).mockResolvedValue(undefined)
 })
 
 afterEach(() => {
@@ -163,5 +165,62 @@ describe('SaoLuuPage', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  // Finding 1 cua vong review cuoi cung: lien ket tai ve tung la <a href> tran, dieu huong
+  // trinh duyet KHONG dinh header Authorization nen luon nhan 401 — xem client.test.ts cho
+  // phan kiem chung `taiBanSaoVe` tu dinh header dung cach. O day chi kiem chung man hinh goi
+  // dung ham moi (khong con dung <a href>) va xu ly loi/trang thai dang tai.
+  it('bam nut "Tai te da chuan bi xong" thi goi taiBanSaoVe dung ma cong viec (khong con la <a href>)', async () => {
+    vi.mocked(api.saoLuu.taoCongViec).mockResolvedValue({ id: 'job-tv' })
+    vi.mocked(api.saoLuu.congViec).mockResolvedValue({
+      id: 'job-tv', loai: 'tai_ve', trangThai: 'xong', buocHienTai: null,
+      nhatKy: null, taoLuc: '2026-09-13T07:00:00Z', batDauLuc: null, ketThucLuc: null,
+    })
+    const { container } = render(<SaoLuuPage />)
+    await screen.findByText(/Bình thường/)
+
+    const dong = container.querySelector('.ag-row')
+    expect(dong).not.toBeNull()
+    fireEvent.contextMenu(dong!, { clientX: 10, clientY: 10 })
+
+    await userEvent.click(await screen.findByRole('button', { name: /Tải bản sao này về máy/ }))
+
+    await waitFor(() => expect(api.saoLuu.taoCongViec)
+      .toHaveBeenCalledWith(expect.objectContaining({ loai: 'tai_ve', snapshotId: motBanSao.id })))
+
+    // Polling hoi lai moi MS_HOI_LAI (2s, timer that) truoc khi cong viec chuyen 'xong' — cho
+    // du hon khoang do de nut xuat hien on dinh, tranh flaky vi timer that cua may CI cham.
+    const nutTai = await screen.findByRole(
+      'button', { name: /Tải tệp đã chuẩn bị xong/ }, { timeout: 4000 })
+    expect(nutTai.tagName).toBe('BUTTON')
+    await userEvent.click(nutTai)
+
+    await waitFor(() => expect(api.saoLuu.taiBanSaoVe).toHaveBeenCalledWith('job-tv'))
+  })
+
+  it('bao loi ro rang khi tai tep that bai, khong im lang', async () => {
+    vi.mocked(api.saoLuu.taoCongViec).mockResolvedValue({ id: 'job-tv' })
+    vi.mocked(api.saoLuu.congViec).mockResolvedValue({
+      id: 'job-tv', loai: 'tai_ve', trangThai: 'xong', buocHienTai: null,
+      nhatKy: null, taoLuc: '2026-09-13T07:00:00Z', batDauLuc: null, ketThucLuc: null,
+    })
+    vi.mocked(api.saoLuu.taiBanSaoVe).mockRejectedValue(
+      new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'))
+    const { container } = render(<SaoLuuPage />)
+    await screen.findByText(/Bình thường/)
+
+    const dong = container.querySelector('.ag-row')
+    fireEvent.contextMenu(dong!, { clientX: 10, clientY: 10 })
+    await userEvent.click(await screen.findByRole('button', { name: /Tải bản sao này về máy/ }))
+    await waitFor(() => expect(api.saoLuu.taoCongViec).toHaveBeenCalled())
+
+    // Polling hoi lai moi MS_HOI_LAI (2s, timer that) truoc khi cong viec chuyen 'xong' — cho
+    // du hon khoang do de nut xuat hien on dinh, tranh flaky vi timer that cua may CI cham.
+    const nutTai = await screen.findByRole(
+      'button', { name: /Tải tệp đã chuẩn bị xong/ }, { timeout: 4000 })
+    await userEvent.click(nutTai)
+
+    expect(await screen.findByText(/Phiên đăng nhập đã hết hạn/)).toBeDefined()
   })
 })
