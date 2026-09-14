@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
 using Qlgx.Api.Services;
 using Qlgx.Data.NhatKy;
+using Qlgx.Domain;
 using Qlgx.Domain.Entities;
 
 namespace Qlgx.Api.Tests;
@@ -96,7 +97,12 @@ public class DongBoNhanVeTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
         // rộng), lấy mốc bằng MAX(SoThuTu) hiện có — khi đó "<= toiDa" là ngữ nghĩa ĐÚNG và ổn
         // định, không phụ thuộc trạng thái CSDL/thứ tự chạy của các test khác.
         await using var db = f.TaoContextThuan();
-        var moc = await db.HieuLuc.MaxAsync(h => (long?)h.SoThuTu, default) ?? 0;
+        // LỌC GiaoXuId ngay cả trên TaoContextThuan() (đã tắt bộ lọc toàn cục) — vòng review 2
+        // bắt đúng lỗi: không lọc thì mốc tính LẪN dòng của giáo xứ khác (do các test khác trong
+        // CÙNG fixture để lại), trong khi endpoint /thay-doi chỉ thấy đúng giáo xứ mình. Chạy cả
+        // lớp xanh nhờ thứ tự may mắn; chạy --filter một test riêng lẻ (hoặc đổi thứ tự) là đỏ
+        // ngay — đã tự xác nhận cả hai chiều trước khi sửa.
+        var moc = await db.HieuLuc.Where(h => h.GiaoXuId == f.GiaoXuId).MaxAsync(h => (long?)h.SoThuTu, default) ?? 0;
 
         db.GiaoHo.Add(new GiaoHo { GiaoXuId = f.GiaoXuId, MaGiaoHoCu = 95501, TenGiaoHo = "Lo rieng 1" });
         await db.LuuCoNhatKy(default);
@@ -123,7 +129,12 @@ public class DongBoNhanVeTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
         // ">=" sẽ coi đây là "còn nữa" (SAI — thật ra đã hết) rồi truy cập lo[soLuong] NGOÀI chỉ
         // số hợp lệ (lo chỉ có chỉ số 0..soLuong-1) — IndexOutOfRangeException ngay lập tức.
         await using var db = f.TaoContextThuan();
-        var moc = await db.HieuLuc.MaxAsync(h => (long?)h.SoThuTu, default) ?? 0;
+        // LỌC GiaoXuId ngay cả trên TaoContextThuan() (đã tắt bộ lọc toàn cục) — vòng review 2
+        // bắt đúng lỗi: không lọc thì mốc tính LẪN dòng của giáo xứ khác (do các test khác trong
+        // CÙNG fixture để lại), trong khi endpoint /thay-doi chỉ thấy đúng giáo xứ mình. Chạy cả
+        // lớp xanh nhờ thứ tự may mắn; chạy --filter một test riêng lẻ (hoặc đổi thứ tự) là đỏ
+        // ngay — đã tự xác nhận cả hai chiều trước khi sửa.
+        var moc = await db.HieuLuc.Where(h => h.GiaoXuId == f.GiaoXuId).MaxAsync(h => (long?)h.SoThuTu, default) ?? 0;
 
         db.GiaoHo.Add(new GiaoHo { GiaoXuId = f.GiaoXuId, MaGiaoHoCu = 95601, TenGiaoHo = "Vua du 1" });
         await db.LuuCoNhatKy(default);
@@ -147,7 +158,12 @@ public class DongBoNhanVeTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
         // mở rộng (chỉ lọc theo GiaoDichId), các dòng đã ở TRƯỚC tu bị gửi lại, vi phạm hợp đồng
         // "mọi dòng trả về phải có SoThuTu > tu" mà toàn bộ giao thức dựa vào để tính tiến độ.
         await using var db = f.TaoContextThuan();
-        var moc = await db.HieuLuc.MaxAsync(h => (long?)h.SoThuTu, default) ?? 0;
+        // LỌC GiaoXuId ngay cả trên TaoContextThuan() (đã tắt bộ lọc toàn cục) — vòng review 2
+        // bắt đúng lỗi: không lọc thì mốc tính LẪN dòng của giáo xứ khác (do các test khác trong
+        // CÙNG fixture để lại), trong khi endpoint /thay-doi chỉ thấy đúng giáo xứ mình. Chạy cả
+        // lớp xanh nhờ thứ tự may mắn; chạy --filter một test riêng lẻ (hoặc đổi thứ tự) là đỏ
+        // ngay — đã tự xác nhận cả hai chiều trước khi sửa.
+        var moc = await db.HieuLuc.Where(h => h.GiaoXuId == f.GiaoXuId).MaxAsync(h => (long?)h.SoThuTu, default) ?? 0;
 
         db.GiaoHo.AddRange(
             new GiaoHo { GiaoXuId = f.GiaoXuId, MaGiaoHoCu = 95701, TenGiaoHo = "Giua 1" },
@@ -198,6 +214,19 @@ public class DongBoNhanVeTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
     [Fact]
     public async Task Khong_doc_duoc_thay_doi_cua_giao_xu_khac()
     {
+        // Giữ NGUYÊN VĂN chữ ký/khẳng định của brief — nhưng BRIEF GỐC hỏi thẳng "tu=0" mà không
+        // tự sinh dữ liệu THẬT (đi qua LuuCoNhatKy) cho CHÍNH giáo xứ mình. Chạy --filter một
+        // mình (review vòng 2 bắt đúng lỗi này ở CÁC test khác, cùng một nguyên nhân): không có
+        // test nào khác trong CÙNG fixture chạy trước để lại dữ liệu, "ketQua.Dong" rỗng, và
+        // FluentAssertions.OnlyContain trên tập RỖNG bị coi là THẤT BẠI — test đỏ dù mã đúng.
+        // Thêm một dòng dữ liệu THẬT của chính giáo xứ mình để Dong không rỗng vô nghĩa, không
+        // phụ thuộc thứ tự chạy của các test khác.
+        await using (var db0 = f.TaoContextThuan())
+        {
+            db0.GiaoHo.Add(new GiaoHo { GiaoXuId = f.GiaoXuId, MaGiaoHoCu = 96201, TenGiaoHo = "Bao dam Dong khong rong" });
+            await db0.LuuCoNhatKy(default);
+        }
+
         var giaoXuKhac = Guid.NewGuid();
         await using (var db = f.TaoContextThuan())
         {
@@ -207,9 +236,10 @@ public class DongBoNhanVeTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
         }
 
         var client = f.CreateAuthClient();
-        var ketQua = await client.GetFromJsonAsync<NhanVeKetQua>("/api/dong-bo/thay-doi?tu=0");
+        var ketQua = await client.GetFromJsonAsync<NhanVeKetQua>("/api/dong-bo/thay-doi?tu=0&toiDa=5000");
 
-        ketQua!.Dong.Should().OnlyContain(d => d.Bang != "GiaoXu");
+        ketQua!.Dong.Should().NotBeEmpty();
+        ketQua.Dong.Should().OnlyContain(d => d.Bang != "GiaoXu");
     }
 
     [Fact]
@@ -248,7 +278,12 @@ public class DongBoNhanVeTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
         // Mốc TRƯỚC khi chèn — dùng MAX hiện có thay vì giả định 0, vì các test khác trong CÙNG
         // lớp (chạy tuần tự trên cùng một CSDL fixture) có thể đã ghi hieu_luc trước đó.
         await using var db = f.TaoContextThuan();
-        var moc = await db.HieuLuc.MaxAsync(h => (long?)h.SoThuTu, default) ?? 0;
+        // LỌC GiaoXuId ngay cả trên TaoContextThuan() (đã tắt bộ lọc toàn cục) — vòng review 2
+        // bắt đúng lỗi: không lọc thì mốc tính LẪN dòng của giáo xứ khác (do các test khác trong
+        // CÙNG fixture để lại), trong khi endpoint /thay-doi chỉ thấy đúng giáo xứ mình. Chạy cả
+        // lớp xanh nhờ thứ tự may mắn; chạy --filter một test riêng lẻ (hoặc đổi thứ tự) là đỏ
+        // ngay — đã tự xác nhận cả hai chiều trước khi sửa.
+        var moc = await db.HieuLuc.Where(h => h.GiaoXuId == f.GiaoXuId).MaxAsync(h => (long?)h.SoThuTu, default) ?? 0;
 
         db.GiaoHo.Add(new GiaoHo { GiaoXuId = f.GiaoXuId, MaGiaoHoCu = 95001, TenGiaoHo = "A rieng" });
         await db.LuuCoNhatKy(default);
@@ -293,7 +328,7 @@ public class DongBoNhanVeTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
         // Một giao dịch DUY NHẤT ghi 3 GiaoHo cùng lúc (cùng GiaoDichId) — dài hơn toiDa=1. Phải
         // trả ĐỦ CẢ BA dòng trong một trang duy nhất (vượt toiDa) thay vì trả trang rỗng mãi mãi.
         await using var db = f.TaoContextThuan();
-        var mocTruoc = await db.HieuLuc.MaxAsync(h => (long?)h.SoThuTu, default) ?? 0;
+        var mocTruoc = await db.HieuLuc.Where(h => h.GiaoXuId == f.GiaoXuId).MaxAsync(h => (long?)h.SoThuTu, default) ?? 0;
 
         db.GiaoHo.AddRange(
             new GiaoHo { GiaoXuId = f.GiaoXuId, MaGiaoHoCu = 95101, TenGiaoHo = "X dai 1" },
@@ -535,6 +570,83 @@ public class DongBoNhanVeTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
         foreach (var cot in dong.EnumerateObject())
             Qlgx.Data.NhatKy.CotLoaiTru.BiLoai(cot.Name).Should().BeFalse(
                 $"cột '{cot.Name}' thuộc CotLoaiTru không được lọt vào ảnh chụp (bảng {bang.Name})");
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // #2/#3 (review vòng 2): sửa GỐC — tập cột ảnh chụp giờ SUY RA từ chính mô hình EF
+    // (IEntityType.GetProperties(), xem DongBoService.ChiGiuCotTheoModel) thay vì lọc trừ trên
+    // phản chiếu CLR. Trước khi sửa, bốn bảng có navigation collection/reference
+    // (GiaDinh.ThanhVien, GiaoDan.GiaDinhThamGia, HonPhoi.GiaoDanThamGia, DotBiTich.ChiTiet) lọt
+    // vào ảnh chụp dưới dạng mảng RỖNG (AsNoTracking không Include) dù luồng hieu_luc không bao
+    // giờ mang chúng — vi phạm ĐÚNG bất biến "hai tập cột phải bằng nhau" mà chính test
+    // ToanBo_khong_chua_cot_nao_thuoc_CotLoaiTru chỉ canh được MỘT chiều (không thừa cột cấm).
+    // Test này canh CẢ HAI CHIỀU cho đúng bốn bảng có navigation đó — nếu suy ra từ model đúng,
+    // JSON key set phải khớp CHÍNH XÁC (không hơn không kém) tập EF property trừ CotLoaiTru.
+    // ---------------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task ToanBo_tap_cot_moi_bang_khop_dung_mo_hinh_EF_tru_CotLoaiTru()
+    {
+        Guid giaDinhId, giaoDan1Id, giaoDan2Id, honPhoiId, dotBiTichId;
+        await using (var db = f.TaoContextThuan())
+        {
+            var giaDinh = new GiaDinh { GiaoXuId = f.GiaoXuId, MaGiaDinhCu = 96101, TenGiaDinh = "GD kiem tap cot" };
+            var gd1 = new Domain.Entities.GiaoDan { GiaoXuId = f.GiaoXuId, MaGiaoDanCu = 96101, HoTen = "Kiem tap cot 1" };
+            var gd2 = new Domain.Entities.GiaoDan { GiaoXuId = f.GiaoXuId, MaGiaoDanCu = 96102, HoTen = "Kiem tap cot 2" };
+            db.GiaDinh.Add(giaDinh);
+            db.GiaoDan.AddRange(gd1, gd2);
+            await db.LuuCoNhatKy(default);
+
+            db.ThanhVienGiaDinh.Add(new ThanhVienGiaDinh
+            { GiaoXuId = f.GiaoXuId, GiaDinhId = giaDinh.Id, GiaoDanId = gd1.Id, VaiTro = VaiTroGiaDinh.Chong });
+            var honPhoi = new HonPhoi { GiaoXuId = f.GiaoXuId, MaHonPhoiCu = 96101, TenHonPhoi = "HP kiem tap cot" };
+            db.HonPhoi.Add(honPhoi);
+            var dotBiTich = new DotBiTich { GiaoXuId = f.GiaoXuId, MaDotBiTichCu = 96101, LoaiBiTich = LoaiBiTich.RuaToi };
+            db.DotBiTich.Add(dotBiTich);
+            await db.LuuCoNhatKy(default);
+
+            db.GiaoDanHonPhoi.Add(new GiaoDanHonPhoi
+            { GiaoXuId = f.GiaoXuId, GiaoDanId = gd2.Id, HonPhoiId = honPhoi.Id, SoThuTu = 1 });
+            db.BiTichChiTiet.Add(new BiTichChiTiet
+            { GiaoXuId = f.GiaoXuId, DotBiTichId = dotBiTich.Id, GiaoDanId = gd2.Id });
+            await db.LuuCoNhatKy(default);
+
+            giaDinhId = giaDinh.Id; giaoDan1Id = gd1.Id; giaoDan2Id = gd2.Id;
+            honPhoiId = honPhoi.Id; dotBiTichId = dotBiTich.Id;
+        }
+
+        var client = f.CreateAuthClient();
+        var toanBo = await client.GetFromJsonAsync<ToanBoKetQua>("/api/dong-bo/toan-bo");
+        var json = GiaiNen(toanBo!.DuLieuNen);
+
+        await using var dbModel = f.TaoContextThuan();
+        var cacBangCanKiem = new (string TenBang, Type LoaiThucThe, Guid IdMauCanTim)[]
+        {
+            ("GiaDinh", typeof(GiaDinh), giaDinhId),
+            ("GiaoDan", typeof(Domain.Entities.GiaoDan), giaoDan1Id),
+            ("HonPhoi", typeof(HonPhoi), honPhoiId),
+            ("DotBiTich", typeof(DotBiTich), dotBiTichId),
+        };
+
+        foreach (var (tenBang, loaiThucThe, idMau) in cacBangCanKiem)
+        {
+            json.RootElement.TryGetProperty(tenBang, out var mangDong).Should().BeTrue();
+            var dongMau = mangDong.EnumerateArray()
+                .Should().Contain(d => d.GetProperty("Id").GetGuid() == idMau, $"bảng {tenBang} phải có bản ghi vừa tạo")
+                .Subject;
+
+            var tenCotMongDoi = dbModel.Model.FindEntityType(loaiThucThe)!.GetProperties()
+                .Select(p => p.Name)
+                .Where(n => !Qlgx.Data.NhatKy.CotLoaiTru.BiLoai(n))
+                .ToHashSet(StringComparer.Ordinal);
+            var tenCotThucTe = dongMau.EnumerateObject().Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
+
+            tenCotThucTe.Should().BeEquivalentTo(tenCotMongDoi,
+                $"bảng {tenBang}: tập cột ảnh chụp phải khớp CHÍNH XÁC (không hơn không kém) tập " +
+                "thuộc tính EF trừ CotLoaiTru — thừa cột nghĩa là lộ navigation rỗng vô ích " +
+                "(GiaoHo tất, ThanhVien, ChiTiet...), thiếu cột nghĩa là dữ liệu đó đóng băng " +
+                "vĩnh viễn ở máy con vì luồng hieu_luc không bao giờ sửa được nó");
+        }
     }
 
     private static JsonDocument GiaiNen(string duLieuNen)

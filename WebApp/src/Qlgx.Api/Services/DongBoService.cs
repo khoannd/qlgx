@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
 using Qlgx.Data.DongBo;
@@ -157,7 +158,7 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh)
 
         await giaoDich.CommitAsync(ct);
 
-        var json = JsonSerializer.SerializeToUtf8Bytes(goi, TuyChonJsonAnhChup);
+        var json = JsonSerializer.SerializeToUtf8Bytes(goi, TaoTuyChonJsonAnhChup());
         var duLieuNen = NenGzipBase64(json);
 
         return new ToanBoKetQua(dem.Epoch, conTro, chupLuc, duLieuNen);
@@ -195,31 +196,57 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh)
     }
 
     /// <summary>
-    /// Tuỳ chọn JSON cho ẢNH CHỤP — loại bỏ mọi cột thuộc <see cref="CotLoaiTru"/> khỏi kết quả
-    /// serialize, ÁP DỤNG CHO MỌI KIỂU (quét qua <see cref="LoaiBoCotLoaiTru"/> ở mức
-    /// <c>JsonTypeInfo</c>, không liệt kê tay theo từng bảng).
+    /// Tuỳ chọn JSON cho ẢNH CHỤP — SUY RA tập cột hợp lệ của MỖI kiểu THẲNG TỪ MÔ HÌNH EF
+    /// (<see cref="IModel.FindEntityType(Type)"/> → <see cref="IEntityType.GetProperties"/>) thay
+    /// vì lọc trừ trên phản chiếu CLR. Đây là sửa GỐC theo review vòng 2, không phải vá triệu
+    /// chứng: <c>IEntityType.GetProperties()</c> trả về ĐÚNG tập cột vô hướng/khoá ngoại mà EF
+    /// biết tới — CHÍNH LÀ tập <c>ChangeTracker.Entries&lt;T&gt;().Properties</c> mà
+    /// <see cref="Qlgx.Data.NhatKy.SinhDongNhatKy"/> đọc để sinh dòng <c>hieu_luc</c> (xem
+    /// <c>muc.Properties</c> trong file đó) — KHÔNG bao giờ bao gồm navigation (danh sách/tham
+    /// chiếu điều hướng như <c>GiaDinh.ThanhVien</c>, <c>GiaoDan.GiaDinhThamGia</c>,
+    /// <c>HonPhoi.GiaoDanThamGia</c>, <c>DotBiTich.ChiTiet</c>...). Nhờ vậy hai tập cột (ảnh chụp
+    /// và luồng hieu_luc) BẰNG NHAU THEO CẤU TRÚC — không ai phải tự canh cho khớp, không cần một
+    /// danh sách loại trừ song song nào khác cho việc này.
     ///
-    /// BẤT BIẾN chưa ai phát biểu trước Task 5: tập cột trong ảnh chụp PHẢI bằng tập cột mà
-    /// luồng <c>hieu_luc</c> duy trì được — tức chính <see cref="CotLoaiTru"/>. Lệch cột nào thì
-    /// cột đó vĩnh viễn đóng băng ở giá trị lúc tải về đối với máy con dùng ảnh chụp làm điểm
-    /// khởi đầu: cụ thể, <c>AnhDaiDienDuLieu</c>/<c>AnhDaiDienLoaiNoiDung</c> đổi qua
-    /// AnhDaiDienService KHÔNG đi qua <c>hieu_luc</c> (xem CotLoaiTru.cs) — nếu ảnh chụp vẫn đưa
-    /// hai cột này vào, một sơ đổi ảnh đại diện trên web sẽ không bao giờ tới được máy con offline
-    /// (mãi mãi hiện ảnh cũ tại thời điểm tải về), trong khi hai máy con của CÙNG một giáo xứ có
-    /// thể hiện hai ảnh khác nhau tuỳ máy nào tải toàn bộ lúc nào — không ai hiểu vì sao nếu không
-    /// biết bất biến này. Không phải chuyện dung lượng (dù loại ảnh cũng giảm size đáng kể) — là
-    /// chuyện NHẤT QUÁN giữa hai đường: chính sách cột nào cũng được, miễn hai đường đồng ý.
+    /// Bản trước lọc trừ theo <see cref="CotLoaiTru"/> trên PHẢN CHIẾU CLR (mọi property public
+    /// của lớp .NET) — điều đó vẫn để lọt các navigation property (chúng KHÔNG thuộc
+    /// CotLoaiTru.Ten, và JsonSerializer mặc định vẫn serialize chúng, dù rỗng vì AsNoTracking
+    /// không Include) vào ảnh chụp, trong khi hieu_luc không bao giờ mang chúng — VI PHẠM đúng
+    /// bất biến mà bản trước tự phát biểu. Bị lộ ra khi review vòng 2 chạy thật.
+    ///
+    /// Vẫn áp <see cref="CotLoaiTru"/> lên trên tập cột theo mô hình — hai điều kiện ĐỘC LẬP:
+    /// GetProperties() loại navigation (điều SinhDongNhatKy vốn không cần làm gì thêm vì
+    /// ChangeTracker.Properties tự nhiên không có navigation), còn CotLoaiTru loại các cột VÔ
+    /// HƯỚNG có ý nghĩa đặc biệt (ảnh đại diện, mật khẩu, cột hệ thống) mà SinhDongNhatKy PHẢI lọc
+    /// tường minh (xem CotLoaiTru.BiLoai trong SinhDongNhatKy.Tu).
     /// </summary>
-    private static readonly JsonSerializerOptions TuyChonJsonAnhChup = new()
+    private JsonSerializerOptions TaoTuyChonJsonAnhChup()
     {
-        TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { LoaiBoCotLoaiTru } },
-    };
+        var model = db.Model;
+        return new JsonSerializerOptions
+        {
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver
+            {
+                Modifiers = { typeInfo => ChiGiuCotTheoModel(typeInfo, model) },
+            },
+        };
+    }
 
-    private static void LoaiBoCotLoaiTru(JsonTypeInfo typeInfo)
+    private static void ChiGiuCotTheoModel(JsonTypeInfo typeInfo, IModel model)
     {
         if (typeInfo.Kind != JsonTypeInfoKind.Object) return;
+
+        var loaiThucThe = model.FindEntityType(typeInfo.Type);
+        // Không phải một kiểu EF biết tới (ví dụ khung Dictionary bọc ngoài) — không đụng tới.
+        if (loaiThucThe is null) return;
+
+        var tenCotHopLe = loaiThucThe.GetProperties()
+            .Select(p => p.Name)
+            .Where(n => !CotLoaiTru.BiLoai(n))
+            .ToHashSet(StringComparer.Ordinal);
+
         for (var i = typeInfo.Properties.Count - 1; i >= 0; i--)
-            if (CotLoaiTru.BiLoai(typeInfo.Properties[i].Name))
+            if (!tenCotHopLe.Contains(typeInfo.Properties[i].Name))
                 typeInfo.Properties.RemoveAt(i);
     }
 }
