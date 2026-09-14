@@ -378,14 +378,30 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
             DauDongHo dau;
             if (tt.NguonGocEpoch is not null)
             {
-                // THAO TÁC BÙ LẠI sau khôi phục (spec 4.8.5 bước 3): mốc GIỮ NGUYÊN, không hiệu
-                // chỉnh, không kẹp. Mốc này ĐÃ ở hệ quy chiếu máy chủ từ lần đầu được chấp nhận,
-                // trước khi 8 giờ dữ liệu đó bị mất. Hiệu chỉnh nó theo độ lệch đồng hồ HIỆN TẠI
-                // của máy con là áp một phép tính không liên quan lên một con số đã đúng — nó
-                // trôi khỏi vị trí thời gian thật của mình trong lịch sử, rồi thắng/thua sai so
-                // với những thay đổi quanh nó. Đây là sự thật lịch sử, không phải thay đổi mới.
+                // THAO TÁC BÙ LẠI sau khôi phục (spec 4.8.5 bước 3): KHÔNG hiệu chỉnh, NHƯNG VẪN
+                // KẸP. Hai việc này rất dễ bị gộp làm một; chúng khác hẳn nhau:
+                //
+                //  - KHÔNG gọi DongHoLai.HieuChinh. Mốc gốc ĐÃ ở hệ quy chiếu máy chủ từ lần đầu
+                //    nó được chấp nhận, trước khi 8 giờ dữ liệu đó bị mất. Hiệu chỉnh nó theo độ
+                //    lệch đồng hồ HIỆN TẠI của máy con là áp một phép tính không liên quan lên
+                //    một con số đã đúng — nó trôi khỏi vị trí thời gian thật của mình trong lịch
+                //    sử, rồi thắng/thua sai so với những thay đổi quanh nó. Đây là sự thật lịch
+                //    sử, không phải thay đổi mới.
+                //
+                //  - VẪN KẸP về min(mốc, giờ máy chủ). Kẹp là một GIỚI HẠN TRÊN an toàn, chẳng
+                //    liên quan gì tới việc hiệu chỉnh độ lệch. Với MỌI thao tác bù hợp lệ nó là
+                //    no-op tuyệt đối: mốc gốc luôn ở quá khứ (khôi phục không làm thời gian chạy
+                //    ngược), nên kẹp không đổi một hành vi đúng nào. Nhưng không kẹp thì một
+                //    thao tác bù GIẢ MẠO — máy con tự bịa NguonGocEpoch kèm một mốc năm 2030 —
+                //    sẽ thắng MỌI bản ghi hợp lệ về sau, VĨNH VIỄN. Và máy chủ không có cách nào
+                //    đối chiếu: sau khi khôi phục nó không còn nhớ giá trị thật từng nằm ở
+                //    so_thu_tu đó để mà so. Đây đúng là cái lỗ mà phép kẹp sinh ra để bịt.
+                //
+                // CHỈ kẹp phần VẬT LÝ, giữ nguyên DongHoLogic của máy con: phần logic là quan hệ
+                // nhân quả của chính chuỗi lịch sử đó, không phải một con số đo bằng đồng hồ.
                 // Hàm dựng của DauDongHo tự cắt micro giây.
-                dau = new DauDongHo(tt.DongHoVatLy, tt.DongHoLogic, yc.ThietBiId, tt.MaThaoTac);
+                var mocBuKep = tt.DongHoVatLy > gioMayChu ? gioMayChu : tt.DongHoVatLy;
+                dau = new DauDongHo(mocBuKep, tt.DongHoLogic, yc.ThietBiId, tt.MaThaoTac);
 
                 // CỬA "cho phép bù lại" (mục 4.8.3). Mặc định ĐÓNG, chỉ mở bởi một lần xoay epoch
                 // chế độ "lay_lai" — tức là chỉ khi một CON NGƯỜI đã nói rõ "máy chủ vừa gặp sự

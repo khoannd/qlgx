@@ -261,6 +261,33 @@ public class KhoiPhucDongBoTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactor
             "day khong phai mot muc can xem lai — day la hanh vi DUNG Y theo lua chon cua quan tri vien");
     }
 
+    [Fact]
+    public async Task Thao_tac_bu_mang_moc_o_TUONG_LAI_van_bi_kep_ve_gio_may_chu()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9307, "Goc Bu Bay");
+        await XoayEpoch("lay_lai");
+
+        var truocKhiGui = DateTimeOffset.UtcNow;
+
+        // Thao tác bù GIẢ MẠO: máy con tự bịa một danh tính gốc kèm mốc mười năm sau. Không kẹp
+        // thì mốc này thắng MỌI bản ghi hợp lệ về sau, VĨNH VIỄN — và máy chủ không có cách nào
+        // đối chiếu, vì sau khôi phục nó không còn nhớ giá trị thật từng nằm ở so_thu_tu đó.
+        var mocTuongLai = DongHoLai.CatMicroGiay(DateTimeOffset.UtcNow.AddYears(10));
+        var kq = await Gui(client, DateTimeOffset.UtcNow,
+            SuaBu(id, "HoTen", "\"Ban Gia Mao\"", mocTuongLai, Guid.NewGuid(), 5001));
+
+        kq.KetQua[0].KetQua.Should().Be("ap");
+
+        var moc = await DocMocO(id, "HoTen");
+        moc.DongHoVatLy.Should().BeBefore(mocTuongLai,
+            "khong kep thi mot thao tac bu gia mao thang moi ban ghi hop le ve sau, vinh vien");
+        moc.DongHoVatLy.Should().BeOnOrAfter(DongHoLai.CatMicroGiay(truocKhiGui))
+            .And.BeOnOrBefore(DateTimeOffset.UtcNow,
+                "kep la GIOI HAN TREN bang gio may chu, khong phai mot phep hieu chinh — moc phai " +
+                "roi dung vao khoang thoi gian may chu xu ly lo nay");
+    }
+
     // ==================================================================
     //  Lớp 2: máy chủ lùi mà không ai xoay epoch (spec 4.8.4)
     // ==================================================================
