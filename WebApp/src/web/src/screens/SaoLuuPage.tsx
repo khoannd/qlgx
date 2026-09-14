@@ -1,12 +1,42 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ColDef } from 'ag-grid-community'
 import { api } from '../api/client'
-import type { BanSaoLuu, CongViecSaoLuu, LoaiCongViecSaoLuu, TinhTrangSaoLuu } from '../api/types'
+import type {
+  BanSaoLuu, CongViecSaoLuu, LoaiCongViecSaoLuu, TinhTrangSaoLuu, TrangThaiCongViec,
+} from '../api/types'
 import { GxGrid } from '../components/GxGrid'
 import { TrangThaiTai } from '../components/TrangThaiTai'
 import { dinhDangNgayGio } from '../lib/ngay'
 
 const MS_HOI_LAI = 2000
+
+/** Chặn trên số lần hỏi lại tiến trình THẤT BẠI LIÊN TIẾP trước khi ngừng polling hẳn và báo
+ * lỗi rõ ràng cho người dùng, thay vì để nút mãi bị khoá và màn hình mãi hiện "Đang chạy" mà
+ * không ai biết máy chủ còn sống hay không. 60 lần × 2s = 2 phút — rộng rãi hơn nhiều so với
+ * `CHO_SAN_SANG_SAU_HOAN_DOI_GIAY` (90 giây) phía máy chủ khi hoán đổi CSDL sau phục hồi, nên
+ * không báo lỗi giả trong một lần hoán đổi bình thường, nhưng vẫn phát hiện được khi máy chủ
+ * thật sự không quay lại nữa (job mất tích sau phục hồi, lỗi 404 dai dẳng…). */
+const SO_LAN_LOI_TOI_DA = 60
+
+export function nhanLoaiCongViec(loai: LoaiCongViecSaoLuu): string {
+  switch (loai) {
+    case 'phuc_hoi': return 'Phục hồi'
+    case 'kiem_tra': return 'Kiểm tra'
+    case 'dien_tap': return 'Diễn tập'
+    case 'tai_ve': return 'Tải về'
+    case 'dong_bo_danh_sach': return 'Đồng bộ danh sách'
+    default: return 'Sao lưu'
+  }
+}
+
+export function nhanTrangThaiCongViec(trangThai: TrangThaiCongViec): string {
+  switch (trangThai) {
+    case 'dang_chay': return 'Đang chạy'
+    case 'xong': return 'Xong'
+    case 'loi': return 'Lỗi'
+    default: return 'Chờ'
+  }
+}
 
 export function dinhDangKichThuoc(byte: number): string {
   if (byte <= 0) return '0 B'
@@ -45,7 +75,9 @@ export function SaoLuuPage() {
   const [loi, setLoi] = useState<string | null>(null)
   const [loiThaoTac, setLoiThaoTac] = useState<string | null>(null)
   const [dangChay, setDangChay] = useState<CongViecSaoLuu | null>(null)
+  const [loiHoiLai, setLoiHoiLai] = useState<string | null>(null)
   const hoLaiRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const soLoiLienTiepRef = useRef(0)
 
   const tai = useCallback(() => {
     setDangTai(true); setLoi(null)
@@ -60,21 +92,33 @@ export function SaoLuuPage() {
 
   function theoDoi(id: string) {
     if (hoLaiRef.current) clearInterval(hoLaiRef.current)
+    soLoiLienTiepRef.current = 0
     hoLaiRef.current = setInterval(() => {
       api.saoLuu.congViec(id)
         .then((cv) => {
+          soLoiLienTiepRef.current = 0
           setDangChay(cv)
           if (cv.trangThai === 'xong' || cv.trangThai === 'loi') {
             if (hoLaiRef.current) { clearInterval(hoLaiRef.current); hoLaiRef.current = null }
             tai()
           }
         })
-        .catch(() => { /* API co the dang khoi dong lai sau khi hoan doi CSDL — cu hoi lai */ })
+        .catch(() => {
+          // API co the dang khoi dong lai sau khi hoan doi CSDL — cu hoi lai, NHUNG chi trong
+          // gioi han SO_LAN_LOI_TOI_DA lan lien tiep, khong de treo man hinh mai mai neu may
+          // chu that su khong quay lai nua.
+          soLoiLienTiepRef.current += 1
+          if (soLoiLienTiepRef.current >= SO_LAN_LOI_TOI_DA) {
+            if (hoLaiRef.current) { clearInterval(hoLaiRef.current); hoLaiRef.current = null }
+            setLoiHoiLai('Không nhận được phản hồi từ máy chủ — hãy tải lại trang để kiểm tra.')
+          }
+        })
     }, MS_HOI_LAI)
   }
 
   async function taoCongViec(loai: LoaiCongViecSaoLuu, them?: Record<string, string>) {
     setLoiThaoTac(null)
+    setLoiHoiLai(null)
     try {
       const { id } = await api.saoLuu.taoCongViec({ loai, ...them })
       setDangChay({
@@ -124,6 +168,9 @@ export function SaoLuuPage() {
           )}
 
           {dangChay && <KhoiTienTrinh congViec={dangChay} />}
+          {loiHoiLai && (
+            <div role="alert" style={{ color: 'var(--rose-ink)', fontSize: 12.5 }}>{loiHoiLai}</div>
+          )}
 
           <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div className="page-head">
@@ -207,7 +254,8 @@ function KhoiNhatKy({ congViec }: { congViec: CongViecSaoLuu[] }) {
       <ul style={{ fontSize: 12, margin: '6px 0 0', paddingLeft: 18 }}>
         {congViec.map((c) => (
           <li key={c.id}>
-            {dinhDangNgayGio(c.taoLuc)} — {c.loai} — <strong>{c.trangThai}</strong>
+            {dinhDangNgayGio(c.taoLuc)} — {nhanLoaiCongViec(c.loai)} —{' '}
+            <strong>{nhanTrangThaiCongViec(c.trangThai)}</strong>
           </li>
         ))}
       </ul>

@@ -1,7 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { SaoLuuPage, nhanNguon, dinhDangKichThuoc } from './SaoLuuPage'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  SaoLuuPage, nhanNguon, dinhDangKichThuoc, nhanLoaiCongViec, nhanTrangThaiCongViec,
+} from './SaoLuuPage'
 import { api } from '../api/client'
 
 vi.mock('../api/client', () => ({
@@ -27,6 +29,10 @@ beforeEach(() => {
   vi.mocked(api.saoLuu.congViecGanDay).mockResolvedValue([])
 })
 
+afterEach(() => {
+  vi.useRealTimers()
+})
+
 describe('dinhDangKichThuoc', () => {
   it('doi byte sang don vi doc duoc', () => {
     expect(dinhDangKichThuoc(0)).toBe('0 B')
@@ -40,6 +46,26 @@ describe('nhanNguon', () => {
     expect(nhanNguon('thu_cong')).toBe('Thủ công')
     expect(nhanNguon('truoc_cap_nhat')).toBe('Trước cập nhật')
     expect(nhanNguon('truoc_phuc_hoi')).toBe('Trước phục hồi')
+  })
+})
+
+describe('nhanLoaiCongViec', () => {
+  it('dich du sau loai cong viec sang tieng Viet', () => {
+    expect(nhanLoaiCongViec('sao_luu')).toBe('Sao lưu')
+    expect(nhanLoaiCongViec('phuc_hoi')).toBe('Phục hồi')
+    expect(nhanLoaiCongViec('kiem_tra')).toBe('Kiểm tra')
+    expect(nhanLoaiCongViec('dien_tap')).toBe('Diễn tập')
+    expect(nhanLoaiCongViec('tai_ve')).toBe('Tải về')
+    expect(nhanLoaiCongViec('dong_bo_danh_sach')).toBe('Đồng bộ danh sách')
+  })
+})
+
+describe('nhanTrangThaiCongViec', () => {
+  it('dich du bon trang thai sang tieng Viet', () => {
+    expect(nhanTrangThaiCongViec('cho')).toBe('Chờ')
+    expect(nhanTrangThaiCongViec('dang_chay')).toBe('Đang chạy')
+    expect(nhanTrangThaiCongViec('xong')).toBe('Xong')
+    expect(nhanTrangThaiCongViec('loi')).toBe('Lỗi')
   })
 })
 
@@ -93,5 +119,49 @@ describe('SaoLuuPage', () => {
     render(<SaoLuuPage />)
     await screen.findByText(/Bình thường/)
     expect(screen.getByText(/chưa mã hoá/i)).toBeDefined()
+  })
+
+  it('nhat ky cong viec gan day hien nhan tieng Viet, khong phai ma tho', async () => {
+    vi.mocked(api.saoLuu.congViecGanDay).mockResolvedValue([{
+      id: 'job-cu', loai: 'sao_luu', trangThai: 'xong', buocHienTai: null,
+      nhatKy: null, taoLuc: '2026-09-12T07:00:00Z', batDauLuc: null, ketThucLuc: null,
+    }])
+    render(<SaoLuuPage />)
+    await screen.findByText(/Bình thường/)
+
+    await userEvent.click(screen.getByText(/Nhật ký công việc gần đây/))
+
+    const dong = screen.getByText(
+      (_, el) => el?.tagName === 'LI' && /Sao lưu/.test(el.textContent ?? '') && /Xong/.test(el.textContent ?? ''),
+    )
+    expect(dong).toBeDefined()
+    expect(screen.queryByText(/sao_luu/)).toBeNull()
+  })
+
+  it('dung polling va bao loi ro rang sau qua nhieu lan hoi lai that bai lien tiep', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      vi.mocked(api.saoLuu.taoCongViec).mockResolvedValue({ id: 'job-1' })
+      vi.mocked(api.saoLuu.congViec).mockRejectedValue(new Error('mang loi tam thoi'))
+      render(<SaoLuuPage />)
+      await screen.findByText(/Bình thường/)
+
+      fireEvent.click(screen.getByRole('button', { name: /Sao lưu ngay/ }))
+      // Cho promise cua taoCongViec/theoDoi chay xong truoc khi bat dau dem gio hoi lai.
+      await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+      // 60 lan that bai lien tiep, moi lan cach 2s (MS_HOI_LAI) = dung 2 phut.
+      await act(async () => { await vi.advanceTimersByTimeAsync(2000 * 60) })
+
+      expect(await screen.findByText(/Không nhận được phản hồi từ máy chủ/)).toBeDefined()
+      const soLanGoiSauKhiDung = vi.mocked(api.saoLuu.congViec).mock.calls.length
+      expect(soLanGoiSauKhiDung).toBe(60)
+
+      // Polling da dung han — khong goi them nua du cho troi qua tiep.
+      await act(async () => { await vi.advanceTimersByTimeAsync(2000 * 10) })
+      expect(vi.mocked(api.saoLuu.congViec).mock.calls.length).toBe(soLanGoiSauKhiDung)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
