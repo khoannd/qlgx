@@ -73,6 +73,19 @@ public record GuiLenKetQua(Guid Epoch, long ConTroMoi, bool ConNua,
 public record CanXemLaiDto(Guid Id, string Loai, string Bang, Guid BanGhiId, string Truong,
     string? LyDo, string? GiaTriA, string? GiaTriB, string? GiaTriDangDung, DateTimeOffset TaoLuc);
 
+/// <summary>
+/// Thân yêu cầu của <c>POST /api/quan-tri/dong-bo/xoay-epoch</c> — bước cuối của quy trình khôi
+/// phục máy chủ (spec 4.8.7).
+///
+/// <see cref="GiaoXuId"/> rỗng nghĩa là MỌI giáo xứ (khôi phục toàn bộ máy chủ), không phải "giáo
+/// xứ của người đang đăng nhập": thao tác này chỉ dành cho Quản trị hệ thống, và ca dùng chính
+/// của nó là cả máy chủ vừa được nạp lại.
+///
+/// <see cref="CheDo"/> chỉ nhận "lay_lai" hoặc "bo_han" và KHÔNG có mặc định — xem
+/// <see cref="Qlgx.Api.Services.KhoiPhucDongBoService"/> vì sao chỗ này buộc con người quyết định.
+/// </summary>
+public record XoayEpochYeuCau(Guid? GiaoXuId, string CheDo);
+
 /// <summary>Thân yêu cầu của <c>POST /api/can-xem-lai/{id}/chon</c>. <see cref="Chon"/> chỉ nhận
 /// "A" hoặc "B" — giá trị khác bị CanXemLaiService từ chối.</summary>
 public record ChonGiaTriYeuCau(string Chon);

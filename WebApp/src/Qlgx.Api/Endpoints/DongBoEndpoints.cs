@@ -18,7 +18,24 @@ public static class DongBoEndpoints
         nhom.MapGet("/thay-doi", async (
             DongBoService dv, Guid? epoch, long tu, int? toiDa, CancellationToken ct) =>
         {
-            var ketQua = await dv.NhanVe(epoch, tu, toiDa, ct);
+            NhanVeKetQua? ketQua;
+            try
+            {
+                ketQua = await dv.NhanVe(epoch, tu, toiDa, ct);
+            }
+            catch (MayChuDiLuiException)
+            {
+                // LỚP 2 của mục 4.8.4 — lưới an toàn cho ca ai đó khôi phục CSDL bằng tay mà
+                // quên xoay epoch. 409 chứ không 410: 410 nghĩa là "con trỏ của anh đã cũ, tải
+                // lại toàn bộ đi", và làm đúng thế ở đây là để máy con TỰ NGUYỆN vứt bản tốt của
+                // chính nó lấy bản cũ của máy chủ. Máy con tra `type` == "may-chu-di-lui" để
+                // chuyển 🔴 và DỪNG đồng bộ (ràng buộc toàn cục của kế hoạch 5).
+                return Results.Problem(statusCode: StatusCodes.Status409Conflict,
+                    type: "may-chu-di-lui",
+                    title: "Máy chủ có dấu hiệu vừa bị đưa về bản cũ",
+                    detail: "So_thu_tu con tro lon hon so lon nhat hien co, cung epoch — dau hieu khoi phuc " +
+                        "CSDL bang tay ma quen xoay epoch.");
+            }
 
             // null nghĩa là epoch client gửi lên không khớp epoch hiện tại của giáo xứ — 410
             // Gone TƯỜNG MINH, không phải 200 kèm mảng rỗng. Con trỏ mồ côi phải bị từ chối rõ
@@ -55,6 +72,27 @@ public static class DongBoEndpoints
                     detail: "Epoch không khớp — tải lại toàn bộ qua /api/dong-bo/toan-bo.")
                 : Results.Ok(ketQua);
         });
+    }
+
+    /// <summary>
+    /// Thao tác QUẢN TRỊ của quy trình khôi phục máy chủ (spec 4.8.7) — tách hẳn khỏi nhóm
+    /// <c>/api/dong-bo</c> của máy con: đây không phải việc của máy con, và policy cũng khác hẳn
+    /// (chỉ Quản trị hệ thống). Cùng khuôn với CachHienThiDungSaiEndpoints.
+    /// </summary>
+    public static void MapKhoiPhucDongBo(this IEndpointRouteBuilder app)
+    {
+        var nhom = app.MapGroup("/api/quan-tri/dong-bo").RequireAuthorization("QuanTriHeThong");
+
+        nhom.MapPost("/xoay-epoch", async (
+            KhoiPhucDongBoService dv, XoayEpochYeuCau yc, CancellationToken ct) =>
+            await dv.XoayEpoch(yc.GiaoXuId, yc.CheDo, ct) is { } so
+                ? Results.Ok(new { soGiaoXuDaXoay = so })
+                : Results.BadRequest(new
+                {
+                    thongBao = "Phải chọn rõ một trong hai: 'lay_lai' (máy chủ vừa gặp sự cố, lấy " +
+                               "lại những thay đổi các máy con còn giữ) hoặc 'bo_han' (đang cố ý " +
+                               "quay lui để huỷ những thay đổi sai). Không có lựa chọn mặc định.",
+                }));
     }
 
     /// <summary>

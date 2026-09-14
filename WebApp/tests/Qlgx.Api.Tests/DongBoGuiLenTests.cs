@@ -783,6 +783,14 @@ public class DongBoGuiLenTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
 
         tuMayA.MaThaoTac.Should().NotBe(tuMayB.MaThaoTac, "hai may sinh hai ma khac nhau");
 
+        // Task 9 thêm một CỬA trước đường bù lại: máy chủ chỉ nhận thao tác mang danh tính gốc
+        // sau khi một CON NGƯỜI đã xoay epoch với chế độ "lay_lai" (spec 4.8.3). Không mở cửa thì
+        // cả hai thao tác dưới đây bị từ chối và test này không còn kiểm được việc chống trùng.
+        var quanTri = f.CreateAuthClient(loaiTaiKhoan: 9);
+        var moCua = await quanTri.PostAsJsonAsync("/api/quan-tri/dong-bo/xoay-epoch",
+            new XoayEpochYeuCau(f.GiaoXuId, "lay_lai"));
+        moCua.StatusCode.Should().Be(HttpStatusCode.OK, await moCua.Content.ReadAsStringAsync());
+
         await Gui(client, Guid.NewGuid(), 0, tuMayA);
         var lanB = await Gui(client, Guid.NewGuid(), 0, tuMayB);
 

@@ -52,6 +52,19 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
 
         if (epoch is { } e && DongHoLai.SoSanhGuid(e, dem.Epoch) != 0) return null;
 
+        // LỚP 2 của mục 4.8.4 — chỉ chạy khi máy con có KHẲNG ĐỊNH một epoch (và epoch đó vừa
+        // khớp ở trên): "con trỏ đi trước số máy chủ từng cấp, CÙNG một epoch" là điều không bao
+        // giờ xảy ra khi vận hành bình thường, nên nó là dấu hiệu máy chủ vừa bị nạp lại từ bản
+        // sao lưu bằng tay mà quên xoay epoch. Lô gửi lên (GuiLen) gọi NhanVe với epoch null nên
+        // KHÔNG đi qua đây — và đúng thế: ném ở đó sẽ thành 500 sau khi lô đã commit.
+        //
+        // So với SoTiepTheo-1 (số LỚN NHẤT từng cấp), KHÔNG phải MAX(hieu_luc.so_thu_tu): ảnh
+        // chụp /toan-bo trả con trỏ đúng bằng SoTiepTheo-1, mà con số đó lớn hơn MAX(hieu_luc)
+        // bất cứ khi nào lô gần nhất có thao tác thua (dải số thừa được trả lại). Lấy MAX sẽ báo
+        // động giả cho một máy con vừa tải toàn bộ về — đúng lúc nó cần đồng bộ nhất.
+        if (epoch is not null && tu > dem.SoTiepTheo - 1)
+            throw new MayChuDiLuiException(tu, dem.SoTiepTheo - 1);
+
         // Lọc CẢ h.Epoch == dem.Epoch, không chỉ SoThuTu — hôm nay luôn đúng vì mỗi giáo xứ mới
         // có đúng MỘT epoch từ trước tới giờ, nhưng Task 9 sẽ thêm cơ chế XOAY epoch (khôi phục
         // máy chủ, dọn nhật ký). Nếu một lần xoay chen giữa câu SELECT dem ở trên và truy vấn
@@ -320,6 +333,19 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
         };
         var ketQua = bc.KetQua;
 
+        // Cờ "cho phép bù lại" của giáo xứ — ĐỌC LƯỜI, chỉ khi lô thật sự có thao tác bù (tuyệt
+        // đại đa số lô không có). An toàn vì dòng bo_dem_hieu_luc đang bị CHÍNH giao dịch này giữ
+        // khoá FOR UPDATE từ LayDaiSo ở trên: giá trị đọc ra không thể đổi giữa chừng. CỐ Ý không
+        // thêm cờ này vào chữ ký LayDaiSo — hàm đó là điểm chung của mọi đường ghi (kể cả web),
+        // đổi chữ ký sẽ bắt mọi nơi gọi mang theo một thứ chỉ đường đồng bộ mới cần.
+        bool? daDocChoPhepBuLai = null;
+        async Task<bool> ChoPhepBuLai()
+        {
+            daDocChoPhepBuLai ??= await db.BoDemHieuLuc.AsNoTracking()
+                .Where(b => b.GiaoXuId == giaoXuId).Select(b => b.ChoPhepBuLai).SingleAsync(ct);
+            return daDocChoPhepBuLai.Value;
+        }
+
         // --- Bước 1: chống trùng, và dựng dấu đồng hồ cho từng thao tác ---
         var canXuLy = new List<(ThaoTacDto Tt, DauDongHo Dau)>();
         var daThayTrongLo = new HashSet<Guid>();
@@ -349,14 +375,45 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
                 continue;
             }
 
-            // HIỆU CHỈNH về giờ máy chủ rồi KẸP: một máy con báo giờ ở năm 2030 (đồng hồ CMOS
-            // hỏng, hoặc cố tình) mà không kẹp thì mốc đó thắng mọi bản ghi hợp lệ về sau VĨNH
-            // VIỄN. Kẹp an toàn được vì máy chủ giữ đồng hồ logic riêng ở dòng đếm — xem
-            // BoDemHieuLuc.DauCuoiVatLy; thiếu nửa đó thì kẹp lại tạo ra một lỗ khác.
-            var mocHieuChinh = DongHoLai.HieuChinh(tt.DongHoVatLy, doLech);
-            var mocKep = mocHieuChinh > gioMayChu ? gioMayChu : mocHieuChinh;
-            // Hàm dựng của DauDongHo tự cắt micro giây — không cắt lại ở đây.
-            var dau = new DauDongHo(mocKep, tt.DongHoLogic, yc.ThietBiId, tt.MaThaoTac);
+            DauDongHo dau;
+            if (tt.NguonGocEpoch is not null)
+            {
+                // THAO TÁC BÙ LẠI sau khôi phục (spec 4.8.5 bước 3): mốc GIỮ NGUYÊN, không hiệu
+                // chỉnh, không kẹp. Mốc này ĐÃ ở hệ quy chiếu máy chủ từ lần đầu được chấp nhận,
+                // trước khi 8 giờ dữ liệu đó bị mất. Hiệu chỉnh nó theo độ lệch đồng hồ HIỆN TẠI
+                // của máy con là áp một phép tính không liên quan lên một con số đã đúng — nó
+                // trôi khỏi vị trí thời gian thật của mình trong lịch sử, rồi thắng/thua sai so
+                // với những thay đổi quanh nó. Đây là sự thật lịch sử, không phải thay đổi mới.
+                // Hàm dựng của DauDongHo tự cắt micro giây.
+                dau = new DauDongHo(tt.DongHoVatLy, tt.DongHoLogic, yc.ThietBiId, tt.MaThaoTac);
+
+                // CỬA "cho phép bù lại" (mục 4.8.3). Mặc định ĐÓNG, chỉ mở bởi một lần xoay epoch
+                // chế độ "lay_lai" — tức là chỉ khi một CON NGƯỜI đã nói rõ "máy chủ vừa gặp sự
+                // cố, lấy lại đi". Đóng nghĩa là quản trị viên đang CỐ Ý quay lui; để máy con đẩy
+                // phần đã bỏ ngược lên là vô hiệu hoá chính thao tác quay lui đó.
+                //
+                // KHÔNG ghi CanXemLai: đây không phải một việc cần người xem lại, đây là hành vi
+                // ĐÚNG Ý theo lựa chọn của quản trị viên. Vẫn vào canXuLy để Bước 3 ghi sổ chống
+                // trùng (giữ nguyên bất biến "mọi thao tác đã xử lý đều có biên nhận").
+                if (!await ChoPhepBuLai())
+                {
+                    ketQua[tt.MaThaoTac] = new KetQuaThaoTacDto(tt.MaThaoTac, "tu_choi",
+                        "May chu dang o che do quay lui co chu y — khong nhan du lieu bu.");
+                    canXuLy.Add((tt, dau));
+                    continue;
+                }
+            }
+            else
+            {
+                // HIỆU CHỈNH về giờ máy chủ rồi KẸP: một máy con báo giờ ở năm 2030 (đồng hồ CMOS
+                // hỏng, hoặc cố tình) mà không kẹp thì mốc đó thắng mọi bản ghi hợp lệ về sau VĨNH
+                // VIỄN. Kẹp an toàn được vì máy chủ giữ đồng hồ logic riêng ở dòng đếm — xem
+                // BoDemHieuLuc.DauCuoiVatLy; thiếu nửa đó thì kẹp lại tạo ra một lỗ khác.
+                var mocHieuChinh = DongHoLai.HieuChinh(tt.DongHoVatLy, doLech);
+                var mocKep = mocHieuChinh > gioMayChu ? gioMayChu : mocHieuChinh;
+                // Hàm dựng của DauDongHo tự cắt micro giây — không cắt lại ở đây.
+                dau = new DauDongHo(mocKep, tt.DongHoLogic, yc.ThietBiId, tt.MaThaoTac);
+            }
 
             // NÂNG đồng hồ máy chủ theo mốc vừa THẤY, kể cả khi thao tác này sẽ thua: "đã thấy"
             // là quan hệ nhân quả, không phải phần thưởng cho người thắng. Không nâng thì lần
@@ -375,6 +432,12 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
         foreach (var (tt, dau) in canXuLy)
         {
             if (!daXuLy.Add(tt.MaThaoTac)) continue;
+
+            // Thao tác ĐÃ có kết quả từ Bước 1 (hôm nay: thao tác bù bị cửa "cho phép bù lại"
+            // đóng) vẫn nằm trong canXuLy để Bước 3 ghi biên nhận, nhưng KHÔNG được áp. Bỏ qua
+            // ở đây thay vì loại khỏi canXuLy: nó còn phải không lọt vào nhóm gộp của một thao
+            // tác khác — mà phép gom nhóm bên dưới lọc đúng theo "đã có kết quả chưa".
+            if (ketQua.ContainsKey(tt.MaThaoTac)) continue;
 
             if (tt.Loai == "tao")
             {
@@ -829,6 +892,8 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
                 GhiThayDoi(bc, bang, banGhiId, tt.Truong, giaTriMoi[tt.MaThaoTac], "sua", tt, dau,
                     thang: false);
                 ketQua[tt.MaThaoTac] = new KetQuaThaoTacDto(tt.MaThaoTac, "thua", null);
+                GhiXemLaiChoThaoTacBuThua(bc, bang, banGhiId, tt, dau, mocNhom,
+                    giaTriBu: giaTriMoi[tt.MaThaoTac], giaTriHienTai: giaTriCu[tt.MaThaoTac]);
             }
             return;
         }
@@ -917,6 +982,57 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
             moc.ThietBiId = daiDien.Dau.ThietBiId;
             moc.MaThaoTac = daiDien.Dau.MaThaoTac;
         }
+    }
+
+    /// <summary>
+    /// Thao tác BÙ LẠI sau khôi phục THUA người đã sửa SAU khi khôi phục, ở một Ô NHẠY CẢM —
+    /// spec 4.8.5 đoạn cuối. Đây là ngoại lệ DUY NHẤT của quy tắc "thua thì im lặng".
+    ///
+    /// VÌ SAO. Thao tác bù thua là ĐÚNG theo luật gộp (mốc gốc cũ hơn mốc của người sửa sau khôi
+    /// phục), và <see cref="LuatGop.Quyet"/> trả <c>Thua</c> đơn thuần, không sinh mục xem lại —
+    /// đúng cho mọi cuộc đua bình thường. Nhưng ở đây "mới hơn thì đúng hơn" KHÔNG chắc đúng ý:
+    /// người sửa sau khôi phục đang nhìn một sổ thiếu 8 giờ mà không hề biết, nên bản sửa của họ
+    /// có thể chỉ là gõ lại từ trí nhớ đè lên một sự thật đầy đủ hơn. Với ngày rửa tội, tên thánh,
+    /// cha chủ sự thì đoán sai là hỏng sổ sách. Nên vẫn mời người xem lại, dù bù đã thua.
+    ///
+    /// KHÔNG sửa <see cref="LuatGop.Quyet"/> để làm việc này: hàm đó CỐ Ý không biết gì về
+    /// <c>NguonGocEpoch</c> — nó là luật gộp thuần, dùng chung cho cả đường web lẫn đường đồng bộ,
+    /// và nhét ngữ cảnh "đang khôi phục" vào trong sẽ làm nó không còn suy luận độc lập được nữa.
+    ///
+    /// <c>Loai = "o_nhay_cam"</c> CHỨ KHÔNG PHẢI một loại mới, cũng có chủ ý: hình dạng ở đây
+    /// đúng hệt một ca xung đột bình thường (một cặp A/B thật để chọn), nên màn hình
+    /// <c>/chon</c> của Task 7 xử lý được ngay không cần sửa gì, và quý cha thấy đúng màn hình
+    /// quen thuộc thay vì một màn hình lạ xuất hiện đúng lúc vừa gặp sự cố.
+    /// </summary>
+    private void GhiXemLaiChoThaoTacBuThua(
+        BoiCanhLo bc, string bang, Guid banGhiId, ThaoTacDto tt, DauDongHo dau, MocO? mocNhom,
+        string? giaTriBu, string? giaTriHienTai)
+    {
+        if (tt.NguonGocEpoch is null) return;
+        if (!LuatGop.LaONhayCam(bang, tt.Truong)) return;
+
+        // Hai bên ghi CÙNG một giá trị thì không có gì để chọn — cùng lý lẽ với nhánh "giá trị
+        // bằng nhau" của LuatGop.Quyet. Thiếu điều kiện này, mỗi lần khôi phục sẽ đẻ ra một mục
+        // cho mọi ô mà máy con bù lại ĐÚNG BẰNG giá trị đang có (ca phổ biến nhất: người sửa sau
+        // khôi phục gõ lại đúng như cũ), hộp xem lại ngập, rồi mục thật bị bấm bỏ qua lẫn.
+        if (string.Equals(giaTriBu, giaTriHienTai, StringComparison.Ordinal)) return;
+
+        db.CanXemLai.Add(new CanXemLai
+        {
+            GiaoXuId = bc.GiaoXuId,
+            Loai = "o_nhay_cam",
+            Bang = bang,
+            BanGhiId = banGhiId,
+            Truong = tt.Truong,
+            GiaTriA = giaTriBu,          // giá trị máy con đang bù lại (mốc gốc, trước sự cố)
+            GiaTriB = giaTriHienTai,     // giá trị do người sửa SAU khôi phục — đang thắng
+            GiaTriDangDung = giaTriHienTai,
+            ThietBiA = dau.ThietBiId,
+            ThietBiB = mocNhom?.ThietBiId,
+            LucA = dau.VatLy,
+            LucB = mocNhom?.DongHoVatLy ?? default,
+            TaoLuc = bc.GioMayChu,
+        });
     }
 
     /// <summary>

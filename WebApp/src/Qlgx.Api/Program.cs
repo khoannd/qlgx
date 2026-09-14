@@ -120,6 +120,10 @@ builder.Services.AddScoped<NhatKyService>();
 builder.Services.AddScoped<DongBoService>();
 // Đường đọc/xử lý hộp "cần xem lại" (Task 7) — Scoped vì cũng phụ thuộc QlgxDbContext/IBoiCanhGiaoXu.
 builder.Services.AddScoped<CanXemLaiService>();
+// Xoay epoch sau khi máy chủ được khôi phục từ bản sao lưu (Task 9). KHÔNG phụ thuộc
+// QlgxDbContext: nó tự mở kết nối quản trị BYPASSRLS để xoay được cho MỌI giáo xứ — xem
+// KhoiPhucDongBoService.
+builder.Services.AddScoped<KhoiPhucDongBoService>();
 
 var app = builder.Build();
 
@@ -268,6 +272,7 @@ app.MapMauIn();
 app.MapCachHienThi();
 app.MapNhatKy();
 app.MapDongBo();
+app.MapKhoiPhucDongBo();
 app.MapCanXemLai();
 
 // Fallback SPA: moi GET khong khop route API/tep tinh nao o tren tra ve index.html de React
