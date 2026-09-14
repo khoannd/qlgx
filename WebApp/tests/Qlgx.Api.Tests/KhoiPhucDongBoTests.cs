@@ -226,6 +226,33 @@ public class KhoiPhucDongBoTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactor
             "moc goc DA o he quy chieu may chu tu lan dau duoc chap nhan; hieu chinh no theo do " +
             "lech dong ho HIEN TAI cua may con la ap mot phep tinh khong lien quan len mot con so " +
             "da dung — no troi khoi vi tri thoi gian that cua minh trong lich su");
+
+        // Bat bien trung tam cua ca Task 9 (spec 4.8.5 buoc 4: "may chu ap chung DUOI EPOCH MOI,
+        // cap so_thu_tu MOI"), truoc do khong test nao canh: dot bien giu nguyen epoch GOC cho
+        // dong hieu_luc moi (thay vi epoch HIEN TAI) van "ap" thanh cong va gia tri dung — nhung
+        // NhanVe loc `h.Epoch == dem.Epoch`, nen may con KHAC se KHONG BAO GIO thay dong nay. So
+        // rua toi vua bu lai chi song tren MOT may, cac may khac vinh vien thieu, khong loi nao
+        // hien ra vi so_tiep_theo van tang binh thuong.
+        var epochHienTai = (await DocBoDem()).Epoch;
+        await using (var db = f.TaoContextThuan())
+        {
+            var dongMoi = await db.HieuLuc
+                .Where(x => x.BanGhiId == id && x.Truong == "HoTen")
+                .OrderByDescending(x => x.SoThuTu).FirstAsync();
+            dongMoi.Epoch.Should().Be(epochHienTai,
+                "dong hieu_luc cua thao tac bu phai mang epoch HIEN TAI — mang epoch GOC thi may " +
+                "con khac se khong bao gio thay no, vi NhanVe chi loc theo epoch dang giu");
+        }
+
+        // May con KHAC (chua tung co du lieu nay) phai kéo duoc dong bu vua ghi qua /thay-doi.
+        var clientKhac = f.CreateAuthClient();
+        var nhan = await clientKhac.GetAsync(
+            $"/api/dong-bo/thay-doi?epoch={epochHienTai:D}&tu=0&toiDa=5000");
+        nhan.EnsureSuccessStatusCode();
+        var noiDung = await nhan.Content.ReadFromJsonAsync<NhanVeKetQua>();
+        noiDung!.Dong.Should().Contain(d => d.BanGhiId == id && d.Truong == "HoTen"
+            && d.GiaTri == "\"Ten That\"",
+            "mot may con hoan toan khac phai nhan duoc dong bu lai qua duong /thay-doi binh thuong");
     }
 
     [Fact]
@@ -313,6 +340,32 @@ public class KhoiPhucDongBoTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactor
         than.GetProperty("type").GetString().Should().Be("may-chu-di-lui",
             "may con tra dung chuoi nay de chuyen thanh trang thai sang do va DUNG dong bo, thay " +
             "vi am tham chay tiep tren mot may chu vua bi dua ve ban cu");
+    }
+
+    [Fact]
+    public async Task Con_tro_dung_bang_so_lon_nhat_thi_OK_nhung_hon_dung_MOT_thi_may_chu_di_lui()
+    {
+        // Bien cua Lop 2: dot bien doi `tu > SoTiepTheo - 1` thanh `tu > SoTiepTheo` truoc do
+        // song sot ca 30 test — mot lan khoi phuc lam mat DUNG MOT dong hieu_luc se lot qua neu
+        // ai do vo tinh doi bien nay khi refactor. Phai kiem CA HAI phia cua bien moi phan biet
+        // duoc: kiem rieng "conTroDung -> OK" khong bat duoc dot bien nay (ca hai cong thuc deu
+        // cho OK o do), phai kem theo ca "conTroDung + 1 -> 409" moi lam hai cong thuc khac nhau.
+        var client = f.CreateAuthClient();
+        await BaoDamCoEpoch(client);
+        var epochHienTai = (await DocBoDem()).Epoch;
+        var conTroDung = (await DocBoDem()).SoTiepTheo - 1;
+
+        var oKhopBien = await client.GetAsync(
+            $"/api/dong-bo/thay-doi?epoch={epochHienTai}&tu={conTroDung}");
+        oKhopBien.StatusCode.Should().Be(HttpStatusCode.OK,
+            "con tro dung bang so LON NHAT hien co la trang thai binh thuong (da bat kip), " +
+            "khong duoc coi la may chu di lui");
+
+        var vuotDungMot = await client.GetAsync(
+            $"/api/dong-bo/thay-doi?epoch={epochHienTai}&tu={conTroDung + 1}");
+        vuotDungMot.StatusCode.Should().Be(HttpStatusCode.Conflict,
+            "vuot qua so lon nhat DUNG MOT don vi, cung epoch, la dau hieu may chu di lui — " +
+            "khong duoc doi them mot lan gui/nhan nua moi phat hien ra");
     }
 
     [Fact]
