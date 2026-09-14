@@ -34,6 +34,12 @@ public class MoiDuongGhiDeuGhiNhatKyTests
         // đầu ApThaoTac.cs). Miễn trừ này KHÔNG để nó thoát lưới: fact
         // Duong_dong_bo_van_phai_tu_ghi_nhat_ky_tuong_minh bên dưới canh đúng chỗ đó.
         "DongBoService.cs",
+        // CanXemLaiService.ChonGiaTri: quyết định của người dùng khi xử lý hộp cần xem lại
+        // (spec 8.6) cũng cần một mốc CỤ THỂ (giờ máy chủ HIỆN TẠI, không phải mốc tự tính từ
+        // ChangeTracker) — cùng lý do miễn trừ với DongBoService.cs ở trên. Miễn trừ này KHÔNG
+        // để nó thoát lưới: fact Duong_can_xem_lai_van_phai_tu_ghi_nhat_ky_tuong_minh bên dưới
+        // canh đúng chỗ đó.
+        "CanXemLaiService.cs",
     };
 
     /// <summary>
@@ -54,6 +60,28 @@ public class MoiDuongGhiDeuGhiNhatKyTests
             "duong dong bo duoc mien tru goi thang SaveChangesAsync VOI DIEU KIEN no tu ghi so kiem toan");
         noi.Should().Contain("db.HieuLuc.Add",
             "khong ghi hieu_luc thi thay doi cua may con khong bao gio den duoc cac may con khac");
+    }
+
+    /// <summary>
+    /// Canh chính chỗ mà miễn trừ <c>CanXemLaiService.cs</c> ở trên mở ra — cùng khuôn với
+    /// <see cref="Duong_dong_bo_van_phai_tu_ghi_nhat_ky_tuong_minh"/>. Nếu ai đó sửa ChonGiaTri
+    /// mà bỏ mất phần ghi cặp thay_doi/hieu_luc thì quyết định của người dùng chỉ còn nằm ở cột
+    /// DaXuLyLuc — đúng lỗ hổng spec 8.6 cảnh báo: máy con đến muộn mang giá trị đã bị bác bỏ vẫn
+    /// thắng ở lần gộp sau vì không có dòng hieu_luc nào mang mốc mới hơn để chặn nó.
+    /// </summary>
+    [Fact]
+    public void Duong_can_xem_lai_van_phai_tu_ghi_nhat_ky_tuong_minh()
+    {
+        var goc = TimThuMucGoc();
+        var duong = MoiFileNguon(goc).Single(f => Path.GetFileName(f) == "CanXemLaiService.cs");
+        var noi = File.ReadAllText(duong);
+
+        noi.Should().Contain("db.ThayDoi.Add",
+            "duong xu ly can xem lai duoc mien tru goi thang SaveChangesAsync VOI DIEU KIEN no " +
+            "tu ghi so kiem toan");
+        noi.Should().Contain("db.HieuLuc.Add",
+            "khong ghi hieu_luc thi quyet dinh cua nguoi dung khong bao gio den duoc cac may con " +
+            "khac, va may den muon van thang o lan gop sau");
     }
 
     /// <summary>

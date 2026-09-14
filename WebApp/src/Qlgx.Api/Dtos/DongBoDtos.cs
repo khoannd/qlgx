@@ -66,3 +66,13 @@ public record KetQuaThaoTacDto(Guid MaThaoTac, string KetQua, string? ThongBao);
 /// tiếp đi" — nó sẽ tưởng mình đã đồng bộ xong trong khi còn cả một quãng chưa kéo về.</summary>
 public record GuiLenKetQua(Guid Epoch, long ConTroMoi, bool ConNua,
     List<KetQuaThaoTacDto> KetQua, List<DongHieuLucDto> DongMoi);
+
+/// <summary>Một mục trong hộp cần xem lại — ánh xạ 1-1 với <see cref="Qlgx.Domain.Entities.CanXemLai"/>.
+/// CỐ Ý KHÔNG dịch <see cref="Truong"/> sang nhãn tiếng Việt ở đây (xem chú thích của
+/// <c>CanXemLai.Truong</c> vì sao) — màn hình xem lại thật đảm nhận việc đó.</summary>
+public record CanXemLaiDto(Guid Id, string Loai, string Bang, Guid BanGhiId, string Truong,
+    string? LyDo, string? GiaTriA, string? GiaTriB, string? GiaTriDangDung, DateTimeOffset TaoLuc);
+
+/// <summary>Thân yêu cầu của <c>POST /api/can-xem-lai/{id}/chon</c>. <see cref="Chon"/> chỉ nhận
+/// "A" hoặc "B" — giá trị khác bị CanXemLaiService từ chối.</summary>
+public record ChonGiaTriYeuCau(string Chon);

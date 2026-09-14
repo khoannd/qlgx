@@ -56,4 +56,43 @@ public static class DongBoEndpoints
                 : Results.Ok(ketQua);
         });
     }
+
+    /// <summary>
+    /// Đường đọc và xử lý hộp "cần xem lại" (xem CanXemLaiService.cs cho toàn bộ lý lẽ).
+    /// RequireAuthorization() là đủ, cùng lý do với <see cref="MapDongBo"/>: hộp này thuộc về
+    /// giáo xứ chứ không thuộc về một chức năng riêng, và ai đã đăng nhập cũng xử lý được.
+    /// </summary>
+    public static void MapCanXemLai(this IEndpointRouteBuilder app)
+    {
+        var nhom = app.MapGroup("/api/can-xem-lai").RequireAuthorization();
+
+        nhom.MapGet("/", async (CanXemLaiService dv, CancellationToken ct) =>
+            Results.Ok(await dv.LayDanhSach(ct)));
+
+        nhom.MapPost("/{id:guid}/chon", async (
+            CanXemLaiService dv, Guid id, ChonGiaTriYeuCau yc, CancellationToken ct) =>
+            await dv.ChonGiaTri(id, yc.Chon, ct) switch
+            {
+                KetQuaXuLyCanXemLai.KhongTimThay => Results.NotFound(),
+                KetQuaXuLyCanXemLai.DaXuLy => Results.Conflict(),
+                KetQuaXuLyCanXemLai.KhongHopLe => Results.BadRequest(new
+                {
+                    thongBao = "Muc nay khong co cap gia tri de chon — hay dung nut 'Da xu ly'.",
+                }),
+                _ => Results.Ok(),
+            });
+
+        nhom.MapPost("/{id:guid}/danh-dau-da-xu-ly", async (
+            CanXemLaiService dv, Guid id, CancellationToken ct) =>
+            await dv.DanhDauDaXuLy(id, ct) switch
+            {
+                KetQuaXuLyCanXemLai.KhongTimThay => Results.NotFound(),
+                KetQuaXuLyCanXemLai.DaXuLy => Results.Conflict(),
+                KetQuaXuLyCanXemLai.KhongHopLe => Results.BadRequest(new
+                {
+                    thongBao = "Muc nay la mot xung dot that — hay chon gia tri A hoac B thay vi bo qua.",
+                }),
+                _ => Results.Ok(),
+            });
+    }
 }

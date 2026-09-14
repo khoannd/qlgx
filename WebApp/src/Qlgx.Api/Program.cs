@@ -118,6 +118,8 @@ builder.Services.AddScoped<NhatKyService>();
 // Đầu vào nhận về của giao thức đồng bộ (Task 5) — máy con kéo thay đổi + tải ảnh chụp toàn bộ.
 // Scoped vì phụ thuộc QlgxDbContext (Scoped) và IBoiCanhGiaoXu (Scoped, đọc claim của request).
 builder.Services.AddScoped<DongBoService>();
+// Đường đọc/xử lý hộp "cần xem lại" (Task 7) — Scoped vì cũng phụ thuộc QlgxDbContext/IBoiCanhGiaoXu.
+builder.Services.AddScoped<CanXemLaiService>();
 
 var app = builder.Build();
 
@@ -266,6 +268,7 @@ app.MapMauIn();
 app.MapCachHienThi();
 app.MapNhatKy();
 app.MapDongBo();
+app.MapCanXemLai();
 
 // Fallback SPA: moi GET khong khop route API/tep tinh nao o tren tra ve index.html de React
 // Router tu xu ly duong dan phia trinh duyet. Loai tru "/api" bang rang buoc regex phu dinh de
