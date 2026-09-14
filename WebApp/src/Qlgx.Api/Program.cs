@@ -182,6 +182,21 @@ if (coSpaTinh)
     app.UseStaticFiles();
 }
 
+// BAT BUOC goi tuong minh: khong app.Use...() nao truoc day trong tep nay (UseDefaultFiles/
+// UseStaticFiles o tren KHONG tinh, vi ly do duoi day), nen neu bo qua UseRouting(), ASP.NET
+// Core tu chen routing NGAY DAU pipeline nhung lai TRI HOAN buoc THUC THI endpoint (goi ham xu
+// ly that su cua MapGet/MapFallbackToFile) tro thanh mot buoc rieng duoc chen o CUOI, dung vi
+// tri ma le ra UseEndpoints() se dung -- SAU CA UseStaticFiles(). Hau qua da do that: moi request
+// toi /assets/*.js hay /icons/*.png deu bi endpoint MapFallbackToFile "thuc thi" truoc, tra ve
+// index.html cho MOI duong dan (kha ca file that su ton tai tren dia, dung quyen doc) -- man
+// hinh trang hoan toan, khong loi console ro rang (chi mot dong "MIME type khong dung"). Goi
+// UseRouting() tuong minh o day buoc ASP.NET Core CHEN CA HAI (match + thuc thi) VAO DUNG VI TRI
+// nay trong pipeline, TRUOC UseAuthentication/UseAuthorization -- dung thu tu chuan Microsoft
+// khuyen nghi khi trai UseCors/UseAuthentication/UseAuthorization voi routing tuong minh, va la
+// thu duy nhat khien UseStaticFiles() phia tren thuc su co co hoi chan request TRUOC khi roi vao
+// fallback. Da kiem chung that: khong co dong nay, MOI tep tinh (kha ca index.html chinh no khi
+// goi qua UseDefaultFiles) deu bi fallback nuot, co dong nay thi dung tep, dung MIME type.
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
