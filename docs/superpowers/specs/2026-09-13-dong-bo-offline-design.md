@@ -279,6 +279,26 @@ con không bao giờ biết có dữ liệu mới, không một dấu hiệu nà
 vi Đợt 3 (nhập từ desktop), nhưng phải làm **trước** khi cho phép nhập đè lên giáo xứ đang dùng
 web.
 
+Một vấn đề nữa của cùng đợt, mức **bảo mật**, phát hiện khi thẩm định lại spec: **không được cất
+vé dài hạn vào `giaoxu.mdb`.**
+
+File `.mdb` có mã hoá, nhưng mật khẩu (`khoanvnit`) nằm **cứng trong mã nguồn công khai** —
+`Source/Giaoly/app.config:6` và `Source/Giaoly/Properties/Settings.Designer.cs:30`. Nên trên thực
+tế nó **không được mã hoá**. Cất vé dài hạn một năm ở đó nghĩa là: mỗi lần quý cha gửi file sao lưu
+cho người hỗ trợ — việc vẫn làm thường xuyên — là gửi kèm luôn **quyền ghi vào giáo xứ của mình
+trên máy chủ**, suốt một năm. Người nhận không cần làm gì sai, chỉ cần mở file ra là có.
+
+Cách giải khi tới Đợt 3: cất vé bằng **DPAPI theo máy/theo người dùng Windows** (không đi theo file
+sao lưu), hoặc ràng vé vào định danh máy để bản sao trên máy khác vô dụng. Chốt cái nào thì chốt
+lúc làm, nhưng **không phải `giaoxu.mdb`**.
+
+Ba điểm kỹ thuật đi kèm nếu vẫn dùng bảng `CauHinh` cho các cấu hình khác (đã kiểm chứng trên file
+thật): cột `GiaTri` là **Memo**, không phải Text 255, nên **sức chứa không phải vấn đề**;
+`SetConfig` (`CMemory.cs:285,309`) chỉ ghi vào `DataTable` trong RAM nên **phải gọi thêm
+`Memory.SaveConfig()`** (`CMemory.cs:332`) mới xuống đĩa; và cả ba hàm `GetConfig`/`SetConfig`/
+`SaveConfig` đều `catch {}` **nuốt lỗi im lặng**, `GetConfig` trả `""` khi hỏng — mất token sẽ
+không có một tiếng động nào.
+
 ### 4.6 Định danh bản ghi
 
 ID do **máy con sinh**: tạo bản ghi mới lúc offline thì máy con tự sinh `Guid` và dùng luôn. Không
