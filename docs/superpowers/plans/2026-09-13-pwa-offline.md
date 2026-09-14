@@ -35,6 +35,22 @@
 9. **Thao tác đã nhận không xử lý lại** (phía máy chủ đã có; máy con không được sinh `MaThaoTac` mới khi gửi lại).
 10. **`navigator.storage.persist()` phải được gọi ngay sau đăng nhập** trên máy bật offline; bị từ chối thì **không** bật chế độ offline cho máy đó.
 
+## Chế độ "quay lui có chủ ý" — không được chuyển loại C thành thao tác thường (R80 sổ thi công kế hoạch 4)
+
+Khi quản trị viên chọn "Bỏ hẳn, không lấy lại" (spec 4.8.3), máy chủ đặt cờ `cho_phep_bu_lai =
+false`. Cửa này **chỉ chặn được dữ liệu gán nhãn đúng là thao tác bù** (mang `NguonGocEpoch`/
+`NguonGocSoThuTu`) — đây là **giới hạn thiết kế đã biết**: máy chủ không có cách nào phân biệt một
+thao tác bù bị gửi trá hình thành thao tác thường với một thao tác thường thật. Trách nhiệm nằm ở
+máy con.
+
+Bắt buộc: khi phát hiện `cho_phep_bu_lai = false` (qua tín hiệu máy chủ trả về), máy con phải **cất
+phần dữ liệu loại C vào kho lưu** (cơ chế "Cất lại", mục 7.7) — **tuyệt đối không** tự động gửi lại
+những dòng đó dưới dạng thao tác sửa thường (dù có kỹ thuật nào khiến việc đó tưởng như "đúng" hơn,
+ví dụ máy con tự động thử gửi lại khi không thấy được chấp nhận qua đường bù). Gửi trá hình như vậy
+sẽ **vô hiệu hoá chính thao tác quay lui** mà quản trị viên vừa chọn có chủ ý.
+
+## Hợp đồng đồng hồ lai — phải khớp TỪNG BIT với bản C# (R6/R7 sổ thi công kế hoạch 4)
+
 ## Hợp đồng đồng hồ lai — phải khớp TỪNG BIT với bản C# (R6/R7 sổ thi công kế hoạch 4)
 
 Bản TypeScript của `DongHoLai` phải cho **cùng một kết quả** với `WebApp/src/Qlgx.Data/DongBo/DongHoLai.cs`
@@ -80,6 +96,28 @@ bên nào đúng.
 - **Ảnh chụp toàn bộ (`DuLieuNen` của `/api/dong-bo/toan-bo`) là JSON nén gzip, mã hoá base64.** Giải
   bằng `DecompressionStream('gzip')` có sẵn trong trình duyệt — **không thêm thư viện nén nào**. Máy chủ
   chốt gzip đúng vì lý do này (kế hoạch 4, Task 5).
+## Máy con tự phát hiện "máy chủ đi lùi" qua `/toan-bo` — ràng buộc cứng (R80 sổ thi công kế hoạch 4)
+
+`/toan-bo` (ảnh chụp toàn bộ giáo xứ) **không có** một lớp an toàn riêng phát hiện "máy chủ vừa bị
+đưa về bản cũ mà quên xoay `epoch`" — đây là **giới hạn thiết kế đã biết**, không phải lỗi thiếu
+sót có thể vá sau: máy chủ không có gì để so sánh ở endpoint này (nó luôn trả trạng thái hiện tại
+của chính nó). Việc phát hiện phải làm ở phía máy con, vì chỉ máy con mới biết nó đang giữ gì.
+
+`ToanBoKetQua` mang đủ `Epoch` và `ConTro` để tự làm việc này. Bắt buộc: trước khi **áp** một ảnh
+chụp vừa tải về, so nó với trạng thái đang giữ —
+
+- **`Epoch` trả về BẰNG `epoch` đang giữ, mà `ConTro` trả về NHỎ HƠN con trỏ đang giữ** → đây là
+  dấu hiệu máy chủ đi lùi (Lớp 2 của mục 4.8.4, đúng cơ chế `/thay-doi` đã dùng, chỉ khác chỗ
+  `/toan-bo` không tự làm được mà máy con phải làm). Chuyển 🔴, **dừng**, không áp ảnh chụp, không
+  ghi đè kho đang có — dữ liệu tốt duy nhất lúc này nằm trong chính kho của máy con.
+- `Epoch` khác `epoch` đang giữ → bình thường (máy chủ đã xoay `epoch`, một ảnh chụp mới là đúng
+  quy trình), áp như thường.
+
+Bỏ qua bước này thì: quý cha bấm "Tải lại toàn bộ" (hoặc cài lại máy) ngay sau khi ai đó khôi phục
+CSDL bằng tay mà quên xoay `epoch` — máy con âm thầm đè kho đang có bằng ảnh chụp cũ, và kéo con
+trỏ lùi về mà `epoch` không đổi, nên từ đó về sau **không bao giờ** nhận được tín hiệu bất thường
+nào nữa. Bản dữ liệu tốt duy nhất còn lại chỉ nằm trong sổ đã nhận 30 ngày, không ai biết để tìm.
+
 ## Việc bị máy chủ từ chối PHẢI hiện ra cho người dùng — ràng buộc cứng (R67 sổ thi công kế hoạch 4)
 
 Máy chủ trả về `KetQuaThaoTacDto` với `KetQua = "tu_choi"` cho những việc nó không nhận được (dữ liệu
