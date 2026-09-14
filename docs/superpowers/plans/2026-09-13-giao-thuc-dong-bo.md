@@ -2014,108 +2014,188 @@ bằng cách tạm bỏ đoạn gọi `KiemBatBien` trong `ChayLo`, xác nhận 
 
 ## Task 9: Xoay `epoch` và bù dữ liệu sau khôi phục
 
+**Brief này viết lại toàn bộ.** Bản gốc viết trước khi tám task kia thi công, nên giả định sai
+gần một nửa hạ tầng nó cần — phần lớn ĐÃ CÓ SẴN, chỉ cần biết ở đâu. Đọc **spec mục 4.8 toàn bộ**
+trước khi viết một dòng nào — đây là task quan trọng nhất kế hoạch, đúng nghĩa đen (thiết kế ghi
+"toàn bộ hướng offline-first tồn tại để giải" đúng tình huống này).
+
+### Đã có sẵn — ĐỪNG LÀM LẠI
+
+- `BoDemHieuLuc.ChoPhepBuLai` (bool) và `XoayEpochLuc` (`DateTimeOffset?`) — cột đã tồn tại từ
+  Task 1.
+- `ThaoTacDto` đã mang `NguonGocEpoch`/`NguonGocSoThuTu` (Task 6).
+- **Chống trùng theo danh tính gốc đã chạy** — `DongBoService.TimThaoTacDaNhan` tra cả
+  `MaThaoTac` lẫn cặp `(NguonGocEpoch, NguonGocSoThuTu)`; `ThaoTacDaNhan` đã có chỉ mục lọc cho
+  việc này (Task 1). Ba máy cùng bù một dòng gốc đã chỉ áp đúng một lần — đọc
+  `Nhieu_may_con_cung_bu_mot_dong_goc_thi_chi_ap_mot_lan` trong `DongBoGuiLenTests.cs` (Task 6) để
+  thấy ca này **đã có test**, không cần viết lại.
+- `NhanVe`/`ToanBo` đã trả **410 Gone** khi `epoch` client gửi không khớp `epoch` hiện tại
+  (`DongBoEndpoints.cs`, comment "Con trỏ đồng bộ không còn hợp lệ") — Lớp 1 của mục 4.8.4 **đã
+  xong** ở phía đọc. Việc còn thiếu chỉ là **ai xoay `epoch`** (Task này) và **Lớp 2** (Step 3).
+
+### Việc thật sự còn lại của task này — năm mục
+
 **Files:**
-- Create: `src/Qlgx.Api/Services/KhoiPhucDongBoService.cs`
-- Modify: `src/Qlgx.Api/Dtos/DongBoDtos.cs`, `src/Qlgx.Api/Endpoints/DongBoEndpoints.cs`, `src/Qlgx.Api/Services/DongBoService.cs`
+- Create: `src/Qlgx.Api/Services/KhoiPhucDongBoService.cs`, `src/Qlgx.Data/DongBo/MayChuDiLuiException.cs`
+- Modify: `src/Qlgx.Api/Dtos/DongBoDtos.cs`, `src/Qlgx.Api/Endpoints/DongBoEndpoints.cs`, `src/Qlgx.Api/Services/DongBoService.cs`, `src/Qlgx.Data/DongBo/LuatGop.cs` (nếu cần thêm chỗ móc — xem mục 5)
 - Test: `tests/Qlgx.Api.Tests/KhoiPhucDongBoTests.cs`
 
-**Đây là task quan trọng nhất của kế hoạch — thiết kế đầy đủ ở spec mục 4.8. Đọc mục đó trước khi viết một dòng nào.**
-
-**Interfaces:**
-- Produces:
-  - `POST /api/quan-tri/dong-bo/xoay-epoch` (policy `QuanTriHeThong`) nhận `{ giaoXuId?, cheDo }` với `cheDo` ∈ `"lay_lai"` | `"bo_han"`; xoay `epoch` cho một hoặc mọi giáo xứ.
-  - Đầu vào nhận-về trả thêm `CheDoKhoiPhuc` khi phát hiện `epoch` lệch, để máy con biết nên bù lại hay bỏ.
-  - Đầu vào gửi-lên nhận thao tác **bù lại** (có `NguonGocEpoch`/`NguonGocSoThuTu`) và chống trùng theo danh tính gốc.
-
-- [ ] **Step 1: Viết test trước — năm kịch bản của mục 4.8**
-
-`tests/Qlgx.Api.Tests/KhoiPhucDongBoTests.cs`:
-
-```csharp
-    [Fact]
-    public async Task Xoay_epoch_lam_con_tro_cu_bi_tu_choi_410() { }
-
-    [Fact]
-    public async Task Che_do_lay_lai_chap_nhan_thao_tac_bu_va_khoi_phuc_du_lieu_da_mat()
-    {
-        // Dựng: giáo dân X có HoTen = "Ten Sau Khoi Phuc" ở trạng thái "đã khôi phục" (giả lập
-        // máy chủ lùi). Máy con giữ dòng hieu_luc cũ nói HoTen = "Ten That" với so_thu_tu 5000
-        // thuộc epoch cũ. Sau khi xoay epoch ở chế độ lay_lai, máy con gửi thao tác bù mang
-        // NguonGocEpoch/NguonGocSoThuTu. Khẳng định dữ liệu quay về "Ten That".
-    }
-
-    [Fact]
-    public async Task Nhieu_may_con_cung_bu_mot_dong_goc_thi_chi_ap_mot_lan()
-    {
-        // Hai lô gửi lên từ hai ThietBiId khác nhau, cùng NguonGocEpoch + NguonGocSoThuTu,
-        // MaThaoTac khác nhau. Khẳng định chỉ sinh MỘT dòng hieu_luc mới.
-    }
-
-    [Fact]
-    public async Task Che_do_bo_han_tu_choi_thao_tac_bu()
-    {
-        // Quay lui có chủ ý: máy con gửi bù, máy chủ phải TỪ CHỐI (ket qua "tu_choi") — nếu
-        // chấp nhận thì thao tác quay lui của quản trị viên bị vô hiệu hoá.
-    }
-
-    [Fact]
-    public async Task Thao_tac_bu_giu_nguyen_moc_goc_nen_thua_nguoi_da_sua_sau_khoi_phuc()
-    {
-        // Sau khôi phục có người sửa ô đó trên máy chủ (mốc mới). Dòng bù mang mốc GỐC (cũ hơn)
-        // nên thua — nhưng vì là ô nhạy cảm nên PHẢI sinh một mục cần xem lại.
-    }
-```
-
-Run: FAIL.
-
-- [ ] **Step 2: Viết `KhoiPhucDongBoService`**
+**1. `POST /api/quan-tri/dong-bo/xoay-epoch`, policy `"QuanTriHeThong"`** (đã có sẵn trong dự án —
+`.RequireAuthorization("QuanTriHeThong")`, xem `CachHienThiDungSaiEndpoints.cs` để thấy khuôn).
+Thân `{ giaoXuId?: Guid, cheDo: "lay_lai" | "bo_han" }` — `giaoXuId` rỗng nghĩa là xoay cho MỌI
+giáo xứ (khôi phục toàn bộ máy chủ). `KhoiPhucDongBoService.XoayEpoch`: với mỗi dòng
+`BoDemHieuLuc` liên quan, đặt `Epoch = Guid.NewGuid()`, `ChoPhepBuLai = (cheDo == "lay_lai")`,
+`XoayEpochLuc = giờ máy chủ hiện tại`. **Không mở giao dịch mới chồng lên giao dịch của
+`DongBoService`** — đây là một hành động quản trị độc lập, tự giao dịch riêng của nó.
 
 ```csharp
 /// <summary>
-/// Xoay epoch và điều phối việc bù lại dữ liệu sau khi máy chủ bị đưa về bản sao lưu.
-/// Thiết kế đầy đủ ở spec mục 4.8 — đọc trước khi sửa.
+/// Xoay `epoch` sau khi máy chủ được khôi phục từ bản sao lưu — thiết kế đầy đủ ở spec mục 4.8.
 ///
-/// Vì sao BẮT BUỘC có tham số chế độ, không có mặc định: máy chủ không thể tự đoán đang ở
-/// trường hợp nào trong hai trường hợp ngược nhau —
-///   - khôi phục sau sự cố: MUỐN máy con đẩy dữ liệu đã mất trở lên;
-///   - quay lui có chủ ý (ai đó làm hỏng dữ liệu, quản trị viên lùi để BỎ HẲN): tuyệt đối
-///     KHÔNG được để máy con tự đẩy đống hỏng đó ngược lên, làm thế là vô hiệu hoá chính thao
-///     tác quay lui.
-/// Đoán sai thì hỏng theo hai kiểu ngược nhau, nên đây là một trong rất ít chỗ trong hệ thống
-/// buộc con người phải quyết định.
+/// BẮT BUỘC có tham số chế độ, không có mặc định: máy chủ không thể tự đoán đang ở trường hợp
+/// nào trong hai trường hợp ngược nhau — khôi phục sau sự cố (MUỐN máy con đẩy dữ liệu đã mất
+/// trở lên) hay quay lui có chủ ý (TUYỆT ĐỐI không muốn máy con tự đẩy đống hỏng đó ngược lên,
+/// làm thế là vô hiệu hoá chính thao tác quay lui). Đoán sai thì hỏng theo hai kiểu ngược nhau —
+/// đây là một trong rất ít chỗ trong hệ thống buộc con người phải quyết định.
 /// </summary>
 ```
 
-Nội dung: cập nhật `bo_dem_hieu_luc.epoch = gen_random_uuid()` và ghi chế độ vào một bảng/cột nhỏ (`cho_phep_bu_lai boolean` trên `bo_dem_hieu_luc`, kèm `xoay_epoch_luc`). Đầu vào nhận-về đọc cờ này để trả về cho máy con.
+**2. Sửa `DongBoService.ChayLo` — mốc của thao tác bù PHẢI giữ NGUYÊN, không hiệu chỉnh, không kẹp.**
+Đọc kỹ đoạn hiện tại (tìm biến `mocHieuChinh`, `mocKep` trong `ChayLo`): **mọi** thao tác đang đi
+qua `DongHoLai.HieuChinh` rồi kẹp theo giờ máy chủ hiện tại — kể cả thao tác mang
+`NguonGocEpoch`. Đây là SAI cho thao tác bù: mốc gốc (`tt.DongHoVatLy`/`tt.DongHoLogic`) đã ở hệ
+quy chiếu máy chủ từ **lần đầu được chấp nhận**, trước khi 8 giờ dữ liệu đó bị mất. Hiệu chỉnh nó
+theo độ lệch đồng hồ *hiện tại* của máy con là áp một phép tính không liên quan lên một con số đã
+đúng — làm nó trôi khỏi vị trí thời gian thật của mình trong lịch sử.
 
-Trong `DongBoService.GuiLen`, khi thao tác có `NguonGocEpoch`:
-- nếu `cho_phep_bu_lai == false` → `KetQua = "tu_choi"`, thông báo *"Máy chủ đang ở chế độ quay lui có chủ ý — không nhận dữ liệu bù."*
-- nếu đã có dòng `thao_tac_da_nhan` với cùng `(GiaoXuId, NguonGocEpoch, NguonGocSoThuTu)` → `"trung"`.
-- ngược lại xử lý như thao tác thường **nhưng giữ nguyên mốc gốc** (không hiệu chỉnh theo độ lệch đồng hồ của máy con hiện tại — mốc gốc đã ở hệ quy chiếu máy chủ từ lần đầu).
+Sửa: nếu `tt.NguonGocEpoch is not null`, dựng `DauDongHo` thẳng từ `tt.DongHoVatLy`/
+`tt.DongHoLogic` (chỉ qua hàm dựng của `DauDongHo`, tự cắt micro giây — không gọi `HieuChinh` hay
+kẹp). Nếu `tt.NguonGocEpoch is null` (thao tác thường), giữ nguyên đường cũ.
 
-- [ ] **Step 3: Lưới an toàn lớp 2 — phát hiện `so_thu_tu` đi lùi**
+**3. Gate `ChoPhepBuLai`.** Trước khi áp một thao tác mang `NguonGocEpoch`: đọc
+`dem.ChoPhepBuLai` (đã đọc dòng đếm ở đầu `ChayLo` rồi, không truy vấn lại); nếu `false` →
+`ketQua[...] = ("tu_choi", "Máy chủ đang ở chế độ quay lui có chủ ý — không nhận dữ liệu bù.")`,
+**không** áp, đi tiếp thao tác kế. Không ghi `CanXemLai` — đây không phải một mục cần xem lại,
+đây là hành vi ĐÚNG Ý theo lựa chọn của quản trị viên.
 
-Trong đầu vào nhận-về: nếu `tu` (con trỏ máy con) **lớn hơn** số lớn nhất hiện có mà `epoch` **vẫn khớp** → trả 409 kèm mã `"may_chu_di_lui"`. Đây là trường hợp ai đó khôi phục CSDL bằng tay mà quên xoay `epoch`; lớp 1 im lặng nên phải có lớp 2.
+**4. Lớp 2 — phát hiện `so_thu_tu` đi lùi mà `epoch` vẫn khớp** (spec 4.8.4). Trong `NhanVe`:
+sau khi xác nhận `epoch` khớp (không trả 410), nếu `tu > số lớn nhất hiện có của giáo xứ` →
+ném `MayChuDiLuiException` (kế thừa `Exception` thường, **không** kế thừa `ILoiTatDinh` — đây
+không phải lỗi của một thao tác, là lỗi của cả kết nối). Bắt ở endpoint, trả:
 
-Viết một fact riêng cho tình huống này.
-
-- [ ] **Step 4: Chạy test, chứng minh test chế độ `bo_han` biết báo lỗi**
-
-Tạm cho `GuiLen` chấp nhận thao tác bù bất kể chế độ.
-Run: `--filter Che_do_bo_han_tu_choi`
-Expected: **FAIL**. Hoàn nguyên.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add WebApp/src/Qlgx.Api/Services/KhoiPhucDongBoService.cs \
-        WebApp/src/Qlgx.Api/Services/DongBoService.cs \
-        WebApp/src/Qlgx.Api/Dtos/DongBoDtos.cs \
-        WebApp/src/Qlgx.Api/Endpoints/DongBoEndpoints.cs \
-        WebApp/src/Qlgx.Data/ \
-        WebApp/tests/Qlgx.Api.Tests/KhoiPhucDongBoTests.cs
-git commit -m "Xoay epoch va bu du lieu sau khoi phuc (spec 4.8)"
+```csharp
+Results.Problem(statusCode: StatusCodes.Status409Conflict,
+    type: "may-chu-di-lui",
+    title: "Máy chủ có dấu hiệu vừa bị đưa về bản cũ",
+    detail: "So_thu_tu con tro lon hon so lon nhat hien co, cung epoch — dau hieu khoi phuc " +
+        "CSDL bang tay ma quen xoay epoch.")
 ```
+
+Client (kế hoạch 5) tra `type == "may-chu-di-lui"` để chuyển 🔴 và **dừng đồng bộ** thay vì âm
+thầm chạy tiếp — ghi việc này vào Global Constraints kế hoạch 5.
+
+**5. Xung đột với người sửa SAU khôi phục, trên Ô NHẠY CẢM** (spec 4.8.5, đoạn cuối). Đây là chỗ
+tinh vi nhất của cả task. Khi thao tác bù **thua** (theo `LuatGop.Quyet` bình thường — đúng, vì
+mốc gốc cũ hơn mốc của người sửa sau khôi phục) **và** trường đó là ô nhạy cảm
+(`LuatGop.LaONhayCam`): `LuatGop.Quyet` trả `Thua` đơn thuần, **không** tự sinh `CanXemLai` (xem
+`LuatGop.cs` — nhánh `Thua` không tạo mục review, đúng thiết kế bình thường). Nhưng ở đây "mới
+hơn thắng" không chắc đúng ý, vì người sửa sau khôi phục đang nhìn dữ liệu thiếu 8 giờ mà không
+biết — nên **bắt buộc** vẫn tạo một mục xem lại, dù thao tác bù đã thua.
+
+Thêm một nhánh RIÊNG trong `ChayLo` (không sửa `LuatGop.Quyet` — hàm đó không biết gì về
+`NguonGocEpoch`, đúng, giữ nó thuần): sau khi `Quyet` trả `Thua` cho một thao tác có
+`NguonGocEpoch != null` **và** `LuatGop.LaONhayCam(bang, truong)`, thêm:
+
+```csharp
+db.CanXemLai.Add(new CanXemLai
+{
+    GiaoXuId = giaoXuId, Loai = "o_nhay_cam", Bang = bang, BanGhiId = banGhiId, Truong = truong,
+    GiaTriA = giaTriBu,       // giá trị máy con đang bù lại (mốc gốc, trước sự cố)
+    GiaTriB = giaTriHienTai,  // giá trị do người sửa SAU khôi phục — đang thắng
+    GiaTriDangDung = giaTriHienTai,
+    ThietBiA = dau.ThietBiId, ThietBiB = mocDangCo?.ThietBiId,
+    LucA = dau.VatLy, LucB = mocDangCo?.DongHoVatLy ?? default,
+    TaoLuc = gioMayChu,
+});
+```
+
+Dùng `Loai = "o_nhay_cam"` (không phải một loại mới) **có chủ ý**: hình dạng đúng hệt ca xung đột
+bình thường (một cặp A/B thật để chọn), Task 7's `/chon` xử lý được ngay không cần sửa gì. Người
+dùng thấy đúng màn hình quen thuộc: *"Ngày rửa tội của Maria Nguyễn Thị A — Máy phòng khách ghi
+X (trước sự cố). Hiện đang dùng Y (sau khi khôi phục)."*
+
+- [ ] **Step 1: Viết test — đủ mã, không placeholder, cho cả sáu fact**
+
+```csharp
+[Fact]
+public async Task Xoay_epoch_lam_con_tro_cu_bi_tu_choi_410()
+{
+    var client = f.CreateAuthClient();
+    await XoayEpoch(f, cheDo: "lay_lai");   // helper gọi thẳng KhoiPhucDongBoService hoặc endpoint
+
+    var phanHoi = await client.GetAsync($"/api/dong-bo/thay-doi?epoch={Guid.NewGuid()}&tu=0");
+    phanHoi.StatusCode.Should().Be(HttpStatusCode.Gone);
+}
+
+[Fact]
+public async Task Che_do_lay_lai_chap_nhan_thao_tac_bu_va_khoi_phuc_du_lieu_da_mat()
+{
+    // Dựng: GiaoDan X có HoTen = "Ten That" đã áp qua đường thường, mốc T0, epoch CŨ.
+    // Giả lập máy chủ lùi: ghi đè trực tiếp HoTen = "Ten Sau Su Co" (mô phỏng mất 8 giờ).
+    // Xoay epoch cheDo="lay_lai". Máy con gửi thao tác bù: NguonGocEpoch=epoch CŨ,
+    // NguonGocSoThuTu=so_thu_tu gốc, DongHoVatLy=T0 (giữ nguyên), GiaTri="Ten That".
+    // Khẳng định: HoTen == "Ten That", VÀ MocO của ô đó mang mốc T0 (không bị nâng lên "bây giờ").
+}
+
+[Fact]
+public async Task Che_do_bo_han_tu_choi_thao_tac_bu()
+{
+    // Xoay epoch cheDo="bo_han". Gửi thao tác bù giống hệt test trên.
+    // Khẳng định: KetQua == "tu_choi", VÀ dữ liệu KHÔNG đổi (vẫn là giá trị sau khôi phục).
+}
+
+[Fact]
+public async Task May_chu_di_lui_ma_epoch_khop_thi_tra_409_ma_may_chu_di_lui()
+{
+    // KHÔNG xoay epoch (mô phỏng ai đó khôi phục CSDL bằng tay, quên xoay). Đặt con trỏ máy con
+    // (`tu`) LỚN HƠN so_thu_tu lớn nhất hiện có, cùng epoch hiện tại.
+    var phanHoi = await client.GetAsync($"/api/dong-bo/thay-doi?epoch={epochHienTai}&tu=999999");
+    phanHoi.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    // đọc ProblemDetails.Type, khẳng định == "may-chu-di-lui"
+}
+
+[Fact]
+public async Task Thao_tac_bu_thua_nguoi_sua_sau_khoi_phuc_o_o_nhay_cam_van_sinh_CanXemLai()
+{
+    // Sau khi xoay epoch (lay_lai), TRƯỚC KHI máy con gửi bù, một người sửa NgayRuaToi (ô nhạy
+    // cảm) trên web với mốc BÂY GIỜ. Máy con gửi thao tác bù cho CHÍNH ô đó, mốc GỐC (cũ hơn).
+    // Khẳng định: (a) giá trị hiện tại VẪN là của người sửa sau khôi phục (bù thua, đúng);
+    // (b) MỘT CanXemLai Loai="o_nhay_cam" xuất hiện, GiaTriA = giá trị bù, GiaTriB = giá trị
+    // đang dùng.
+}
+
+[Fact]
+public async Task Thao_tac_bu_thua_o_khong_nhay_cam_thi_KHONG_sinh_CanXemLai()
+{
+    // Đối chứng cho test trên: cùng kịch bản nhưng ô KHÔNG nhạy cảm (vd DienThoai) — thua thì
+    // thua, không có gì để hỏi lại, không sinh CanXemLai nào cả.
+}
+```
+
+- [ ] **Step 2: Chạy test — thấy fail**
+
+Run: `dotnet test WebApp/tests/Qlgx.Api.Tests --filter KhoiPhucDongBoTests -o "<thư mục tạm riêng>"`
+
+- [ ] **Step 3: Viết `KhoiPhucDongBoService` và năm phần sửa trong `DongBoService`/`DongBoEndpoints`** theo đúng mô tả ở trên.
+
+- [ ] **Step 4: Chạy test — xanh**
+
+- [ ] **Step 5: Chứng minh test biết báo lỗi cho ba fact quan trọng nhất**
+1. Tạm cho `ChayLo` bỏ qua điều kiện `ChoPhepBuLai` (luôn áp thao tác bù) → `Che_do_bo_han_tu_choi_thao_tac_bu` phải đỏ. Hoàn nguyên.
+2. Tạm để thao tác bù đi qua `HieuChinh`/kẹp như thao tác thường → `Che_do_lay_lai_chap_nhan_thao_tac_bu...` phải đỏ (mốc sai). Hoàn nguyên.
+3. Tạm bỏ nhánh tạo `CanXemLai` cho thao tác bù thua ở ô nhạy cảm → `Thao_tac_bu_thua_nguoi_sua_sau_khoi_phuc...` phải đỏ. Hoàn nguyên.
+
+- [ ] **Step 6: Commit** — `git add` từng file cụ thể.
 
 ---
 
