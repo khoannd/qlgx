@@ -350,8 +350,12 @@ git -C "$GOC_GIA" commit -q -m "them mot ban nua de kich ban phu co gi ma cap nh
   ra_phu=$(cap_nhat 2>&1); ma_phu=$?
   echo "$ra_phu"
   echo "    Ma thoat (subshell): $ma_phu"
-  printf '%s\n' "$ra_phu" | grep -qi "sao luu truoc khi cap nhat" \
-    || { echo "THAT BAI: khong thay dau hieu cap_nhat co vao nhanh sao luu bat buoc truoc cap nhat" >&2; exit 1; }
+  # Chuoi nay CHI do chinh sao_luu_bat_buoc_cap_nhat() phat ra khi khong dem duoc snapshot --
+  # khac voi dong log "sao luu truoc khi cap nhat" o cap_nhat() (phat ra ngay khi VAO nhanh, kha
+  # nang doc that su khong the chung minh ham kiem chung dem-snapshot-nhan/sao_luu_bat_buoc_cap_nhat
+  # co CHAY hay khong -- xem review cuoi cung.
+  printf '%s\n' "$ra_phu" | grep -qi "Khong dem duoc snapshot" \
+    || { echo "THAT BAI: khong thay dau hieu sao_luu_bat_buoc_cap_nhat() thuc su chay va that bai o buoc dem snapshot" >&2; exit 1; }
   [ "$ma_phu" -ne 0 ] \
     || { echo "THAT BAI: cap_nhat bao thanh cong (ma thoat 0) du khong the sao luu that (moi truong e2e nay khong co restic/R2 that hoat dong)" >&2; exit 1; }
 )
