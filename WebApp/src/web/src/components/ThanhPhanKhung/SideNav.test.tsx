@@ -40,4 +40,13 @@ describe('SideNav', () => {
     await waitFor(() => expect(api.he.sucKhoe).toHaveBeenCalled())
     expect(screen.getByText('Bản web')).toBeDefined()
   })
+
+  it('chi Quan tri he thong thay muc "Sao luu & Phuc hoi"', () => {
+    const { rerender } = render(
+      <SideNav dangChonId="" onNavigate={vi.fn()} laQuanTri laQuanTriHeThong={false} />)
+    expect(screen.queryByText('Sao lưu & Phục hồi')).toBeNull()
+
+    rerender(<SideNav dangChonId="" onNavigate={vi.fn()} laQuanTri laQuanTriHeThong />)
+    expect(screen.queryByText('Sao lưu & Phục hồi')).not.toBeNull()
+  })
 })

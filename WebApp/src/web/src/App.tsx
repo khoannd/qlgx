@@ -33,10 +33,12 @@ import { MauInListPage } from './screens/MauInListPage'
 import { ThongKeChungPage } from './screens/ThongKeChungPage'
 import { BieuDoPage } from './screens/BieuDoPage'
 import { NhapDuLieuPage } from './screens/NhapDuLieuPage'
+import { SaoLuuPage } from './screens/SaoLuuPage'
 import { LoginPage } from './screens/LoginPage'
 import { useAuth } from './api/AuthContext'
 import { TrangThaiMangBanner } from './components/TrangThaiMangBanner'
 import { CapNhatPWA } from './components/CapNhatPWA'
+import { BangCanhBaoSaoLuu } from './components/BangCanhBaoSaoLuu'
 import { useTuNhayKhiChonDropdown } from './lib/focusDieuHuong'
 
 /** Chỗ giữ chỗ — màn hình Tổng quan thật sẽ được dựng ở task sau. */
@@ -344,6 +346,12 @@ function App() {
     mo({ id: 'nhapDuLieu', tieuDe: 'Nhập dữ liệu Access', noiDung: <NhapDuLieuPage /> })
   }
 
+  // "Sao lưu & Phục hồi" (chỉ Quản trị hệ thống) — thay thế đúng chỗ ba mục Nhập/Sao lưu/Khôi
+  // phục dữ liệu kiểu desktop hiện đang bị khoá trong menu.
+  function moSaoLuu() {
+    mo({ id: 'saoLuu', tieuDe: 'Sao lưu & Phục hồi', noiDung: <SaoLuuPage /> })
+  }
+
   function moThongKeChung() {
     mo({ id: 'thongKeChung', tieuDe: 'Thống kê chung', noiDung: <ThongKeChungPage /> })
   }
@@ -385,6 +393,7 @@ function App() {
     else if (id === 'giaoXu') moGiaoXu()
     else if (id === 'mauInList') moMauInList()
     else if (id === 'nhapDuLieu') moNhapDuLieu()
+    else if (id === 'saoLuu') moSaoLuu()
     else if (id === 'thongKeChung') moThongKeChung()
     else if (id === 'bieuDo') moBieuDo()
   }
@@ -406,6 +415,9 @@ function App() {
   return (
     <>
       <TrangThaiMangBanner />
+      <BangCanhBaoSaoLuu
+        laQuanTriHeThong={nguoiDung.loaiTaiKhoan === 9}
+        onMoManHinh={moSaoLuu} />
       <AppShell dangChonNav={dangChon} onNavigate={moTheoDieuHuong} nguoiDung={nguoiDung}>
         <TabDocs
           danhSach={danhSach}
