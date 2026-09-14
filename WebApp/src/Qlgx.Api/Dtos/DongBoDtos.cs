@@ -59,6 +59,10 @@ public record GuiLenYeuCau(Guid ThietBiId, DateTimeOffset GioMayCon, Guid? Epoch
 public record KetQuaThaoTacDto(Guid MaThaoTac, string KetQua, string? ThongBao);
 
 /// <summary>Phản hồi một lô. <see cref="DongMoi"/> là các dòng hiệu lực sau con trỏ máy con gửi
-/// lên — trả kèm "miễn phí" để ai đang nhập liệu thì dữ liệu luôn mới (spec 7.3).</summary>
-public record GuiLenKetQua(Guid Epoch, long ConTroMoi, List<KetQuaThaoTacDto> KetQua,
-    List<DongHieuLucDto> DongMoi);
+/// lên — trả kèm "miễn phí" để ai đang nhập liệu thì dữ liệu luôn mới (spec 7.3).
+///
+/// <see cref="ConNua"/> mang đúng nghĩa như ở <see cref="NhanVeKetQua"/>: <see cref="DongMoi"/>
+/// bị kẹp số dòng, nên thiếu cờ này máy con không phân biệt được "đã bắt kịp" với "còn nữa, hỏi
+/// tiếp đi" — nó sẽ tưởng mình đã đồng bộ xong trong khi còn cả một quãng chưa kéo về.</summary>
+public record GuiLenKetQua(Guid Epoch, long ConTroMoi, bool ConNua,
+    List<KetQuaThaoTacDto> KetQua, List<DongHieuLucDto> DongMoi);

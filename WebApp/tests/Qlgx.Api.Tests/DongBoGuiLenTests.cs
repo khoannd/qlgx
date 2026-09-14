@@ -431,6 +431,189 @@ public class DongBoGuiLenTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
         }
     }
 
+    // ------------------------------------------------------------------
+    //  Lỗi bật ra từ CSDL lúc lưu: tất định thì từ chối riêng, không gãy cả lô
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task O_bat_buoc_de_rong_chi_lam_hong_thao_tac_do_khong_hong_ca_lo()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9122, "Goc Hai Hai");
+        var moc = MocGoc;
+
+        // HoTen là cột NOT NULL. Máy con bản cũ (hoặc form gửi ô trống) đẩy null lên. Lỗi này
+        // KHÔNG do mã đồng bộ tự bắt được — nó chỉ nổ ra ở SaveChanges, tức là SAU khi cả lô đã
+        // được xếp vào ChangeTracker.
+        var hong = Sua(id, "HoTen", "null", moc);
+
+        var kq = await Gui(client, Guid.NewGuid(), 0,
+            Sua(id, "GhiChu", "\"ghi chu hop le\"", moc),
+            hong,
+            Sua(id, "DiaChi", "\"dia chi hop le\"", moc));
+
+        kq.KetQua.Select(x => x.KetQua).ToList().Should().Equal(
+            new List<string> { "ap", "tu_choi", "ap" },
+            "200 dong so rua toi dung dan khong duoc phep khong toi noi chi vi MOT o sai");
+
+        var sau = await DocGiaoDan(id);
+        sau.GhiChu.Should().Be("ghi chu hop le");
+        sau.DiaChi.Should().Be("dia chi hop le");
+        sau.HoTen.Should().Be("Goc Hai Hai");
+
+        // Và thao tác hỏng phải được GHI SỔ, nếu không máy con gửi lại y hệt mãi mãi.
+        await using var db = f.TaoContextThuan();
+        (await db.ThaoTacDaNhan.AsNoTracking().SingleAsync(x => x.MaThaoTac == hong.MaThaoTac))
+            .KetQua.Should().Be("tu_choi");
+
+        // Đơn vị bị quay lui đã TIÊU một số thứ tự trước khi CSDL bật lỗi. Số đó phải được trả
+        // lại, nếu không chuỗi so_thu_tu thủng một lỗ ngay GIỮA hai dòng lành — đúng chỗ mà
+        // "đếm tới cuối rồi so với bộ đếm" không nhìn thấy.
+        var dong = await DocHieuLuc(id);
+        dong.Should().HaveCount(2);
+        dong[1].SoThuTu.Should().Be(dong[0].SoThuTu + 1,
+            "hai dong lanh cua cung mot lo phai lien nhau — so ma don vi bi quay lui da lay " +
+            "khong con dong nao mang, giu lai la tu thung mot lo");
+    }
+
+    [Fact]
+    public async Task O_kieu_bool_nhan_gia_tri_rong_bi_EF_chan_van_chi_hong_thao_tac_do()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9128, "Goc Hai Tam");
+        var moc = MocGoc;
+
+        // QuaDoi là bool KHÔNG cho phép rỗng. Ô rỗng trên form máy con gửi lên thành JSON null.
+        // EF chặn ca này TRƯỚC khi ra tới CSDL và ném InvalidOperationException KHÔNG mang mã lỗi
+        // nào — nhánh nhận diện theo văn bản "marked as required" là thứ duy nhất bắt được.
+        var hong = Sua(id, "QuaDoi", null, moc);
+
+        var kq = await Gui(client, Guid.NewGuid(), 0,
+            hong,
+            Sua(id, "GhiChu", "\"van phai toi noi\"", moc));
+
+        kq.KetQua.Select(x => x.KetQua).ToList().Should().Equal(
+            new List<string> { "tu_choi", "ap" });
+        (await DocGiaoDan(id)).GhiChu.Should().Be("van phai toi noi");
+    }
+
+    [Fact]
+    public async Task Vi_pham_khoa_duy_nhat_chi_lam_hong_thao_tac_do()
+    {
+        var client = f.CreateAuthClient();
+        await TaoGiaoDan(9123, "Goc Hai Ba");
+        var id = await TaoGiaoDan(9124, "Goc Hai Bon");
+        var moc = MocGoc;
+
+        // (GiaoXuId, MaGiaoDanCu) là khoá duy nhất — đổi sang một mã đã có sẽ nổ 23505.
+        var trung = Sua(id, "MaGiaoDanCu", "9123", moc);
+
+        var kq = await Gui(client, Guid.NewGuid(), 0,
+            trung,
+            Sua(id, "GhiChu", "\"van phai toi noi\"", moc));
+
+        kq.KetQua.Select(x => x.KetQua).ToList().Should().Equal(
+            new List<string> { "tu_choi", "ap" });
+        var sau = await DocGiaoDan(id);
+        sau.MaGiaoDanCu.Should().Be(9124);
+        sau.GhiChu.Should().Be("van phai toi noi");
+    }
+
+    [Fact]
+    public async Task Dong_tao_mang_JSON_khong_phai_doi_tuong_thi_bi_tu_choi_rieng()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9125, "Goc Hai Nam");
+
+        // JSON HỢP LỆ nhưng không phải một object. Rào chắn khoá ngoại duyệt các khoá của object
+        // nên nếu không kiểm ValueKind trước, EnumerateObject ném InvalidOperationException trần
+        // và gãy cả lô.
+        var hong = new ThaoTacDto(Guid.NewGuid(), Guid.NewGuid(), "tao", "GiaoDan", Guid.NewGuid(),
+            "", "[]", MocGoc, 0, null, null);
+
+        var kq = await Gui(client, Guid.NewGuid(), 0,
+            hong,
+            Sua(id, "GhiChu", "\"khong duoc bi keo theo\"", MocGoc));
+
+        kq.KetQua.Select(x => x.KetQua).ToList().Should().Equal(
+            new List<string> { "tu_choi", "ap" });
+        (await DocGiaoDan(id)).GhiChu.Should().Be("khong duoc bi keo theo");
+    }
+
+    // ------------------------------------------------------------------
+    //  Chống trùng theo DANH TÍNH GỐC — cơ chế DUY NHẤT chống nhân bản
+    //  sau khi máy chủ được khôi phục (Task 9 dựa vào nó)
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task Hai_may_cung_bu_lai_MOT_dong_goc_chi_duoc_ghi_MOT_lan()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9126, "Goc Hai Sau");
+        var nguonGoc = Guid.NewGuid();
+        var moc = MocGoc;
+
+        // Sau một lần khôi phục máy chủ, NHIỀU máy con cùng giữ một dòng đã mất và cùng gửi lại.
+        // Mỗi máy sinh một MaThaoTac KHÁC NHAU, nên chỉ danh tính gốc mới nhận ra chúng là MỘT.
+        var tuMayA = Sua(id, "GhiChu", "\"ban bu lai\"", moc) with
+        { NguonGocEpoch = nguonGoc, NguonGocSoThuTu = 4823 };
+        var tuMayB = Sua(id, "GhiChu", "\"ban bu lai\"", moc) with
+        { NguonGocEpoch = nguonGoc, NguonGocSoThuTu = 4823 };
+
+        tuMayA.MaThaoTac.Should().NotBe(tuMayB.MaThaoTac, "hai may sinh hai ma khac nhau");
+
+        await Gui(client, Guid.NewGuid(), 0, tuMayA);
+        var lanB = await Gui(client, Guid.NewGuid(), 0, tuMayB);
+
+        lanB.KetQua[0].MaThaoTac.Should().Be(tuMayB.MaThaoTac,
+            "tra ve ma cua MAY KHAC thi may B khong bao gio thay cau tra loi cho ma cua minh va " +
+            "se gui lai vo tan");
+
+        (await DocHieuLuc(id)).Should().ContainSingle(
+            "5 may con cung bu lai mot dong so rua toi ma khong chong trung theo danh tinh goc " +
+            "se thanh 5 ban ghi thay vi 1, khong test nao do");
+    }
+
+    [Fact]
+    public async Task Phan_hoi_kem_co_ConNua_de_may_con_biet_con_phai_hoi_tiep()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9127, "Goc Hai Bay");
+
+        // Bắt kịp rồi thì KHÔNG còn nữa.
+        long conTro;
+        await using (var db = f.TaoContextThuan())
+            conTro = await db.HieuLuc.Where(x => x.GiaoXuId == f.GiaoXuId)
+                .Select(x => (long?)x.SoThuTu).MaxAsync() ?? 0;
+
+        var batKip = await Gui(client, Guid.NewGuid(), conTro,
+            Sua(id, "GhiChu", "\"mot dong duy nhat\"", MocGoc));
+        batKip.ConNua.Should().BeFalse("chi co dung mot dong moi, tra het roi thi khong con nua");
+
+        // Dựng tay đủ dòng để vượt trần một trang (500). TỰ CÔ LẬP: không dựa vào lượng dữ liệu
+        // mà các test khác trong cùng fixture tình cờ để lại.
+        await using (var db = f.TaoContextThuan())
+        {
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                WITH dem AS (
+                    UPDATE bo_dem_hieu_luc SET so_tiep_theo = so_tiep_theo + 501
+                     WHERE giao_xu_id = {f.GiaoXuId}
+                 RETURNING so_tiep_theo - 501 AS so_dau, epoch
+                )
+                INSERT INTO hieu_luc (id, giao_xu_id, so_thu_tu, epoch, bang, ban_ghi_id, truong,
+                                      gia_tri, dong_ho_vat_ly, dong_ho_logic, thiet_bi_id, giao_dich_id)
+                SELECT gen_random_uuid(), {f.GiaoXuId}, dem.so_dau + g, dem.epoch, 'GiaoDan',
+                       {id}, 'GhiChu', '"nhoi day"', now(), 0, NULL, gen_random_uuid()
+                  FROM dem, generate_series(0, 500) AS g
+                """);
+        }
+
+        var conNua = await Gui(client, Guid.NewGuid(), conTro,
+            Sua(id, "DiaChi", "\"mot dong nua\"", MocGoc));
+        conNua.ConNua.Should().BeTrue(
+            "thieu co nay may con tuong da bat kip trong khi con ca mot quang chua keo ve");
+    }
+
     [Fact]
     public async Task Epoch_khong_khop_thi_tu_choi_ca_lo_bang_410()
     {

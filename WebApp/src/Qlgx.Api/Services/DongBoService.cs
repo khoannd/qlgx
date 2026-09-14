@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
 using Qlgx.Data.DongBo;
@@ -181,6 +182,10 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
         public required Guid Epoch { get; init; }
         public required long SoDau { get; init; }
         public long SoDaDung { get; private set; }
+
+        /// <summary>Trả lại phần dải số đã tiêu kể từ mốc <paramref name="moc"/> — dùng khi một
+        /// đơn vị áp bị quay lui, nên những số nó đã lấy không còn dòng nào mang.</summary>
+        public void TraLaiSoDen(long moc) => SoDaDung = moc;
         public Dictionary<Guid, KetQuaThaoTacDto> KetQua { get; } = [];
 
         /// <summary>Lấy số thứ tự kế tiếp trong dải đã cấp — chỉ gọi khi CHẮC CHẮN sẽ sinh một
@@ -240,7 +245,43 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
         // được luôn ràng buộc "không cắt giữa một GiaoDichId" mà nó đã cài và đã có test.
         var moi = await NhanVe(null, yc.ConTro, null, ct);
         return new GuiLenKetQua(
-            moi!.Epoch, moi.ConTroMoi, ketQua, moi.Dong);
+            moi!.Epoch, moi.ConTroMoi, moi.ConNua, ketQua, moi.Dong);
+    }
+
+    /// <summary>
+    /// Xử lý một lô, và nếu CSDL bật ra một lỗi TẤT ĐỊNH lúc lưu thì chạy lại lô đó ở chế độ
+    /// từng-thao-tác-một để chỉ đích danh thủ phạm.
+    ///
+    /// VÌ SAO phải có đường chạy lại. <see cref="ILoiTatDinh"/> chỉ chặn được lỗi mà chính mã
+    /// đồng bộ tự phát hiện; ranh giới EF/Npgsql thì bỏ ngỏ. Một lô 200 thay đổi sổ rửa tội hợp
+    /// lệ cộng ĐÚNG MỘT ô <c>HoTen</c> để rỗng sẽ nổ <c>23502</c> lúc <c>SaveChanges</c>, quay
+    /// lui cả lô, và <c>thao_tac_da_nhan</c> quay lui theo — máy con gửi lại y hệt MÃI MÃI.
+    ///
+    /// VÌ SAO chạy lại từng cái chứ không đoán từ <c>DbUpdateException.Entries</c>: một thực thể
+    /// có thể mang nhiều thao tác (hai ô của cùng một giáo dân), nên đoán sai sẽ loại nhầm một
+    /// thao tác lành. Chạy lại thì chậm hơn, nhưng chỉ xảy ra khi ĐÃ có lỗi, luôn kết thúc, và
+    /// chỉ đúng thủ phạm không mơ hồ.
+    /// </summary>
+    private async Task<List<KetQuaThaoTacDto>> XuLyMotLo(
+        GuiLenYeuCau yc, List<ThaoTacDto> lo, Guid giaoXuId, DateTimeOffset gioMayChu,
+        TimeSpan doLech, CancellationToken ct)
+    {
+        try
+        {
+            return await ChayLo(yc, lo, giaoXuId, gioMayChu, doLech, tungThaoTacMot: false, ct);
+        }
+        catch (Exception ex) when (PhanLoaiLoiCsdl.LaTatDinh(ex))
+        {
+            nhatKy.LogWarning(ex,
+                "Dong bo: lo cua giao xu {GiaoXuId} vap mot loi TAT DINH tu CSDL — chay lai tung " +
+                "thao tac mot de tim dung thao tac hong, phan con lai van duoc ghi.", giaoXuId);
+
+            // Giao dịch cũ đã quay lui khi thoát khỏi ChayLo. ChangeTracker thì CHƯA — EF còn giữ
+            // nguyên các thực thể ở trạng thái Added/Modified của lần thử hỏng. Không dọn thì lần
+            // chạy lại sẽ lưu lại đúng những dòng đó (kể cả dòng hieu_luc mang số thứ tự đã cũ).
+            db.ChangeTracker.Clear();
+            return await ChayLo(yc, lo, giaoXuId, gioMayChu, doLech, tungThaoTacMot: true, ct);
+        }
     }
 
     /// <summary>
@@ -248,10 +289,13 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
     /// thẩm mỹ: mở giao dịch → giành khoá dòng đếm → mới chạm dữ liệu. Ngược lại (khoá bản ghi
     /// nghiệp vụ trước rồi mới khoá dòng đếm) là deadlock thật với mọi đường ghi khác của hệ
     /// thống, và deadlock chỉ lộ ra khi có tải — đúng lúc giáo xứ đang nhập liệu nhiều nhất.
+    ///
+    /// <paramref name="tungThaoTacMot"/> là ĐƯỜNG LỖI: lưu sau mỗi đơn vị áp, bọc mỗi đơn vị
+    /// bằng một savepoint để một đơn vị hỏng không kéo theo phần còn lại.
     /// </summary>
-    private async Task<List<KetQuaThaoTacDto>> XuLyMotLo(
+    private async Task<List<KetQuaThaoTacDto>> ChayLo(
         GuiLenYeuCau yc, List<ThaoTacDto> lo, Guid giaoXuId, DateTimeOffset gioMayChu,
-        TimeSpan doLech, CancellationToken ct)
+        TimeSpan doLech, bool tungThaoTacMot, CancellationToken ct)
     {
         var thuTuTraVe = new List<Guid>();
 
@@ -334,7 +378,8 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
 
             if (tt.Loai == "tao")
             {
-                await ApThaoTacTao(bc, tt, dau, ct);
+                await ChayMotDonVi(bc, giaoDich, [tt], tungThaoTacMot,
+                    () => ApThaoTacTao(bc, tt, dau, ct), ct);
                 continue;
             }
 
@@ -356,7 +401,10 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
                 .ToList();
             foreach (var x in cungNhom) daXuLy.Add(x.Tt.MaThaoTac);
 
-            await ApMotNhom(bc, cungNhom, nhom, ct);
+            // ĐƠN VỊ áp là cả NHÓM, không phải từng ô: nhóm phải nguyên vẹn hoặc không gì cả,
+            // nếu không ta tự tay dựng lại đúng trạng thái lai mà nhóm sinh ra để chặn.
+            await ChayMotDonVi(bc, giaoDich, [.. cungNhom.Select(x => x.Tt)], tungThaoTacMot,
+                () => ApMotNhom(bc, cungNhom, nhom, ct), ct);
         }
 
         // --- Bước 3: ghi sổ chống trùng cho MỌI thao tác vừa xử lý ---
@@ -392,6 +440,59 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
             .ToList();
     }
 
+    /// <summary>
+    /// Chạy MỘT đơn vị áp (một thao tác "tao", hoặc cả một nhóm gộp).
+    ///
+    /// Đường thường (<paramref name="tungThaoTacMot"/> = false): gọi thẳng, để dành việc lưu cho
+    /// cuối lô — một <c>SaveChanges</c> cho cả lô là đường nhanh, và tuyệt đại đa số lô đi đường
+    /// này.
+    ///
+    /// Đường lỗi: bọc bằng một SAVEPOINT rồi lưu ngay. Đơn vị nào làm CSDL bật lỗi TẤT ĐỊNH thì
+    /// quay lui đúng tới savepoint của nó — phần đã ghi trước đó vẫn còn, phần sau vẫn chạy tiếp,
+    /// và mọi thao tác của đơn vị hỏng bị từ chối kèm lý do. Dùng savepoint chứ không mở giao dịch
+    /// riêng cho từng đơn vị vì khoá dòng đếm phải giữ NGUYÊN một lần cho cả lô: nhả ra rồi giành
+    /// lại giữa chừng là mở cửa cho một giao dịch khác chen vào giữa dải số đã cấp.
+    ///
+    /// Trả lại phần dải số mà đơn vị hỏng đã tiêu: nó quay lui rồi nên không còn dòng nào mang
+    /// những số ấy, giữ lại là tự thủng một lỗ trong chuỗi <c>so_thu_tu</c>.
+    /// </summary>
+    private async Task ChayMotDonVi(
+        BoiCanhLo bc, IDbContextTransaction giaoDich, IReadOnlyList<ThaoTacDto> thaoTac,
+        bool tungThaoTacMot, Func<Task> ap, CancellationToken ct)
+    {
+        if (!tungThaoTacMot)
+        {
+            await ap();
+            return;
+        }
+
+        var tenDiem = "dv" + Guid.NewGuid().ToString("N")[..8];
+        var soTruoc = bc.SoDaDung;
+        await giaoDich.CreateSavepointAsync(tenDiem, ct);
+        try
+        {
+            await ap();
+            await db.SaveChangesAsync(ct);
+            await giaoDich.ReleaseSavepointAsync(tenDiem, ct);
+        }
+        catch (Exception ex) when (PhanLoaiLoiCsdl.LaTatDinh(ex))
+        {
+            await giaoDich.RollbackToSavepointAsync(tenDiem, ct);
+            // Dọn ChangeTracker: CSDL đã quay lui nhưng EF vẫn giữ các thực thể ở trạng thái
+            // Added/Modified, và lần SaveChanges kế tiếp sẽ cố ghi lại đúng chúng — hỏng y hệt,
+            // lần này kéo theo cả những đơn vị lành phía sau.
+            db.ChangeTracker.Clear();
+            bc.TraLaiSoDen(soTruoc);
+
+            foreach (var tt in thaoTac)
+            {
+                bc.KetQua[tt.MaThaoTac] = new KetQuaThaoTacDto(
+                    tt.MaThaoTac, "tu_choi",
+                    $"CSDL tu choi gia tri nay: {ex.GetBaseException().Message}");
+            }
+        }
+    }
+
     /// <summary>Tra sổ chống trùng: theo <c>MaThaoTac</c>, và với thao tác BÙ LẠI sau khôi phục
     /// thì theo DANH TÍNH GỐC của dòng — nhiều máy con cùng giữ một dòng đã mất sẽ cùng gửi lại,
     /// mỗi máy một mã thao tác khác nhau, nên chỉ danh tính gốc mới nhận ra chúng là một.
@@ -418,7 +519,12 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
             try
             {
                 var cu = JsonSerializer.Deserialize<KetQuaThaoTacDto>(json);
-                if (cu is not null) return cu;
+                // ĐỔI LẠI mã thao tác thành mã của chính máy đang hỏi. Khi tra sổ theo DANH TÍNH
+                // GỐC (thao tác bù lại sau khôi phục), dòng tìm được là của MÁY KHÁC và mang mã
+                // của máy đó. Trả nguyên si thì máy B gửi mã B lại nhận về mã A, không bao giờ
+                // thấy câu trả lời cho mã của mình, kết luận "chưa gửi xong" và gửi lại vô tận.
+                // Nhánh dựng lại ở dưới vốn đã dùng đúng maThaoTac — hai nhánh phải nhất quán.
+                if (cu is not null) return cu with { MaThaoTac = maThaoTac };
             }
             catch (JsonException) { /* rơi xuống nhánh dựng lại bên dưới */ }
         }
@@ -467,6 +573,16 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
             // ghi với khoá ngoại sai là lọt.
             using (var doc = JsonDocument.Parse(giaTri))
             {
+                // BẮT BUỘC kiểm trước khi duyệt. ApThaoTac.TaoBanGhi VỐN xử lý đúng ca "JSON hợp
+                // lệ nhưng không phải object" (nó ném LoiApThaoTac), nhưng vòng lặp rào chắn này
+                // chạy TRƯỚC nó và giành mất: EnumerateObject trên một mảng ném
+                // InvalidOperationException trần, không mang ILoiTatDinh, nên GÃY CẢ LÔ.
+                // Bài học ghi lại cho người sửa sau: thêm một bước vào TRƯỚC một bước đã có thì
+                // phải kiểm xem bước cũ đang bảo vệ những gì mà bước mới vô tình giành mất.
+                if (doc.RootElement.ValueKind != JsonValueKind.Object)
+                    throw new LoiApThaoTac(
+                        tt.Bang, "*", "gia tri dong 'tao' khong phai mot doi tuong JSON");
+
                 foreach (var o in doc.RootElement.EnumerateObject())
                 {
                     await ApThaoTac.KiemKhoaNgoaiCungGiaoXu(
