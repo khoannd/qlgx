@@ -115,6 +115,9 @@ builder.Services.AddScoped<CachHienThiDungSaiService>();
 // Man hinh "Lich su thay doi" (Task 7 nhat ky thay doi) — chi doc bang thay_doi, Scoped vi
 // phu thuoc QlgxDbContext.
 builder.Services.AddScoped<NhatKyService>();
+// Đầu vào nhận về của giao thức đồng bộ (Task 5) — máy con kéo thay đổi + tải ảnh chụp toàn bộ.
+// Scoped vì phụ thuộc QlgxDbContext (Scoped) và IBoiCanhGiaoXu (Scoped, đọc claim của request).
+builder.Services.AddScoped<DongBoService>();
 
 var app = builder.Build();
 
@@ -247,6 +250,7 @@ app.MapThongKe();
 app.MapMauIn();
 app.MapCachHienThi();
 app.MapNhatKy();
+app.MapDongBo();
 
 // Fallback SPA: moi GET khong khop route API/tep tinh nao o tren tra ve index.html de React
 // Router tu xu ly duong dan phia trinh duyet. Loai tru "/api" bang rang buoc regex phu dinh de
