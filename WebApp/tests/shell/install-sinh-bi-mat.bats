@@ -86,3 +86,68 @@ setup() {
   run la_cai_moi
   [ "$status" -ne 0 ]
 }
+
+# Task 16 (dep dat, dispatch xuyen-task sau khi dong Task 14/15): cho_san_sang() cua install.sh la
+# ham chi em cua cho_api_san_sang trong qlgx-restore.sh, cung mac cung loi va duoc va cung mot cach
+# -- xem phuc-hoi.bats de doi chieu. Gioi han phai la SO GIAY THAT (han chot theo dong ho), KHONG
+# phai so vong lap: khi API crash-restart, moi lan `dc exec` tham do mat nhieu giay ngoai du kien.
+@test "cho_san_sang nhan gioi han qua tham so va that bai khi khong bao gio san sang" {
+  dc() { return 1; }
+  sleep() { :; }
+  run cho_san_sang 2
+  [ "$status" -ne 0 ]
+}
+
+@test "cho_san_sang do bang DONG HO, khong phai bang so vong lap" {
+  dc() { sleep 1; return 1; }   # moi lan tham do "ton" 1 giay
+  bat_dau=$(date +%s)
+  run cho_san_sang 3
+  het=$(date +%s)
+  [ "$status" -ne 0 ]
+  troi_qua=$(( het - bat_dau ))
+  # Neu dem theo vong lap thi phai mat >= 6 giay (3 vong x (1 giay dc + 1 giay sleep)).
+  [ "$troi_qua" -lt 6 ]
+  [ "$troi_qua" -ge 3 ]
+}
+
+@test "cho_san_sang tra ve thanh cong ngay khi dc bao san sang" {
+  dc() { return 0; }
+  run cho_san_sang 5
+  [ "$status" -eq 0 ]
+}
+
+# Task 16, Viec 2: the phuc hoi (duong may trang) phai co buoc cai Docker TRUOC khi tai
+# qlgx-restore.sh -- thieu buoc nay thi buoc goi qlgx-restore.sh that bai ngay voi "docker:
+# command not found" (phat hien Critical 2 cua Task 14, hoan sua sang task nay).
+@test "in_the_phuc_hoi: the phuc hoi co buoc cai Docker truoc buoc tai qlgx-restore.sh" {
+  GOC_UNG_DUNG="$BATS_TEST_TMPDIR/ung-dung"
+  THU_MUC_CAU_HINH="$BATS_TEST_TMPDIR/etc-qlgx"
+  mkdir -p "$GOC_UNG_DUNG" "$THU_MUC_CAU_HINH"
+  cat > "$GOC_UNG_DUNG/.env" <<'EOF'
+POSTGRES_USER=u
+POSTGRES_PASSWORD=p
+QLGX_APP_DB_USER=au
+QLGX_APP_DB_PASSWORD=ap
+QLGX_ADMIN_DB_USER=du
+QLGX_ADMIN_DB_PASSWORD=dp
+EOF
+  cat > "$THU_MUC_CAU_HINH/backup.env" <<'EOF'
+RESTIC_PASSWORD=rp
+RESTIC_REPOSITORY=s3:https://vd.r2.cloudflarestorage.com/qlgx-sao-luu
+AWS_ACCESS_KEY_ID=id
+AWS_SECRET_ACCESS_KEY=secret
+EOF
+  ghi_log() { :; }
+  run in_the_phuc_hoi
+  [ "$status" -eq 0 ]
+  the="$THU_MUC_CAU_HINH/the-phuc-hoi.txt"
+  [ -f "$the" ]
+  dong_docker=$(grep -n 'get.docker.com' "$the" | cut -d: -f1)
+  dong_tai_restore=$(grep -n 'qlgx-restore.sh -o qlgx-restore.sh' "$the" | cut -d: -f1)
+  [ -n "$dong_docker" ]
+  [ -n "$dong_tai_restore" ]
+  [ "$dong_docker" -lt "$dong_tai_restore" ]
+  # Cac buoc phai danh so lien tuc 1..5, khong trung khong thieu.
+  buoc=$(grep -oE '^  [0-9]+\.' "$the" | grep -oE '[0-9]+' | tr '\n' ' ')
+  [ "$buoc" = "1 2 3 4 5 " ]
+}

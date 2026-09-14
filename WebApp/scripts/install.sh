@@ -261,9 +261,13 @@ tao_vai_tro_rls() {
     < "$GOC_UNG_DUNG/scripts/sql/00-vai-tro-rls.sql"
 }
 
+# Gioi han la SO GIAY THAT (han chot theo dong ho), KHONG phai so vong lap -- xem cho_api_san_sang
+# trong qlgx-restore.sh (Task 14) de biet ly do: dem theo vong lap thi moi lan `dc exec` vao mot
+# container dang crash-restart mat nhieu giay ngoai du kien, "180" hoa ra dai hon that nhieu.
 cho_san_sang() {
-  local gioi_han="${1:-180}" i
-  for i in $(seq 1 "$gioi_han"); do
+  local gioi_han="${1:-180}" het_han
+  het_han=$(( $(date +%s) + gioi_han ))
+  while [ "$(date +%s)" -lt "$het_han" ]; do
     if dc exec -T api curl -fsS http://localhost:8080/api/suc-khoe/san-sang >/dev/null 2>&1; then
       return 0
     fi
@@ -393,9 +397,10 @@ MAT KHAU CSDL:
 
 PHUC HOI TU MAY TRANG:
   1. Dung mot may chu Linux moi
-  2. curl -fsSL $KHO_GIT/raw/$NHANH/WebApp/scripts/qlgx-restore.sh -o qlgx-restore.sh
-  3. sudo bash qlgx-restore.sh --card the-phuc-hoi.txt          (in ra ke hoach)
-  4. sudo bash qlgx-restore.sh --card the-phuc-hoi.txt --apply  (thuc hien)
+  2. Cai Docker: curl -fsSL https://get.docker.com | sudo sh
+  3. curl -fsSL $KHO_GIT/raw/$NHANH/WebApp/scripts/qlgx-restore.sh -o qlgx-restore.sh
+  4. sudo bash qlgx-restore.sh --card the-phuc-hoi.txt          (in ra ke hoach)
+  5. sudo bash qlgx-restore.sh --card the-phuc-hoi.txt --apply  (thuc hien)
 =======================================================
 EOF
   chmod 600 "$tep"
