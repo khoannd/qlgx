@@ -271,6 +271,20 @@ public class DongBoGuiLenTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
         gd.NgayQuaDoi.Should().BeNull(
             "cung nhom voi QuaDoi nen phai theo ca nhom — gop tung o doc lap se ra mot nguoi " +
             "CON SONG MA CO NGAY QUA DOI, loai sai khong ai thay bang mat cho toi khi in so");
+
+        // Hang rao cho dung cho da tung bi doi nham (review khep lai toan ke hoach 4, commit
+        // d1af8db): bien nhan xoa o cung nhom PHAI mang Loai="bat_bien" — dung ten do Task 7's
+        // CanXemLaiService.LoaiCoCapGiaTri dang cho de cho /chon duoc. Doi sang bat ky ten nao
+        // khac (ke ca "mau_thuan_du_lieu" cua Task 8, mot nghia hoan toan khac) se lam bien nhan
+        // nay KET VINH VIEN: khong /chon duoc (sai ten), khong /danh-dau-da-xu-ly duoc (ten moi
+        // cung khong nam trong LoaiCoCapGiaTri luc do). Truoc ban sua nay, khong mot test nao
+        // trong ca ke hoach kiem duoc dieu nay.
+        await using var db = f.TaoContextThuan();
+        var bienNhan = await db.CanXemLai.AsNoTracking()
+            .SingleAsync(x => x.BanGhiId == id && x.Truong == "NgayQuaDoi");
+        bienNhan.Loai.Should().Be("bat_bien",
+            "day la ten ma CanXemLaiService.LoaiCoCapGiaTri cho de cho phep /chon — doi ten o " +
+            "day ma khong doi theo o do se lam bien nhan ket vinh vien, khong bam nut nao xu ly duoc");
     }
 
     [Fact]

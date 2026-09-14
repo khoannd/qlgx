@@ -165,9 +165,14 @@ public static class LuatGop
         // biến hàm thuần này thành phụ thuộc ngữ cảnh khó tái dùng ở nơi khác.
         if (mocDangCo.Bang != bang || mocDangCo.Truong != truong)
         {
-            throw new ArgumentException(
+            // Bất khả đạt trong thực tế (mọi chỗ gọi đều tự dán đúng nhãn qua GanNhanO) — nhưng
+            // nếu một chỗ gọi TƯƠNG LAI lệch nhãn, đây là lỗi CỦA MÁY CHỦ, không phải dữ liệu xấu
+            // của máy con. LoiNoiBoTatDinh (không phải ArgumentException trần): vẫn tất định nên
+            // không được làm gãy cả lô, nhưng không được âm thầm đổ lỗi cho máy con — xem
+            // LoiNoiBoTatDinh.cs.
+            throw new LoiNoiBoTatDinh(
                 $"MocO truyen vao la cua o '{mocDangCo.Bang}.{mocDangCo.Truong}' " +
-                $"nhung dang xet o '{bang}.{truong}'.", nameof(mocDangCo));
+                $"nhung dang xet o '{bang}.{truong}'.");
         }
 
         var dauCu = new DauDongHo(

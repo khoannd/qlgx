@@ -261,7 +261,12 @@ public static class ApThaoTac
         }
 
         var thucThe = Activator.CreateInstance(kieu.ClrType)
-            ?? throw new InvalidOperationException($"Khong tao duoc thuc the '{bang}'.");
+            // Bất khả đạt trong thực tế (kieu.ClrType luôn là một thực thể EF cụ thể, không phải
+            // interface/abstract) — nhưng nếu nó xảy ra, đây là lỗi CỦA MÁY CHỦ, không phải dữ
+            // liệu xấu của máy con. LoiNoiBoTatDinh (không phải InvalidOperationException trần):
+            // vẫn tất định nên không được làm gãy cả lô, nhưng không được âm thầm đổ lỗi cho máy
+            // con qua LoiRaoChan/LoiApThaoTac — xem LoiNoiBoTatDinh.cs.
+            ?? throw new LoiNoiBoTatDinh($"Khong tao duoc thuc the '{bang}'.");
         var muc = db.Entry(thucThe);
 
         Dictionary<string, JsonElement>? cacO;

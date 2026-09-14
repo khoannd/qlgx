@@ -1179,7 +1179,16 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
                 GiaoXuId = bc.GiaoXuId,
                 // "bat_bien": ô này bị xoá không phải vì ai đó muốn xoá nó, mà vì bất biến của
                 // nhóm đòi thế. Người xem lại cần phân biệt với xung đột ô nhạy cảm thường.
-                Loai = "mau_thuan_du_lieu",
+                //
+                // KHÔNG được đổi thành "mau_thuan_du_lieu" (Task 8 dùng tên đó cho một nghĩa
+                // KHÁC — vi phạm bất biến dữ liệu, không có cặp A/B để chọn lại). Từng bị đổi
+                // nhầm ở chính chỗ này trong commit d1af8db: CanXemLaiService.LoaiCoCapGiaTri
+                // vẫn chờ đúng "bat_bien" để cho phép /chon — đổi tên ở đây làm biên nhận xoá
+                // theo nhóm thành BẤM KHÔNG ĐƯỢC (không /chon được vì đã không còn nằm trong
+                // LoaiCoCapGiaTri theo tên cũ nó tưởng, không /danh-dau-da-xu-ly được vì tên mới
+                // "mau_thuan_du_lieu" cũng không nằm trong LoaiCoCapGiaTri lúc đó — mục kẹt vĩnh
+                // viễn, và giá trị đã xoá không bao giờ khôi phục lại được nữa).
+                Loai = "bat_bien",
                 Bang = bang,
                 BanGhiId = banGhiId,
                 Truong = truong,

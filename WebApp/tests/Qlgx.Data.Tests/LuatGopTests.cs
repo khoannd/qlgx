@@ -199,8 +199,14 @@ public class LuatGopTests
         var hanhDong = () => LuatGop.Quyet(mocSai, new DauDongHo(Moc.AddMinutes(5), 0, null, Guid.NewGuid()),
             bangO, truongO, "\"cu\"", "\"moi\"");
 
-        hanhDong.Should().Throw<ArgumentException>(
-            "goi nham moc cua o khac se lam moi luat ben duoi so sanh sai o, phai chan som");
+        // LoiNoiBoTatDinh (khong phai ArgumentException tran) — day la loi CUA MAY CHU, va duong
+        // dong bo phai bat duoc no bang ILoiTatDinh de tu choi rieng mot thao tac thay vi gay ca
+        // lo (xem LoiNoiBoTatDinh.cs, R60 so thi cong).
+        hanhDong.Should().Throw<LoiNoiBoTatDinh>(
+            "goi nham moc cua o khac se lam moi luat ben duoi so sanh sai o, phai chan som")
+            .Which.Should().BeAssignableTo<ILoiTatDinh>(
+                "loi nay van tat dinh nen phai duoc DongBoService tu choi rieng mot thao tac, " +
+                "khong duoc lam gay ca lo");
     }
 
     [Fact]
@@ -212,5 +218,23 @@ public class LuatGopTests
             .Should().NotBe(LuatGop.NhomGop("GiaoDan", "QuaDoi"),
                 "ten sai hoa thuong khong duoc khop bang nhom — neu khop thi mot o viet sai kieu"
                 + " se bi gop nham vao nhom qua doi va keo theo ca nhom thang/thua oan");
+    }
+
+    // Danh sach nam nay la neo (canary), khong phai enum toan bo — them cap moi vao day khi them
+    // nhom moi vao `NhomCuaO`/`OChuCuaNhom` cua LuatGop.cs.
+    [Theory]
+    [InlineData("GiaoDan", "GiaoDan#quadoi", "QuaDoi")]
+    [InlineData("GiaDinh", "GiaDinh#chuyenxu", "DaChuyenXu")]
+    public void Truong_chu_cua_nhom_phai_la_mot_truong_THAT_SU_thuoc_nhom_do(
+        string bang, string nhom, string truongChuMongDoi)
+    {
+        // `OChuCuaNhom` la danh sach chep tay THU NAM cua ke hoach nay (sau ONhayCam,
+        // CotCamDongBo, CacBangDongBo.Danh, tap cot anh chup) — khong test nao ep khoa cua no
+        // (ten nhom) trung voi gia tri cua `NhomCuaO`, va gia tri cua no (ten truong chu) trung
+        // voi mot truong THAT trong nhom. Go sai mot ky tu se lam `TruongChuCuaNhom` tra null (im
+        // lang bo qua viec xoa cascade) hoac tro toi mot truong SAI (cascade nham dieu kien).
+        LuatGop.TruongChuCuaNhom(nhom).Should().Be(truongChuMongDoi);
+        LuatGop.CacTruongCuaNhom(bang, nhom).Should().Contain(truongChuMongDoi,
+            "truong chu phai la MOT trong cac truong cua chinh nhom do, khong phai ten roi");
     }
 }

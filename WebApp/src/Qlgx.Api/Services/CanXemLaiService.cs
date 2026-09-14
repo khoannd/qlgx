@@ -22,6 +22,20 @@ public enum KetQuaXuLyCanXemLai
     /// <c>/danh-dau-da-xu-ly</c> cho một loại CÓ cặp giá trị thật (không được phép "bỏ qua" một
     /// xung đột thật mà không ghi quyết định) — 400.</summary>
     KhongHopLe,
+    /// <summary>
+    /// Giá trị được chọn KHÔNG áp được nữa vì một lý do TẤT ĐỊNH khác (không phải "hồ sơ đã mất",
+    /// cái đó tự đóng — xem <see cref="CanXemLaiService.ChonGiaTri"/>): ô bị cấm sửa qua đường
+    /// này, hoặc chính giá trị đang chọn đã hỏng. 409 — chưa xử lý được, KHÔNG tự đóng mục, vì có
+    /// thể còn sửa lại được (khác trường hợp hồ sơ đã mất, ở đó không còn gì để chọn nữa).
+    /// </summary>
+    KhongApDuocNua,
+}
+
+/// <summary>Kết quả kèm câu giải thích bằng lời thường khi cần — chỉ khác rỗng ở nhánh
+/// <see cref="KetQuaXuLyCanXemLai.KhongApDuocNua"/>, các nhánh khác endpoint tự có câu tĩnh.</summary>
+public readonly record struct KetQuaCanXemLai(KetQuaXuLyCanXemLai Ket, string? ThongBao = null)
+{
+    public static implicit operator KetQuaCanXemLai(KetQuaXuLyCanXemLai ket) => new(ket);
 }
 
 /// <summary>
@@ -72,8 +86,17 @@ public class CanXemLaiService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh)
             .ToListAsync(ct);
 
     /// <summary>Người dùng chọn nhánh A hoặc B cho một mục có cặp giá trị thật — xem chú thích
-    /// đầu lớp cho quy tắc cốt lõi (spec 8.6).</summary>
-    public async Task<KetQuaXuLyCanXemLai> ChonGiaTri(Guid id, string chon, CancellationToken ct)
+    /// đầu lớp cho quy tắc cốt lõi (spec 8.6).
+    ///
+    /// VÌ SAO cần bọc bằng try/catch — phát hiện ở review khép lại toàn kế hoạch, không review
+    /// riêng lẻ nào từng thấy: đây là đường ghi THỨ BA của cả kế hoạch (sau đường web thường và
+    /// đường đồng bộ), nhưng trước bản sửa này nó CHƯA đi qua kỷ luật "thử lại có giúp gì không"
+    /// đã lập ở Task 6. `ApMotO` và `SaveChangesAsync` bên dưới đều có thể ném lỗi TẤT ĐỊNH (hồ sơ
+    /// đã bị xoá cứng giữa lúc mục nằm chờ và lúc quý sơ bấm nút; hoặc CSDL từ chối giá trị). Nếu
+    /// để lọt thành 500 trần: mục đó không /chon được (lỗi), mà cũng không /danh-dau-da-xu-ly được
+    /// (loại này CỐ Ý bị chặn ở đó vì có cặp giá trị thật) — KẸT VĨNH VIỄN.
+    /// </summary>
+    public async Task<KetQuaCanXemLai> ChonGiaTri(Guid id, string chon, CancellationToken ct)
     {
         if (chon != "A" && chon != "B") return KetQuaXuLyCanXemLai.KhongHopLe;
 
@@ -91,6 +114,40 @@ public class CanXemLaiService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh)
         // Mở giao dịch tường minh rồi giành khoá dòng đếm NGAY câu lệnh đầu tiên — cùng bắt buộc
         // với CapSoHieuLuc.LayDaiSo ở mọi đường ghi khác của hệ thống (xem chú thích ở đó).
         await using var giaoDich = await db.Database.BeginTransactionAsync(ct);
+
+        try
+        {
+            await ApMotOVaGhiSo(giaoXuId, muc, giaTriChon, maThaoTac, giaoDichId, ct);
+        }
+        catch (LoiKhongTimThayBanGhi)
+        {
+            // Hồ sơ đã bị xoá cứng sau khi mục này được tạo — không còn A hay B nào để chọn nữa,
+            // bấm nút nào cũng chỉ có MỘT kết quả đúng: đóng mục. Không rollback giao dịch rồi mở
+            // lại — quay lui tại chỗ (chưa ghi gì) rồi tự đóng mục trong MỘT giao dịch mới, ngắn
+            // gọn, không giữ khoá dòng đếm (không cần, không có so_thu_tu nào được xin ở đây).
+            await giaoDich.RollbackAsync(ct);
+            muc.DaXuLyLuc = DongHoLai.CatMicroGiay(DateTimeOffset.UtcNow);
+            muc.NguoiXuLy = null;
+            await db.SaveChangesAsync(ct);
+            return KetQuaXuLyCanXemLai.ThanhCong;
+        }
+        catch (Exception ex) when (ex is ILoiTatDinh || PhanLoaiLoiCsdl.LaTatDinh(ex))
+        {
+            // Tất định nhưng KHÔNG phải "hồ sơ đã mất" (cột cấm, giá trị hỏng...) — có thể còn sửa
+            // lại được bằng cách khác, nên KHÔNG tự đóng mục, chỉ báo rõ lý do.
+            await giaoDich.RollbackAsync(ct);
+            return new KetQuaCanXemLai(
+                KetQuaXuLyCanXemLai.KhongApDuocNua, LoiThuongDan.Dich(ex));
+        }
+
+        await giaoDich.CommitAsync(ct);
+        return KetQuaXuLyCanXemLai.ThanhCong;
+    }
+
+    private async Task ApMotOVaGhiSo(
+        Guid giaoXuId, CanXemLai muc, string? giaTriChon, Guid maThaoTac, Guid giaoDichId,
+        CancellationToken ct)
+    {
         var (soDau, epoch, dauCuoi) = await CapSoHieuLuc.LayDaiSo(db, giaoXuId, 1, ct);
 
         var gioHienTai = DongHoLai.CatMicroGiay(DateTimeOffset.UtcNow);
@@ -154,10 +211,9 @@ public class CanXemLaiService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh)
         await db.SaveChangesAsync(ct);
         // Chốt dòng đếm khi VẪN đang giữ khoá: ghi đồng hồ máy chủ vừa nâng (dải xin đúng 1, dùng
         // đúng 1, nên không có gì để trả lại — vẫn gọi để dau_cuoi_* được cập nhật, xem ChotDaiSo).
+        // KHÔNG commit giao dịch ở đây — người gọi (ChonGiaTri) giữ giao dịch để còn có thể bắt
+        // lỗi tất định từ chính lời gọi này và rollback, thay vì đã trót commit rồi mới biết hỏng.
         await CapSoHieuLuc.ChotDaiSo(db, giaoXuId, new DauDongHo(vatLy, logic, null, Guid.Empty), null, ct);
-        await giaoDich.CommitAsync(ct);
-
-        return KetQuaXuLyCanXemLai.ThanhCong;
     }
 
     /// <summary>Người dùng đánh dấu đã xử lý một mục KHÔNG có cặp giá trị (dữ liệu đã mất, phải

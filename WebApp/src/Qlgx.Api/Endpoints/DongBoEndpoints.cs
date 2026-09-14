@@ -111,12 +111,16 @@ public static class DongBoEndpoints
             CanXemLaiService dv, Guid id, ChonGiaTriYeuCau yc, CancellationToken ct) =>
             await dv.ChonGiaTri(id, yc.Chon, ct) switch
             {
-                KetQuaXuLyCanXemLai.KhongTimThay => Results.NotFound(),
-                KetQuaXuLyCanXemLai.DaXuLy => Results.Conflict(),
-                KetQuaXuLyCanXemLai.KhongHopLe => Results.BadRequest(new
+                { Ket: KetQuaXuLyCanXemLai.KhongTimThay } => Results.NotFound(),
+                { Ket: KetQuaXuLyCanXemLai.DaXuLy } => Results.Conflict(),
+                { Ket: KetQuaXuLyCanXemLai.KhongHopLe } => Results.BadRequest(new
                 {
                     thongBao = "Muc nay khong co cap gia tri de chon — hay dung nut 'Da xu ly'.",
                 }),
+                // Tất định nhưng không phải "hồ sơ đã mất" (cái đó tự đóng mục và trả ThanhCong) —
+                // 409, kèm câu lời thường CỤ THỂ cho ca này (khác câu tĩnh của KhongHopLe ở trên).
+                { Ket: KetQuaXuLyCanXemLai.KhongApDuocNua, ThongBao: var tb } =>
+                    Results.Conflict(new { thongBao = tb }),
                 _ => Results.Ok(),
             });
 

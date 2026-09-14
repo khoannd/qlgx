@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
@@ -248,5 +249,83 @@ public class CanXemLaiTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
         var lan2 = await client.PostAsync($"/api/can-xem-lai/{idMuc}/danh-dau-da-xu-ly", null);
         lan2.StatusCode.Should().Be(HttpStatusCode.Conflict,
             "mot muc da xu ly roi thi khong duoc phep danh dau lai lan nua");
+    }
+
+    // ------------------------------------------------------------------
+    //  Ba fact phat hien o review khep lai toan ke hoach 4 — commit d1af8db
+    //  (Task 8) tung doi nham "bat_bien" thanh "mau_thuan_du_lieu" o chinh
+    //  duong xoa o cung nhom (Task 6), lam bien nhan do KET vinh vien: khong
+    //  /chon duoc (LoaiCoCapGiaTri doi ten cu "bat_bien"), khong
+    //  /danh-dau-da-xu-ly duoc (ten moi cung khong nam trong LoaiCoCapGiaTri
+    //  luc do). Da sua tai dung dong bi doi nham; ba fact duoi day khoa lai
+    //  de khong ai doi nham lan thu hai.
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task Muc_loai_bat_bien_CHON_duoc_binh_thuong()
+    {
+        // Dung dung ten loai cua Task 6 (XoaOConLaiCuaNhom) — "bat_bien" PHAI nam trong
+        // LoaiCoCapGiaTri, khac han "mau_thuan_du_lieu" cua Task 8 (khong co cap gia tri).
+        var client = f.CreateAuthClient();
+        var idGiaoDan = await TaoGiaoDan(9920, "Nguoi bi xoa theo nhom");
+        var idMuc = await TaoMucCanXemLai(idGiaoDan, "GiaoDan", "NgayQuaDoi",
+            giaTriA: "\"2026-09-12\"", giaTriB: null, dangDung: "B", loai: "bat_bien");
+
+        var phanHoi = await client.PostAsJsonAsync($"/api/can-xem-lai/{idMuc}/chon",
+            new ChonGiaTriYeuCau("A"));
+
+        phanHoi.StatusCode.Should().Be(HttpStatusCode.OK,
+            "\"bat_bien\" la loai CO cap gia tri that (bien nhan xoa o cung nhom), phai chon duoc");
+        (await DocGiaoDan(idGiaoDan)).NgayQuaDoi.Should().Be(new DateOnly(2026, 9, 12));
+    }
+
+    [Fact]
+    public async Task Chon_khi_ho_so_da_bi_xoa_cung_thi_TU_DONG_DONG_muc_khong_do_500()
+    {
+        var client = f.CreateAuthClient();
+        var idGiaoDan = await TaoGiaoDan(9921, "Nguoi se bi xoa cung");
+        var idMuc = await TaoMucCanXemLai(idGiaoDan, "GiaoDan", "HoTen",
+            giaTriA: "\"Ten A\"", giaTriB: "\"Ten B\"", dangDung: "B", loai: "o_nhay_cam");
+
+        // Xoá CỨNG hồ sơ sau khi mục đã tạo — mô phỏng văn phòng xứ gộp hai hồ sơ trùng ngay
+        // trong lúc mục này còn nằm chờ trong hộp.
+        await using (var db = f.TaoContextThuan())
+        {
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM giao_dan WHERE id = {idGiaoDan}");
+        }
+
+        var phanHoi = await client.PostAsJsonAsync($"/api/can-xem-lai/{idMuc}/chon",
+            new ChonGiaTriYeuCau("A"));
+
+        phanHoi.StatusCode.Should().Be(HttpStatusCode.OK,
+            "ho so da mat thi khong con A hay B nao de chon — dong muc, khong duoc 500");
+
+        await using var doc = f.TaoContextThuan();
+        var mucSau = await doc.CanXemLai.AsNoTracking().SingleAsync(x => x.Id == idMuc);
+        mucSau.DaXuLyLuc.Should().NotBeNull("muc phai duoc dong lai, khong duoc ket vinh vien");
+    }
+
+    [Fact]
+    public async Task Chon_gia_tri_hong_thi_409_kem_loi_thuong_khong_tu_dong_muc()
+    {
+        var client = f.CreateAuthClient();
+        var idGiaoDan = await TaoGiaoDan(9922, "Nguoi co gia tri hong trong hop");
+        // NgaySinh la DateOnly — "khong phai ngay" khong parse duoc, ApMotO nem LoiApThaoTac.
+        var idMuc = await TaoMucCanXemLai(idGiaoDan, "GiaoDan", "NgaySinh",
+            giaTriA: "\"khong phai ngay\"", giaTriB: "\"1985-03-12\"", dangDung: "B");
+
+        var phanHoi = await client.PostAsJsonAsync($"/api/can-xem-lai/{idMuc}/chon",
+            new ChonGiaTriYeuCau("A"));
+
+        phanHoi.StatusCode.Should().Be(HttpStatusCode.Conflict,
+            "loi TAT DINH nhung KHONG PHAI ho so da mat — bao ro, dung tu dong dong muc");
+        var than = await phanHoi.Content.ReadFromJsonAsync<JsonElement>();
+        than.GetProperty("thongBao").GetString().Should().NotBeNullOrWhiteSpace();
+
+        await using var doc = f.TaoContextThuan();
+        var mucSau = await doc.CanXemLai.AsNoTracking().SingleAsync(x => x.Id == idMuc);
+        mucSau.DaXuLyLuc.Should().BeNull(
+            "loi khac 'ho so da mat' co the con sua duoc bang cach khac — khong duoc tu dong dong");
     }
 }
