@@ -1889,23 +1889,126 @@ Tạm bỏ đoạn ghi `HieuLuc`/`MocO` trong `ChonGiaTri` (chỉ giữ `DaXuLyL
 
 ## Task 8: Bộ kiểm bất biến
 
+**Brief này viết lại toàn bộ, chi tiết hơn hẳn bản gốc — bản gốc chỉ có khung việc, không đủ để
+thi công mà không phải đoán.**
+
+**Phần "kiểm RLS bằng vai trò không superuser" ĐÃ CÓ SẴN — không thuộc phạm vi task này nữa.**
+`WebApp/tests/Qlgx.Data.Tests/RlsTests.cs` (661 dòng, 8 fact, do một phiên khác làm việc trên cùng
+nhánh dựng cho nhu cầu riêng của họ) đã kiểm đúng cơ chế: vai trò `NOSUPERUSER NOBYPASSRLS`, xác
+nhận không đặt `app.giao_xu_id` thì trả rỗng (đóng mặc định), kèm hai fact riêng cho đúng hai bảng
+của kế hoạch này (`Bang_moc_o_chiu_rls_nhu_bang_nghiep_vu`,
+`Bang_nhat_ky_chiu_rls_nhu_bang_nghiep_vu`). Đã chạy lại độc lập: 8/8 xanh. Đừng làm lại.
+
 **Files:**
 - Create: `src/Qlgx.Data/DongBo/KiemBatBien.cs`
 - Modify: `src/Qlgx.Api/Services/DongBoService.cs`
 - Test: `tests/Qlgx.Data.Tests/KiemBatBienTests.cs`
 
 **Interfaces:**
-- Produces: `KiemBatBien.Kiem(QlgxDbContext db, string bang, Guid banGhiId, CancellationToken ct) -> Task<List<string>>` — trả danh sách bất biến bị vi phạm, rỗng nghĩa là sạch.
+- Produces: `KiemBatBien.Kiem(QlgxDbContext db, Guid giaoXuId, string bang, Guid banGhiId, CancellationToken ct) -> Task<List<string>>` — trả danh sách câu tiếng Việt mô tả từng bất biến bị vi phạm (rỗng nghĩa là sạch). Mỗi câu đã sẵn sàng đi thẳng vào `CanXemLai.LyDo` — viết bằng lời thường, không thuật ngữ kỹ thuật, đúng tinh thần chú thích trong `CanXemLai.cs`.
 
-Ba bất biến bắt buộc (spec 8.2):
+**Ba bất biến bắt buộc (spec 8.2), CHỈ áp cho đúng bảng của nó — `Kiem` phải tự dispatch theo `bang`, không quét mù:**
 
-1. **Ngày rửa tội không được trước ngày sinh** (và tương tự cho các bí tích khác).
-2. **Mỗi gia đình đúng một chủ hộ.**
-3. **`QuaDoi = false` thì `NgayQuaDoi` phải rỗng** — cái này đơn vị gộp đã chặn phần lớn, bộ kiểm là lưới thứ hai.
+1. **`bang == "GiaoDan"`: ngày rửa tội / rước lễ / thêm sức không được trước ngày sinh.** Cột thật:
+   `GiaoDan.NgaySinh` (`DateOnly?`), `NgayRuaToi`, `NgayRuocLe`, `NgayThemSuc` (cùng kiểu). Bỏ qua
+   cặp nào có một vế `null` — chưa đủ dữ liệu để so, không phải vi phạm. Câu mẫu: *"Ngày rửa tội
+   (12/03/1984) sớm hơn ngày sinh (12/03/1985) của {HoTen}."*
+2. **`bang == "ThanhVienGiaDinh"`: một `GiaDinhId` phải có đúng một dòng `ChuHo = true`.** Đọc
+   `WebApp/src/Qlgx.Domain/Entities/ThanhVienGiaDinh.cs` trước khi viết — đã có chỉ mục lọc riêng
+   giữ luật khác (`(GiaDinhId, VaiTro) WHERE VaiTro IN (0,1)` — tối đa một Chồng, một Vợ), **đừng
+   lẫn hai luật**. Khi `Kiem` được gọi với `bang == "ThanhVienGiaDinh"` và `banGhiId` là một dòng
+   thành viên, tra `GiaDinhId` của dòng đó rồi đếm số dòng `ChuHo = true` trong cùng gia đình:
+   `0` hoặc `>= 2` đều vi phạm. Câu mẫu (0): *"Gia đình {TenGiaDinh} hiện không có ai được đánh dấu
+   chủ hộ."* Câu mẫu (≥2): *"Gia đình {TenGiaDinh} đang có {n} người cùng được đánh dấu chủ hộ."*
+3. **`bang == "GiaoDan"`: `QuaDoi = false` thì `NgayQuaDoi` phải rỗng.** Đơn vị gộp (Task 6,
+   `XoaOConLaiCuaNhom`) đã chặn phần lớn ca này khi *chính lần sửa đó* đụng tới `QuaDoi` — bộ kiểm
+   là **lưới thứ hai**, bắt cả ca dữ liệu vào sai đường khác (nhập từ Access, sửa tay CSDL, một
+   lỗi tương lai ở tầng khác). Câu mẫu: *"{HoTen} được ghi còn sống nhưng vẫn còn ngày qua đời
+   (12/03/1984)."*
 
-Vi phạm không làm hỏng lô: sinh một mục `CanXemLai` loại `"bat_bien"` với câu tiếng Việt đời thường, ví dụ *"Ngày rửa tội (12/03/1984) sớm hơn ngày sinh (12/03/1985) của Maria Nguyễn Thị A."*
+**CẢNH BÁO ĐẶT TÊN — bản brief gốc của task này định dùng `Loai = "bat_bien"`, nhưng Task 6 đã
+CHIẾM tên đó cho một nghĩa khác** (`DongBoService.cs:976` — "biên nhận xoá ô cùng nhóm, giữ giá trị
+cũ trong `GiaTriA` để phục hồi", loại CÓ cặp giá trị A/B thật, Task 7 đã xếp vào
+`LoaiCoCapGiaTri` và xử lý qua `/chon`). Vi phạm bất biến ở TASK NÀY là loại khác hẳn — không có gì
+để "chọn A hay B", chỉ có một câu cảnh báo. Dùng chung tên `"bat_bien"` cho hai nghĩa sẽ làm một
+mục do `KiemBatBien` sinh ra đi lạc vào nhánh `/chon` của Task 7 (không có `GiaTriA`/`GiaTriB` thật
+để chọn — lỗi hoặc hành vi vô nghĩa ở đó).
 
-- [ ] **Step 1-4:** Viết test → chạy đỏ → viết `KiemBatBien` → nối vào `DongBoService` sau mỗi thao tác đã thắng → chạy xanh → commit.
+**Dùng tên RIÊNG, KHÔNG chứa gốc "bat_bien" để không ai nhầm lẫn khi đọc lướt: `"mau_thuan_du_lieu"`.**
+Sinh một mục `CanXemLai { Loai = "mau_thuan_du_lieu", Bang, BanGhiId, LyDo = <câu vi phạm>,
+GiaTriA = null, GiaTriB = null, GiaTriDangDung = null, TaoLuc = giờ máy chủ }` — vi phạm KHÔNG làm
+hỏng lô (đúng triết lý "hệ thống không bao giờ đứng chờ người dùng trả lời", spec 9.2). Thêm
+`"mau_thuan_du_lieu"` vào chú thích liệt kê `Loai` khả dĩ ở `CanXemLai.cs`. Task 7's
+`LoaiCoCapGiaTri` KHÔNG cần sửa — danh sách đó là danh sách trắng, loại mới không nằm trong đó thì
+tự động chỉ xử lý được qua `/danh-dau-da-xu-ly`, đúng ý.
+
+**Điểm tích hợp vào `DongBoService.ChayLo`:** ngay sau dòng `await db.SaveChangesAsync(ct);` của
+Bước 3 (biến `giaoDich` vẫn mở, `db.SaveChangesAsync` vừa flush mọi thay đổi của lô xuống CSDL —
+đọc lại từ đây thấy đúng trạng thái sau khi áp, không phải trạng thái đang chờ trong bộ nhớ), **và
+trước** `CapSoHieuLuc.ChotDaiSo`/`giaoDich.CommitAsync`. Thu thập tập `(Bang, BanGhiId)` **duy
+nhất** từ các thao tác có `ketQua[...].KetQua == "ap"` trong lô này (thao tác `"thua"`/`"tu_choi"`
+không cần kiểm — giá trị của chúng chưa hề chạm vào dữ liệu), gọi `KiemBatBien.Kiem` cho từng cặp,
+thêm `CanXemLai` cho mỗi câu vi phạm trả về, rồi một `SaveChangesAsync` nữa (vẫn trong cùng giao
+dịch) trước khi chốt dải số. **Không mở giao dịch mới, không giành lại khoá dòng đếm** — dùng
+đúng giao dịch đang có.
+
+- [ ] **Step 1: Viết test — đủ mã cho cả sáu fact, không placeholder**
+
+```csharp
+[Fact]
+public async Task Ngay_rua_toi_som_hon_ngay_sinh_bi_bao_bang_cau_de_hieu()
+{
+    var giaoDan = new GiaoDan { GiaoXuId = giaoXuId, MaGiaoDanCu = 9910, HoTen = "Maria Nguyen Thi A",
+        NgaySinh = new DateOnly(1985, 3, 12), NgayRuaToi = new DateOnly(1984, 3, 12) };
+    // ... lưu, gọi KiemBatBien.Kiem trực tiếp (không cần qua GuiLen cho test đơn vị này)
+    var viPham = await KiemBatBien.Kiem(db, giaoXuId, "GiaoDan", giaoDan.Id, default);
+    viPham.Should().ContainSingle(s => s.Contains("Maria Nguyen Thi A") && !s.Contains("NgayRuaToi"),
+        "cau phai bang loi thuong, khong duoc chua ten cot ky thuat");
+}
+
+[Fact]
+public async Task Thieu_du_lieu_mot_ve_thi_khong_bi_bao_vi_pham()
+{
+    // NgaySinh null, NgayRuaToi có giá trị -> KHÔNG đủ để kết luận, không được báo vi phạm giả.
+}
+
+[Fact]
+public async Task Gia_dinh_khong_ai_la_chu_ho_bi_bao()
+{
+}
+
+[Fact]
+public async Task Gia_dinh_hai_nguoi_cung_la_chu_ho_bi_bao()
+{
+}
+
+[Fact]
+public async Task Con_song_ma_co_ngay_qua_doi_bi_bao()
+{
+}
+
+[Fact]
+public async Task Gui_len_thao_tac_vi_pham_bat_bien_van_ap_gia_tri_VA_sinh_CanXemLai()
+{
+    // Kiểm TÍCH HỢP qua endpoint gui-len thật: gửi một thao tác làm QuaDoi=false trong khi
+    // NgayQuaDoi vẫn còn (kịch bản không đụng QuaDoi nên đơn vị gộp Task 6 không bắt được) ->
+    // giá trị VẪN được áp (spec 9.2: không đứng chờ), VÀ một CanXemLai Loai="mau_thuan_du_lieu"
+    // xuất hiện. Đây là ca CHỨNG MINH bộ kiểm là lưới THỨ HAI, không phải lưới duy nhất.
+}
+```
+
+- [ ] **Step 2: Chạy test — thấy fail**
+
+Run: `dotnet test WebApp/tests/Qlgx.Data.Tests --filter KiemBatBienTests -o "<thư mục tạm riêng>"`
+
+- [ ] **Step 3: Viết `KiemBatBien`, nối vào `DongBoService`**
+
+Theo đúng mô tả điểm tích hợp ở trên.
+
+- [ ] **Step 4: Chạy test — xanh; chứng minh test biết báo lỗi** cho fact tích hợp (Step 1's cuối)
+bằng cách tạm bỏ đoạn gọi `KiemBatBien` trong `ChayLo`, xác nhận đỏ, hoàn nguyên, xác nhận xanh.
+
+- [ ] **Step 5: Commit** — `git add` từng file cụ thể.
 
 ---
 
