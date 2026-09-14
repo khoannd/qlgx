@@ -1,3 +1,5 @@
+using Qlgx.Api.Dtos;
+using Qlgx.Data.DongBo;
 using Qlgx.Api.Services;
 
 namespace Qlgx.Api.Endpoints;
@@ -32,5 +34,34 @@ public static class DongBoEndpoints
 
         nhom.MapGet("/toan-bo", async (DongBoService dv, CancellationToken ct) =>
             Results.Ok(await dv.ToanBo(ct)));
+
+        nhom.MapPost("/gui-len", async (
+            DongBoService dv, GuiLenYeuCau yeuCau, CancellationToken ct) =>
+        {
+            try
+            {
+                var ketQua = await dv.GuiLen(yeuCau, ct);
+
+                // Cùng ngữ nghĩa với /thay-doi: epoch không khớp thì 410 Gone TƯỜNG MINH. Nhận
+                // bừa một lô thuộc lịch sử đã bị khôi phục đè lên là trộn hai lịch sử vào nhau,
+                // và không ai gỡ ra được nữa.
+                return ketQua is null
+                    ? Results.Problem(statusCode: StatusCodes.Status410Gone,
+                        title: "Con trỏ đồng bộ không còn hợp lệ",
+                        detail: "Epoch không khớp — tải lại toàn bộ qua /api/dong-bo/toan-bo.")
+                    : Results.Ok(ketQua);
+            }
+            catch (InvalidOperationException ex) when (ex is not LoiKhongTimThayBanGhi)
+            {
+                // VI PHẠM RÀO CHẮN (bảng cấm, cột cấm, sai giáo xứ, khoá ngoại trỏ sang giáo xứ
+                // khác). Cả lô bị quay lui và KHÔNG có gì lọt vào sổ sách — đây là chỗ PHẢI đổ
+                // vỡ tường minh thay vì nuốt rồi đi tiếp. Khác hẳn "bản ghi không còn" hay "dữ
+                // liệu một dòng hỏng": hai loại đó chỉ từ chối đúng thao tác của nó và lô vẫn
+                // chạy tiếp (xem LoiKhongTimThayBanGhi.cs).
+                return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
+                    title: "Lô đồng bộ vi phạm rào chắn",
+                    detail: ex.Message);
+            }
+        });
     }
 }

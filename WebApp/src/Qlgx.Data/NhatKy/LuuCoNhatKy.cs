@@ -1,4 +1,5 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using Qlgx.Data.DongBo;
 using Qlgx.Domain.Entities;
 
 namespace Qlgx.Data.NhatKy;
@@ -148,7 +149,29 @@ public static class QlgxDbContextNhatKyExtensions
         foreach (var nhom in dong.GroupBy(x => x.GiaoXuId).OrderBy(x => x.Key))
         {
             var cacDong = nhom.ToList();
-            var (soDau, epoch) = await CapSoHieuLuc.LayDaiSo(db, nhom.Key, cacDong.Count, ct);
+            var (soDau, epoch, dauCuoi) = await CapSoHieuLuc.LayDaiSo(db, nhom.Key, cacDong.Count, ct);
+
+            // NÂNG ĐỒNG HỒ LAI CỦA MÁY CHỦ cho chính lần phát này (nhanDuoc = null: đây là mốc
+            // do máy chủ tự sinh, không phải mốc nhận từ máy con).
+            //
+            // Vì sao đường ghi THƯỜNG của web cũng phải làm: đầu vào gửi lên KẸP mốc máy con về
+            // giờ máy chủ, nên một thao tác máy con rất thường xuyên mang ĐÚNG mốc vật lý của
+            // giây này. Nếu web cứ phát Logic = 0 thì ở mọi ca hoà đó, thao tác máy con (Logic
+            // >= 1 sau khi nâng) LUÔN thắng bản sửa quý cha vừa gõ. Nâng theo dau_cuoi_* làm hai
+            // đường ghi cùng chơi một luật: ai ghi SAU thì đồng hồ logic cao hơn.
+            //
+            // Ở ca thường (không có thao tác đồng bộ nào trong cùng micro giây), NangDau trả về
+            // đúng (moc, 0) — hành vi không đổi so với trước.
+            var moc = cacDong.Max(x => x.DongHoVatLy);
+            var (vatLy, logic) = DongHoLai.NangDau(dauCuoi, null, moc);
+            foreach (var t in cacDong)
+            {
+                t.DongHoVatLy = vatLy;
+                t.DongHoLogic = logic;
+            }
+
+            await CapSoHieuLuc.ChotDaiSo(
+                db, nhom.Key, new DauDongHo(vatLy, logic, null, Guid.Empty), null, ct);
 
             db.ThayDoi.AddRange(cacDong);
             for (var i = 0; i < cacDong.Count; i++)
@@ -164,11 +187,9 @@ public static class QlgxDbContextNhatKyExtensions
                     Truong = t.Truong,
                     GiaTri = t.GiaTri,
                     DongHoVatLy = t.DongHoVatLy,
-                    // DongHoLogic giữ nguyên 0 một cách CỐ Ý, không phải sót. Đồng hồ logic lai
-                    // (HLC) chỉ cần khi có nhiều nguồn sinh thay đổi cùng lúc; trong kế hoạch
-                    // này MỌI dòng nhật ký đều sinh từ máy chủ và được xếp thứ tự bởi khoá dòng
-                    // đếm, nên SoThuTu đã là một thứ tự toàn phần. Khi máy con bắt đầu tự sinh
-                    // thay đổi thì mới phải nuôi đồng hồ logic.
+                    // DongHoLogic KHÔNG còn luôn bằng 0 (khác bản trước): từ khi có đầu vào gửi
+                    // lên, máy chủ không phải nguồn sinh thay đổi duy nhất nữa, nên mọi dòng
+                    // phát ra đều phải mang đồng hồ lai đã nâng ở trên.
                     DongHoLogic = t.DongHoLogic,
                     ThietBiId = t.ThietBiId,
                     GiaoDichId = t.GiaoDichId,

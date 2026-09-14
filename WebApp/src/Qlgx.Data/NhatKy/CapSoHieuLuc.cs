@@ -1,4 +1,5 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using Qlgx.Data.DongBo;
 using Qlgx.Domain.Entities;
 
 namespace Qlgx.Data.NhatKy;
@@ -32,7 +33,19 @@ public static class CapSoHieuLuc
     /// giáo xứ đang nhập liệu nhiều nhất. Đây là ghi chú phòng ngừa: nếu buộc phải đổi thứ tự,
     /// hãy đổi ở MỌI chỗ gọi cùng lúc, đừng đổi lẻ một chỗ.
     /// </summary>
-    public static async Task<(long SoDau, Guid Epoch)> LayDaiSo(
+    /// <remarks>
+    /// Trả thêm <c>DauCuoi</c> — đồng hồ lai của CHÍNH máy chủ cho giáo xứ này, đọc từ hai cột
+    /// <c>dau_cuoi_vat_ly</c>/<c>dau_cuoi_logic</c> trên đúng dòng vừa khoá (xem
+    /// <see cref="BoDemHieuLuc.DauCuoiVatLy"/>). <c>ThietBiId = null</c> vì đây là mốc do máy chủ
+    /// phát (null xếp TRƯỚC mọi thiết bị khi hoà — xem <c>DongHoLai.SoSanh</c>);
+    /// <c>MaThaoTac = Guid.Empty</c> vì dòng đếm không thuộc về một thao tác nào.
+    ///
+    /// VÌ SAO đổi chữ ký thay vì thêm một hàm đọc riêng: <c>LayDaiSo</c> là điểm DUY NHẤT mọi
+    /// đường ghi đi qua. Nếu đồng hồ nằm chỗ khác, sẽ có đường ghi quên nâng nó — và lỗi đó
+    /// không có test nào bắt được một cách tự nhiên (nó chỉ hiện ra thành "bản sửa của quý cha
+    /// bị máy con đè" nhiều tháng sau). Đổi chữ ký buộc mọi nơi gọi phải nhìn lại; đó là mục đích.
+    /// </remarks>
+    public static async Task<(long SoDau, Guid Epoch, DauDongHo DauCuoi)> LayDaiSo(
         QlgxDbContext db, Guid giaoXuId, int soLuong, CancellationToken ct)
     {
         if (soLuong <= 0) throw new ArgumentOutOfRangeException(nameof(soLuong));
@@ -63,6 +76,48 @@ public static class CapSoHieuLuc
             WHERE giao_xu_id = {giaoXuId}
             """, ct);
 
-        return (soDau, bd.Epoch);
+        return (soDau, bd.Epoch, new DauDongHo(bd.DauCuoiVatLy, bd.DauCuoiLogic, null, Guid.Empty));
+    }
+
+    /// <summary>
+    /// Chốt lại dòng đếm ở CUỐI giao dịch đã gọi <see cref="LayDaiSo"/>: ghi mốc mới nhất máy
+    /// chủ vừa phát, và (tuỳ chọn) TRẢ LẠI phần dải số chưa dùng tới.
+    ///
+    /// Vì sao cần trả lại số: người gọi phải giành khoá dòng đếm NGAY khi mở giao dịch (nếu khoá
+    /// bản ghi nghiệp vụ trước rồi mới khoá dòng đếm thì hai giao dịch ngược thứ tự sẽ deadlock —
+    /// xem <see cref="LayDaiSo"/>), nhưng lúc đó chưa biết trong lô có bao nhiêu thao tác sẽ
+    /// THẮNG cuộc gộp, nên phải xin theo CẬN TRÊN. Không trả lại thì chuỗi <c>so_thu_tu</c> thủng
+    /// lỗ đúng bằng số thao tác thua. Trả lại là an toàn tuyệt đối vì khoá <c>FOR UPDATE</c> vẫn
+    /// đang giữ: không ai khác có thể đã lấy số trong khoảng đó.
+    ///
+    /// <c>LEAST</c> chứ không gán thẳng: hàm này chỉ được phép ĐẨY LÙI con số về phần chưa dùng,
+    /// không bao giờ đẩy tới. Người gọi tính nhầm theo hướng lớn hơn sẽ không âm thầm cấp trùng
+    /// số cho lần sau.
+    /// </summary>
+    public static async Task ChotDaiSo(
+        QlgxDbContext db, Guid giaoXuId, DauDongHo dauCuoi, long? soTiepTheoMoi, CancellationToken ct)
+    {
+        if (db.Database.CurrentTransaction is null)
+            throw new InvalidOperationException(
+                "ChotDaiSo phai chay trong chinh giao dich dang giu khoa dong dem (goi sau LayDaiSo).");
+
+        if (soTiepTheoMoi is { } so)
+        {
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                UPDATE bo_dem_hieu_luc
+                   SET so_tiep_theo   = LEAST(so_tiep_theo, {so}),
+                       dau_cuoi_vat_ly = {dauCuoi.VatLy},
+                       dau_cuoi_logic  = {dauCuoi.Logic}
+                 WHERE giao_xu_id = {giaoXuId}
+                """, ct);
+            return;
+        }
+
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE bo_dem_hieu_luc
+               SET dau_cuoi_vat_ly = {dauCuoi.VatLy},
+                   dau_cuoi_logic  = {dauCuoi.Logic}
+             WHERE giao_xu_id = {giaoXuId}
+            """, ct);
     }
 }

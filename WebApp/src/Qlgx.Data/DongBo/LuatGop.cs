@@ -95,6 +95,33 @@ public static class LuatGop
     public static string NhomGop(string bang, string truong)
         => NhomCuaO.TryGetValue($"{bang}.{truong}", out var nhom) ? nhom : $"{bang}.{truong}";
 
+    /// <summary>
+    /// Mọi ô thuộc một nhóm, kể cả ô mà thao tác đang xét KHÔNG đụng tới.
+    ///
+    /// Cần vì chỗ gộp phải cập nhật MỐC cho TOÀN BỘ ô của nhóm khi nhóm thắng. Chỉ cập nhật mốc
+    /// của ô có thay đổi thì một thao tác CŨ HƠN đến SAU vẫn sửa lẻ được ô còn lại (mốc của nó
+    /// chưa tiến) và trạng thái lai — người còn sống mang ngày qua đời — quay lại y nguyên. Đừng
+    /// thay bước này bằng "bắt máy con luôn gửi đủ cả nhóm": máy con là form nên nó vốn gửi cả
+    /// bản ghi, nhưng một bản máy con cũ, một lỗi, hay một lần bù lại sau khôi phục đều có thể
+    /// gửi thiếu. Cập nhật mốc cả nhóm thì không cần tin ai.
+    ///
+    /// Suy NGƯỢC từ chính bảng <see cref="NhomCuaO"/> chứ không chép tay một bảng thứ hai: hai
+    /// bảng song song sẽ lệch nhau ngay lần đầu ai đó thêm một ô vào nhóm.
+    /// </summary>
+    public static IReadOnlyList<string> CacTruongCuaNhom(string bang, string nhom)
+    {
+        var tien = $"{bang}.";
+        var thuocNhom = NhomCuaO
+            .Where(x => x.Value == nhom && x.Key.StartsWith(tien, StringComparison.Ordinal))
+            .Select(x => x.Key[tien.Length..])
+            .ToList();
+
+        // Không có tên nhóm trong bảng nghĩa là ô đứng một mình — chính nó là cả nhóm (đúng theo
+        // quy ước của NhomGop, nơi ô lẻ nhận tên nhóm là "Bang.Truong").
+        if (thuocNhom.Count > 0) return thuocNhom;
+        return nhom.StartsWith(tien, StringComparison.Ordinal) ? [nhom[tien.Length..]] : [];
+    }
+
     public static KetQuaGop Quyet(
         MocO? mocDangCo, DauDongHo dauMoi, string bang, string truong,
         string? giaTriCu, string? giaTriMoi)

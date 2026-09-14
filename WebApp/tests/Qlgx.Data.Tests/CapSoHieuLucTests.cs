@@ -15,8 +15,8 @@ public class CapSoHieuLucTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuF
         await using var ctx = db.TaoContext();
         await using var gd = await ctx.Database.BeginTransactionAsync();
 
-        var (dau1, epoch1) = await CapSoHieuLuc.LayDaiSo(ctx, db.GiaoXuId, 3, default);
-        var (dau2, epoch2) = await CapSoHieuLuc.LayDaiSo(ctx, db.GiaoXuId, 2, default);
+        var (dau1, epoch1, _) = await CapSoHieuLuc.LayDaiSo(ctx, db.GiaoXuId, 3, default);
+        var (dau2, epoch2, _) = await CapSoHieuLuc.LayDaiSo(ctx, db.GiaoXuId, 2, default);
 
         dau2.Should().Be(dau1 + 3, "dai so phai lien tiep, khong chong lan va khong bo trong");
         epoch2.Should().Be(epoch1);
@@ -48,7 +48,7 @@ public class CapSoHieuLucTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuF
 
         await using var sau = db.TaoContext();
         await using var gdSau = await sau.Database.BeginTransactionAsync();
-        var (dau, _) = await CapSoHieuLuc.LayDaiSo(sau, db.GiaoXuId, 1, default);
+        var (dau, _, _) = await CapSoHieuLuc.LayDaiSo(sau, db.GiaoXuId, 1, default);
         dau.Should().Be(truoc, "giao dich bi huy thi so KHONG duoc tieu ton");
         await gdSau.CommitAsync();
     }
@@ -72,7 +72,7 @@ public class CapSoHieuLucTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuF
         // KHONG bi chan boi giao dich A nua - test nay bat truc tiep su chan do bang FOR UPDATE.
         await using var ctxA = db.TaoContext();
         await using var gdA = await ctxA.Database.BeginTransactionAsync();
-        var (soA, _) = await CapSoHieuLuc.LayDaiSo(ctxA, db.GiaoXuId, 1, default);
+        var (soA, _, _) = await CapSoHieuLuc.LayDaiSo(ctxA, db.GiaoXuId, 1, default);
         // CO Y chua commit A - giu khoa dong dem.
 
         await using var ctxB = db.TaoContext();
@@ -85,7 +85,7 @@ public class CapSoHieuLucTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuF
 
         await gdA.CommitAsync();
 
-        var (soB, _) = await tacVuB.WaitAsync(TimeSpan.FromSeconds(5));
+        var (soB, _, _) = await tacVuB.WaitAsync(TimeSpan.FromSeconds(5));
         soB.Should().Be(soA + 1, "B chi duoc cap so sau khi A commit, va phai la so ke tiep");
         await gdB.CommitAsync();
     }
@@ -98,7 +98,7 @@ public class CapSoHieuLucTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuF
         {
             await using var ctx = db.TaoContext();
             await using var gd = await ctx.Database.BeginTransactionAsync();
-            var (dau, _) = await CapSoHieuLuc.LayDaiSo(ctx, db.GiaoXuId, 1, default);
+            var (dau, _, _) = await CapSoHieuLuc.LayDaiSo(ctx, db.GiaoXuId, 1, default);
             await gd.CommitAsync();
             return dau;
         }));

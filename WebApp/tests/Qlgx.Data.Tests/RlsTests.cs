@@ -582,7 +582,7 @@ public class RlsTests : IAsyncLifetime
         await using (var ctx = TaoContextVaiTroThat(giaoXuA))
         {
             await using var giaoDich = await ctx.Database.BeginTransactionAsync();
-            var (soDauLan1, _) = await CapSoHieuLuc.LayDaiSo(ctx, giaoXuA, 3, CancellationToken.None);
+            var (soDauLan1, _, _) = await CapSoHieuLuc.LayDaiSo(ctx, giaoXuA, 3, CancellationToken.None);
             await giaoDich.CommitAsync();
             Assert.Equal(1, soDauLan1);
         }
@@ -593,7 +593,7 @@ public class RlsTests : IAsyncLifetime
         await using (var ctx = TaoContextVaiTroThat(giaoXuA))
         {
             await using var giaoDich = await ctx.Database.BeginTransactionAsync();
-            var (soDauLan2, _) = await CapSoHieuLuc.LayDaiSo(ctx, giaoXuA, 2, CancellationToken.None);
+            var (soDauLan2, _, _) = await CapSoHieuLuc.LayDaiSo(ctx, giaoXuA, 2, CancellationToken.None);
             await giaoDich.CommitAsync();
             Assert.Equal(4, soDauLan2); // 1 + 3 (da cap lan dau) = 4
         }

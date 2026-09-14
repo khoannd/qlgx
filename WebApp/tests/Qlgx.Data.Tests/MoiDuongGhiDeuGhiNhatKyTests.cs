@@ -27,7 +27,34 @@ public class MoiDuongGhiDeuGhiNhatKyTests
         //    PhanLoaiThucThe.DuocGhi — không có gì để ghi nhật ký.
         "KhoiPhucNgayThangThieu.cs",
         "TaoTaiKhoanQuanTri.cs",
+        // DongBoService.GuiLen: đường nhận lô thay đổi từ máy con. Nó KHÔNG được gọi
+        // LuuCoNhatKy — không phải để né nhật ký mà vì gọi sẽ SINH THÊM một bộ dòng nhật ký thứ
+        // hai mang đồng hồ MÁY CHỦ, chồng lên bộ dòng nó đã ghi tường minh với đồng hồ MÁY CON.
+        // Hai dòng cho một thay đổi, và dòng sai đồng hồ sẽ thắng ở lần gộp sau (xem cảnh báo ở
+        // đầu ApThaoTac.cs). Miễn trừ này KHÔNG để nó thoát lưới: fact
+        // Duong_dong_bo_van_phai_tu_ghi_nhat_ky_tuong_minh bên dưới canh đúng chỗ đó.
+        "DongBoService.cs",
     };
+
+    /// <summary>
+    /// Canh chính chỗ mà miễn trừ <c>DongBoService.cs</c> ở trên mở ra. Miễn trừ chỉ nói "được
+    /// phép gọi thẳng SaveChangesAsync"; nó KHÔNG được biến thành "được phép không ghi nhật ký".
+    /// Nếu ai đó sửa GuiLen mà bỏ mất phần ghi cặp thay_doi/hieu_luc, dữ liệu máy con sẽ vào sổ
+    /// sách mà không sinh dòng phát xuống — mọi máy con khác không bao giờ thấy thay đổi đó, và
+    /// hai bản sao phân kỳ vĩnh viễn không một lỗi nào hiện ra.
+    /// </summary>
+    [Fact]
+    public void Duong_dong_bo_van_phai_tu_ghi_nhat_ky_tuong_minh()
+    {
+        var goc = TimThuMucGoc();
+        var duong = MoiFileNguon(goc).Single(f => Path.GetFileName(f) == "DongBoService.cs");
+        var noi = File.ReadAllText(duong);
+
+        noi.Should().Contain("db.ThayDoi.Add",
+            "duong dong bo duoc mien tru goi thang SaveChangesAsync VOI DIEU KIEN no tu ghi so kiem toan");
+        noi.Should().Contain("db.HieuLuc.Add",
+            "khong ghi hieu_luc thi thay doi cua may con khong bao gio den duoc cac may con khac");
+    }
 
     /// <summary>
     /// Quét CẢ CÂY src/Qlgx.Api, không riêng Services/. Trước đây chỉ quét Services/ nên hai file

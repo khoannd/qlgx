@@ -107,6 +107,8 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
     public DbSet<MocO> MocO => Set<MocO>();
     /// <summary>Sổ chống xử lý trùng thao tác đã nhận (xem ThaoTacDaNhan.cs).</summary>
     public DbSet<ThaoTacDaNhan> ThaoTacDaNhan => Set<ThaoTacDaNhan>();
+    /// <summary>Hộp việc máy không tự quyết được, chờ người xem lại (xem CanXemLai.cs).</summary>
+    public DbSet<CanXemLai> CanXemLai => Set<CanXemLai>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -145,6 +147,7 @@ public class QlgxDbContext(DbContextOptions<QlgxDbContext> options, IBoiCanhGiao
         b.Entity<HieuLuc>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         b.Entity<MocO>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         b.Entity<ThaoTacDaNhan>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
+        b.Entity<CanXemLai>().HasQueryFilter(x => BoiCanhGiaoXuId == null || x.GiaoXuId == BoiCanhGiaoXuId);
         // GiaoPhan và GiaoHat KHÔNG có bộ lọc — chúng nằm trên cấp giáo xứ (xem GiaoPhan.cs).
 
         DatTenSnakeCase(b);

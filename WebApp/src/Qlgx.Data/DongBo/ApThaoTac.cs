@@ -111,10 +111,81 @@ public static class ApThaoTac
     {
         var kieu = LayKieu(db, bang);
         var thucThe = await db.FindAsync(kieu.ClrType, [banGhiId], ct)
-            ?? throw new InvalidOperationException(
-                $"Khong tim thay ban ghi {banGhiId} trong bang '{bang}'.");
+            ?? throw new LoiKhongTimThayBanGhi(bang, banGhiId);
         KiemDungGiaoXu(db.Entry(thucThe), giaoXuId, bang, banGhiId);
         return thucThe;
+    }
+
+    /// <summary>
+    /// RÀO CHẮN GIÁO XỨ CHO KHOÁ NGOẠI — kiểm một ô là khoá ngoại có trỏ sang thực thể của
+    /// GIÁO XỨ KHÁC không. Ném <see cref="InvalidOperationException"/> nếu có.
+    ///
+    /// Vì sao cần dù đã có <see cref="KiemDungGiaoXu"/>: hàm kia canh bản ghi ĐANG SỬA, còn đây
+    /// canh bản ghi ĐƯỢC TRỎ TỚI. <c>GiaoHoId</c> CỐ Ý không nằm trong
+    /// <see cref="CotCamDongBo"/> — người dùng thật sự chuyển giáo dân sang giáo họ khác, cấm là
+    /// hỏng việc thật. Nhưng khoá ngoại của CSDL chỉ kiểm "giáo họ đó có tồn tại không", không
+    /// kiểm "của giáo xứ nào". Một máy con gửi <c>GiaoHoId</c> của giáo xứ khác sẽ được nhận
+    /// êm ru: giáo dân ấy biến khỏi mọi danh sách giáo họ của xứ mình (đếm thiếu người, không
+    /// một lỗi nào hiện ra) và lại hiện ra ở danh sách của xứ kia.
+    ///
+    /// SUY TỪ MÔ HÌNH EF, không chép tay danh sách khoá ngoại: <c>GetForeignKeys()</c> cho đúng
+    /// tập khoá ngoại mà CSDL thật sự có, nên thêm một khoá ngoại mới là nó tự được canh. Một
+    /// danh sách chép tay thì lần sau ai đó thêm cột sẽ quên, và quên ở đây không gây lỗi nào
+    /// nhìn thấy được.
+    /// </summary>
+    public static async Task KiemKhoaNgoaiCungGiaoXu(
+        QlgxDbContext db, Guid giaoXuId, string bang, string truong, string? giaTriJson,
+        CancellationToken ct)
+    {
+        // Ô rỗng thì không trỏ đi đâu cả — không có gì để kiểm.
+        if (giaTriJson is null) return;
+
+        var kieu = LayKieu(db, bang);
+        var khoaNgoai = kieu.GetForeignKeys().FirstOrDefault(
+            k => k.Properties.Count == 1 && k.Properties[0].Name == truong);
+        if (khoaNgoai is null) return;
+
+        var kieuCha = khoaNgoai.PrincipalEntityType;
+        // Thực thể được trỏ tới không có cột GiaoXuId (GiaoPhan, GiaoHat — nằm TRÊN cấp giáo
+        // xứ) thì không có ranh giới nào để vi phạm.
+        if (kieuCha.FindProperty("GiaoXuId") is null) return;
+
+        Guid? maCha;
+        try
+        {
+            maCha = JsonSerializer.Deserialize<Guid?>(giaTriJson);
+        }
+        catch (Exception ex) when (ex is JsonException or FormatException)
+        {
+            // Giá trị hỏng, không phải vi phạm rào chắn — để ApMotO báo đúng loại lỗi của nó.
+            throw new LoiApThaoTac(bang, truong, $"khong doc duoc khoa ngoai tu JSON '{giaTriJson}'", ex);
+        }
+        if (maCha is not { } id) return;
+
+        // Đọc bằng SQL THÔ chứ không FindAsync: FindAsync đi qua bộ lọc toàn cục theo giáo xứ,
+        // nên bản ghi của giáo xứ khác trả về null và ta không phân biệt được "trỏ sang xứ khác"
+        // với "trỏ vào chỗ trống". Câu này nhìn thấy dòng thật rồi mới SO giáo xứ — đúng cái
+        // việc hàm này nhận làm. (RLS ở tầng CSDL vẫn là lưới thứ hai: dưới vai trò nghiệp vụ
+        // thật, dòng của xứ khác bị giấu và ta rơi vào nhánh "không tồn tại" — vẫn CHẶN, chỉ
+        // khác thông điệp. Hai lưới độc lập, không lưới nào là lưới duy nhất.)
+        var tenBang = kieuCha.GetTableName()!;
+        var cotKhoa = kieuCha.FindPrimaryKey()!.Properties[0].GetColumnName();
+        var cotGiaoXu = kieuCha.FindProperty("GiaoXuId")!.GetColumnName();
+        var cua = await db.Database
+            .SqlQueryRaw<Guid>(
+                $"SELECT {cotGiaoXu} AS \"Value\" FROM {tenBang} WHERE {cotKhoa} = {{0}}", id)
+            .ToListAsync(ct);
+
+        if (cua.Count == 0)
+            throw new LoiApThaoTac(
+                bang, truong,
+                $"khoa ngoai tro toi ban ghi {id} cua bang '{kieuCha.ClrType.Name}' khong ton tai");
+
+        if (cua[0] != giaoXuId)
+            throw new InvalidOperationException(
+                $"Cot '{bang}.{truong}' tro toi ban ghi {id} cua bang '{kieuCha.ClrType.Name}' " +
+                "thuoc GIAO XU KHAC — tu choi de mot may con khong the doi hong danh sach cua " +
+                "giao xu minh lan giao xu kia.");
     }
 
     /// <summary>Đọc giá trị hiện tại của một ô, dạng JSON — dùng để so trong luật gộp.</summary>
