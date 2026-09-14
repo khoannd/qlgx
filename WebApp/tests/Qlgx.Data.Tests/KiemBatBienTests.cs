@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Data.DongBo;
 using Qlgx.Domain;
@@ -68,6 +68,24 @@ public class KiemBatBienTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFi
         viPham.Should().ContainSingle(
             s => s.Contains("Maria Nguyen Thi A") && !s.Contains("NgayRuaToi"),
             "cau phai bang loi thuong, khong duoc chua ten cot ky thuat");
+    }
+
+    [Fact]
+    public async Task Rua_toi_dung_ngay_sinh_KHONG_bi_bao_vi_pham()
+    {
+        // Bien: >= khong duoc doi thanh > — rua toi khan cap ngay luc sinh la chuyen co that
+        // va hop le, khong phai loi nhap lieu. Dot bien M1 (doi bien) song sot vi khong test nao
+        // dung dung diem nay.
+        var id = await TaoGiaoDan(9920, "Nguoi rua toi ngay luc sinh", g =>
+        {
+            g.NgaySinh = new DateOnly(1985, 3, 12);
+            g.NgayRuaToi = new DateOnly(1985, 3, 12);
+        });
+
+        await using var ctx = db.TaoContext();
+        var viPham = await KiemBatBien.Kiem(ctx, db.GiaoXuId, "GiaoDan", id, default);
+
+        viPham.Should().BeEmpty("cung ngay khong phai la SOM HON, khong duoc bao vi pham");
     }
 
     [Fact]

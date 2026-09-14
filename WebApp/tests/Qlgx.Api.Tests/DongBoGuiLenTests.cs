@@ -1048,4 +1048,34 @@ public class DongBoGuiLenTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
             muc.LyDo.Should().NotContain(chu, $"'{chu}' la tieng may, khong phai tieng nguoi");
         }
     }
+
+    /// <summary>
+    /// Mot lo cham CUNG mot ban ghi qua HAI thao tac khac nhau (hai o khac nhau, cung nhom "qua
+    /// doi" nen ca hai cung THANG rieng le) khong duoc kiem bat bien HAI LAN cho ban ghi do — neu
+    /// khong, hop can xem lai co HAI muc canh bao GIONG HET NHAU cho cung mot loi. Day la hang rao
+    /// cho `.Distinct()` truoc vong lap KiemBatBien trong DongBoService.ChayLo (dot bien bo no van
+    /// 764/764 xanh o vong review — khong phai loi du lieu, chi la lo test).
+    /// </summary>
+    [Fact]
+    public async Task Mot_ban_ghi_bi_dung_hai_lan_trong_cung_lo_chi_sinh_MOT_bo_muc_canh_bao()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9140, "Nguoi bi dung hai lan trong mot lo",
+            gd => { gd.QuaDoi = true; gd.NgayQuaDoi = new DateOnly(2026, 3, 12); });
+
+        // Hai thao tac CUNG mot giao dich, cham HAI o khac nhau cua CUNG mot ban ghi. Ca hai deu
+        // thang (khong dung nhau) nen ca hai deu duoc ghi ket qua "ap".
+        var giaoDich = Guid.NewGuid();
+        var kq = await Gui(client, Guid.NewGuid(), 0,
+            Sua(id, "QuaDoi", "false", MocGoc, giaoDich),
+            Sua(id, "NoiQuaDoi", "\"Nghia trang Binh Hung Hoa\"", MocGoc.AddSeconds(1), giaoDich));
+
+        kq.KetQua.Should().OnlyContain(k => k.KetQua == "ap");
+
+        await using var db = f.TaoContextThuan();
+        var soMuc = await db.CanXemLai.AsNoTracking()
+            .CountAsync(x => x.BanGhiId == id && x.Loai == "mau_thuan_du_lieu");
+        soMuc.Should().Be(1, "hai thao tac cung mot lo cham cung mot ban ghi chi duoc kiem " +
+            "bat bien MOT LAN — hai lan se cho quy so hai muc canh bao giong het nhau");
+    }
 }
