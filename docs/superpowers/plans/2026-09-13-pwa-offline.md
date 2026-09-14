@@ -77,6 +77,9 @@ bên nào đúng.
   bỏ qua luôn mục thật. Đây là loại lỗi làm hỏng cả tính năng chứ không chỉ một ô.
   Máy chủ cũng chuẩn hoá lại một lần nữa khi nhận (kế hoạch 4, Task 6), nhưng **máy con vẫn phải sinh
   đúng ngay từ đầu** — nếu không, chính máy con sẽ tự so sai khi quyết định có gửi lên hay không.
+- **Ảnh chụp toàn bộ (`DuLieuNen` của `/api/dong-bo/toan-bo`) là JSON nén gzip, mã hoá base64.** Giải
+  bằng `DecompressionStream('gzip')` có sẵn trong trình duyệt — **không thêm thư viện nén nào**. Máy chủ
+  chốt gzip đúng vì lý do này (kế hoạch 4, Task 5).
 - **Task 6 phải có một test vector dùng chung**: một file JSON liệt kê các cặp đầu vào/đầu ra, được
   **cả** bộ test C# **và** bộ test TypeScript đọc. Không nhân bản ca kiểm thử bằng tay ở hai nơi — nhân
   bản là cách hai bản trôi khỏi nhau.

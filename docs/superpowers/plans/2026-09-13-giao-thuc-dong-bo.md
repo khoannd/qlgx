@@ -1219,6 +1219,11 @@ public record DongHieuLucDto(long SoThuTu, string Bang, Guid BanGhiId, string Tr
 public record NhanVeKetQua(Guid Epoch, long ConTroMoi, bool ConNua, List<DongHieuLucDto> Dong);
 
 public record ToanBoKetQua(Guid Epoch, long ConTro, DateTimeOffset ChupLuc, string DuLieuNen);
+// DuLieuNen = JSON của ảnh chụp, nén **gzip** rồi mã hoá **base64**.
+// Chốt gzip chứ không phải Brotli vì trình duyệt giải nén gzip nguyên bản bằng
+// `DecompressionStream('gzip')` — không phải kéo thêm một thư viện JS nào vào PWA.
+// `DecompressionStream` không nhận 'br', nên chọn Brotli là ép kế hoạch 5 thêm một
+// phụ thuộc và tăng kích thước vỏ ứng dụng. Tỉ số nén kém hơn chút không đáng đổi.
 ```
 
 - [ ] **Step 1: Viết test trước — chạy để thấy fail**
