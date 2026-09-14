@@ -80,6 +80,26 @@ bên nào đúng.
 - **Ảnh chụp toàn bộ (`DuLieuNen` của `/api/dong-bo/toan-bo`) là JSON nén gzip, mã hoá base64.** Giải
   bằng `DecompressionStream('gzip')` có sẵn trong trình duyệt — **không thêm thư viện nén nào**. Máy chủ
   chốt gzip đúng vì lý do này (kế hoạch 4, Task 5).
+## Việc bị máy chủ từ chối PHẢI hiện ra cho người dùng — ràng buộc cứng (R67 sổ thi công kế hoạch 4)
+
+Máy chủ trả về `KetQuaThaoTacDto` với `KetQua = "tu_choi"` cho những việc nó không nhận được (dữ liệu
+sai kiểu, ô bắt buộc để trống, số sổ trùng, bản ghi liên quan chưa tới...). **Những việc này đã mất.**
+Chúng không nằm trong hàng chờ nữa (máy chủ đã ghi vào sổ chống trùng nên máy con không gửi lại), và
+**không một ai ở phía máy chủ nhìn thấy chúng** — chúng chỉ tồn tại trong câu trả lời gửi về đúng máy
+đã gửi chúng lên.
+
+Nên nếu kế hoạch 5 không hiện chúng ra, việc quý sơ vừa nhập **biến mất không một dấu vết**. Đó là
+đúng thứ tệ nhất mà cả thiết kế này tồn tại để tránh, và nó rơi vào khe giữa hai kế hoạch — cùng kiểu
+khe đã làm mất `MocO` một lần rồi.
+
+Bắt buộc:
+- Mỗi kết quả `"tu_choi"` sinh **một mục trong hộp cần xem lại của máy con**, giữ nguyên giá trị người
+  dùng đã nhập để họ nhập lại được, kèm lời giải thích **bằng lời thường** theo bảng từ vựng ở spec
+  mục 2 — không có chữ "từ chối", "thao tác", "đồng bộ", "máy chủ". Ví dụ: *"Mục này chưa được lưu:
+  ô Họ tên đang để trống. Xin nhập lại giúp."*
+- Thanh trạng thái phải **đếm** chúng, vì một mục nằm im trong hộp mà không ai mở hộp thì cũng như mất.
+- Không được lặng lẽ xoá khỏi hàng chờ rồi thôi.
+
 - **Task 6 phải có một test vector dùng chung**: một file JSON liệt kê các cặp đầu vào/đầu ra, được
   **cả** bộ test C# **và** bộ test TypeScript đọc. Không nhân bản ca kiểm thử bằng tay ở hai nơi — nhân
   bản là cách hai bản trôi khỏi nhau.
