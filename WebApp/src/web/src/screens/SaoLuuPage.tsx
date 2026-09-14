@@ -5,6 +5,7 @@ import type {
   BanSaoLuu, CongViecSaoLuu, LoaiCongViecSaoLuu, TinhTrangSaoLuu, TrangThaiCongViec,
 } from '../api/types'
 import { GxGrid } from '../components/GxGrid'
+import { SaoLuuPhucHoiModal } from './SaoLuuPhucHoiModal'
 import { TrangThaiTai } from '../components/TrangThaiTai'
 import { dinhDangNgayGio } from '../lib/ngay'
 
@@ -78,6 +79,9 @@ export function SaoLuuPage() {
   const [loiHoiLai, setLoiHoiLai] = useState<string | null>(null)
   const hoLaiRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const soLoiLienTiepRef = useRef(0)
+  const [banSaoDangPhucHoi, setBanSaoDangPhucHoi] = useState<BanSaoLuu | null>(null)
+  // Ma cong viec "tai_ve" gan nhat — dung de biet khi nao hien duoc lien ket tai tep.
+  const [maTaiVe, setMaTaiVe] = useState<string | null>(null)
 
   const tai = useCallback(() => {
     setDangTai(true); setLoi(null)
@@ -129,6 +133,19 @@ export function SaoLuuPage() {
     } catch (e) {
       setLoiThaoTac(e instanceof Error ? e.message : String(e))
     }
+  }
+
+  async function taiVe(ban: BanSaoLuu) {
+    setLoiThaoTac(null)
+    try {
+      const { id } = await api.saoLuu.taoCongViec({ loai: 'tai_ve', snapshotId: ban.id })
+      setDangChay({
+        id, loai: 'tai_ve', trangThai: 'cho', buocHienTai: 'Đang chuẩn bị tệp…',
+        nhatKy: null, taoLuc: new Date().toISOString(), batDauLuc: null, ketThucLuc: null,
+      })
+      theoDoi(id)
+      setMaTaiVe(id)
+    } catch (e) { setLoiThaoTac(e instanceof Error ? e.message : String(e)) }
   }
 
   const cot: ColDef<BanSaoLuu>[] = [
@@ -184,11 +201,41 @@ export function SaoLuuPage() {
             </p>
             <div style={{ height: 360 }}>
               <GxGrid<BanSaoLuu> columnDefs={cot} rowData={banSao} layId={(d) => d.id}
-                ghiChuChan="Nhấp chuột phải vào một dòng để tải về hoặc phục hồi." />
+                ghiChuChan="Nhấp chuột phải vào một dòng để tải về hoặc phục hồi."
+                menuChuotPhai={[
+                  { nhan: 'Tải bản sao này về máy', chay: (d) => void taiVe(d) },
+                  { nhan: 'Phục hồi về bản sao này…', chay: (d) => setBanSaoDangPhucHoi(d) },
+                ]} />
             </div>
           </section>
 
           <KhoiNhatKy congViec={congViec} />
+
+          {banSaoDangPhucHoi && (
+            <SaoLuuPhucHoiModal
+              banSao={banSaoDangPhucHoi}
+              // Chua co API dem so ban ghi HIEN TAI cua may chu — dung tam so cua ban sao moi
+              // nhat lam gan dung (banSao da sap theo thoi diem giam dan, xem api.saoLuu.danhSach).
+              // Day chi la thong tin tham khao tren giao dien de nguoi dung thay xu huong tang/
+              // giam, KHONG anh huong toi thao tac phuc hoi that (thao tac do dua vao snapshotId,
+              // khong dua vao con so nay). Neu can con so chinh xac tuyet doi, phai them truong
+              // moi vao TinhTrangSaoLuuDto phia may chu (Task 6) — co chu dinh KHONG lam trong task
+              // nay vi day chi la tieu tiet hien thi.
+              soGiaoDanHienTai={banSao[0]?.soGiaoDan ?? 0}
+              soGiaDinhHienTai={banSao[0]?.soGiaDinh ?? 0}
+              onDong={() => setBanSaoDangPhucHoi(null)}
+              onXacNhan={(snapshotId, xacNhan) => {
+                setBanSaoDangPhucHoi(null)
+                void taoCongViec('phuc_hoi', { snapshotId, xacNhan })
+              }}
+            />
+          )}
+
+          {maTaiVe && dangChay?.id === maTaiVe && dangChay.trangThai === 'xong' && (
+            <a className="btn" href={api.saoLuu.duongDanTaiVe(maTaiVe)}>
+              Tải tệp đã chuẩn bị xong
+            </a>
+          )}
         </div>
       </section>
     </TrangThaiTai>
