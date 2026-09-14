@@ -289,8 +289,97 @@ public class DongBoGuiLenTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
 
         kq.KetQua[0].KetQua.Should().Be("thua");
         (await DocGiaoDan(id)).NgayQuaDoi.Should().BeNull(
-            "moc CA NHOM da tien nen thao tac cu phai thua — day dung la ca ma 'chi cap nhat " +
-            "MocO cua o co doi' se hong");
+            "moc cua NHOM lay theo o MOI NHAT trong nhom, nen thao tac cu hon phai thua");
+        // GHI CHO DUNG SU THAT: test nay duoc cuu boi 'moc nhom = max tren moi o', chu KHONG
+        // kiem co che 'cap nhat MocO cho ca nhom'. O QuaDoi da co moc rieng tu lan gui truoc.
+        // Co che ca nhom duoc canh o Moc_cua_ca_nhom_chan_thao_tac_cu_hon_tren_o_CHUA_TUNG_gui.
+    }
+
+    [Fact]
+    public async Task Moc_cua_ca_nhom_chan_thao_tac_cu_hon_tren_o_CHUA_TUNG_gui()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9133, "Goc Ba Ba");
+        var moc = MocGoc;
+
+        // Chỉ gửi MỘT ô của nhóm. Cơ chế "cập nhật MocO cho cả nhóm" đóng mốc cho CẢ NoiQuaDoi
+        // — một ô CHƯA TỪNG được gửi riêng, nên nếu thiếu cơ chế đó thì nó vẫn không có mốc nào.
+        await Gui(client, Guid.NewGuid(), 0, Sua(id, "NgayQuaDoi", "\"2026-09-12\"", moc.AddMinutes(5)));
+
+        // Thao tác CŨ HƠN đến SAU, nhắm đúng ô chưa từng được gửi đó.
+        var kq = await Gui(client, Guid.NewGuid(), 0, Sua(id, "NoiQuaDoi", "\"Cu hon\"", moc));
+
+        kq.KetQua[0].KetQua.Should().Be("thua",
+            "khong cap nhat MocO cho ca nhom thi o nay khong co moc nao, LuatGop.Quyet thay " +
+            "mocDangCo null va cho qua VO DIEU KIEN — thao tac cu hon sua le duoc mot o va " +
+            "trang thai lai quay lai");
+        (await DocGiaoDan(id)).NoiQuaDoi.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Dat_o_chu_ve_CO_khong_duoc_xoa_cac_o_phu_thuoc()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9137, "Goc Ba Bay");
+        var moc = MocGoc;
+
+        await Gui(client, Guid.NewGuid(), 0, Sua(id, "NgayQuaDoi", "\"2026-09-12\"", moc));
+        // Đặt ô chủ về CÓ. Các ô phụ thuộc chỉ hết ý nghĩa khi ô chủ về KHÔNG — về CÓ thì chúng
+        // càng đúng hơn, xoá đi là xoá đúng thứ vừa được khẳng định.
+        await Gui(client, Guid.NewGuid(), 0, Sua(id, "QuaDoi", "true", moc.AddMinutes(10)));
+
+        var gd = await DocGiaoDan(id);
+        gd.QuaDoi.Should().BeTrue();
+        gd.NgayQuaDoi.Should().Be(new DateOnly(2026, 9, 12),
+            "danh dau qua doi ma lai xoa mat ngay qua doi thi chinh la trang thai lai, chi doi chieu");
+    }
+
+    [Fact]
+    public async Task Dai_dien_nhom_phai_la_dau_MOI_NHAT_trong_so_o_con_lai()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9138, "Goc Ba Tam");
+        var moc = MocGoc;
+
+        // Dựng mốc nhóm ở T+5.
+        await Gui(client, Guid.NewGuid(), 0, Sua(id, "QuaDoi", "true", moc.AddMinutes(5)));
+
+        // Lô sau: ô mang dấu MỚI NHẤT (T+9) lại là ô có JSON hỏng nên bị loại. Hai ô còn lại
+        // mang T+1 và T+7; chỉ T+7 mới thắng được mốc nhóm T+5.
+        var kq = await Gui(client, Guid.NewGuid(), 0,
+            Sua(id, "NoiQuaDoi", "\"Benh vien\"", moc.AddMinutes(1)),
+            Sua(id, "NgayQuaDoi", "{{{khong phai JSON", moc.AddMinutes(9)),
+            Sua(id, "SoAnTang", "\"A-12\"", moc.AddMinutes(7)));
+
+        kq.KetQua.Select(x => x.KetQua).ToList().Should().Equal(
+            new List<string> { "ap", "tu_choi", "ap" },
+            "lay bua phan tu dau lam dai dien se phan xu ca nhom bang dau T+1 — thua oan mot " +
+            "thay doi dang le thang");
+        var gd = await DocGiaoDan(id);
+        gd.NoiQuaDoi.Should().Be("Benh vien");
+        gd.SoAnTang.Should().Be("A-12");
+    }
+
+    [Fact]
+    public async Task Sua_rieng_mot_o_KHONG_LIEN_QUAN_sau_khi_nhom_da_thang_lan_truoc_KHONG_duoc_xoa_o_khac()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9134, "Goc Ba Bon");
+        var t1 = MocGoc;
+
+        // Ngày 1: sửa riêng NgayQuaDoi -> nhóm thắng -> MocO cả 5 ô của nhóm được cập nhật,
+        // bao gồm NoiAnTang mà chưa ai đụng tới.
+        await Gui(client, Guid.NewGuid(), 0, Sua(id, "NgayQuaDoi", "\"2026-09-12\"", t1));
+
+        // Ngày 2: sửa RIÊNG NoiAnTang. QuaDoi KHÔNG hề được đụng tới.
+        await Gui(client, Guid.NewGuid(), 0,
+            Sua(id, "NoiAnTang", "\"Nghia trang Binh Hung Hoa\"", t1.AddMinutes(10)));
+
+        var gd = await DocGiaoDan(id);
+        gd.NoiAnTang.Should().Be("Nghia trang Binh Hung Hoa");
+        gd.NgayQuaDoi.Should().Be(new DateOnly(2026, 9, 12),
+            "QuaDoi khong doi thi khong co gi de don theo no — day la luong binh thuong cua MOT " +
+            "nguoi sua hai lan noi tiep, khong can hai may, khong can khoi phuc gi ca");
     }
 
     // ------------------------------------------------------------------
@@ -495,6 +584,34 @@ public class DongBoGuiLenTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
         kq.KetQua.Select(x => x.KetQua).ToList().Should().Equal(
             new List<string> { "tu_choi", "ap" });
         (await DocGiaoDan(id)).GhiChu.Should().Be("van phai toi noi");
+    }
+
+    [Fact]
+    public async Task Hai_don_vi_deu_hong_trong_MOT_lo_thi_CA_HAI_deu_co_bien_nhan()
+    {
+        var client = f.CreateAuthClient();
+        await TaoGiaoDan(9135, "Goc Ba Nam");
+        var id = await TaoGiaoDan(9136, "Goc Ba Sau");
+        var moc = MocGoc;
+
+        // Hai đơn vị hỏng NỐI TIẾP nhau. Biên nhận của đơn vị ĐẦU chỉ nằm trong ChangeTracker
+        // nếu không lưu ngay; nó sẽ được flush lẫn với dữ liệu của đơn vị SAU, tức là nằm TRONG
+        // phạm vi savepoint của đơn vị sau — đơn vị sau hỏng thì rollback xoá luôn biên nhận đó.
+        // Mà sổ chống trùng vẫn ghi "tu_choi" nên máy con không gửi lại: mất không dấu vết.
+        var hong1 = Sua(id, "HoTen", "null", moc);
+        var hong2 = Sua(id, "MaGiaoDanCu", "9135", moc);
+
+        var kq = await Gui(client, Guid.NewGuid(), 0, hong1, hong2);
+
+        kq.KetQua.Should().OnlyContain(x => x.KetQua == "tu_choi");
+
+        await using var db = f.TaoContextThuan();
+        var muc = await db.CanXemLai.AsNoTracking()
+            .Where(x => x.BanGhiId == id && x.Loai == "khong_luu_duoc")
+            .Select(x => x.Truong).ToListAsync();
+        muc.Should().BeEquivalentTo(["HoTen", "MaGiaoDanCu"],
+            "ten giao dan quy so vua go khong duoc phep mat khong dau vet — khong o so, khong o " +
+            "hop kiem");
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-using Qlgx.Domain.Entities;
+﻿using Qlgx.Domain.Entities;
 
 namespace Qlgx.Data.DongBo;
 
@@ -84,6 +84,35 @@ public static class LuatGop
         ["GiaDinh.DaChuyenXu"] = "GiaDinh#chuyenxu",
         ["GiaDinh.NgayChuyen"] = "GiaDinh#chuyenxu",
         ["GiaDinh.NoiChuyen"] = "GiaDinh#chuyenxu",
+    };
+
+    /// <summary>
+    /// Ô CHỦ của một nhóm: ô quyết định các ô còn lại có còn ý nghĩa hay không. `QuaDoi = false`
+    /// thì `NgayQuaDoi`, `NoiQuaDoi`, `SoAnTang`, `NoiAnTang` không còn nghĩa gì; ngược lại thì
+    /// không.
+    ///
+    /// VÌ SAO phải có, thay vì cứ nhóm thắng là dọn các ô còn lại. Mốc của CẢ nhóm được đẩy lên
+    /// mỗi lần nhóm thắng (kể cả ô chưa ai đụng tới) — đó là chủ ý, để một thao tác cũ hơn đến
+    /// sau không sửa lẻ được một ô. Nhưng nó cũng làm cho MỌI ô của nhóm luôn có một mốc "cũ"
+    /// sẵn. Nếu việc dọn chỉ dựa vào "mốc cũ hơn và không được gửi lần này" thì:
+    ///
+    ///   Ngày 1, sơ sửa riêng `NgayQuaDoi` → nhóm thắng → cả 5 ô đóng mốc T1.
+    ///   Ngày 2, sơ sửa riêng `NoiAnTang` → nhóm thắng ở T2 → `NgayQuaDoi`, `NoiQuaDoi` bị XOÁ
+    ///   TRẮNG, dù `QuaDoi` không hề đổi giữa hai lần.
+    ///
+    /// Đó là luồng bình thường của MỘT người sửa hai lần nối tiếp — không cần hai máy, không cần
+    /// khôi phục gì cả. Chỉ khi chính ô CHỦ bị đổi sang giá trị "không" thì các ô phụ thuộc mới
+    /// thật sự hết nghĩa và mới được phép dọn.
+    ///
+    /// Trả null cho nhóm không có khái niệm này (phần lớn nhóm là ô lẻ đứng một mình) — nghĩa là
+    /// không bao giờ dọn theo nhóm.
+    /// </summary>
+    public static string? TruongChuCuaNhom(string nhom) => OChuCuaNhom.GetValueOrDefault(nhom);
+
+    private static readonly Dictionary<string, string> OChuCuaNhom = new(StringComparer.Ordinal)
+    {
+        ["GiaoDan#quadoi"] = "QuaDoi",
+        ["GiaDinh#chuyenxu"] = "DaChuyenXu",
     };
 
     public static bool LaONhayCam(string bang, string truong) => !OKhongNhayCam.Contains($"{bang}.{truong}");

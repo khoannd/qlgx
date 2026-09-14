@@ -407,13 +407,26 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
                 () => ApMotNhom(bc, cungNhom, nhom, ct), ct);
         }
 
+        // Thao tác nào chưa có kết quả thì ĐÓNG nó lại ngay tại đây, TRƯỚC khi ghi sổ.
+        //
+        // Hôm nay không có đường nào đi tới đây (mọi nhánh của Bước 2 đều đặt kết quả), nhưng
+        // trước vòng sửa này hai đầu dây lệch nhau: Bước 3 bỏ qua thao tác không có kết quả (nên
+        // KHÔNG ghi sổ chống trùng), còn chỗ trả về lại tự dựng một kết quả "tu_choi" cho nó.
+        // Máy con nhận "tu_choi" mà máy chủ chưa hề ghi sổ, nên nó gửi lại VĨNH VIỄN — đúng cái
+        // nêm mà cả cơ chế này sinh ra để gỡ. Đóng ở một chỗ duy nhất thì hai đầu không thể lệch.
+        foreach (var (tt, _) in canXuLy)
+        {
+            if (ketQua.ContainsKey(tt.MaThaoTac)) continue;
+            await TuChoiThaoTac(bc, tt, null, "Khong xu ly duoc thao tac nay.", ct);
+        }
+
         // --- Bước 3: ghi sổ chống trùng cho MỌI thao tác vừa xử lý ---
         // Ghi cả thao tác THUA và TỪ CHỐI, không riêng thao tác thành công: nếu chỉ ghi khi
         // thành công thì lần gửi lại của một thao tác bị từ chối vẫn chạy lại từ đầu, và cái
         // giá của nó (một mục cần xem lại trùng, một bản ghi nhân đôi) cứ thế lặp mãi.
         foreach (var (tt, _) in canXuLy)
         {
-            if (!ketQua.TryGetValue(tt.MaThaoTac, out var kq)) continue;
+            var kq = ketQua[tt.MaThaoTac];
             db.ThaoTacDaNhan.Add(new ThaoTacDaNhan
             {
                 GiaoXuId = giaoXuId,
@@ -433,11 +446,12 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
         await CapSoHieuLuc.ChotDaiSo(db, giaoXuId, dauCuoi, soDau + bc.SoDaDung, ct);
         await giaoDich.CommitAsync(ct);
 
-        return thuTuTraVe
-            .Select(ma => ketQua.TryGetValue(ma, out var kq)
-                ? kq
-                : new KetQuaThaoTacDto(ma, "tu_choi", "Khong xu ly duoc thao tac nay."))
-            .ToList();
+        // Tra thẳng, KHÔNG có nhánh dự phòng: mọi mã trong thuTuTraVe đã chắc chắn có kết quả
+        // (Bước 1 đặt kết quả hoặc đưa vào canXuLy; vòng đóng ở trên phủ nốt phần còn lại). Một
+        // nhánh dự phòng ở đây sẽ lại dựng ra câu trả lời "tu_choi" mà không có dòng nào trong sổ
+        // chống trùng — đúng cái lệch vừa gỡ. Thiếu mã nào là bất biến đã vỡ, và phải đổ vỡ
+        // TƯỜNG MINH để cả lô quay lui, chứ không im lặng trả một câu trả lời sai.
+        return thuTuTraVe.Select(ma => ketQua[ma]).ToList();
     }
 
     /// <summary>
@@ -489,6 +503,18 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
                 await TuChoiThaoTac(bc, tt, ex,
                     $"CSDL tu choi gia tri nay: {ex.GetBaseException().Message}", ct);
             }
+
+            // LƯU NGAY, không để dồn tới cuối lô. Biên nhận vừa xếp mới chỉ nằm trong
+            // ChangeTracker; nếu để nó chờ, nó sẽ được flush lẫn với dữ liệu của ĐƠN VỊ SAU và
+            // nằm TRONG phạm vi savepoint của đơn vị đó — đơn vị sau mà cũng hỏng thì rollback
+            // xoá luôn biên nhận của đơn vị này, rồi ChangeTracker.Clear() quên nốt. Trong khi
+            // sổ chống trùng vẫn ghi "tu_choi" cho nó ở Bước 3 (đọc từ ketQua trong bộ nhớ), nên
+            // máy con KHÔNG gửi lại nữa: tên giáo dân quý sơ vừa gõ mất không dấu vết — không ở
+            // sổ, không ở hộp kiểm.
+            //
+            // Ở đây giao dịch vừa quay lui về savepoint nên nó đang LÀNH, và thời điểm này nằm
+            // NGOÀI phạm vi mọi savepoint sẽ mở sau, nên không rollback nào sau này chạm tới.
+            await db.SaveChangesAsync(ct);
         }
     }
 
@@ -755,7 +781,10 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
         // Thao tác nào đã bị từ chối ở trên thì không tham gia phán quyết nữa.
         var conLai = cungNhom.Where(x => !ketQua.ContainsKey(x.Tt.MaThaoTac)).ToList();
         if (conLai.Count == 0) return;
-        if (!conLai.Contains(daiDien)) daiDien = conLai[0];
+        // Lấy dấu MỚI NHẤT trong phần còn lại, không phải phần tử đầu: ô mang dấu mới nhất của
+        // nhóm rất có thể vừa bị loại vì JSON hỏng, và khi đó lấy bừa phần tử đầu sẽ phân xử cả
+        // nhóm bằng một dấu CŨ HƠN thực tế — thua oan một thay đổi đáng lẽ thắng.
+        if (!conLai.Contains(daiDien)) daiDien = conLai.MaxBy(x => x.Dau);
 
         var quyet = LuatGop.Quyet(
             GanNhanO(mocNhom, bang, daiDien.Tt.Truong), daiDien.Dau, bang, daiDien.Tt.Truong,
@@ -828,7 +857,16 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
         // được gì sẽ chặn luôn một thao tác đúng đắn tới sau.
         if (!coOApDuoc) return;
 
-        await XoaOConLaiCuaNhom(bc, bang, banGhiId, truongCuaNhom, conLai, daiDien, ct);
+        // CHỈ dọn các ô phụ thuộc khi chính Ô CHỦ của nhóm được gửi lên trong lần này VÀ bị đặt
+        // về "không". Ô chủ không bị đụng tới thì các ô kia vẫn còn nguyên ý nghĩa — xem
+        // LuatGop.TruongChuCuaNhom để biết vì sao thiếu điều kiện này là xoá trắng dữ liệu ở một
+        // luồng hoàn toàn bình thường (một người sửa hai lần nối tiếp).
+        if (LuatGop.TruongChuCuaNhom(nhom) is { } truongChu
+            && conLai.FirstOrDefault(x => x.Tt.Truong == truongChu) is { Tt.Truong: not null } oChu
+            && giaTriMoi[oChu.Tt.MaThaoTac] == "false")
+        {
+            await XoaOConLaiCuaNhom(bc, bang, banGhiId, truongCuaNhom, conLai, daiDien, ct);
+        }
 
         // ĐIỂM MẤU CHỐT: cập nhật mốc cho TOÀN BỘ ô của nhóm, kể cả ô mà lô này không đụng tới.
         // Chỉ cập nhật ô có thay đổi thì một thao tác CŨ HƠN đến SAU vẫn sửa lẻ được ô còn lại
