@@ -441,6 +441,36 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
 
         await db.SaveChangesAsync(ct);
 
+        // --- Bước 4: bộ kiểm bất biến — lưới THỨ HAI, đọc lại đúng trạng thái sau khi áp ---
+        //
+        // Đọc SAU SaveChangesAsync ở trên (đã flush mọi thay đổi của lô xuống CSDL), TRƯỚC khi
+        // chốt dải số — vẫn trong CÙNG giao dịch, không mở giao dịch mới, không giành lại khoá
+        // dòng đếm. Chỉ kiểm những bản ghi có thao tác THẮNG ("ap"): thao tác "thua"/"tu_choi"
+        // chưa hề chạm vào dữ liệu, kiểm chúng chỉ tốn công vô ích. Gom vào một tập DUY NHẤT
+        // trước khi gọi — một lô có thể sửa cùng một bản ghi qua nhiều ô/nhóm khác nhau.
+        var banGhiDaApTrongLo = canXuLy
+            .Where(x => ketQua[x.Tt.MaThaoTac].KetQua == "ap")
+            .Select(x => (x.Tt.Bang, x.Tt.BanGhiId))
+            .Distinct()
+            .ToList();
+        foreach (var (bang, banGhiId) in banGhiDaApTrongLo)
+        {
+            var viPham = await KiemBatBien.Kiem(db, giaoXuId, bang, banGhiId, ct);
+            foreach (var cau in viPham)
+            {
+                db.CanXemLai.Add(new CanXemLai
+                {
+                    GiaoXuId = giaoXuId,
+                    Loai = "mau_thuan_du_lieu",
+                    Bang = bang,
+                    BanGhiId = banGhiId,
+                    LyDo = cau,
+                    TaoLuc = gioMayChu,
+                });
+            }
+        }
+        if (banGhiDaApTrongLo.Count > 0) await db.SaveChangesAsync(ct);
+
         // Chốt dòng đếm khi VẪN đang giữ khoá: ghi đồng hồ máy chủ vừa nâng, và trả lại phần
         // dải số không dùng tới để chuỗi so_thu_tu không thủng lỗ.
         await CapSoHieuLuc.ChotDaiSo(db, giaoXuId, dauCuoi, soDau + bc.SoDaDung, ct);
@@ -973,7 +1003,7 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
                 GiaoXuId = bc.GiaoXuId,
                 // "bat_bien": ô này bị xoá không phải vì ai đó muốn xoá nó, mà vì bất biến của
                 // nhóm đòi thế. Người xem lại cần phân biệt với xung đột ô nhạy cảm thường.
-                Loai = "bat_bien",
+                Loai = "mau_thuan_du_lieu",
                 Bang = bang,
                 BanGhiId = banGhiId,
                 Truong = truong,

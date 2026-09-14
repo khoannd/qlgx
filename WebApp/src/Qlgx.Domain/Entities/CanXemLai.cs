@@ -10,7 +10,14 @@ public class CanXemLai
     public Guid GiaoXuId { get; set; }
 
     /// <summary>"o_nhay_cam" | "nghi_trung" | "quan_he" | "bat_bien" | "tham_chieu_chet"
-    /// | "khong_luu_duoc"</summary>
+    /// | "khong_luu_duoc" | "mau_thuan_du_lieu"
+    ///
+    /// "mau_thuan_du_lieu": khác hẳn "bat_bien" (biên nhận xoá ô cùng nhóm, có cặp GiaTriA/GiaTriB
+    /// thật để chọn lại — xem Task 6/7). Loại này do <see cref="Qlgx.Data.DongBo.KiemBatBien"/>
+    /// sinh ra SAU khi một thao tác đã thắng và được áp: một ràng buộc nghiệp vụ cơ bản (ví dụ
+    /// ngày rửa tội trước ngày sinh) bị vi phạm ở kết quả cuối cùng. Không có "A hay B" để chọn,
+    /// chỉ có một câu cảnh báo — GiaTriA/GiaTriB/GiaTriDangDung đều null, xử lý qua
+    /// <c>/danh-dau-da-xu-ly</c>.</summary>
     public string Loai { get; set; } = "";
 
     /// <summary>

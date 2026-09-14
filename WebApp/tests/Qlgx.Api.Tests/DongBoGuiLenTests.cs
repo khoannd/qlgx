@@ -1001,4 +1001,51 @@ public class DongBoGuiLenTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
             "xin dai so theo can tren la dung (phai giu khoa truoc khi biet ai thang), nhung " +
             "phan thua phai duoc tra lai — lo hong trong chuoi so lam may con tuong minh bo sot");
     }
+
+    // ------------------------------------------------------------------
+    //  Bộ kiểm bất biến (Task 8) — lưới THỨ HAI, chạy SAU khi lô đã áp,
+    //  độc lập với đơn vị gộp (Task 6) ở trên
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Cùng hình dạng dữ liệu nền với
+    /// <see cref="O_cung_nhom_chua_tung_co_moc_thi_KHONG_bi_xoa_theo_nhom"/> (một ô của nhóm "qua
+    /// đời" có SẴN giá trị từ trước, CHƯA từng có mốc — như một hồ sơ nhập từ Access): ô đó nằm
+    /// NGOÀI tầm với của đơn vị gộp Task 6 (<c>XoaMotO</c> bỏ qua ô chưa có <c>MocO</c>), nên gửi
+    /// riêng <c>QuaDoi = false</c> để lại đúng trạng thái lai "còn sống mà còn ngày qua đời". Đây
+    /// là ca CHỨNG MINH bộ kiểm bất biến là lưới THỨ HAI, không phải lưới duy nhất — lưới thứ nhất
+    /// (đơn vị gộp) đã bỏ lọt chính ca này.
+    /// </summary>
+    [Fact]
+    public async Task Gui_len_thao_tac_vi_pham_bat_bien_van_ap_gia_tri_VA_sinh_CanXemLai()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9139, "Goc Ba Chin",
+            gd => { gd.QuaDoi = true; gd.NgayQuaDoi = new DateOnly(2026, 3, 12); });
+
+        var kq = await Gui(client, Guid.NewGuid(), 0, Sua(id, "QuaDoi", "false", MocGoc));
+
+        // (a) Giá trị VẪN được áp — hệ thống không bao giờ đứng chờ người dùng trả lời (spec 9.2).
+        kq.KetQua[0].KetQua.Should().Be("ap");
+        var sau = await DocGiaoDan(id);
+        sau.QuaDoi.Should().BeFalse();
+        sau.NgayQuaDoi.Should().Be(new DateOnly(2026, 3, 12),
+            "NgayQuaDoi chua tung co moc nen doi vi gop Task 6 KHONG don duoc no — day chinh la " +
+            "trang thai lai ma bo kiem bat bien phai bat o lop thu hai");
+
+        // (b) Một CanXemLai loại "mau_thuan_du_lieu" xuất hiện — KHÔNG lẫn với "bat_bien" của
+        // Task 6 (biên nhận xoá ô cùng nhóm, có cặp GiaTriA/GiaTriB thật để chọn lại).
+        await using var db = f.TaoContextThuan();
+        var muc = await db.CanXemLai.AsNoTracking()
+            .SingleAsync(x => x.BanGhiId == id && x.Loai == "mau_thuan_du_lieu");
+        muc.GiaTriA.Should().BeNull("khong co 'A hay B' de chon, chi co mot cau canh bao");
+        muc.GiaTriB.Should().BeNull();
+        muc.GiaTriDangDung.Should().BeNull();
+        muc.LyDo.Should().NotBeNullOrWhiteSpace();
+        muc.LyDo.Should().Contain("Goc Ba Chin");
+        foreach (var chu in ChuKyThuatCam)
+        {
+            muc.LyDo.Should().NotContain(chu, $"'{chu}' la tieng may, khong phai tieng nguoi");
+        }
+    }
 }
