@@ -1,6 +1,7 @@
 using System.Data;
 using System.IO.Compression;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
@@ -44,15 +45,20 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh)
     public async Task<NhanVeKetQua?> NhanVe(Guid? epoch, long tu, int? toiDa, CancellationToken ct)
     {
         var soLuong = Math.Clamp(toiDa ?? ToiDaMacDinh, 1, ToiDaTranTuyetDoi);
-        var dem = await LayHoacTaoBoDem(ct);
+        await BaoDamBoDemTonTai(ct);
+        var dem = await DocBoDem(ct);
 
         if (epoch is { } e && DongHoLai.SoSanhGuid(e, dem.Epoch) != 0) return null;
 
-        // Lấy dư MỘT dòng để biết dòng ngay sau trang có cùng giao dịch với dòng cuối trang hay
-        // không — đó là cách duy nhất phát hiện một ranh giới giao dịch đang bị cắt giữa mà
-        // không cần đọc thêm một lượt riêng cho trường hợp thường (không cắt).
+        // Lọc CẢ h.Epoch == dem.Epoch, không chỉ SoThuTu — hôm nay luôn đúng vì mỗi giáo xứ mới
+        // có đúng MỘT epoch từ trước tới giờ, nhưng Task 9 sẽ thêm cơ chế XOAY epoch (khôi phục
+        // máy chủ, dọn nhật ký). Nếu một lần xoay chen giữa câu SELECT dem ở trên và truy vấn
+        // hieu_luc ở đây, thiếu điều kiện này sẽ trộn số thứ tự của HAI chuỗi epoch khác nhau lại
+        // với nhau — dem.Epoch (mới) đi kèm những dòng thuộc chuỗi epoch CŨ, một kiểu lỗi im lặng
+        // y hệt loại mà toàn bộ cơ chế epoch này sinh ra để tránh. Rẻ để thêm ngay bây giờ dù
+        // chưa gây hại hôm nay, còn hơn phải nhớ thêm đúng lúc Task 9 chạm vào.
         var lo = await db.HieuLuc
-            .Where(h => h.SoThuTu > tu)
+            .Where(h => h.Epoch == dem.Epoch && h.SoThuTu > tu)
             .OrderBy(h => h.SoThuTu)
             .Take(soLuong + 1)
             .AsNoTracking()
@@ -74,8 +80,14 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh)
                 // tu, cùng epoch) sẽ nhận lại y hệt kết quả rỗng đó MÃI MÃI — tiến độ đứng im
                 // vĩnh viễn mà không một lỗi nào hiện ra. Thà một lần trả nhiều hơn toiDa dòng
                 // (đọc lại đúng giao dịch đó không giới hạn số dòng) còn hơn treo máy con.
+                //
+                // "SoThuTu > tu" vẫn giữ ở đây dù GiaoDichId thường đã đủ xác định đúng lô (mỗi
+                // giao dịch một GiaoDichId duy nhất): nếu client gửi một "tu" rơi vào GIỮA một
+                // giao dịch (hợp lệ về mặt tham số, dù trái quy trình bình thường của máy con),
+                // thiếu điều kiện này sẽ gửi lại cả những dòng đã ở TRƯỚC tu — vi phạm hợp đồng
+                // "mọi dòng trả về phải có SoThuTu > tu" mà cả giao thức dựa vào để tính tiến độ.
                 trang = await db.HieuLuc
-                    .Where(h => h.SoThuTu > tu && h.GiaoDichId == giaoDichBiCat)
+                    .Where(h => h.Epoch == dem.Epoch && h.SoThuTu > tu && h.GiaoDichId == giaoDichBiCat)
                     .OrderBy(h => h.SoThuTu)
                     .AsNoTracking()
                     .ToListAsync(ct);
@@ -86,7 +98,8 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh)
                 // vừa mở rộng là dòng cuối cùng — máy con hỏi lại vô ích một vòng nữa (không mất
                 // dữ liệu, nhưng vẫn là một chỗ hiểu sai trạng thái nếu để nguyên).
                 var conTroSauMoRong = trang[^1].SoThuTu;
-                conNua = await db.HieuLuc.AnyAsync(h => h.SoThuTu > conTroSauMoRong, ct);
+                conNua = await db.HieuLuc.AnyAsync(
+                    h => h.Epoch == dem.Epoch && h.SoThuTu > conTroSauMoRong, ct);
             }
             else if (soGiuLai < soLuong)
             {
@@ -117,9 +130,23 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh)
     /// </summary>
     public async Task<ToanBoKetQua> ToanBo(CancellationToken ct)
     {
+        // BẢO ĐẢM dòng đếm tồn tại TRƯỚC khi mở giao dịch chỉ-đọc bên dưới — KHÔNG gộp câu INSERT
+        // vào trong giao dịch RepeatableRead (khác bản trước). Hai lý do:
+        //  - /toan-bo phải THẬT SỰ chỉ đọc: một INSERT làm câu lệnh đầu tiên chiếm một XID, giữ nó
+        //    suốt thời gian chụp (có thể vài giây với giáo xứ lớn) và cản trở autovacuum — một
+        //    endpoint tải-về không nên có tác dụng phụ đó.
+        //  - Ca 500 hiếm: giáo xứ MỚI TOANH, hai yêu cầu /toan-bo đua nhau. Nếu INSERT nằm trong
+        //    giao dịch RepeatableRead, giao dịch B mở snapshot TRƯỚC khi giao dịch A commit dòng
+        //    A vừa chèn — B tự ON CONFLICT DO NOTHING (không chèn được vì unique key đã có ở tầng
+        //    dưới) nhưng snapshot của B (chụp lúc B bắt đầu) lại CHƯA THẤY dòng A vừa chèn ⇒
+        //    SingleAsync ném ngay. Tách INSERT ra ngoài, chạy ở mức mặc định (READ COMMITTED),
+        //    loại bỏ hẳn khả năng này: khi ExecuteSqlInterpolatedAsync trả về, dòng đã CHẮC CHẮN
+        //    tồn tại và đã commit (dù ai chèn), giao dịch RepeatableRead mở SAU đó luôn thấy nó.
+        await BaoDamBoDemTonTai(ct);
+
         await using var giaoDich = await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, ct);
 
-        var dem = await LayHoacTaoBoDem(ct);
+        var dem = await DocBoDem(ct);
         // so_tiep_theo là SỐ KẾ TIẾP sẽ cấp; con trỏ của ảnh chụp là số ĐÃ CẤP GẦN NHẤT.
         var conTro = dem.SoTiepTheo - 1;
         var chupLuc = DateTimeOffset.UtcNow;
@@ -130,29 +157,32 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh)
 
         await giaoDich.CommitAsync(ct);
 
-        var json = JsonSerializer.SerializeToUtf8Bytes(goi);
+        var json = JsonSerializer.SerializeToUtf8Bytes(goi, TuyChonJsonAnhChup);
         var duLieuNen = NenGzipBase64(json);
 
         return new ToanBoKetQua(dem.Epoch, conTro, chupLuc, duLieuNen);
     }
 
-    /// <summary>Đọc dòng đếm của giáo xứ hiện tại, tạo nếu chưa có. BoDemHieuLuc CỐ Ý không có
-    /// bộ lọc toàn cục (xem QlgxDbContext) nên MỌI truy vấn ở đây phải tự lọc GiaoXuId — đây
-    /// đúng là ranh giới giáo xứ thật sự cần canh của hai endpoint này, khác các bảng nghiệp vụ
-    /// vốn đã được bộ lọc toàn cục lo hộ. Câu INSERT giống hệt CapSoHieuLuc.LayDaiSo (cùng một
-    /// bất biến: mỗi giáo xứ đúng một dòng đếm, epoch sinh một lần duy nhất lúc tạo).</summary>
-    private async Task<BoDemHieuLuc> LayHoacTaoBoDem(CancellationToken ct)
-    {
-        var giaoXuId = boiCanh.GiaoXuId;
+    /// <summary>Tạo dòng đếm của giáo xứ hiện tại nếu chưa có — KHÔNG đọc lại giá trị (xem
+    /// <see cref="DocBoDem"/>). Tách riêng khỏi việc đọc để <see cref="ToanBo"/> có thể chạy câu
+    /// này TRƯỚC khi mở giao dịch chỉ-đọc của nó (xem chú thích ở đó vì sao). Câu INSERT giống
+    /// hệt CapSoHieuLuc.LayDaiSo (cùng một bất biến: mỗi giáo xứ đúng một dòng đếm, epoch sinh
+    /// một lần duy nhất lúc tạo).</summary>
+    private async Task BaoDamBoDemTonTai(CancellationToken ct) =>
         await db.Database.ExecuteSqlInterpolatedAsync($"""
             INSERT INTO bo_dem_hieu_luc (giao_xu_id, so_tiep_theo, epoch)
-            VALUES ({giaoXuId}, 1, gen_random_uuid())
+            VALUES ({boiCanh.GiaoXuId}, 1, gen_random_uuid())
             ON CONFLICT (giao_xu_id) DO NOTHING
             """, ct);
 
-        return await db.BoDemHieuLuc.AsNoTracking()
-            .SingleAsync(b => b.GiaoXuId == giaoXuId, ct);
-    }
+    /// <summary>Đọc dòng đếm của giáo xứ hiện tại — PHẢI gọi <see cref="BaoDamBoDemTonTai"/>
+    /// trước (hoặc chắc chắn dòng đã tồn tại) vì đây chỉ SELECT, không tự tạo. BoDemHieuLuc CỐ Ý
+    /// không có bộ lọc toàn cục (xem QlgxDbContext) nên MỌI truy vấn ở đây phải tự lọc GiaoXuId —
+    /// đây đúng là ranh giới giáo xứ thật sự cần canh của hai endpoint này, khác các bảng nghiệp
+    /// vụ vốn đã được bộ lọc toàn cục lo hộ.</summary>
+    private async Task<BoDemHieuLuc> DocBoDem(CancellationToken ct) =>
+        await db.BoDemHieuLuc.AsNoTracking()
+            .SingleAsync(b => b.GiaoXuId == boiCanh.GiaoXuId, ct);
 
     /// <summary>Nén gzip rồi Base64 — xem lý do chốt gzip (không phải Brotli) ở
     /// <see cref="ToanBoKetQua.DuLieuNen"/>.</summary>
@@ -163,16 +193,52 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh)
             nen.Write(json, 0, json.Length);
         return Convert.ToBase64String(dauRa.ToArray());
     }
+
+    /// <summary>
+    /// Tuỳ chọn JSON cho ẢNH CHỤP — loại bỏ mọi cột thuộc <see cref="CotLoaiTru"/> khỏi kết quả
+    /// serialize, ÁP DỤNG CHO MỌI KIỂU (quét qua <see cref="LoaiBoCotLoaiTru"/> ở mức
+    /// <c>JsonTypeInfo</c>, không liệt kê tay theo từng bảng).
+    ///
+    /// BẤT BIẾN chưa ai phát biểu trước Task 5: tập cột trong ảnh chụp PHẢI bằng tập cột mà
+    /// luồng <c>hieu_luc</c> duy trì được — tức chính <see cref="CotLoaiTru"/>. Lệch cột nào thì
+    /// cột đó vĩnh viễn đóng băng ở giá trị lúc tải về đối với máy con dùng ảnh chụp làm điểm
+    /// khởi đầu: cụ thể, <c>AnhDaiDienDuLieu</c>/<c>AnhDaiDienLoaiNoiDung</c> đổi qua
+    /// AnhDaiDienService KHÔNG đi qua <c>hieu_luc</c> (xem CotLoaiTru.cs) — nếu ảnh chụp vẫn đưa
+    /// hai cột này vào, một sơ đổi ảnh đại diện trên web sẽ không bao giờ tới được máy con offline
+    /// (mãi mãi hiện ảnh cũ tại thời điểm tải về), trong khi hai máy con của CÙNG một giáo xứ có
+    /// thể hiện hai ảnh khác nhau tuỳ máy nào tải toàn bộ lúc nào — không ai hiểu vì sao nếu không
+    /// biết bất biến này. Không phải chuyện dung lượng (dù loại ảnh cũng giảm size đáng kể) — là
+    /// chuyện NHẤT QUÁN giữa hai đường: chính sách cột nào cũng được, miễn hai đường đồng ý.
+    /// </summary>
+    private static readonly JsonSerializerOptions TuyChonJsonAnhChup = new()
+    {
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { LoaiBoCotLoaiTru } },
+    };
+
+    private static void LoaiBoCotLoaiTru(JsonTypeInfo typeInfo)
+    {
+        if (typeInfo.Kind != JsonTypeInfoKind.Object) return;
+        for (var i = typeInfo.Properties.Count - 1; i >= 0; i--)
+            if (CotLoaiTru.BiLoai(typeInfo.Properties[i].Name))
+                typeInfo.Properties.RemoveAt(i);
+    }
 }
 
 /// <summary>
-/// Danh sách bảng nghiệp vụ đưa vào ảnh chụp toàn bộ — CỐ Ý dùng lại đúng
-/// <see cref="PhanLoaiThucThe.DuocGhi"/> (khớp tên bảng với <see cref="HieuLuc.Bang"/>): đây
-/// chính xác là tập bảng máy con cần để "làm việc đủ" theo cờ offline (spec 6.6), không hơn
-/// không kém — nhiều hơn thì lộ dữ liệu không cần (TaiKhoan chẳng hạn), ít hơn thì máy con
-/// offline thiếu bảng để tra cứu. Nếu <see cref="PhanLoaiThucThe.DuocGhi"/> đổi (thêm/bớt bảng
-/// vào nhật ký), danh sách này phải đổi theo — cố tình không tách rời để tránh hai danh sách
-/// trôi dạt khỏi nhau theo thời gian.
+/// Danh sách bảng nghiệp vụ đưa vào ảnh chụp toàn bộ.
+///
+/// ĐÂY LÀ BẢN CHÉP TAY, KHÔNG PHẢI "dùng lại nguyên văn" <see cref="PhanLoaiThucThe.DuocGhi"/> —
+/// chú thích một bản trước của file này khẳng định sai điều đó (một chú thích nói sai còn tệ hơn
+/// không có chú thích, vì người đọc sau sẽ tin). `Danh` PHẢI khớp `PhanLoaiThucThe.DuocGhi` từng
+/// tên một (đây chính xác là tập bảng máy con cần để "làm việc đủ" theo cờ offline — spec 6.6,
+/// không hơn không kém: nhiều hơn thì lộ dữ liệu không cần như TaiKhoan, ít hơn thì máy con
+/// offline thiếu bảng để tra cứu), nhưng KHÔNG có gì trong ngôn ngữ C# ép hai danh sách này khớp
+/// nhau — <c>DongBoNhanVeTests</c> (dự án test) có một test so sánh trực tiếp
+/// <c>CacBangDongBo.Danh</c> với <c>PhanLoaiThucThe.DuocGhi</c> để KHÔNG lặp lại lỗi "hai danh
+/// sách phải khớp nhau nhưng không gì ép chúng khớp" (đây là lần thứ ba trong kế hoạch này gặp
+/// đúng mẫu lỗi đó). Ai thêm bảng mới vào `DuocGhi` mà quên thêm vào đây: test đỏ ngay, thay vì
+/// để quý sơ tải toàn bộ về và mở đúng sổ đó thấy TRỐNG TRƠN trong khi máy chủ có đủ dữ liệu,
+/// không một lỗi/cảnh báo nào hiện ra.
 /// </summary>
 internal static class CacBangDongBo
 {
