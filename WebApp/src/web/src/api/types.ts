@@ -833,3 +833,42 @@ export type CachHienThiDungSaiItem = {
 }
 
 export type BieuDoGiaoHo = { tenGiaoHo: string; soLuong: number }
+
+/** Ánh xạ 1-1 với LoaiCongViecSaoLuu phía máy chủ (Qlgx.Domain/Entities/CongViecSaoLuu.cs). */
+export type LoaiCongViecSaoLuu =
+  | 'sao_luu' | 'phuc_hoi' | 'kiem_tra' | 'dien_tap' | 'tai_ve' | 'dong_bo_danh_sach'
+
+export type TrangThaiCongViec = 'cho' | 'dang_chay' | 'xong' | 'loi'
+
+/** Ánh xạ 1-1 với TinhTrangSaoLuuDto. `den` là "xanh" | "vang" | "do". */
+export type TinhTrangSaoLuu = {
+  den: 'xanh' | 'vang' | 'do'
+  saoLuuGanNhat: string | null
+  soBanSao: number
+  dienTapGanNhat: string | null
+  dienTapDat: boolean
+  loiGanNhat: string | null
+}
+
+/** Ánh xạ 1-1 với BanSaoLuuDto. `id` là mã snapshot ngắn của restic. */
+export type BanSaoLuu = {
+  id: string
+  thoiDiem: string
+  nhan: string | null
+  kichThuocByte: number
+  soGiaoDan: number
+  soGiaDinh: number
+  nguon: 'tu_dong' | 'thu_cong' | 'truoc_cap_nhat' | 'truoc_phuc_hoi'
+}
+
+/** Ánh xạ 1-1 với CongViecDto. */
+export type CongViecSaoLuu = {
+  id: string
+  loai: LoaiCongViecSaoLuu
+  trangThai: TrangThaiCongViec
+  buocHienTai: string | null
+  nhatKy: string | null
+  taoLuc: string
+  batDauLuc: string | null
+  ketThucLuc: string | null
+}

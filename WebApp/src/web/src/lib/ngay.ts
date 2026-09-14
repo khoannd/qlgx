@@ -185,3 +185,20 @@ export function chuanHoaNgayThieu(ngay: string, thang: string, nam: string): str
   const mm = m === '' ? '01' : m.padStart(2, '0')
   return ngayTuHienThi(`${dd}/${mm}/${y}`)
 }
+
+/**
+ * Định dạng một mốc thời gian ISO đầy đủ (có giờ) sang `dd/MM/yyyy HH:mm` theo giờ địa phương
+ * của trình duyệt. Dùng cho các mốc thời gian THẬT (lúc sao lưu, lúc chạy công việc) — khác
+ * `dinhDangNgay` vốn dành cho ngày nghiệp vụ dạng `DateOnly` không có múi giờ.
+ *
+ * Giữ nguyên văn chuỗi không phân giải được thay vì hiện "Invalid Date" — cùng nguyên tắc với
+ * `dinhDangNgay`: dữ liệu lạ không được làm sập màn hình.
+ */
+export function dinhDangNgayGio(iso?: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const hai = (n: number) => String(n).padStart(2, '0')
+  return `${hai(d.getDate())}/${hai(d.getMonth() + 1)}/${d.getFullYear()} ` +
+         `${hai(d.getHours())}:${hai(d.getMinutes())}`
+}

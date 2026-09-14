@@ -13,6 +13,7 @@ import type {
   ChuanHoaXemTruoc, ChuanHoaKetQua, TaoDotBiTichXemTruoc, TaoDotBiTichKetQua,
   BangTimThayThe, TimThayTheXemTruoc, TimThayTheKetQua,
   MauInDanhSachItem, MauInChiTiet, CachHienThiDungSaiItem,
+  TinhTrangSaoLuu, BanSaoLuu, CongViecSaoLuu, LoaiCongViecSaoLuu,
 } from './types'
 import { authStore } from './authStore'
 
@@ -794,6 +795,28 @@ export const api = {
       trangThai: (jobId: string) =>
         goi<TrangThaiNhapDuLieu>(`/api/quan-tri/nhap-du-lieu/trang-thai/${jobId}`),
     },
+  },
+  /** Màn hình "Sao lưu & Phục hồi" (policy "QuanTriHeThong", LoaiTaiKhoan=9). Mọi thao tác ở
+   * đây tác động tới TOÀN MÁY CHỦ, không riêng giáo xứ nào — xem
+   * docs/superpowers/specs/2026-09-13-qlgx-trien-khai-sao-luu-design.md mục 8.
+   *
+   * Toàn bộ đều BẤT ĐỒNG BỘ: `taoCongViec` trả về ngay một mã công việc, bộ chạy trên host mới
+   * là bên thực thi. Không có endpoint nào chờ pg_dump xong (có thể mất vài phút, vượt timeout
+   * của reverse proxy). */
+  saoLuu: {
+    tinhTrang: () => goi<TinhTrangSaoLuu>('/api/sao-luu/tinh-trang'),
+    danhSach: () => goi<BanSaoLuu[]>('/api/sao-luu/danh-sach'),
+    taoCongViec: (than: {
+      loai: LoaiCongViecSaoLuu; snapshotId?: string | null
+      xacNhan?: string | null; nhan?: string | null
+    }) => goi<{ id: string }>('/api/sao-luu/cong-viec', {
+      method: 'POST', body: JSON.stringify(than),
+    }),
+    congViec: (id: string) => goi<CongViecSaoLuu>(`/api/sao-luu/cong-viec/${id}`),
+    congViecGanDay: () => goi<CongViecSaoLuu[]>('/api/sao-luu/cong-viec'),
+    /** Trả về ĐƯỜNG DẪN, không phải nội dung — nơi gọi mở bằng thẻ <a download> để trình duyệt
+     * tự tải, tránh nạp cả tệp dump (có thể hàng trăm MB) vào bộ nhớ trang. */
+    duongDanTaiVe: (maCongViec: string) => `/api/sao-luu/tai-ve/${maCongViec}`,
   },
   /** Màn hình "Thống kê chung" + "Biểu đồ" — xem
    * docs/superpowers/specs/man-hinh/thong-ke-bieu-do.md. */

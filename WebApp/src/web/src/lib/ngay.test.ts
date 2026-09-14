@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   chuanHoaNgayThieu,
   dinhDangNgay,
+  dinhDangNgayGio,
   goSoVaoKhuon,
   khuonSangPhan,
   khuonTuIso,
@@ -188,5 +189,20 @@ describe('chuanHoaNgayThieu', () => {
 
   it('ngay/thang khong ton tai thi khong hop le', () => {
     expect(chuanHoaNgayThieu('31', '02', '2020')).toBeUndefined()
+  })
+})
+
+describe('dinhDangNgayGio', () => {
+  it('doi ISO co gio sang dd/MM/yyyy HH:mm', () => {
+    expect(dinhDangNgayGio('2026-09-13T06:05:00Z')).toMatch(/^13\/09\/2026 \d{2}:\d{2}$/)
+  })
+
+  it('tra chuoi rong khi khong co gia tri', () => {
+    expect(dinhDangNgayGio(null)).toBe('')
+    expect(dinhDangNgayGio(undefined)).toBe('')
+  })
+
+  it('giu nguyen van chuoi khong phan giai duoc, khong nem loi', () => {
+    expect(dinhDangNgayGio('khong-phai-ngay')).toBe('khong-phai-ngay')
   })
 })
