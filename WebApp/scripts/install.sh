@@ -396,8 +396,10 @@ MAT KHAU CSDL:
   qlgx_admin : $(doc_env_kv "$env" QLGX_ADMIN_DB_USER) / $(doc_env_kv "$env" QLGX_ADMIN_DB_PASSWORD)
 
 PHUC HOI TU MAY TRANG:
-  1. Dung mot may chu Linux moi
-  2. Cai Docker: curl -fsSL https://get.docker.com | sudo sh
+  1. Dung mot may chu Linux moi (Ubuntu 24.04)
+  2. Cai lai bo ung dung (tu cai Docker luon, chua co du lieu giao xu nao):
+       curl -fsSL $KHO_GIT/raw/$NHANH/WebApp/scripts/install.sh | sudo bash
+     Khi duoc hoi kho R2, nhap dung KHO SAO LUU / R2 KEY ID / R2 SECRET o tren.
   3. curl -fsSL $KHO_GIT/raw/$NHANH/WebApp/scripts/qlgx-restore.sh -o qlgx-restore.sh
   4. sudo bash qlgx-restore.sh --card the-phuc-hoi.txt          (in ra ke hoach)
   5. sudo bash qlgx-restore.sh --card the-phuc-hoi.txt --apply  (thuc hien)

@@ -91,8 +91,16 @@ Migration `BatRlsChoBangTheoGiaoXu` đã bật RLS trên 22 bảng nghiệp vụ
 người đăng nhập (xem `BoiCanhGiaoXuConnectionInterceptor.cs`). Điều này chỉ có tác dụng thật
 nếu vai trò CSDL của API **không phải** superuser và **không có** `BYPASSRLS`.
 
-Sau khi container `postgres` chạy lần đầu (`docker compose up -d postgres`), tạo hai vai trò
-bằng `psql` (thay `<mat_khau_...>` bằng mật khẩu thật, TRÙNG với giá trị đã điền trong `.env`):
+Khi cài đặt bằng bộ cài chính thức (`curl … | sudo bash`, xem `docs/CAI-DAT-MAY-CHU.md`), **script
+cài đặt tự làm việc này** — chạy `scripts/sql/00-vai-tro-rls.sql` ngay sau khi PostgreSQL sẵn
+sàng, không cần thao tác tay. Đọc `docs/CAI-DAT-MAY-CHU.md` để biết toàn bộ quy trình cài đặt.
+
+### Làm tay khi cần gỡ rối
+
+Trường hợp cần tạo/sửa lại hai vai trò này bằng tay (hệ thống hỏng, hoặc triển khai không qua bộ
+cài chính thức), sau khi container `postgres` chạy (`docker compose up -d postgres`), tạo hai
+vai trò bằng `psql` (thay `<mat_khau_...>` bằng mật khẩu thật, TRÙNG với giá trị đã điền trong
+`.env`):
 
 ```sql
 -- Vai trò phục vụ nghiệp vụ hằng ngày — PHẢI không có BYPASSRLS.
@@ -266,34 +274,16 @@ CloudWatch…) tuỳ hạ tầng. Điều **bắt buộc phải kiểm tra** tr�
 
 ## 12. Sao lưu và phục hồi CSDL
 
-Sao lưu = sao lưu PostgreSQL, không có gì khác cần sao lưu (không ghi file xuống đĩa cục bộ ở
-tầng ứng dụng — xem mục 3).
+Khi triển khai bằng bộ cài chính thức, sao lưu/phục hồi **đã được tự động hoá đầy đủ** — restic
+gửi bản mã hoá lên Cloudflare R2 4 lần/ngày, có diễn tập phục hồi tự động hằng tuần, và có màn
+hình web để sao lưu/phục hồi thủ công. Xem toàn bộ hướng dẫn dành cho người vận hành ở
+**`docs/SAO-LUU-PHUC-HOI.md`** — tài liệu đó là nguồn tham khảo chính thức cho quy trình sao
+lưu/phục hồi, không lặp lại ở đây.
 
-**Sao lưu** (chạy định kỳ bằng cron/Task Scheduler, ví dụ mỗi đêm):
-
-```bash
-docker compose exec -T postgres pg_dump -U qlgx_admin -Fc ${POSTGRES_DB:-qlgx} > "qlgx-$(date +%Y%m%d).dump"
-```
-
-Giữ file `.dump` ở nơi KHÁC máy chủ (một máy chủ bản sao lưu, một dịch vụ lưu trữ đối tượng) —
-sao lưu nằm cùng ổ đĩa với dữ liệu gốc không bảo vệ được gì khi ổ đĩa hỏng.
-
-**Phục hồi** (máy chủ mới hoặc khôi phục sau sự cố):
-
-```bash
-docker compose up -d postgres
-# Doi postgres san sang, sau do:
-docker compose exec -T postgres pg_restore -U qlgx_admin -d ${POSTGRES_DB:-qlgx} --clean --if-exists < qlgx-20260907.dump
-docker compose up -d api
-```
-
-`--clean --if-exists` xoá các đối tượng đã có trước khi phục hồi — dùng khi phục hồi vào một
-database ĐÃ CÓ SCHEMA (an toàn để chạy lại nhiều lần). Sau khi phục hồi, kiểm tra lại RLS còn
-bật đúng (mục 5) — `pg_restore` phục hồi cả policy/`ENABLE ROW LEVEL SECURITY` vì chúng nằm
-trong dump, nhưng vẫn nên kiểm lại một lần cho chắc trước khi cho người dùng vào lại.
-
-**Diễn tập phục hồi** ít nhất một lần trước khi có giáo xứ thật đầu tiên — một bản sao lưu chưa
-từng được phục hồi thử không đáng tin.
+Với cách triển khai không qua bộ cài chính thức (tự dựng `docker-compose.yml` riêng, không dùng
+`scripts/qlgx-runner.sh`/`scripts/qlgx-restore.sh`), tự đảm bảo có một cơ chế sao lưu tương
+đương — tối thiểu là `pg_dump`/`pg_restore` định kỳ, giữ bản sao ở nơi KHÁC máy chủ, và diễn
+tập phục hồi trước khi có giáo xứ thật đầu tiên.
 
 ## 13. Nâng cấp phiên bản
 
@@ -310,7 +300,10 @@ từng được phục hồi thử không đáng tin.
 
 ## 14. Việc CHƯA kiểm chứng được trên máy chuẩn bị tài liệu này
 
-Ghi rõ ở đây theo đúng yêu cầu — đừng coi các mục này là "đã xong":
+Ghi rõ ở đây theo đúng yêu cầu — đừng coi các mục này là "đã xong". (Reverse proxy/HTTPS tự
+động, sao lưu, và phục hồi — từng liệt kê ở đây trước Task 20 — nay đã được cài đặt, chạy thử
+đầu-cuối thật, và có tài liệu vận hành riêng, xem mục 7/12 và `docs/CAI-DAT-MAY-CHU.md`/
+`docs/SAO-LUU-PHUC-HOI.md`.)
 
 - **Không có Postgres quản lý riêng (managed) nào được thử** — hướng dẫn mục 2 giả định
   PostgreSQL tự vận hành (trong `docker-compose.yml` hoặc một instance tự cài); nếu dùng dịch
@@ -320,4 +313,3 @@ Ghi rõ ở đây theo đúng yêu cầu — đừng coi các mục này là "đ
 - **Chưa triển khai thật lên nhiều máy (HA thật, nhiều bản API sau một bộ cân bằng tải)** —
   kiến trúc được THIẾT KẾ để làm được (không trạng thái, khoá migration đúng), nhưng chỉ mới
   chạy thử một nút duy nhất trên máy chuẩn bị tài liệu này.
-- **Reverse proxy/HTTPS ở mục 7 chưa được dựng thật** — chỉ là cấu hình mẫu, chưa chạy qua.
