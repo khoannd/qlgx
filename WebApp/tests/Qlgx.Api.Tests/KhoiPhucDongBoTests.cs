@@ -118,6 +118,78 @@ public class KhoiPhucDongBoTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactor
             .SingleAsync(m => m.BanGhiId == banGhiId && m.Truong == truong);
     }
 
+    private async Task<ThaoTacDaNhan?> DocBienNhan(Guid maThaoTac)
+    {
+        await using var db = f.TaoContextThuan();
+        return await db.ThaoTacDaNhan.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.MaThaoTac == maThaoTac);
+    }
+
+    // ==================================================================
+    //  Danh tính gốc điền NỬA VỜI — ràng buộc CHECK nổ ở Bước 3 (ngoài
+    //  mọi savepoint) sẽ nêm cứng cả hàng chờ của một máy con
+    // ==================================================================
+
+    /// <summary>
+    /// Cả hai chiều nửa vời đều phải bị từ chối TẤT ĐỊNH, có biên nhận, và KHÔNG kéo theo các
+    /// thao tác lành trong cùng lô.
+    ///
+    /// Máy con TypeScript sinh ra ca này rất dễ mà không hay: <c>JSON.stringify</c> bỏ hẳn một
+    /// khoá có giá trị <c>undefined</c>, nên chỉ cần <c>nguonGocEpoch</c> bị undefined là JSON
+    /// gửi lên còn đúng một nửa danh tính.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]   // có số thứ tự, THIẾU epoch
+    [InlineData(false)]  // có epoch, THIẾU số thứ tự
+    public async Task Danh_tinh_goc_dien_nua_voi_bi_tu_choi_ma_khong_lam_gay_ca_lo(bool thieuEpoch)
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(thieuEpoch ? 9308 : 9309, "Goc Nua Voi");
+        await XoayEpoch("lay_lai");
+
+        var nuaVoi = SuaThuong(id, "HoTen", "\"Ban Nua Voi\"", MocTruocSuCo) with
+        {
+            NguonGocEpoch = thieuEpoch ? null : Guid.NewGuid(),
+            NguonGocSoThuTu = thieuEpoch ? 6001 : null,
+        };
+        var lanh = SuaThuong(id, "GhiChu", "\"thao tac lanh\"", MocTruocSuCo);
+
+        var kq = await Gui(client, DateTimeOffset.UtcNow, nuaVoi, lanh);
+
+        kq.KetQua.Single(x => x.MaThaoTac == nuaVoi.MaThaoTac).KetQua.Should().Be("tu_choi");
+        kq.KetQua.Single(x => x.MaThaoTac == lanh.MaThaoTac).KetQua.Should().Be("ap",
+            "mot thao tac hong kieu nay lam gay ca lo thi CA HANG CHO cua may do — ke ca so rua " +
+            "toi quy so vua go sang nay — khong bao gio len duoc may chu");
+        (await DocGiaoDan(id)).GhiChu.Should().Be("thao tac lanh");
+
+        (await DocBienNhan(nuaVoi.MaThaoTac)).Should().NotBeNull(
+            "khong co bien nhan thi may con gui lai y het VINH VIEN, va no keo theo ca hang cho");
+    }
+
+    [Fact]
+    public async Task Gui_lai_lo_co_danh_tinh_goc_nua_voi_thi_luy_dang()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9310, "Goc Nua Voi Hai");
+        await XoayEpoch("lay_lai");
+
+        var nuaVoi = SuaThuong(id, "HoTen", "\"Ban Nua Voi\"", MocTruocSuCo) with
+        { NguonGocEpoch = null, NguonGocSoThuTu = 6002 };
+
+        await Gui(client, DateTimeOffset.UtcNow, nuaVoi);
+        var soMucLan1 = (await DocCanXemLai(id)).Count;
+
+        // Mạng chập chờn thì máy con gửi lại cả lô là chuyện chắc chắn xảy ra.
+        var lan2 = await Gui(client, DateTimeOffset.UtcNow, nuaVoi);
+
+        lan2.KetQua[0].KetQua.Should().Be("tu_choi");
+        (await DocCanXemLai(id)).Count.Should().Be(soMucLan1,
+            "hop can xem lai ma ngap muc trung thi quy so quen tay bam bo qua, roi bo qua luon muc that");
+
+        await using var db = f.TaoContextThuan();
+        (await db.ThaoTacDaNhan.CountAsync(x => x.MaThaoTac == nuaVoi.MaThaoTac)).Should().Be(1);
+    }
+
     // ==================================================================
     //  Lớp 1: xoay epoch
     // ==================================================================

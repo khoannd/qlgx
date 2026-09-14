@@ -363,6 +363,41 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
                 continue;
             }
 
+            // DANH TÍNH GỐC ĐIỀN NỬA VỜI — chặn ở ĐÂY, ngay sau phép chống trùng.
+            //
+            // Cột nguon_goc_epoch/nguon_goc_so_thu_tu có ràng buộc CHECK "cùng có hoặc cùng
+            // rỗng". Điền một nửa thì ràng buộc đó nổ ở BƯỚC 3 (lúc ghi biên nhận) — nằm NGOÀI
+            // mọi savepoint, nên cả đường "chạy lại từng thao tác một" cũng không cứu được: lô
+            // quay lui sạch, HTTP 500, KHÔNG một biên nhận nào được ghi. Máy con gửi lại y hệt
+            // MÃI MÃI, và nó kéo theo CẢ HÀNG CHỜ của máy đó — kể cả sổ rửa tội quý sơ vừa gõ
+            // sáng nay — không bao giờ lên được máy chủ. Không mục nào trong hộp cần xem lại,
+            // không "tu_choi", chỉ có log máy chủ mà không ai đọc: đúng kiểu nêm cứng một giáo
+            // xứ mà ILoiTatDinh sinh ra để gỡ.
+            //
+            // Máy con TypeScript sinh ra ca này rất dễ mà không hay: JSON.stringify BỎ HẲN một
+            // khoá có giá trị undefined, nên chỉ cần nguonGocEpoch bị undefined là JSON gửi lên
+            // còn đúng một nửa danh tính.
+            //
+            // VÌ SAO đặt SAU TimThaoTacDaNhan chứ không trước (brief vòng 2 đề nghị "trước", thử
+            // rồi và nó hỏng — xem báo cáo): thao tác này VẪN được ghi biên nhận ở Bước 3, nên
+            // lần gửi lại phải đi qua sổ chống trùng TRƯỚC, nếu không nó bị từ chối lần nữa rồi
+            // Bước 3 chèn lại đúng khoá chính đó — 23505, gãy cả lô, đúng cái nêm vừa gỡ. Lý do
+            // brief muốn chặn trước (nửa vời làm phép chống trùng theo danh tính gốc tự bỏ qua)
+            // không còn ý nghĩa ở đây: thao tác nửa vời KHÔNG BAO GIỜ được áp, nên không có gì
+            // để nhân bản; tra theo MaThaoTac vẫn chạy bình thường và đó mới là thứ cần cho
+            // tính luỹ đẳng.
+            if ((tt.NguonGocEpoch is null) != (tt.NguonGocSoThuTu is null))
+            {
+                await TuChoiThaoTac(bc, tt, null,
+                    "Danh tinh goc dien nua voi: nguon_goc_epoch va nguon_goc_so_thu_tu phai " +
+                    "cung co gia tri hoac cung de rong.", ct);
+                // Vào canXuLy để Bước 3 ghi biên nhận (máy con thôi gửi lại). Dấu đồng hồ ở đây
+                // KHÔNG bao giờ được dùng — Bước 2 bỏ qua thao tác đã có kết quả — nhưng vẫn
+                // dựng một dấu thật thay vì default để không ai đọc sau này hiểu nhầm là mốc 0.
+                canXuLy.Add((tt, new DauDongHo(gioMayChu, tt.DongHoLogic, yc.ThietBiId, tt.MaThaoTac)));
+                continue;
+            }
+
             // Trùng NGAY TRONG một lô (máy con ghép nhầm hai lần gửi vào một gói). Phải bắt ở
             // đây: hai dòng cùng khoá chính trong một SaveChanges làm gãy CẢ LÔ, đúng điều mà
             // toàn bộ cơ chế chống trùng sinh ra để tránh.
@@ -506,12 +541,21 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
         foreach (var (tt, _) in canXuLy)
         {
             var kq = ketQua[tt.MaThaoTac];
+
+            // CHÉP danh tính gốc theo kiểu CẢ-HAI-HOẶC-KHÔNG-GÌ. Cột này có ràng buộc CHECK
+            // "cùng có hoặc cùng rỗng", và chỗ này là nơi DUY NHẤT ghi nó — mà nó nằm NGOÀI mọi
+            // savepoint, nên một dòng nửa vời làm nổ CẢ LÔ và không để lại biên nhận nào (xem
+            // chú thích dài ở Bước 1). Bước 1 đã từ chối sớm mọi thao tác nửa vời; đây là lưới
+            // THỨ HAI đặt đúng chỗ ràng buộc cắn, để một đường mới thêm vào sau này không lặp
+            // lại đúng cái nêm đó. Một nửa danh tính vốn cũng vô nghĩa với việc chống trùng.
+            var coDanhTinhGoc = tt.NguonGocEpoch is not null && tt.NguonGocSoThuTu is not null;
+
             db.ThaoTacDaNhan.Add(new ThaoTacDaNhan
             {
                 GiaoXuId = giaoXuId,
                 MaThaoTac = tt.MaThaoTac,
-                NguonGocEpoch = tt.NguonGocEpoch,
-                NguonGocSoThuTu = tt.NguonGocSoThuTu,
+                NguonGocEpoch = coDanhTinhGoc ? tt.NguonGocEpoch : null,
+                NguonGocSoThuTu = coDanhTinhGoc ? tt.NguonGocSoThuTu : null,
                 KetQua = kq.KetQua,
                 PhanHoi = JsonSerializer.Serialize(kq),
                 NhanLuc = gioMayChu,
