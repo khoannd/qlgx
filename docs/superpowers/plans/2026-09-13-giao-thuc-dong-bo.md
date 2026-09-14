@@ -1626,6 +1626,110 @@ git commit -m "Them dau vao gui len: gop muc truong, chong trung, hop can xem la
 
 ---
 
+## Task 6b: Ghi `MocO` ở đường ghi thường của web
+
+**Vì sao có task này.** Phát hiện khi thi công Task 6. `MocO` được ghi ở **đúng một chỗ**:
+`DongBoService`. Mọi lần quý cha sửa trên web đều **không để lại mốc nào**, nên
+`LuatGop.Quyet(mocDangCo: null, …)` trả `Thang` vô điều kiện và **máy con luôn thắng** — kể cả một
+thao tác cũ hơn ba ngày.
+
+Kịch bản hỏng: cha sửa ngày rửa tội của giáo dân trên web lúc 10g. Một laptop offline ba ngày đẩy
+lên bản sửa cũ của đúng ô đó. Bản sửa của cha bị đè **im lặng**, không một dấu hiệu nào. Đây chính
+xác là loại hỏng mà toàn bộ thiết kế luật gộp sinh ra để ngăn.
+
+Đây là lỗ của kế hoạch, không phải của ai thi công: kế hoạch 1 dựng nhật ký, `MocO` sinh ra ở kế
+hoạch 4 Task 1, và không ai nối dây giữa hai cái. Task 6 đã nối được một nửa — đường ghi web **đã**
+nâng đồng hồ máy chủ trên dòng đếm. Chỉ còn thiếu đúng mảnh `MocO`.
+
+Tách thành task riêng thay vì gộp vào Task 6 vì nó đụng vào file của kế hoạch 1 (`LuuCoNhatKy`) và
+ảnh hưởng **mọi** đường ghi của web — nó xứng đáng một mặt review riêng.
+
+**Files:**
+- Modify: `src/Qlgx.Data/NhatKy/LuuCoNhatKy.cs`
+- Test: `tests/Qlgx.Data.Tests/MocOTheoDuongGhiWebTests.cs`
+
+**Interfaces:**
+- Consumes: `MocO` (Task 1); `CapSoHieuLuc.LayDaiSo` trả `DauCuoi` (Task 6); `DongHoLai.NangDau` (Task 2).
+- Produces: không có kiểu mới — `LuuCoNhatKy` thêm việc ghi `MocO` cho mỗi ô nó sinh dòng nhật ký.
+
+**Nguyên tắc bắt buộc: một ô sinh dòng `hieu_luc` thì PHẢI sinh `MocO` tương ứng, cùng giao dịch.**
+Hai thứ này là hai mặt của một việc — dòng `hieu_luc` nói "ô này vừa đổi", `MocO` nói "ô này đổi
+lúc nào và bởi ai". Thiếu mặt sau thì luật gộp mù. Đừng để chúng thành hai danh sách phải nhớ khớp
+nhau: **suy ra cái sau từ chính tập ô đã sinh cái trước**, trong cùng một vòng lặp.
+
+- [ ] **Step 1: Viết test trước**
+
+```csharp
+[Fact]
+public async Task Sua_tren_web_roi_may_con_gui_ban_CU_hon_thi_may_con_THUA()
+{
+    // Đây là bất biến cả task này tồn tại vì nó. Trước khi sửa, máy con thắng vô điều kiện.
+    var idGiaoDan = await TaoGiaoDan(9800, "Nguoi bi de mat sua");
+
+    // Quý cha sửa trên web lúc 10g (đường ghi thường).
+    await SuaTrenWeb(idGiaoDan, "HoTen", "Ten cha vua sua");
+
+    // Laptop offline ba ngày đẩy lên bản sửa CŨ HƠN của đúng ô đó.
+    var moc = await DocMocO("GiaoDan", idGiaoDan, "HoTen");
+    moc.Should().NotBeNull("duong ghi web PHAI de lai moc, neu khong may con thang vo dieu kien");
+
+    var ketQua = LuatGop.Quyet(moc, new DauDongHo(moc!.DongHoVatLy.AddDays(-3), 0,
+        Guid.NewGuid(), Guid.NewGuid()), "GiaoDan", "HoTen",
+        "\"Ten cha vua sua\"", "\"Ten cu tren laptop\"");
+
+    ketQua.Should().Be(KetQuaGop.Thua, "thao tac cu hon khong duoc de len ban sua cua cha");
+}
+
+[Fact]
+public async Task Moi_o_sinh_dong_hieu_luc_deu_co_MocO_tuong_ung()
+{
+    // Lưới an toàn: quét theo chính tập dòng đã sinh, không liệt kê tay.
+    var idGiaoDan = await TaoGiaoDan(9801, "Nguoi kiem du moc");
+    await SuaNhieuO(idGiaoDan);
+
+    var cacDong = await DocHieuLucMoiNhat(idGiaoDan);
+    cacDong.Should().NotBeEmpty("khong co dong nao thi test nay rong nghia");
+
+    foreach (var dong in cacDong)
+    {
+        var moc = await DocMocO(dong.Bang, dong.BanGhiId, dong.Truong);
+        moc.Should().NotBeNull($"o {dong.Bang}.{dong.Truong} sinh dong hieu luc ma khong co moc");
+        moc!.DongHoVatLy.Should().Be(dong.DongHoVatLy);
+        moc.MaThaoTac.Should().Be(dong.MaThaoTac);
+    }
+}
+
+[Fact]
+public async Task Ghi_web_va_ghi_MocO_nam_trong_CUNG_mot_giao_dich()
+{
+    // Nếu tách hai giao dịch, một lần sập giữa chừng để lại dòng hieu_luc không có mốc — và ô đó
+    // vĩnh viễn để máy con thắng vô điều kiện, đúng lỗi mà task này sinh ra để sửa.
+    // Chứng minh bằng cách ép SaveChanges ném sau khi đã ghi hieu_luc.
+}
+```
+
+- [ ] **Step 2: Chạy test để thấy fail**
+
+Run: `dotnet test WebApp/tests/Qlgx.Data.Tests --filter MocOTheoDuongGhiWebTests -o "<thư mục tạm riêng>"`
+Expected: FAIL — `moc.Should().NotBeNull()` đỏ, vì đường ghi web chưa ghi `MocO`.
+
+- [ ] **Step 3: Nối `MocO` vào `LuuCoNhatKy`**
+
+Trong cùng vòng lặp đã sinh dòng `ThayDoi`/`HieuLuc`, với mỗi ô: `MocO` khoá
+`(GiaoXuId, Bang, BanGhiId, Truong)`, bốn cột mốc lấy **đúng dấu đã dùng cho dòng `hieu_luc`**
+(mốc máy chủ đã nâng qua `NangDau`, `ThietBiId = null` vì là ghi từ chính máy chủ). Ghi đè nếu đã
+có — mốc mới nhất thắng. Cùng giao dịch, không `SaveChanges` riêng.
+
+- [ ] **Step 4: Chạy test — PASS**
+
+- [ ] **Step 5: Chứng minh test biết báo lỗi**
+
+Tạm bỏ đoạn ghi `MocO`. Xác nhận cả ba test đỏ. Hoàn nguyên, xác nhận xanh.
+
+- [ ] **Step 6: Commit**
+
+---
+
 ## Task 7: Đường đọc và xử lý hộp cần xem lại
 
 **Files:**
