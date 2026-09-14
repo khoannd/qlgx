@@ -116,10 +116,11 @@ setup() {
   [ "$status" -eq 0 ]
 }
 
-# Task 16, Viec 2: the phuc hoi (duong may trang) phai co buoc cai Docker TRUOC khi tai
-# qlgx-restore.sh -- thieu buoc nay thi buoc goi qlgx-restore.sh that bai ngay voi "docker:
-# command not found" (phat hien Critical 2 cua Task 14, hoan sua sang task nay).
-@test "in_the_phuc_hoi: the phuc hoi co buoc cai Docker truoc buoc tai qlgx-restore.sh" {
+# Task 16 (dep dat) dat buoc "cai Docker" truoc buoc tai qlgx-restore.sh; Task 20 sua lai chinh
+# xac hon thanh "cai lai toan bo install.sh" sau khi doi chieu voi kiem_ung_dung_da_co() that
+# trong qlgx-restore.sh -- dieu kien that la docker-compose.yml/.env phai ton tai, chi cai Docker
+# khong du. Test cap nhat theo dung noi dung the moi (phat hien Critical 2 cua Task 14).
+@test "in_the_phuc_hoi: the phuc hoi co buoc cai lai ung dung truoc buoc tai qlgx-restore.sh" {
   GOC_UNG_DUNG="$BATS_TEST_TMPDIR/ung-dung"
   THU_MUC_CAU_HINH="$BATS_TEST_TMPDIR/etc-qlgx"
   mkdir -p "$GOC_UNG_DUNG" "$THU_MUC_CAU_HINH"
@@ -142,11 +143,11 @@ EOF
   [ "$status" -eq 0 ]
   the="$THU_MUC_CAU_HINH/the-phuc-hoi.txt"
   [ -f "$the" ]
-  dong_docker=$(grep -n 'get.docker.com' "$the" | cut -d: -f1)
+  dong_cai_lai=$(grep -n 'scripts/install.sh | sudo bash' "$the" | cut -d: -f1)
   dong_tai_restore=$(grep -n 'qlgx-restore.sh -o qlgx-restore.sh' "$the" | cut -d: -f1)
-  [ -n "$dong_docker" ]
+  [ -n "$dong_cai_lai" ]
   [ -n "$dong_tai_restore" ]
-  [ "$dong_docker" -lt "$dong_tai_restore" ]
+  [ "$dong_cai_lai" -lt "$dong_tai_restore" ]
   # Cac buoc phai danh so lien tuc 1..5, khong trung khong thieu.
   buoc=$(grep -oE '^  [0-9]+\.' "$the" | grep -oE '[0-9]+' | tr '\n' ' ')
   [ "$buoc" = "1 2 3 4 5 " ]
