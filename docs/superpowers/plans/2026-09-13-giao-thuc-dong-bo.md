@@ -1739,46 +1739,151 @@ Tạm bỏ đoạn ghi `MocO`. Xác nhận cả ba test đỏ. Hoàn nguyên, x�
 
 ## Task 7: Đường đọc và xử lý hộp cần xem lại
 
+**Brief này viết lại toàn bộ sau khi Task 6 hoàn tất** — bản đầu viết trước khi `CanXemLai` có
+hình dạng thật, quá mỏng và bỏ sót việc phân biệt ba loại mục. Đọc kỹ trước khi thi công, đừng chỉ
+lấy phần khung việc rồi tự đoán chi tiết.
+
 **Files:**
-- Modify: `src/Qlgx.Api/Dtos/DongBoDtos.cs`, `src/Qlgx.Api/Endpoints/DongBoEndpoints.cs`
+- Modify: `src/Qlgx.Api/Dtos/DongBoDtos.cs`, `src/Qlgx.Api/Endpoints/DongBoEndpoints.cs`,
+  `tests/Qlgx.Data.Tests/MoiDuongGhiDeuGhiNhatKyTests.cs` (thêm `CanXemLaiService.cs` vào miễn trừ,
+  kèm một fact canh chính miễn trừ đó — xem "Vì sao cần miễn trừ" bên dưới)
 - Create: `src/Qlgx.Api/Services/CanXemLaiService.cs`
 - Test: `tests/Qlgx.Api.Tests/CanXemLaiTests.cs`
 
 **Interfaces:**
-- Produces: `GET /api/can-xem-lai` (danh sách chưa xử lý), `POST /api/can-xem-lai/{id}/chon` với thân `{ "chon": "A" | "B" }`.
-
-**Quy tắc cốt lõi (spec 8.6):** quyết định của người dùng là **một thao tác ghi bình thường** mang **mốc hiện tại**. Nếu chỉ đánh dấu mục đã xử lý mà không ghi một thay đổi mới, thì lần đồng bộ sau giá trị kia (mốc mới hơn) vẫn thắng và **tự đổi lại** — người dùng thấy phần mềm "không nghe lời".
-
-- [ ] **Step 1: Viết test — trong đó có một fact riêng cho đúng cái bẫy trên**
+- Produces: `GET /api/can-xem-lai` (danh sách chưa xử lý của giáo xứ hiện tại);
+  `POST /api/can-xem-lai/{id}/chon` thân `{ "chon": "A" | "B" }`;
+  `POST /api/can-xem-lai/{id}/danh-dau-da-xu-ly` (không thân).
 
 ```csharp
-    [Fact]
-    public async Task Chon_gia_tri_cu_hon_thi_no_phai_THANG_o_lan_dong_bo_sau()
-    {
-        // Dựng một mục cần xem lại: A cũ hơn, B mới hơn và đang được dùng.
-        // Người dùng chọn A. Sau đó gửi lại một lô đồng bộ có chứa B (như một máy con đến muộn).
-        // A phải vẫn thắng, vì lựa chọn của người dùng mang mốc HIỆN TẠI, mới hơn cả B.
-    }
+public record CanXemLaiDto(Guid Id, string Loai, string Bang, Guid BanGhiId, string Truong,
+    string? LyDo, string? GiaTriA, string? GiaTriB, string? GiaTriDangDung, DateTimeOffset TaoLuc);
+public record ChonGiaTriYeuCau(string Chon);
 ```
 
-Viết đầy đủ. Đây là fact quan trọng nhất của task.
+**Đọc `WebApp/src/Qlgx.Domain/Entities/CanXemLai.cs` TRƯỚC KHI VIẾT GÌ** — đặc biệt chú thích của
+`LyDo` và `Loai`. Sáu giá trị `Loai` khả dĩ, nhưng hôm nay chỉ ba loại thật sự được sinh ra (Task 6):
+`"o_nhay_cam"`, `"bat_bien"`, `"khong_luu_duoc"`. Ba loại còn lại (`"nghi_trung"`, `"quan_he"`,
+`"tham_chieu_chet"`) là tên dành sẵn cho việc chưa làm — **đừng cố xử lý chúng**, chỉ cần không vỡ
+nếu gặp (coi như "không thể quyết bằng /chon").
 
-- [ ] **Step 2: Viết service và endpoint**
+**KHÔNG dịch `Truong` sang nhãn tiếng Việt ở đây.** Đã phán quyết ở Task 6 (xem chú thích trong
+chính `CanXemLai.cs`): máy chủ không có bản đồ "tên cột → nhãn" dùng chung, và dựng một bản đồ chỉ
+cho task này sẽ là danh sách thứ năm phải nhớ khớp với thứ gì đó khác — mẫu đã cắn kế hoạch này
+nhiều lần. Việc dịch nhãn thuộc về màn hình hiển thị thật (`CanXemLaiPage.tsx`, kế hoạch 5). Trả về
+nguyên `Bang`/`Truong` là đủ và đúng phạm vi.
 
-`ChonGiaTri`: mở giao dịch, giành khoá dòng đếm, áp giá trị được chọn qua `ApThaoTac.ApMotO` với `DauDongHo` mang **giờ máy chủ hiện tại** và `MaThaoTac` mới, ghi `ThayDoi` + `HieuLuc` + cập nhật `MocO`, đánh dấu mục đã xử lý.
+**Hai loại quyết định, KHÔNG được trộn vào một endpoint:**
 
-- [ ] **Step 3: Chạy test và commit**
+1. **Loại có cặp giá trị thật để chọn** (`"o_nhay_cam"`, `"bat_bien"`) → `POST .../chon`. Với
+   `Loai` khác, endpoint này trả **400** — không được âm thầm coi như đã xử lý.
+2. **Loại không có gì để chọn** (`"khong_luu_duoc"` — dữ liệu đã mất, người dùng phải **nhập lại
+   qua màn hình sửa bình thường**, không có "giá trị B đang dùng" nào để giữ) → chỉ
+   `POST .../danh-dau-da-xu-ly`. Gọi endpoint này cho `"o_nhay_cam"`/`"bat_bien"` cũng phải trả
+   **400** — không cho phép "bỏ qua" một xung đột thật mà không ghi quyết định, vì làm vậy để lộ
+   đúng lỗ mà spec 8.6 cảnh báo (mục dưới đây).
 
-Run: `dotnet test WebApp/tests/Qlgx.Api.Tests --filter CanXemLaiTests`
+**Quy tắc cốt lõi cho `/chon` (spec 8.6):** quyết định của người dùng là **một thao tác ghi bình
+thường** mang **mốc hiện tại**. Nếu chỉ đánh dấu mục đã xử lý mà không ghi một thay đổi mới, thì
+lần đồng bộ sau giá trị kia (mốc mới hơn) vẫn thắng và **tự đổi lại** — người dùng thấy phần mềm
+"không nghe lời". Ghi **thống nhất cho cả hai nhánh A và B** (đừng tối ưu "B đang dùng rồi thì khỏi
+ghi" — một nhánh có điều kiện riêng là thêm một đường chưa được test, và giá thành của ghi thừa một
+dòng `hieu_luc` rẻ hơn nhiều so với một nhánh không ai kiểm).
+
+**Vì sao cần miễn trừ `MoiDuongGhiDeuGhiNhatKyTests`.** `/chon` cần một mốc **cụ thể** (giờ máy chủ
+hiện tại, không phải mốc tự tính từ so sánh ChangeTracker) và phải cập nhật `MocO` — giống hệt lý
+do `DongBoService.cs` đã được miễn trừ ở Task 6. Không đi qua `LuuCoNhatKy`/`GhiDongTuongMinh`;
+dựng `ThayDoi`+`HieuLuc` tường minh theo đúng khuôn `DongBoService.GhiCapNhatKy` đã dùng (đọc hàm
+đó trước khi viết hàm tương tự ở đây — đừng chép dán, khuôn giống nhưng bối cảnh khác).
+
+- [ ] **Step 1: Viết test — đủ mã, không placeholder**
+
+```csharp
+[Fact]
+public async Task Chon_gia_tri_cu_hon_thi_no_phai_THANG_o_lan_dong_bo_sau()
+{
+    // Đây là fact quan trọng nhất của task — đúng cái bẫy spec 8.6 cảnh báo.
+    // Dựng một mục cần xem lại kiểu "o_nhay_cam": A cũ hơn, B mới hơn và đang được dùng.
+    var idGiaoDan = await TaoGiaoDan(9900, "Nguoi co xung dot ngay sinh");
+    var idMuc = await TaoMucCanXemLai(idGiaoDan, "GiaoDan", "NgaySinh",
+        giaTriA: "\"1985-03-12\"", giaTriB: "\"1985-03-13\"", dangDung: "B");
+
+    // Người dùng chọn A.
+    var phanHoi = await client.PostAsync($"/api/can-xem-lai/{idMuc}/chon",
+        JsonContent.Create(new ChonGiaTriYeuCau("A")));
+    phanHoi.StatusCode.Should().Be(HttpStatusCode.OK);
+
+    // Sau đó gửi lại một lô đồng bộ có chứa B (như một máy con đến muộn, mốc của B CŨ HƠN
+    // quyết định vừa ghi vì quyết định mang giờ máy chủ HIỆN TẠI).
+    await GuiLoDongBoChuaGiaTri(idGiaoDan, "NgaySinh", "\"1985-03-13\"", mocCu: true);
+
+    var giaoDan = await DocGiaoDan(idGiaoDan);
+    giaoDan.NgaySinh.Should().Be(new DateOnly(1985, 3, 12),
+        "quyet dinh cua nguoi dung mang moc HIEN TAI, phai thang moi thao tac den sau");
+}
+
+[Fact]
+public async Task Danh_sach_chi_tra_ve_muc_cua_dung_giao_xu_va_chua_xu_ly()
+{
+    // Dựng: một mục của giáo xứ hiện tại (chưa xử lý), một mục của giáo xứ khác, một mục của
+    // giáo xứ hiện tại NHƯNG đã xử lý (DaXuLyLuc != null). Cả ba đều có mặt trong CSDL.
+    // Chỉ mục đầu tiên được trả về.
+}
+
+[Fact]
+public async Task Chon_voi_loai_khong_luu_duoc_bi_tu_choi_400()
+{
+    // Loai "khong_luu_duoc" không có cặp giá trị thật — /chon phải trả 400, không được coi
+    // như đã xử lý một cách âm thầm.
+}
+
+[Fact]
+public async Task Danh_dau_da_xu_ly_voi_loai_o_nhay_cam_bi_tu_choi_400()
+{
+    // Không được phép "bỏ qua" một xung đột thật mà không ghi quyết định — nếu cho qua, giá trị
+    // đang dùng hôm nay có thể vẫn thua một thao tác cũ hơn đến sau, đúng lỗ spec 8.6 cảnh báo.
+}
+
+[Fact]
+public async Task Xu_ly_hai_lan_lien_tiep_khong_ghi_them_lan_thu_hai()
+{
+    // Chọn A xong, gọi /chon lần nữa (dù A hay B) trên CÙNG mục -> 409 hoặc idempotent rõ ràng,
+    // KHÔNG được ghi thêm một dòng hieu_luc nữa. Quyết định lại được thì phải đi qua giao dịch
+    // bình thường (sửa trên web), không phải bấm lại nút cũ.
+}
+```
+
+Viết đủ mã cho cả năm test, không để thân trống — vi phạm "không placeholder" của writing-plans.
+
+- [ ] **Step 2: Viết `CanXemLaiService`**
+
+`LayDanhSach(giaoXuId)`: lọc `GiaoXuId` **và** `DaXuLyLuc == null`, sắp theo `TaoLuc`.
+
+`ChonGiaTri(id, chon)`: 404 nếu không tìm thấy mục thuộc đúng giáo xứ; 409 nếu `DaXuLyLuc != null`;
+400 nếu `Loai` không thuộc `{"o_nhay_cam", "bat_bien"}`. Mở giao dịch tường minh, giành khoá dòng
+đếm (`CapSoHieuLuc.LayDaiSo`), lấy giá trị theo `chon` (`"A"` → `GiaTriA`, `"B"` → `GiaTriB`), áp
+qua `ApThaoTac.ApMotO` với dấu `(giờ máy chủ hiện tại, logic đã nâng qua `NangDau`, `ThietBiId =
+null`, `MaThaoTac = Guid.NewGuid())`, ghi `ThayDoi` + `HieuLuc` (khuôn `GhiCapNhatKy`), cập nhật
+`MocO` cho đúng `(Bang, BanGhiId, Truong)`, đặt `DaXuLyLuc`, `GiaTriDangDung = giá trị vừa chọn`.
+`NguoiXuLy` để `null` — khoảng trống đã biết giống `tai_khoan_id` của `ThayDoi` (xem
+`LuuCoNhatKy.cs`), chưa có chỗ nào dựng `IBoiCanhGhiNhatKy` từ claim người đăng nhập.
+
+`DanhDauDaXuLy(id)`: 404/409 như trên; 400 nếu `Loai` thuộc `{"o_nhay_cam", "bat_bien"}`. Chỉ đặt
+`DaXuLyLuc`, không ghi `ThayDoi`/`HieuLuc`/`MocO` nào — không có giá trị nào được quyết định.
+
+- [ ] **Step 3: Chạy test**
+
+Run: `dotnet test WebApp/tests/Qlgx.Api.Tests --filter CanXemLaiTests -o "<thư mục tạm riêng>"`
 Expected: PASS.
 
-```bash
-git add WebApp/src/Qlgx.Api/Services/CanXemLaiService.cs \
-        WebApp/src/Qlgx.Api/Dtos/DongBoDtos.cs \
-        WebApp/src/Qlgx.Api/Endpoints/DongBoEndpoints.cs \
-        WebApp/tests/Qlgx.Api.Tests/CanXemLaiTests.cs
-git commit -m "Them duong doc va xu ly hop can xem lai"
-```
+- [ ] **Step 4: Chứng minh test biết báo lỗi cho fact quan trọng nhất**
+
+Tạm bỏ đoạn ghi `HieuLuc`/`MocO` trong `ChonGiaTri` (chỉ giữ `DaXuLyLuc`). Xác nhận
+`Chon_gia_tri_cu_hon_thi_no_phai_THANG_o_lan_dong_bo_sau` đỏ. Hoàn nguyên, xác nhận xanh.
+
+- [ ] **Step 5: Commit**
+
+`git add` từng file cụ thể — không `git add -A`.
 
 ---
 
