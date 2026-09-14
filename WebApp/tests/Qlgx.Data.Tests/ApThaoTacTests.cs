@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Data.DongBo;
@@ -221,13 +221,20 @@ public class ApThaoTacTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
     {
         var (_, idGiaoDanKhac) = await TaoGiaoXuKhacVaGiaoDan(90004, 9720, "Giao dan xu khac trong change tracker");
 
-        await using var ctxDungChung = db.TaoContext();
+        // PHẢI có bối cảnh giáo xứ. Bản trước dùng `db.TaoContext()` trần — context đó không có
+        // `IBoiCanhGiaoXu` nên bộ lọc toàn cục cho qua tất cả, và test xanh vì ĐÚNG CÁI LÝ DO SAI
+        // của vòng trước, dù đã thêm docstring khẳng định ngược lại. Xoá dòng nạp ChangeTracker đi
+        // thì nó vẫn xanh — tức nó chưa từng kiểm điều nó nói.
+        await using var ctxDungChung = db.TaoContextCoBoiCanh(db.GiaoXuId);
         // Nạp sẵn bản ghi của giáo xứ khác vào ChangeTracker của CHÍNH context này.
         await ctxDungChung.GiaoDan.IgnoreQueryFilters().SingleAsync(x => x.Id == idGiaoDanKhac);
 
         var hanhDong = async () => await ApThaoTac.ApMotO(
             ctxDungChung, db.GiaoXuId, "GiaoDan", idGiaoDanKhac, "HoTen", "\"Doc chiem\"", default);
 
+        // Thông điệp là bằng chứng test đứng ĐÚNG NHÁNH: nếu bản ghi chưa nằm sẵn trong
+        // ChangeTracker thì bộ lọc chặn sớm hơn và lỗi là "Khong tim thay ban ghi" — xem ca đối
+        // chứng ngay dưới. Hai thông điệp khác nhau chính là thứ phân biệt hai kịch bản.
         await hanhDong.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*giao xu khac*");
 
@@ -575,15 +582,91 @@ public class ApThaoTacTests(CoSoDuLieuFixture db) : IClassFixture<CoSoDuLieuFixt
         await hanhDong.Should().ThrowAsync<LoiApThaoTac>();
     }
 
-    [Fact]
-    public async Task TaoBanGhi_nem_LoiApThaoTac_khi_json_khong_phai_doi_tuong()
+    [Theory]
+    [InlineData("42", "so nguyen — Deserialize nem JsonException, roi vao catch")]
+    [InlineData("null", "chu null — Deserialize TRA VE null, di vao nhanh `cacO is null`")]
+    public async Task TaoBanGhi_nem_LoiApThaoTac_khi_json_khong_phai_doi_tuong(
+        string giaTriJson, string lyDo)
     {
+        // Ban dau chi co ca "42", va ca do KHONG chay nhanh no nham toi: Deserialize("42") nem
+        // JsonException nen roi vao `catch`, giong het test ngay tren. Nhanh `if (cacO is null)`
+        // chi dat duoc voi dung chu `null`, va no CHUA TUNG duoc chay — dot bien bo rieng nhanh do
+        // (giu nguyen try/catch) van 28/28 xanh. Neu nhanh do bien mat, `giaTriJson = "null"` cho
+        // NullReferenceException o `foreach`, va Task 6 se hieu nham la loi he thong roi gay CA LO
+        // dong bo cua giao xu thay vi chi bo qua mot dong hong.
         var hanhDong = async () =>
         {
             await using var ctx = db.TaoContext();
-            await ApThaoTac.TaoBanGhi(ctx, "GiaoDan", Guid.NewGuid(), db.GiaoXuId, "42", default);
+            await ApThaoTac.TaoBanGhi(ctx, "GiaoDan", Guid.NewGuid(), db.GiaoXuId, giaTriJson, default);
         };
 
-        await hanhDong.Should().ThrowAsync<LoiApThaoTac>();
+        (await hanhDong.Should().ThrowAsync<LoiApThaoTac>(lyDo))
+            .And.Bang.Should().Be("GiaoDan");
+    }
+
+    [Fact]
+    public async Task Loi_ap_thao_tac_mang_du_thong_tin_cho_hop_can_xem_lai()
+    {
+        // Day la HOP DONG ma Task 6 se doc de ghi vao hop "can xem lai" cho quy so. Truoc do khong
+        // mot dong test nao giu no: dot bien thay thong diep bang chuoi co dinh va vut
+        // InnerException van 28/28 xanh. Ai do don dep sau nay bo `loiGoc` di thi hop can xem lai
+        // mat sach nguyen nhan goc ma bo test khong ken mot tieng.
+        var idGiaoDan = await TaoGiaoDan(9750, "Nguoi de kiem loi");
+
+        var hanhDong = async () =>
+        {
+            await using var ctx = db.TaoContext();
+            await ApThaoTac.ApMotO(ctx, db.GiaoXuId, "GiaoDan", idGiaoDan, "NgaySinh",
+                "\"32/13/2005\"", default);
+        };
+
+        var loi = (await hanhDong.Should().ThrowAsync<LoiApThaoTac>()).Which;
+
+        loi.Bang.Should().Be("GiaoDan");
+        loi.Truong.Should().Be("NgaySinh");
+        loi.InnerException.Should().NotBeNull("mat nguyen nhan goc la mat kha nang chan doan");
+        loi.Message.Should().Contain("GiaoDan").And.Contain("NgaySinh",
+            "quy so phai doc duoc O NAO hong, khong chi 'co loi'");
+    }
+
+    [Fact]
+    public async Task Khong_nap_san_thi_bo_loc_chan_som_hon_rao_chan()
+    {
+        // Ca DOI CHUNG cho test ChangeTracker o tren. Cung mot bat bien, hai duong khac nhau:
+        //   - co nap san vao ChangeTracker -> FindAsync tra ve ngay, KHONG xuong CSDL, bo loc
+        //     khong co co hoi chan -> rao chan `KiemDungGiaoXu` la thu duy nhat dung lai.
+        //   - khong nap san -> phai xuong CSDL, bo loc theo giao xu chan truoc, chua toi rao chan.
+        // Hai thong diep KHAC NHAU la bang chung moi test dung dung nhanh cua no. Thieu ca doi
+        // chung nay thi khong gi chung minh duoc test kia that su di duong ChangeTracker.
+        var (_, idGiaoDanKhac) = await TaoGiaoXuKhacVaGiaoDan(90006, 9722, "Giao dan xu khac doi chung");
+
+        await using var ctx = db.TaoContextCoBoiCanh(db.GiaoXuId);
+
+        var hanhDong = async () => await ApThaoTac.ApMotO(
+            ctx, db.GiaoXuId, "GiaoDan", idGiaoDanKhac, "HoTen", "\"Doc chiem\"", default);
+
+        await hanhDong.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*Khong tim thay ban ghi*");
+    }
+
+    [Fact]
+    public async Task Khong_duoc_doi_ma_nhan_dang_qua_duong_dong_bo()
+    {
+        // MaNhanDang la khoa nhan dang de dong bo HAI CHIEU voi ban desktop. GiaoDanService dat no
+        // mot lan luc tao roi co tinh khong dung toi khi cap nhat (GiaoDanService.cs:477) — bat
+        // bien da tuyen bo tuong minh trong ma, va duong dong bo nay la duong DUY NHAT con vi pham
+        // duoc. May con doi no thi lien ket giua ho so tren web va ho so tuong ung ben desktop dut
+        // am tham, va toi dot nhap tu desktop se sinh ban trung hoac ghi de nham ho so.
+        var idGiaoDan = await TaoGiaoDan(9751, "Nguoi giu ma nhan dang");
+
+        var hanhDong = async () =>
+        {
+            await using var ctx = db.TaoContext();
+            await ApThaoTac.ApMotO(ctx, db.GiaoXuId, "GiaoDan", idGiaoDan, "MaNhanDang",
+                "\"web::giao_dan::gia-mao\"", default);
+        };
+
+        await hanhDong.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*CotCamDongBo*");
     }
 }

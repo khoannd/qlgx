@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Qlgx.Data.NhatKy;
@@ -52,6 +52,12 @@ public static class ApThaoTac
     private static readonly HashSet<string> CotCamDongBo = new(StringComparer.Ordinal)
     {
         "Id", "GiaoXuId", "SourceSystem", "DuLieuLoi",
+        // MaNhanDang: khoá nhận dạng để đồng bộ HAI CHIỀU với bản desktop. `GiaoDanService` đặt
+        // nó một lần lúc tạo rồi cố tình không đụng tới khi cập nhật (GiaoDanService.cs:477) —
+        // bất biến đã tuyên bố tường minh trong mã, và đường đồng bộ này là đường DUY NHẤT còn
+        // vi phạm được. Máy con đổi nó thì liên kết giữa hồ sơ trên web và hồ sơ tương ứng bên
+        // desktop đứt âm thầm, và tới đợt nhập từ desktop sẽ sinh bản trùng hoặc ghi đè nhầm hồ sơ.
+        "MaNhanDang",
     };
 
     private static Microsoft.EntityFrameworkCore.Metadata.IEntityType LayKieu(

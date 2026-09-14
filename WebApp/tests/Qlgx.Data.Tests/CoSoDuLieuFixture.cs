@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Qlgx.Data;
 using Qlgx.Domain.Entities;
@@ -43,6 +43,20 @@ public class CoSoDuLieuFixture : IAsyncLifetime
 
     public QlgxDbContext TaoContext() =>
         new(new DbContextOptionsBuilder<QlgxDbContext>().UseNpgsql(ChuoiKetNoi).Options);
+
+    private sealed record BoiCanh(Guid GiaoXuId) : IBoiCanhGiaoXu;
+
+    /// <summary>
+    /// Context CÓ bối cảnh giáo xứ, tức bộ lọc toàn cục thật sự hoạt động.
+    ///
+    /// <see cref="TaoContext"/> trần không có <c>IBoiCanhGiaoXu</c>, nên <c>BoiCanhGiaoXuId</c> là
+    /// null và bộ lọc cho qua TẤT CẢ. Nhiều kiểm thử tưởng mình đang kiểm rào chắn nhưng thật ra
+    /// chỉ chạy trên một đường không có bộ lọc — đã có hai lần test xanh vì lý do sai như vậy.
+    /// Dùng hàm này khi kịch bản phụ thuộc vào việc bộ lọc CÓ chạy.
+    /// </summary>
+    public QlgxDbContext TaoContextCoBoiCanh(Guid giaoXuId) =>
+        new(new DbContextOptionsBuilder<QlgxDbContext>().UseNpgsql(ChuoiKetNoi).Options,
+            new BoiCanh(giaoXuId));
 
     public async Task DisposeAsync()
     {
