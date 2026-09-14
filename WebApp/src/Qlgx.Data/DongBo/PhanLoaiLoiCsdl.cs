@@ -31,6 +31,19 @@ public static class PhanLoaiLoiCsdl
     ///   khoá duy nhất (23505), CHECK (23514).
     /// Cùng dữ liệu đó gửi lại một triệu lần vẫn ra đúng lỗi ấy.
     ///
+    /// NGOẠI LỆ ĐÃ CÂN NHẮC — <c>23503</c> (khoá ngoại) KHÔNG luôn tất định, nhưng vẫn để ở đây.
+    /// Máy con tự sinh Guid và tạo được các bản ghi phụ thuộc nhau khi offline (spec 4.6); trong
+    /// MỘT lô thì thứ tự giữ nguyên, nhưng GIỮA CÁC MÁY thì không. Ca nặng nhất là đường bù lại
+    /// sau khôi phục (Task 9): máy chủ lùi về bản sao lưu, một giáo họ và một giáo dân trỏ tới nó
+    /// cùng bị mất, hai máy con bù lại hai dòng đó theo thứ tự bất kỳ — dòng giáo dân tới trước
+    /// thì <c>23503</c>, tức là "chưa tới lúc" chứ không phải "sai vĩnh viễn".
+    ///
+    /// Vẫn giữ ở nhóm tất định vì chiều ngược lại tệ hơn hẳn: nếu bản ghi cha KHÔNG BAO GIỜ tới
+    /// (máy giữ nó đã hỏng, người dùng đã xoá), coi là tạm thời sẽ làm cả lô quay lui MÃI MÃI —
+    /// đúng cái nêm mà toàn bộ cơ chế này sinh ra để gỡ. Đổi lại, việc từ chối PHẢI hiện ra cho
+    /// người nhìn thấy: mỗi thao tác bị từ chối sinh một mục trong hộp cần xem lại kèm giá trị
+    /// người dùng đã nhập, để nhập lại được bằng tay (xem <c>DongBoService.TuChoiThaoTac</c>).
+    ///
     /// CỐ Ý KHÔNG có ở đây: <c>40001</c> (serialization_failure), <c>40P01</c> (deadlock),
     /// <c>08xxx</c> (mất kết nối), <c>53xxx</c> (hết tài nguyên), <c>57xxx</c> (bị huỷ). Những
     /// cái đó thử lại THẬT SỰ có giúp, nên phải để cả lô quay lui.

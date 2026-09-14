@@ -385,8 +385,8 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
 
             if (tt.Loai != "sua")
             {
-                ketQua[tt.MaThaoTac] = new KetQuaThaoTacDto(
-                    tt.MaThaoTac, "tu_choi", $"Loai thao tac '{tt.Loai}' khong duoc ho tro.");
+                await TuChoiThaoTac(bc, tt, null,
+                    $"Loai thao tac '{tt.Loai}' khong duoc ho tro.", ct);
                 continue;
             }
 
@@ -486,10 +486,90 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
 
             foreach (var tt in thaoTac)
             {
-                bc.KetQua[tt.MaThaoTac] = new KetQuaThaoTacDto(
-                    tt.MaThaoTac, "tu_choi",
-                    $"CSDL tu choi gia tri nay: {ex.GetBaseException().Message}");
+                await TuChoiThaoTac(bc, tt, ex,
+                    $"CSDL tu choi gia tri nay: {ex.GetBaseException().Message}", ct);
             }
+        }
+    }
+
+    /// <summary>
+    /// TỪ CHỐI một thao tác: ghi kết quả kỹ thuật cho máy con, VÀ đặt một mục vào hộp cần xem
+    /// lại bằng lời thường.
+    ///
+    /// VÌ SAO phải có mục trong hộp, không chỉ trả lời máy con. Máy chủ đã ghi sổ chống trùng nên
+    /// máy con KHÔNG gửi lại nữa — việc người dùng vừa làm đã mất. Nếu chỗ duy nhất nói ra điều
+    /// đó là câu trả lời gửi về đúng cái máy đã gửi lên, thì nó chỉ tới được người dùng khi máy
+    /// đó còn được mở lại: máy mượn, máy của người giúp việc thời vụ, laptop hỏng — mất luôn.
+    /// Quý cha ở văn phòng thì vẫn mở hộp kiểm. Hai đường độc lập, hỏng một vẫn còn một.
+    ///
+    /// HAI CHUỖI KHÁC NHAU, đừng dùng chung: <paramref name="thongDiepKyThuat"/> (nguyên văn lỗi
+    /// Postgres/EF) đi vào phản hồi và <c>thao_tac_da_nhan</c> cho người hỗ trợ; câu lời thường
+    /// từ <see cref="LoiThuongDan"/> đi vào mục hiện cho quý sơ.
+    ///
+    /// LUỸ ĐẲNG: một ô đã có mục CHƯA XỬ LÝ thì cập nhật tại chỗ chứ không đẻ thêm. Sổ chống
+    /// trùng đã chặn ca máy con gửi lại NGUYÊN mã thao tác cũ, nhưng một máy con sinh mã mới mỗi
+    /// lần thử lại vẫn lọt qua đó — và khi đó hộp kiểm ngập, quý sơ quen tay bấm bỏ qua, rồi bỏ
+    /// qua luôn mục thật.
+    /// </summary>
+    private async Task TuChoiThaoTac(
+        BoiCanhLo bc, ThaoTacDto tt, Exception? loi, string thongDiepKyThuat, CancellationToken ct)
+    {
+        bc.KetQua[tt.MaThaoTac] = new KetQuaThaoTacDto(tt.MaThaoTac, "tu_choi", thongDiepKyThuat);
+
+        var lyDo = loi is null
+            ? "Mục này chưa được lưu: máy chủ chưa lưu được, xin nhập lại hoặc báo người phụ trách."
+            : LoiThuongDan.Dich(loi);
+
+        // Hỏi ChangeTracker TRƯỚC rồi mới xuống CSDL. Truy vấn LINQ đi thẳng xuống CSDL nên nó
+        // KHÔNG thấy mục vừa xếp vào mà chưa lưu — hai thao tác cùng một ô trong CÙNG MỘT lô sẽ
+        // đẻ ra hai mục. Local thì phản ánh đúng những gì đang chờ lưu, và tự rỗng theo mỗi lần
+        // ChangeTracker.Clear() ở đường chạy lại, nên không phải tự nhớ tự xoá.
+        var daCo = db.CanXemLai.Local.FirstOrDefault(
+                       x => x.GiaoXuId == bc.GiaoXuId && x.Loai == "khong_luu_duoc"
+                            && x.Bang == tt.Bang && x.BanGhiId == tt.BanGhiId
+                            && x.Truong == tt.Truong && x.DaXuLyLuc == null)
+                   ?? await db.CanXemLai.FirstOrDefaultAsync(
+                       x => x.GiaoXuId == bc.GiaoXuId && x.Loai == "khong_luu_duoc"
+                            && x.Bang == tt.Bang && x.BanGhiId == tt.BanGhiId
+                            && x.Truong == tt.Truong && x.DaXuLyLuc == null, ct);
+
+        if (daCo is null)
+        {
+            daCo = new CanXemLai
+            {
+                GiaoXuId = bc.GiaoXuId,
+                Loai = "khong_luu_duoc",
+                Bang = tt.Bang,
+                BanGhiId = tt.BanGhiId,
+                Truong = tt.Truong,
+                TaoLuc = bc.GioMayChu,
+            };
+            db.CanXemLai.Add(daCo);
+        }
+
+        daCo.LyDo = lyDo;
+        // Giá trị người dùng đã nhập — thứ DUY NHẤT cho phép nhập lại bằng tay, nên nó mới là
+        // phần không được để mất. GiaTriDangDung để rỗng vì đúng là không có gì được dùng cả.
+        daCo.GiaTriB = GiaTriHopLeChoJsonb(tt.GiaTri);
+        daCo.GiaTriDangDung = null;
+        daCo.ThietBiB = bc.Yc.ThietBiId;
+        daCo.LucB = bc.GioMayChu;
+    }
+
+    /// <summary>Cột <c>gia_tri_b</c> là <c>jsonb</c>, mà một trong những lý do bị từ chối lại
+    /// CHÍNH LÀ "JSON hỏng". Bọc lại thành một chuỗi JSON hợp lệ để việc ghi biên nhận không tự
+    /// nó đổ vỡ — mất luôn cả biên nhận thì còn tệ hơn mất định dạng gốc.</summary>
+    private static string? GiaTriHopLeChoJsonb(string? tho)
+    {
+        if (tho is null) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(tho);
+            return JsonSerializer.Serialize(doc.RootElement);
+        }
+        catch (JsonException)
+        {
+            return JsonSerializer.Serialize(tho);
         }
     }
 
@@ -597,7 +677,7 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
             // TẤT ĐỊNH theo từng thao tác: gửi lại y hệt sẽ hỏng y hệt, nên quay lui cả lô không
             // mua được gì — chỉ làm giáo xứ kẹt vĩnh viễn. Từ chối đúng nó; Bước 3 ghi kết quả
             // vào thao_tac_da_nhan để máy con thôi gửi lại. Xem ILoiTatDinh.cs.
-            ketQua[tt.MaThaoTac] = new KetQuaThaoTacDto(tt.MaThaoTac, "tu_choi", ex.Message);
+            await TuChoiThaoTac(bc, tt, ex, ex.Message, ct);
             return;
         }
 
@@ -661,15 +741,14 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
             {
                 // Bản ghi không còn thì MỌI ô của nhóm đều vô phương — từ chối cả nhóm rồi đi
                 // tiếp, chứ không phải lần lượt hỏng từng ô.
-                foreach (var (y, _) in cungNhom)
-                    ketQua[y.MaThaoTac] = new KetQuaThaoTacDto(y.MaThaoTac, "tu_choi", ex.Message);
+                foreach (var (y, _) in cungNhom) await TuChoiThaoTac(bc, y, ex, ex.Message, ct);
                 return;
             }
             catch (Exception ex) when (ex is ILoiTatDinh)
             {
                 // Cột cấm, bảng cấm, sai giáo xứ, giá trị hỏng — tất cả đều tất định và thuộc về
                 // đúng ô này. Xem ILoiTatDinh.cs vì sao KHÔNG được làm gãy cả lô.
-                ketQua[tt.MaThaoTac] = new KetQuaThaoTacDto(tt.MaThaoTac, "tu_choi", ex.Message);
+                await TuChoiThaoTac(bc, tt, ex, ex.Message, ct);
             }
         }
 
@@ -710,7 +789,7 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
                 // Dữ liệu của ĐÚNG ô này hỏng (ngày sinh "32/13/2005" trên một máy con cũ), hoặc
                 // ô này vi phạm rào chắn (khoá ngoại trỏ sang giáo xứ khác). Cả hai đều tất định:
                 // từ chối đúng nó, các ô còn lại của nhóm vẫn áp.
-                ketQua[tt.MaThaoTac] = new KetQuaThaoTacDto(tt.MaThaoTac, "tu_choi", ex.Message);
+                await TuChoiThaoTac(bc, tt, ex, ex.Message, ct);
                 continue;
             }
 

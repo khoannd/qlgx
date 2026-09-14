@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Qlgx.Domain.Entities;
 
@@ -12,6 +12,7 @@ public class CanXemLaiConfig : IEntityTypeConfiguration<CanXemLai>
         b.Property(x => x.Loai).HasMaxLength(32).IsRequired();
         b.Property(x => x.Bang).HasMaxLength(64).IsRequired();
         b.Property(x => x.Truong).HasMaxLength(64).IsRequired();
+        b.Property(x => x.LyDo).HasMaxLength(500);
 
         // Ba cột giá trị là JSON ĐÚNG NGHĨA — cùng dạng chuỗi mà `hieu_luc.gia_tri` và
         // `ApThaoTac.DocO` sinh ra. Khai jsonb để tầng CSDL từ chối chuỗi hỏng ngay lúc ghi thay

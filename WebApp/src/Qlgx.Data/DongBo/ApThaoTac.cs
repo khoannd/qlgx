@@ -177,9 +177,10 @@ public static class ApThaoTac
             .ToListAsync(ct);
 
         if (cua.Count == 0)
-            throw new LoiApThaoTac(
+            throw new LoiThamChieuChuaCo(
                 bang, truong,
-                $"khoa ngoai tro toi ban ghi {id} cua bang '{kieuCha.ClrType.Name}' khong ton tai");
+                $"Khoa ngoai '{bang}.{truong}' tro toi ban ghi {id} cua bang " +
+                $"'{kieuCha.ClrType.Name}' chua co trong so.");
 
         if (cua[0] != giaoXuId)
             throw new LoiRaoChan(

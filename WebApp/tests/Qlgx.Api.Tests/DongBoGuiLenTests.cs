@@ -540,6 +540,110 @@ public class DongBoGuiLenTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactory>
         (await DocGiaoDan(id)).GhiChu.Should().Be("khong duoc bi keo theo");
     }
 
+    /// <summary>
+    /// Mọi chữ mà một câu hiện cho quý cha, quý sơ KHÔNG được chứa. Máy chủ đã ghi sổ chống trùng
+    /// nên máy con thôi gửi lại — việc người dùng vừa làm ĐÃ MẤT; câu duy nhất nói ra điều đó mà
+    /// lại bằng tiếng máy thì người đọc sẽ quen tay bấm bỏ qua, rồi bỏ qua luôn mục thật.
+    /// </summary>
+    private static readonly string[] ChuKyThuatCam =
+    [
+        "tu_choi", "từ chối", "thao tác", "đồng bộ", "CSDL", "23502", "23503", "23505",
+        "null", "violation", "constraint", "Exception", "column", "GiaoDan", "HoTen",
+    ];
+
+    private async Task<CanXemLai> DocMucKhongLuuDuoc(Guid banGhiId, string truong)
+    {
+        await using var db = f.TaoContextThuan();
+        return await db.CanXemLai.AsNoTracking()
+            .SingleAsync(x => x.BanGhiId == banGhiId && x.Truong == truong
+                              && x.Loai == "khong_luu_duoc");
+    }
+
+    [Fact]
+    public async Task Thao_tac_bi_tu_choi_sinh_muc_can_xem_lai_bang_LOI_THUONG()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9129, "Goc Hai Chin");
+
+        await Gui(client, Guid.NewGuid(), 0, Sua(id, "HoTen", "null", MocGoc));
+
+        var muc = await DocMucKhongLuuDuoc(id, "HoTen");
+        muc.LyDo.Should().NotBeNullOrWhiteSpace();
+        muc.LyDo.Should().Contain("chưa được lưu",
+            "cau quan trong nhat la cau DAU: nguoi doc phai hieu ngay 'viec toi vua lam CHUA vao so'");
+        foreach (var chu in ChuKyThuatCam)
+        {
+            muc.LyDo.Should().NotContain(chu, $"'{chu}' la tieng may, khong phai tieng nguoi");
+        }
+
+        muc.GiaTriB.Should().NotBeNull(
+            "gia tri nguoi dung da nhap la thu DUY NHAT cho phep nhap lai bang tay");
+        muc.GiaTriDangDung.Should().BeNull("khong co gi duoc dung ca");
+    }
+
+    [Fact]
+    public async Task Khoa_ngoai_chua_toi_van_sinh_muc_va_cac_thao_tac_lanh_van_duoc_ap()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9130, "Goc Ba Muoi");
+
+        // Giáo họ chưa có trong sổ — rất thường là nó CHƯA TỚI chứ không phải đã mất (máy khác
+        // còn đang giữ dòng tạo giáo họ, hoặc đang bù lại sau khôi phục).
+        var chuaToi = Sua(id, "GiaoHoId", JsonSerializer.Serialize(Guid.NewGuid()), MocGoc);
+
+        var kq = await Gui(client, Guid.NewGuid(), 0,
+            chuaToi,
+            Sua(id, "GhiChu", "\"van phai toi noi\"", MocGoc));
+
+        kq.KetQua.Select(x => x.KetQua).ToList().Should().Equal(
+            new List<string> { "tu_choi", "ap" });
+        (await DocGiaoDan(id)).GhiChu.Should().Be("van phai toi noi");
+
+        var muc = await DocMucKhongLuuDuoc(id, "GiaoHoId");
+        muc.LyDo.Should().Contain("chưa có trong sổ");
+        muc.LyDo.Should().NotContain("xoá",
+            "noi 'da bi xoa' se khien nguoi dung di tao lai mot ho so von dang tren duong ve");
+    }
+
+    [Fact]
+    public async Task Gui_lai_lo_bi_tu_choi_KHONG_sinh_them_muc_can_xem_lai()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9131, "Goc Ba Mot");
+        var hong = Sua(id, "HoTen", "null", MocGoc);
+
+        await Gui(client, Guid.NewGuid(), 0, hong);
+        await Gui(client, Guid.NewGuid(), 0, hong);
+        // Và cả ca máy con sinh MÃ MỚI mỗi lần thử lại — sổ chống trùng không chặn được ca này.
+        await Gui(client, Guid.NewGuid(), 0, Sua(id, "HoTen", "null", MocGoc));
+
+        await using var db = f.TaoContextThuan();
+        (await db.CanXemLai.CountAsync(x => x.BanGhiId == id && x.Loai == "khong_luu_duoc"))
+            .Should().Be(1,
+                "moi lan may con thu lai lai de them mot muc thi hop kiem ngap, quy so quen tay " +
+                "bam bo qua, roi bo qua luon muc that");
+    }
+
+    [Fact]
+    public async Task Hai_lan_tu_choi_cung_mot_o_TRONG_CUNG_MOT_LO_cung_chi_MOT_muc()
+    {
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9132, "Goc Ba Hai");
+
+        // Máy con ghép nhầm hai lần gửi vào một gói: hai mã thao tác KHÁC NHAU cùng đụng một ô.
+        // Truy vấn LINQ đi thẳng xuống CSDL nên nó không thấy mục vừa xếp mà chưa lưu — nếu chỉ
+        // dựa vào nó thì đúng một lô cũng đủ đẻ ra hai mục.
+        var kq = await Gui(client, Guid.NewGuid(), 0,
+            Sua(id, "HoTen", "null", MocGoc),
+            Sua(id, "HoTen", "null", MocGoc.AddMinutes(1)));
+
+        kq.KetQua.Should().OnlyContain(x => x.KetQua == "tu_choi");
+
+        await using var db = f.TaoContextThuan();
+        (await db.CanXemLai.CountAsync(x => x.BanGhiId == id && x.Loai == "khong_luu_duoc"))
+            .Should().Be(1);
+    }
+
     // ------------------------------------------------------------------
     //  Chống trùng theo DANH TÍNH GỐC — cơ chế DUY NHẤT chống nhân bản
     //  sau khi máy chủ được khôi phục (Task 9 dựa vào nó)
