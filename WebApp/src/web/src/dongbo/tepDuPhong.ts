@@ -193,7 +193,16 @@ function vatLyCuNhatMs(hangCho: DongHangCho[]): number | null {
  * mục đích của nó là hạn chế TẦN SUẤT tải file, không phải xác định "đã tồn đọng hay chưa" (việc đó
  * đã do `quaSoLuong`/`quaThoiGian` đảm nhiệm) — một chuỗi ISO không hợp lệ (`Date.parse` ra `NaN`)
  * bị coi như "chưa từng dự phòng" (an toàn hơn — thà tải thêm một file thừa còn hơn im lặng bỏ qua
- * một lần cần dự phòng thật vì dữ liệu mốc hỏng). */
+ * một lần cần dự phòng thật vì dữ liệu mốc hỏng).
+ *
+ * **`msTuLanTruoc >= 0` là điều kiện BẮT BUỘC, không phải phòng thủ thừa** (phát hiện qua review):
+ * nếu đồng hồ hệ thống bị LÙI sau lần tự dự phòng gần nhất (đặt sai ngày, RTC hỏng, cài lại
+ * Windows...), `Date.now() - Date.parse(lanDuPhongGanNhatIso)` ra một số ÂM — và số âm LUÔN nhỏ hơn
+ * `HAI_NGAY_MS`, khiến nhánh hãm coi như "còn trong 2 ngày kể từ lần dự phòng trước" MÃI MÃI, chặn
+ * vĩnh viễn CẢ điều kiện `quaSoLuong` (vốn không hề phụ thuộc đồng hồ) — đúng lớp an toàn sinh ra
+ * cho tình huống "máy có chuyện gì" lại bị chính một chuyện-gì-đó-với-đồng-hồ vô hiệu hoá âm thầm.
+ * Coi một delta ÂM là "hãm đã hết hạn từ lâu" (không phải "còn hãm") — nhất quán với cách hàm đã xử
+ * lý chuỗi ISO không hợp lệ: thà tải thêm một file thừa còn hơn im lặng bỏ sót. */
 export function canTuDongDuPhong(hangCho: DongHangCho[], lanDuPhongGanNhatIso: string | null): boolean {
   if (hangCho.length === 0) return false
 
@@ -205,7 +214,7 @@ export function canTuDongDuPhong(hangCho: DongHangCho[], lanDuPhongGanNhatIso: s
 
   if (lanDuPhongGanNhatIso !== null) {
     const msTuLanTruoc = Date.now() - Date.parse(lanDuPhongGanNhatIso)
-    if (!Number.isNaN(msTuLanTruoc) && msTuLanTruoc < HAI_NGAY_MS) return false
+    if (!Number.isNaN(msTuLanTruoc) && msTuLanTruoc >= 0 && msTuLanTruoc < HAI_NGAY_MS) return false
   }
 
   return true

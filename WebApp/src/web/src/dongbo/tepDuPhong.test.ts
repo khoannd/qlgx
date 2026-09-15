@@ -281,4 +281,16 @@ describe('canTuDongDuPhong (Task 9 — quyet dinh > 2 ngay HOAC > 20 viec, huong
     const hangCho = [dongMau('tt-1', { vatLy: baNgayTruoc })]
     expect(canTuDongDuPhong(hangCho, 'khong-phai-ngay-thang')).toBe(true)
   })
+
+  it('I1 (review): dong ho he thong bi LUI sau lan du phong truoc KHONG duoc phep khoa "ham" vinh vien', () => {
+    // Kich ban that: dat sai ngay, RTC hong, cai lai Windows... khien Date.now() hien tai NHO HON
+    // lanDuPhongGanNhatIso da luu. `Date.now() - Date.parse(lanDuPhongGanNhatIso)` ra AM — mot so
+    // am LUON nho hon HAI_NGAY_MS, neu khong loai truong hop nay rieng thi nhanh "ham" se coi day
+    // la "con trong 2 ngay ke tu lan du phong truoc" MAI MAI, chan vinh vien CA dieu kien
+    // quaSoLuong (von khong he phu thuoc dong ho). Dung 21 dong KHONG co vatLy (chi con dieu kien
+    // qua-20-viec co the kich hoat, loai het anh huong cua quaThoiGian) de co lap dung nguyen nhan.
+    const lanDuPhongGanNhat = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString() // "trong tuong lai" so voi bay gio -> mo phong dong ho da bi LUI ve sau do
+    const hangCho21 = Array.from({ length: 21 }, (_, i) => dongMau(`tt-${i}`)) // khong co vatLy
+    expect(canTuDongDuPhong(hangCho21, lanDuPhongGanNhat)).toBe(true)
+  })
 })
