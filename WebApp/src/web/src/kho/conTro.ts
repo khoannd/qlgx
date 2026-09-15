@@ -44,22 +44,36 @@ export function docConTro(kho: IDBDatabase): Promise<ConTro> {
   })
 }
 
+/** Lõi dùng chung, TRÊN MỘT `IDBObjectStore` (`KHO_CON_TRO`) đã mở sẵn ở chế độ `readwrite` — không
+ * tự mở/đóng giao dịch, để nơi gọi (Task 6: áp thao tác nhận về + tiến con trỏ + xoá khỏi hàng chờ
+ * trong MỘT giao dịch — spec mục 5, ràng buộc 3) ghép được lệnh đọc-sửa-ghi này vào giao dịch của
+ * chính nó, cùng khuôn mẫu với `xoaKhoiHangChoTrongGiaoDich`. Không tự `reject` khi đọc lỗi
+ * (`baoLoi` để trống nếu nơi gọi đã có `onerror`/`onabort` riêng của giao dịch bao ngoài). */
+export function ghiConTroTrongGiaoDich(
+  storeConTro: IDBObjectStore,
+  sua: Partial<ConTro>,
+  baoLoi: (loi: unknown) => void,
+): void {
+  const ycDoc = storeConTro.get(KHOA_CON_TRO)
+  ycDoc.onsuccess = () => {
+    const hienTai = (ycDoc.result as ConTro | undefined) ?? { ...CON_TRO_MAC_DINH }
+    storeConTro.put({ ...hienTai, ...sua }, KHOA_CON_TRO)
+  }
+  ycDoc.onerror = () => baoLoi(ycDoc.error)
+}
+
 /**
  * Ghi đè MỘT PHẦN dòng `conTro`: chỉ các trường có mặt trong `sua` bị thay, các trường khác (kể cả
  * trường do task khác thêm mà `sua` không biết tới) giữ nguyên. Đọc-sửa-ghi trong CÙNG một giao
  * dịch readwrite để không mất cập nhật nếu có ai gọi `ghiConTro` gần như đồng thời.
+ *
+ * Bản ĐỘC LẬP (tự mở giao dịch riêng) — dùng khi KHÔNG cần ghép chung giao dịch với thao tác nào
+ * khác. Khi cần ghép chung (Task 6), dùng `ghiConTroTrongGiaoDich` trên store đã mở sẵn.
  */
 export function ghiConTro(kho: IDBDatabase, sua: Partial<ConTro>): Promise<void> {
   return new Promise((resolve, reject) => {
     const gd = kho.transaction(KHO_CON_TRO, 'readwrite')
-    const store = gd.objectStore(KHO_CON_TRO)
-    const ycDoc = store.get(KHOA_CON_TRO)
-    ycDoc.onsuccess = () => {
-      const hienTai = (ycDoc.result as ConTro | undefined) ?? { ...CON_TRO_MAC_DINH }
-      store.put({ ...hienTai, ...sua }, KHOA_CON_TRO)
-    }
-    // Không tự `reject` ở đây — để `gd.onerror`/`gd.onabort` xử lý thống nhất (xem `khoDuLieu.ts`).
-    ycDoc.onerror = () => {}
+    ghiConTroTrongGiaoDich(gd.objectStore(KHO_CON_TRO), sua, () => {})
 
     gd.oncomplete = () => resolve()
     gd.onerror = () => reject(gd.error ?? new Error('Không ghi được con trỏ'))

@@ -86,18 +86,19 @@ describe('ghiVaXepHang (Task 2 — ràng buộc sống còn: ghi bản ghi và x
     const tenKho = tenKhoRieng()
     const db = await moKho(tenKho)
 
-    // Ép giao dịch ABORT ngay sau khi lệnh put() thứ hai (dòng hàng chờ) được gửi đi, trước khi
-    // giao dịch kịp commit — mô phỏng mất điện/đứt nguồn giữa hai thao tác ghi. Đây là fact bắt
-    // buộc theo brief: nếu ai đó tách `ghiVaXepHang` thành HAI giao dịch riêng, spy này sẽ KHÔNG
-    // bắt được kịch bản hỏng giữa chừng đúng như mô tả nữa, vì thao tác ghi bản ghi đầu tiên đã
-    // commit xong từ trước khi thao tác thứ hai (đã ở giao dịch khác) kịp bị ép abort — dữ liệu
-    // hiển thị sẽ CÒN LẠI một mình trên màn hình, đúng trạng thái tệ nhất mà ràng buộc 2 cấm.
-    const putGoc = IDBObjectStore.prototype.put
-    const spy = vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (
+    // Ép giao dịch ABORT ngay sau khi lệnh ghi thứ hai (dòng hàng chờ — dùng `add()`, xem
+    // `khoDuLieu.ts`) được gửi đi, trước khi giao dịch kịp commit — mô phỏng mất điện/đứt nguồn
+    // giữa hai thao tác ghi. Đây là fact bắt buộc theo brief: nếu ai đó tách `ghiVaXepHang` thành
+    // HAI giao dịch riêng, spy này sẽ KHÔNG bắt được kịch bản hỏng giữa chừng đúng như mô tả nữa,
+    // vì thao tác ghi bản ghi đầu tiên đã commit xong từ trước khi thao tác thứ hai (đã ở giao
+    // dịch khác) kịp bị ép abort — dữ liệu hiển thị sẽ CÒN LẠI một mình trên màn hình, đúng trạng
+    // thái tệ nhất mà ràng buộc 2 cấm.
+    const addGoc = IDBObjectStore.prototype.add
+    const spy = vi.spyOn(IDBObjectStore.prototype, 'add').mockImplementation(function (
       this: IDBObjectStore,
-      ...doiSo: Parameters<IDBObjectStore['put']>
+      ...doiSo: Parameters<IDBObjectStore['add']>
     ) {
-      const yc = putGoc.apply(this, doiSo)
+      const yc = addGoc.apply(this, doiSo)
       if (this.name === KHO_HANG_CHO) {
         this.transaction.abort()
       }
@@ -112,6 +113,44 @@ describe('ghiVaXepHang (Task 2 — ràng buộc sống còn: ghi bản ghi và x
 
     // Ràng buộc sống còn: CẢ HAI bên đều không có gì, không phải chỉ một bên.
     const banGhiConLai = await docTuKho(db, KHO_BAN_GHI, 'giaoDan:1')
+    expect(banGhiConLai).toBeUndefined()
+    expect(await demHangCho(db)).toBe(0)
+
+    db.close()
+  })
+
+  it('abort KHONG qua loi (vi du het dia luc commit) van khong ghi gi ca — khong phai ma chet', async () => {
+    // Khac voi ca tren (abort do MOT REQUEST loi), ca nay mo phong abort xay ra SAU KHI moi put()
+    // da thanh cong (khong request nao loi) — dung kich ban trinh duyet that: het dung luong dia
+    // luc COMMIT giao dich, sau khi tat ca cac put() rieng le da onsuccess. Trong tinh huong nay
+    // IndexedDB chi phat 'abort' tren giao dich, KHONG BAO GIO phat 'error' tren request nao —
+    // neu `gd.onabort` bi go bo (hoac vo tinh resolve thay vi reject), ham se AM THAM "thanh cong"
+    // ma khong ghi gi vao ca hai kho — mat du lieu ma khong ai biet.
+    const tenKho = tenKhoRieng()
+    const db = await moKho(tenKho)
+
+    const addGoc = IDBObjectStore.prototype.add
+    const spy = vi.spyOn(IDBObjectStore.prototype, 'add').mockImplementation(function (
+      this: IDBObjectStore,
+      ...doiSo: Parameters<IDBObjectStore['add']>
+    ) {
+      const yc = addGoc.apply(this, doiSo)
+      if (this.name === KHO_HANG_CHO) {
+        // Abort ngay trong onsuccess cua chinh add() nay — luc nay KHONG con request nao dang
+        // cho/loi, dung mo phong "abort luc commit" (khac han spy o test truoc goi abort() truoc
+        // khi add() hang cho kip onsuccess).
+        yc.onsuccess = () => this.transaction.abort()
+      }
+      return yc
+    })
+
+    await expect(
+      ghiVaXepHang(db, { khoa: 'giaoDan:2', giaTri: { hoTen: 'Khong ai ca' } }, { maThaoTac: 'tt-abort-commit' }),
+    ).rejects.toThrow()
+
+    spy.mockRestore()
+
+    const banGhiConLai = await docTuKho(db, KHO_BAN_GHI, 'giaoDan:2')
     expect(banGhiConLai).toBeUndefined()
     expect(await demHangCho(db)).toBe(0)
 

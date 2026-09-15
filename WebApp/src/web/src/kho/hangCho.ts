@@ -75,30 +75,43 @@ export function docHangCho(kho: IDBDatabase, gioiHan?: number): Promise<DongHang
   })
 }
 
+/** Lõi dùng chung, TRÊN MỘT `IDBObjectStore` đã mở sẵn — không tự mở/đóng giao dịch, để nơi gọi
+ * (Task 6: áp thao tác nhận về + tiến con trỏ + xoá khỏi hàng chờ) ghép được vào MỘT giao dịch
+ * `readwrite` DUY NHẤT bao cả ba việc đó (spec mục 5, ràng buộc 3), cùng khuôn mẫu với
+ * `voiKhoaKeTiep` ở trên. Không tự `reject` khi con trỏ lỗi (`baoLoi` để trống nếu gọi trong một
+ * giao dịch đã có `onerror`/`onabort` của riêng nơi gọi) — lỗi ở bất kỳ yêu cầu nào trong giao dịch
+ * cũng khiến cả giao dịch abort, nơi gọi xử lý thống nhất ở đó. */
+export function xoaKhoiHangChoTrongGiaoDich(
+  khoHangCho: IDBObjectStore,
+  maThaoTac: string[],
+  baoLoi: (loi: unknown) => void,
+): void {
+  if (maThaoTac.length === 0) return
+  const canXoa = new Set(maThaoTac)
+  const yc = khoHangCho.openCursor()
+  yc.onsuccess = () => {
+    const con = yc.result
+    if (con) {
+      const dong = con.value as DongHangCho
+      if (canXoa.has(dong.maThaoTac)) con.delete()
+      con.continue()
+    }
+  }
+  yc.onerror = () => baoLoi(yc.error)
+}
+
 /** Xoá khỏi hàng chờ các việc đã gửi thành công, theo `maThaoTac` (không phải khoá lưu trong kho —
  * xem chú thích đầu file), nên phải quét toàn bộ để tìm đúng dòng. Hàng chờ vốn chỉ giữ việc CHƯA
- * gửi nên số dòng nhỏ, quét toàn bộ ở đây không đáng ngại. */
+ * gửi nên số dòng nhỏ, quét toàn bộ ở đây không đáng ngại.
+ *
+ * Bản ĐỘC LẬP (tự mở giao dịch riêng) — dùng khi KHÔNG cần ghép chung giao dịch với thao tác nào
+ * khác. Khi cần ghép chung (Task 6), dùng `xoaKhoiHangChoTrongGiaoDich` trên store đã mở sẵn. */
 export function xoaKhoiHangCho(kho: IDBDatabase, maThaoTac: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (maThaoTac.length === 0) {
-      resolve()
-      return
-    }
-    const canXoa = new Set(maThaoTac)
     const gd = kho.transaction(KHO_HANG_CHO, 'readwrite')
-    const store = gd.objectStore(KHO_HANG_CHO)
-    const yc = store.openCursor()
-    yc.onsuccess = () => {
-      const con = yc.result
-      if (con) {
-        const dong = con.value as DongHangCho
-        if (canXoa.has(dong.maThaoTac)) con.delete()
-        con.continue()
-      }
-    }
-    yc.onerror = () => reject(yc.error)
+    xoaKhoiHangChoTrongGiaoDich(gd.objectStore(KHO_HANG_CHO), maThaoTac, () => {})
     gd.oncomplete = () => resolve()
-    gd.onerror = () => reject(gd.error)
+    gd.onerror = () => reject(gd.error ?? new Error('Không xoá được khỏi hàng chờ'))
     gd.onabort = () => reject(gd.error ?? new Error('Giao dịch xoá hàng chờ bị huỷ giữa chừng'))
   })
 }

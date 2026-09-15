@@ -45,9 +45,13 @@ export function ghiVaXepHang(kho: IDBDatabase, banGhi: BanGhiKho, thaoTac: Omit<
     // trong CÙNG giao dịch `gd` đã mở ở trên (xem chú thích trong `hangCho.ts`). Không tự `reject`
     // khi con trỏ lỗi (`baoLoi` để trống) — để `gd.onerror`/`gd.onabort` xử lý thống nhất, vì lỗi ở
     // bất kỳ yêu cầu nào trong giao dịch cũng khiến cả giao dịch abort (đúng thứ cần kiểm thử).
+    // `add()` thay vì `put()`: khoá `khoaKeTiep` do `voiKhoaKeTiep` tính (khoá lớn nhất + 1) LUÔN
+    // phải là khoá MỚI, chưa từng có trong kho. Nếu một lỗi tính toán nào đó (ví dụ trong lúc sửa
+    // `voiKhoaKeTiep` sau này) khiến hai lần ghi trùng khoá, `add()` sẽ khiến giao dịch abort ngay
+    // (bảo vệ dữ liệu — báo lỗi rõ ràng) thay vì `put()` âm thầm GHI ĐÈ mất một việc đang chờ gửi.
     voiKhoaKeTiep(
       khoHangCho,
-      (khoaKeTiep) => khoHangCho.put({ ...thaoTac, doan: thaoTac.doan ?? 0 }, khoaKeTiep),
+      (khoaKeTiep) => khoHangCho.add({ ...thaoTac, doan: thaoTac.doan ?? 0 }, khoaKeTiep),
       () => {},
     )
 
