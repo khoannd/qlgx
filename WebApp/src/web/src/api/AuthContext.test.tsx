@@ -133,6 +133,26 @@ describe('AuthContext', () => {
     expect(await screen.findByText('da-dang-nhap:vanphong')).toBeDefined()
   })
 
+  // I1 (re-review fix round 1): navigator.storage.persist() co the tu NEM LOI DONG BO ngay luc goi
+  // (khac voi Promise bi reject) — vi du extension/trinh duyet chan truy cap navigator.storage. Mot
+  // .catch() don thuan KHONG bat duoc loi nem dong bo nay; can try/catch bao ngoai.
+  it('persist() nem loi DONG BO ngay luc goi -> dangNhap van hoan tat (khong vo luong)', async () => {
+    vi.mocked(api.auth.dangNhap).mockResolvedValue({
+      token: 'token-moi', hetHanSau: 28800,
+      nguoiDung: { id: '1', tenTaiKhoan: 'vanphong', hoTen: 'Van Phong', loaiTaiKhoan: 0, giaoXuId: 'x', tenGiaoXu: 'Vo Nhiem' },
+    })
+    const persistNemDongBo = vi.fn(() => {
+      throw new Error('trinh duyet chan truy cap navigator.storage')
+    })
+    vi.stubGlobal('navigator', { ...navigator, storage: { persist: persistNemDongBo } })
+
+    render(<AuthProvider><ThamDo /></AuthProvider>)
+    await screen.findByText('chua-dang-nhap')
+    await userEvent.click(screen.getByText('dang-nhap'))
+
+    expect(await screen.findByText('da-dang-nhap:vanphong')).toBeDefined()
+  })
+
   it('dangXuat xoa token va tro ve chua dang nhap', async () => {
     vi.mocked(api.auth.dangNhap).mockResolvedValue({
       token: 'token-moi', hetHanSau: 28800,

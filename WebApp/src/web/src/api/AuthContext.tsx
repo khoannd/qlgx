@@ -98,13 +98,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     //
     // I1 (fix round 1): KHÔNG được `await` — ở một số trình duyệt (Firefox) `persist()` có thể bật
     // hộp thoại xin phép và treo tới khi người dùng trả lời; `await` bên trong `dangNhap` sẽ treo
-    // luôn màn hình đăng nhập theo. Bắn-rồi-quên: bọc trong `Promise.resolve()` để hứng cả lỗi ném
-    // ĐỒNG BỘ (ví dụ `navigator.storage` không tồn tại ở trình duyệt cũ) lẫn Promise bị reject, rồi
-    // `.catch()` im lặng — một lời từ chối/lỗi ở đây TUYỆT ĐỐI không được làm hỏng luồng đăng nhập
-    // chính, đây chỉ là một lớp tăng cường, không phải điều kiện để vào app.
-    void Promise.resolve(navigator.storage?.persist?.()).catch(() => {
-      // Im lặng bỏ qua — xem chú thích ở trên.
-    })
+    // luôn màn hình đăng nhập theo. Bắn-rồi-quên bằng `.catch()` chỉ hứng được Promise bị reject —
+    // KHÔNG hứng được lỗi `navigator.storage?.persist?.()` tự NÉM ĐỒNG BỘ lúc gọi (ví dụ trình
+    // duyệt/extension chặn truy cập `navigator.storage`); vì vậy vẫn cần try/catch bao ngoài. Một
+    // lời từ chối/lỗi ở đây TUYỆT ĐỐI không được làm hỏng luồng đăng nhập chính, đây chỉ là một lớp
+    // tăng cường, không phải điều kiện để vào app.
+    try {
+      void Promise.resolve(navigator.storage?.persist?.()).catch(() => {
+        // Im lặng bỏ qua — xem chú thích ở trên.
+      })
+    } catch {
+      // Im lặng bỏ qua — truy cập navigator.storage tự ném lỗi đồng bộ.
+    }
   }, [])
 
   const value = useMemo(
