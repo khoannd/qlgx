@@ -29,10 +29,12 @@ function taoNguonKhoaGiaLap(): NguonKhoa {
     return tt
   }
 
-  function taoLoiHuy(): Error {
-    const loi = new Error('The request was aborted.')
-    loi.name = 'AbortError'
-    return loi
+  // `navigator.locks` THẬT reject bằng `DOMException` (do trình duyệt tạo), KHÔNG phải `Error`
+  // thường gán `.name` tay — dùng đúng `DOMException` ở đây để bộ test chạm đúng LOẠI lỗi mà mã sản
+  // xuất (`bauChu.ts`) thực sự sẽ gặp, không phải một loại lỗi tương tự nhưng khác nhau.
+  function taoLoiHuy(lyDo: unknown): DOMException {
+    if (lyDo instanceof DOMException) return lyDo
+    return new DOMException('The request was aborted.', 'AbortError')
   }
 
   return {
@@ -76,11 +78,14 @@ function taoNguonKhoaGiaLap(): NguonKhoa {
           conXepHang = false
           const vt = tt.hangDoi.indexOf(chay)
           if (vt !== -1) tt.hangDoi.splice(vt, 1)
-          reject(taoLoiHuy())
+          reject(taoLoiHuy(signal.reason))
         }
 
+        // Spec Web Locks (buoc 9 cua request()): signal DA aborted TU LUC GOI — tra ve promise bi
+        // tu choi NGAY, callback (`xuLy`) khong bao gio duoc goi, kha nang khong xep hang mot chut
+        // nao (khac voi truong hop abort SAU khi da xep hang, xu ly boi huyKhiConXepHang o tren).
         if (signal.aborted) {
-          huyKhiConXepHang()
+          reject(taoLoiHuy(signal.reason))
           return
         }
         signal.addEventListener('abort', huyKhiConXepHang, { once: true })
@@ -201,6 +206,73 @@ describe('troThanhChuKhiCoTheChoDenKhiHuy', () => {
 
     congViecB.phanGiai()
     await vi.waitFor(() => expect(khiMatChuB).toHaveBeenCalledTimes(1))
+  })
+
+  it('QUAN TRONG: khong truyen signal cho nguon.request se khien tab bi huy luc xep hang VAN gianh duoc khoa sau nay (mutation phai bi bat)', async () => {
+    // Day la kich ban that: quy so mo tab B (xep hang sau tab A), roi dong tab B (goi abort()).
+    // Neu `troThanhChuKhiCoTheChoDenKhiHuy` QUEN truyen `{ signal: tinHieuHuy }` vao `nguon.request`,
+    // request cua B VAN NAM trong hang doi cua NguonKhoa (khong ai bao no huy ca) - khi A nha khoa,
+    // hang doi se cap khoa cho B, goi khiLaChuB tren mot tab DA DONG/dang thao do. Day chinh la dieu
+    // cac test khac (vi du "huy tab con dang xep hang") KHONG bat duoc: chung chi kiem tra NGAY SAU
+    // khi abort (B chua duoc goi), khong kiem tra lai SAU KHI A nha khoa.
+    const nguon = taoNguonKhoaGiaLap()
+    const dieuKhienA = new AbortController()
+    const dieuKhienB = new AbortController()
+
+    const congViecA = taoHoanTatThuCong()
+    const khiLaChuA = vi.fn(async () => {
+      await congViecA.hua
+    })
+    const khiLaChuB = vi.fn(async () => {})
+    const khiMatChuB = vi.fn()
+
+    troThanhChuKhiCoTheChoDenKhiHuy(khiLaChuA, vi.fn(), dieuKhienA.signal, TEN_KHOA_BAU_CHU, nguon)
+    await vi.waitFor(() => expect(khiLaChuA).toHaveBeenCalledTimes(1))
+
+    troThanhChuKhiCoTheChoDenKhiHuy(khiLaChuB, khiMatChuB, dieuKhienB.signal, TEN_KHOA_BAU_CHU, nguon)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    // Huy B trong luc CON XEP HANG.
+    dieuKhienB.abort()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    // A nha khoa BINH THUONG (khong lien quan gi den viec B vua huy).
+    congViecA.phanGiai()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    // Cho vai vong microtask de chac chan: neu `signal` KHONG duoc truyen di, request cua B (van
+    // con trong hang doi that su cua NguonKhoa) se duoc cap khoa o day va goi khiLaChuB.
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(khiLaChuB).not.toHaveBeenCalled()
+    expect(khiMatChuB).not.toHaveBeenCalled()
+  })
+
+  it('QUAN TRONG: tinHieuHuy DA bi huy TRUOC KHI goi ham (chua tung xep hang) thi khong bao gio la chu', async () => {
+    // Buoc 9 cua thuat toan request() (spec Web Locks): signal da aborted tu luc goi -> tra ve
+    // ngay, callback khong bao gio chay. Chua co test nao kiem tra tinh huong nay (khac voi "abort
+    // SAU KHI da xep hang" o cac test tren).
+    const nguon = taoNguonKhoaGiaLap()
+    const dieuKhien = new AbortController()
+    dieuKhien.abort()
+
+    const khiLaChu = vi.fn(async () => {})
+    const khiMatChu = vi.fn()
+
+    const tab = troThanhChuKhiCoTheChoDenKhiHuy(khiLaChu, khiMatChu, dieuKhien.signal, TEN_KHOA_BAU_CHU, nguon)
+
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(khiLaChu).not.toHaveBeenCalled()
+    expect(khiMatChu).not.toHaveBeenCalled()
+    expect(tab.laChu()).toBe(false)
   })
 
   it('huy tab con dang XEP HANG (chua bao gio la chu): khong bao gio goi khiLaChu, khong goi khiMatChu', async () => {

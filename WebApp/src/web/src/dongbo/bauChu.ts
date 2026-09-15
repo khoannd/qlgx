@@ -25,24 +25,36 @@ export type NguonKhoa = {
 }
 
 const NGUON_KHOA_MAC_DINH: NguonKhoa = {
-  request: (tenKhoa, tuyChon, xuLy) => navigator.locks.request(tenKhoa, tuyChon, xuLy),
+  request: (tenKhoa, tuyChon, xuLy) => {
+    // `navigator.locks` có thể KHÔNG tồn tại (secure context không đủ — http thường thay vì https
+    // ngoài localhost, hoặc trình duyệt cũ). Trả về một promise BỊ TỪ CHỐI thay vì để
+    // `navigator.locks.request` ném lỗi ĐỒNG BỘ ngay tại đây — hàm `troThanhChuKhiCoTheChoDenKhiHuy`
+    // hứa "trả về NGAY", ném đồng bộ ở tầng này sẽ phá luôn phần khởi tạo của nơi gọi (Task 6).
+    if (typeof navigator === 'undefined' || !navigator.locks) {
+      return Promise.reject(new Error('navigator.locks khong kha dung (can secure context: https hoac localhost)'))
+    }
+    return navigator.locks.request(tenKhoa, tuyChon, xuLy)
+  },
 }
 
 /** Tên khoá dùng CHUNG cho mọi tab của app — phải giống hệt nhau ở mọi nơi gọi
  * `troThanhChuKhiCoTheChoDenKhiHuy` để cùng tranh trên MỘT khoá (khác tên là mất tác dụng). */
 export const TEN_KHOA_BAU_CHU = 'qlgx-bau-chu-dong-bo'
 
-/** `err.name === 'AbortError'` là cách chuẩn (DOM) để nhận biết một promise bị từ chối vì
- * `AbortSignal` báo huỷ, KHÔNG phải vì một lỗi thật xảy ra bên trong `khiLaChu`. */
-function laLoiHuyBoThat(err: unknown): boolean {
-  return err instanceof Error && err.name === 'AbortError'
-}
-
 /**
- * Tranh khoá `tenKhoa` mãi mãi cho tới khi `tinHieuHuy` báo huỷ (đóng tab/dừng ứng dụng chủ động).
- * Gọi `khiLaChu()` NGAY khi giành được khoá (tab này giờ là bộ gửi/nhận DUY NHẤT); gọi `khiMatChu()`
- * khi mất khoá (bị huỷ, hoặc — không xảy ra với `navigator.locks` thật trừ khi tự huỷ — lỗi). Trả
- * về NGAY (không đợi giành được khoá) — trạng thái "đang chờ tới lượt/đã là chủ" đọc qua `laChu()`.
+ * Tranh khoá `tenKhoa` ĐÚNG MỘT LẦN. Gọi `khiLaChu()` NGAY khi giành được khoá (tab này giờ là bộ
+ * gửi/nhận DUY NHẤT); gọi `khiMatChu()` khi mất khoá — DÙ VÌ LÝ DO GÌ: bị huỷ qua `tinHieuHuy`,
+ * `khiLaChu` tự kết thúc bình thường (resolve), hay `khiLaChu` ném lỗi thật. Trả về NGAY (không đợi
+ * giành được khoá) — trạng thái "đang chờ tới lượt/đã là chủ" đọc qua `laChu()`.
+ *
+ * **KHÔNG tự tranh lại sau khi mất khoá** (dù `tinHieuHuy` chưa hề báo huỷ) — nếu tầng gọi (Task 6)
+ * muốn vòng đồng bộ tiếp tục vô thời hạn, CHÍNH nó phải hoặc (a) để `khiLaChu` tự là một vòng lặp
+ * không bao giờ resolve cho tới khi thấy `tinHieuHuy.aborted`, hoặc (b) tự gọi lại
+ * `troThanhChuKhiCoTheChoDenKhiHuy` từ trong `khiMatChu` nếu `!tinHieuHuy.aborted` (tự quyết định có
+ * cần chờ/backoff trước khi tranh lại hay không, và có cần log/báo người dùng hay không nếu lý do
+ * mất chủ là một lỗi thật). File này CỐ TÌNH không tự làm việc đó — quyết định "tranh lại ngay lập
+ * tức, có chờ, hay bỏ cuộc và báo lỗi" phụ thuộc ngữ cảnh cụ thể của vòng đồng bộ (Task 6), không
+ * phải việc của module bầu-chủ.
  *
  * `khiLaChu` có thể là một vòng lặp dài (đại diện cho toàn bộ vòng đồng bộ) — hàm `request()` của
  * Web Locks API CHỈ nhả khoá khi callback truyền vào RESOLVE/REJECT, nên khoá được giữ ĐÚNG SUỐT
@@ -50,10 +62,12 @@ function laLoiHuyBoThat(err: unknown): boolean {
  * bắt và coi là kết thúc bình thường, không phải lỗi).
  *
  * QUAN TRỌNG (khác với suy nghĩ trực giác): một khi ĐÃ giành được khoá, bản thân `AbortSignal` KHÔNG
- * tự động buộc `khiLaChu` dừng lại hay tự nhả khoá — theo đúng Web Locks API thật, `signal` chỉ huỷ
- * được request khi nó CÒN đang xếp hàng chờ (chưa được cấp khoá). Vì vậy `khiLaChu` (triển khai ở
- * Task 6) phải TỰ lắng nghe `tinHieuHuy` nó nhận được và tự kết thúc (resolve hoặc ném `AbortError`)
- * khi thấy huỷ — hàm này chỉ có nhiệm vụ BẮT `AbortError` đó để không lộ ra ngoài như một lỗi thật.
+ * tự động buộc `khiLaChu` dừng lại hay tự nhả khoá — theo đúng thuật toán Web Locks API thật (bước
+ * "process the lock request queue" gỡ handler abort khỏi signal NGAY khi khoá được cấp), `signal`
+ * chỉ huỷ được request khi nó CÒN đang xếp hàng chờ (chưa được cấp khoá). Vì vậy `khiLaChu` (triển
+ * khai ở Task 6) phải TỰ lắng nghe `tinHieuHuy` nó nhận được và tự kết thúc (resolve hoặc ném
+ * `AbortError`) khi thấy huỷ — hàm này chỉ có nhiệm vụ BẮT `AbortError` đó để không lộ ra ngoài như
+ * một lỗi thật.
  */
 export function troThanhChuKhiCoTheChoDenKhiHuy(
   khiLaChu: (tinHieuHuy: AbortSignal) => Promise<void>,
@@ -73,32 +87,31 @@ export function troThanhChuKhiCoTheChoDenKhiHuy(
       coLaChu = true
       try {
         await khiLaChu(tinHieuHuy)
-      } catch (err) {
-        // AbortError la ket thuc BINH THUONG (tab chu tu dong roi vi tinHieuHuy huy) - nuot o day,
-        // KHONG duoc coi la loi that. Loi nao khac phai duoc nem lai, khong duoc am tham bo qua -
-        // "mat chu vi loi" van la mat chu that (xem chu thich khiMatChu o tren), nhung ban than
-        // loi do van phai lo ra ngoai de khong bi giau di.
-        if (!laLoiHuyBoThat(err)) throw err
       } finally {
         // Goi khiMatChu() TRUOC khi coLaChu doi lai false hay sau deu duoc VE MAT THU TU QUAN SAT
         // DUOC (ham nay dong bo, khong co ai doc laChu() xen giua) - nhung dat false TRUOC khi goi
         // khiMatChu de neu chinh khiMatChu (ma nguoi goi cung cap) co lo doc lai laChu(), no thay
-        // dung trang thai "khong con la chu nua", khong phai trang thai cu da mat hieu luc.
+        // dung trang thai "khong con la chu nua", khong phai trang thai cu da mat hieu luc. Chay
+        // trong CA HAI nhanh (khiLaChu resolve binh thuong LAN reject) - "mat chu" la mat chu, bat
+        // ke ly do gi (xem chu thich ham o tren).
         coLaChu = false
         khiMatChu()
       }
     })
     .catch((err: unknown) => {
-      // Toi day la loi TU CHINH request() (khong phai tu khiLaChu, vi loi tu khiLaChu da duoc xu ly
-      // va nem lai/nuot o tren). Hai truong hop:
-      // 1. AbortError vi tinHieuHuy huy trong luc CON XEP HANG (chua bao gio duoc goi khiLaChu,
-      //    coLaChu chua tung la true) - day la huy binh thuong cua mot tab CHUA TUNG la chu, khong
-      //    co gi de "mat" nen KHONG goi khiMatChu (khac voi truong hop huy khi DANG la chu, da duoc
-      //    xu ly qua nhanh finally o tren).
-      // 2. Loi that (khong phai AbortError) duoc nem lai tu khoi catch ben trong - ham nay tra ve
-      //    NGAY tu dau (khong phai promise) nen khong con noi nao de bao loi nay len tren; danh phai
-      //    de no thanh unhandled rejection de khong bi am tham mat di hoan toan.
-      if (!laLoiHuyBoThat(err)) throw err
+      // Toi day co the la loi tu `khiLaChu` (nem lai tu khoi try/finally o tren - finally KHONG
+      // nuot loi, chi chay xong roi loi tiep tuc lan truyen), HOAC loi tu chinh request() (con dang
+      // XEP HANG thi bi huy, chua bao gio duoc goi khiLaChu, coLaChu chua tung la true - khong co gi
+      // de "mat" nen KHONG goi khiMatChu, khac voi truong hop huy khi DANG la chu, da xu ly qua
+      // nhanh finally o tren).
+      //
+      // Tieu chi PHAN BIET "huy binh thuong" voi "loi that" PHAI la `tinHieuHuy.aborted` — TUYET
+      // DOI khong phai `err.name === 'AbortError'`/`err instanceof Error`: mot loi AbortError THAT
+      // (vi du tu mot `fetch` khac bi mot AbortSignal KHAC huy, khong lien quan gi `tinHieuHuy` cua
+      // ham nay) se bi nuot nham neu chi xet ten loi - "mat chu vi loi that" se bien mat khong dau
+      // vet, dong bo ngung ma khong ai biet. Theo dung thuat toan Web Locks, duong DUY NHAT khien
+      // `request()` reject vi huy la chinh `tinHieuHuy` (tham so `signal`) da abort.
+      if (!tinHieuHuy.aborted) throw err
     })
 
   return {
