@@ -88,6 +88,16 @@ export function CanXemLaiPage() {
       <ul style={{ listStyle: 'none', padding: 0 }}>
         {danhSach.map((muc) => {
           const coCapAB = muc.giaTriA !== null && muc.giaTriB !== null
+          // I3 (fix round 1): nhãn nút phải hiện THẲNG giá trị thật (spec 9.2: "[ Giữ 12/03/1986 ]
+          // [ Đổi lại thành 12/03/1985 ]"), không phải thuật ngữ kỹ thuật "giá trị A/B". Xác định
+          // chiều bằng `giaTriDangDung` (giá trị máy chủ đang thật sự dùng) so với `giaTriA` — nếu
+          // trùng thì A là "giữ nguyên", ngược lại B là "giữ nguyên" (xem CanXemLaiService.cs —
+          // `giaTriDangDung` luôn khớp đúng một trong hai).
+          const dangDungLaA = coCapAB && muc.giaTriDangDung === muc.giaTriA
+          const gia_Giu: 'A' | 'B' = dangDungLaA ? 'A' : 'B'
+          const gia_Doi: 'A' | 'B' = dangDungLaA ? 'B' : 'A'
+          const giaTriGiu = dangDungLaA ? muc.giaTriA : muc.giaTriB
+          const giaTriDoi = dangDungLaA ? muc.giaTriB : muc.giaTriA
           return (
             <li key={muc.id} style={{ border: '1px solid #ddd', borderRadius: 6, padding: 12, marginBottom: 8 }}>
               <p style={{ fontWeight: 600 }}>{muc.bang} — {muc.truong}</p>
@@ -97,11 +107,11 @@ export function CanXemLaiPage() {
                   <p>Giá trị A: {muc.giaTriA}</p>
                   <p>Giá trị B: {muc.giaTriB}</p>
                   <p>Hiện đang dùng: {muc.giaTriDangDung}</p>
-                  <button type="button" disabled={dangXuLy[muc.id]} onClick={() => chon(muc, 'A')}>
-                    Giữ giá trị A
+                  <button type="button" disabled={dangXuLy[muc.id]} onClick={() => chon(muc, gia_Giu)}>
+                    Giữ {giaTriGiu}
                   </button>{' '}
-                  <button type="button" disabled={dangXuLy[muc.id]} onClick={() => chon(muc, 'B')}>
-                    Đổi lại thành giá trị B
+                  <button type="button" disabled={dangXuLy[muc.id]} onClick={() => chon(muc, gia_Doi)}>
+                    Đổi lại thành {giaTriDoi}
                   </button>
                 </>
               )}

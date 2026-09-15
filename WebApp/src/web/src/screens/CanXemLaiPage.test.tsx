@@ -34,7 +34,9 @@ describe('CanXemLaiPage (Task 10, spec 9.2)', () => {
     expect(screen.getByText('Hiện đang dùng: 12/03/1986')).toBeDefined()
   })
 
-  it('bam "Giu gia tri A" goi dung api.canXemLai.chon(id, "A") roi tai lai danh sach', async () => {
+  it('bam nut "Giu <gia tri dang dung>" goi dung api.canXemLai.chon(id, "B") roi tai lai danh sach', async () => {
+    // mucMau(): giaTriDangDung ('12/03/1986') === giaTriB -> nut "Giu" phai hien gia tri THAT
+    // (12/03/1986, dang la B) va goi chon(id, 'B'); nut "Doi lai" hien gia tri con lai (A).
     vi.mocked(api.canXemLai.danhSach)
       .mockResolvedValueOnce([mucMau()])
       .mockResolvedValueOnce([])
@@ -43,9 +45,12 @@ describe('CanXemLaiPage (Task 10, spec 9.2)', () => {
     render(<CanXemLaiPage />)
     await screen.findByText('Giá trị A: 12/03/1985')
 
-    await userEvent.click(screen.getByRole('button', { name: 'Giữ giá trị A' }))
+    expect(screen.getByRole('button', { name: 'Giữ 12/03/1986' })).toBeDefined()
+    expect(screen.getByRole('button', { name: 'Đổi lại thành 12/03/1985' })).toBeDefined()
 
-    await waitFor(() => expect(api.canXemLai.chon).toHaveBeenCalledWith('m1', 'A'))
+    await userEvent.click(screen.getByRole('button', { name: 'Giữ 12/03/1986' }))
+
+    await waitFor(() => expect(api.canXemLai.chon).toHaveBeenCalledWith('m1', 'B'))
     expect(await screen.findByText('Không có việc gì cần xem lại.')).toBeDefined()
   })
 
@@ -73,7 +78,7 @@ describe('CanXemLaiPage (Task 10, spec 9.2)', () => {
     render(<CanXemLaiPage />)
     await screen.findByText('Giá trị A: 12/03/1985')
 
-    await userEvent.click(screen.getByRole('button', { name: 'Giữ giá trị A' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Giữ 12/03/1986' }))
 
     expect(await screen.findByText('Hồ sơ liên quan đã bị xoá, không áp được nữa.')).toBeDefined()
     expect(screen.getByText('Giá trị A: 12/03/1985')).toBeDefined()
