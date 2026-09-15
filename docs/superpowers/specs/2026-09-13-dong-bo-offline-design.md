@@ -1030,6 +1030,27 @@ hệ thống làm được, sau khi đã sao lưu.
 | Người dùng bấm "Cất lại" rồi hối hận | Trung bình | Không xoá, cất ở máy chủ; câu chữ nói thẳng hậu quả (7.7) |
 | Khoá dòng đếm làm xếp hàng việc ghi của cả giáo xứ | Trung bình | `lock_timeout`, chia nhỏ thao tác hàng loạt (4.2) |
 | Dung lượng IndexedDB vượt hạn mức ở giáo xứ rất lớn | Thấp | 7,3 MB cho 4074 giáo dân; theo dõi `storage.estimate()` và cảnh báo |
+| `storage.persist()` bị Chrome từ chối trên site chưa có tương tác/bookmark (đo được thật ở Task 11, `navigator.storage.persisted() === false` ngay sau đăng nhập lần đầu) | Trung bình | Chính sách trình duyệt, không sửa được từ phía mã ứng dụng; cần hướng dẫn vận hành (cài PWA/ghim trang) hoặc chấp nhận rủi ro có ghi nhận |
+| File dự phòng tự động (7.10) chỉ dựa vào `<a download>` — Chrome chặn tải tự động từ lần thứ hai trở đi trên cùng origin nếu người dùng bấm "Chặn" một lần; đúng lúc file đó là lớp an toàn cuối cùng trước khi bỏ dữ liệu (ca 13, khôi phục `bo_han`) | Trung bình | Chưa làm — cần thêm một bản sao trong IndexedDB song song với `<a download>` để "Nạp lại file dự phòng" còn phục hồi được cả khi trình duyệt chặn tải; ghi nhận ở đây để không quên, chưa thuộc phạm vi kế hoạch 5 |
+| Sau khi bù lại xong (4.8.5), các dòng bù có thể nằm chờ tới `CHU_KY_YEN_TINH_MS` (5 phút) mới thực sự được gửi vì vòng lặp đồng bộ không `continue` ngay sau nhánh xử lý epoch không khớp | Thấp | Không mất dữ liệu, chỉ chậm hiển thị đúng lúc người vận hành đang theo dõi sát nhất sau một lần khôi phục — đánh đổi thiết kế đã chấp nhận (chu kỳ cố định, không cần sửa) |
+
+**Ghi chú phạm vi — kiểm thử Task 11 (17 ca trên trình duyệt thật, xem mục 14) phát hiện một số màn
+hình/tính năng CHƯA được nối dây vào giao diện, nhưng đây đều là giới hạn phạm vi đã quyết định từ
+trước, không phải lỗi mới:**
+
+- Không màn hình nghiệp vụ nào (chi tiết giáo dân, gia đình…) dùng đường ghi `ghiCucBo.ts` — mất
+  mạng thì chưa sửa/tạo/tìm được gì qua các màn hình đó (ảnh chụp `/toan-bo` cũng chưa được ghi vào
+  kho `banGhi` cục bộ, `apDungToanBo` chưa viết). Quyết định hoãn việc này sang một plan riêng
+  ("Task 7b") đã ghi trong ledger kế hoạch 5 khi đóng Task 6/7 và nhắc lại rõ trong brief Task 10
+  mục 4 — kế hoạch 5 giao **hạ tầng** đồng bộ/gộp/khôi phục, không giao việc nối hạ tầng đó vào
+  từng màn hình nghiệp vụ.
+- "Chế độ tắt offline" theo tài khoản (mục 6.6 — kho RAM thay vì IndexedDB, chặn đóng tab khi hàng
+  chờ chưa rỗng) đã có đủ cả hai lớp lưu trữ từ Task 7 (`moKhoRam.ts`, `chanDongTab.ts`), nhưng
+  chưa có đường bật/tắt nào (cờ theo tài khoản phía máy chủ + màn hình quản trị) — thuộc cùng phạm
+  vi "Task 7b" ở trên vì cả hai đều là một phần của việc nối `ghiCucBo` vào ứng dụng thật.
+- Hộp "Cần xem lại" hiện tên bảng/trường kỹ thuật (`GiaoDan — NgaySinh`) và JSON thô thay vì câu
+  đời thường đầy đủ theo mục 9.2 — đã được review Task 10 chấp nhận hoãn (thiếu bảng dịch tên
+  trường + tên hiển thị bản ghi mà DTO hiện chưa có), ghi lại ở đây để không bị quên khi làm tiếp.
 
 ## 12. Thứ tự triển khai
 
