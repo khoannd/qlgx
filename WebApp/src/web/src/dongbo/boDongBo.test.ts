@@ -3,9 +3,9 @@ import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { moKho, KHO_HANG_CHO } from '../kho/moKho'
 import { docHangCho, type DongHangCho } from '../kho/hangCho'
-import { docConTro } from '../kho/conTro'
+import { docConTro, ghiConTro } from '../kho/conTro'
 import { docTheoKhoang } from '../kho/soDaNhan'
-import { chuanHoaMocMayChu } from './dauDongHo'
+import { chuanHoaMocMayChu, mocSangMs, tuMocMs } from './dauDongHo'
 import {
   batDauBoDongBo,
   dauTuDongHieuLuc,
@@ -171,6 +171,114 @@ describe('boDongBo (Task 6 — bộ đồng bộ)', () => {
       // Sau khi thanh cong, hang cho phai rong (dung MOT dong duoc ap, khong phai hai).
       expect(await docHangCho(db)).toHaveLength(0)
 
+      db.close()
+    })
+  })
+
+  describe('guiHangChoVaApDung — Task 7 muc 3 (huong a): nhom theo doan, hieu chinh rieng doan vua dong', () => {
+    it('hai dong CUNG mot doan (mac dinh 0) van gui THANH MOT lo duy nhat — khong pha vo hanh vi cu', async () => {
+      const db = await moKho(tenKhoRieng())
+      const phuThuoc = await khoiTaoPhuThuoc(db)
+      await themVaoHangCho(db, dongMau('tt-1', { doan: 0 }))
+      await themVaoHangCho(db, dongMau('tt-2', { doan: 0 }))
+
+      const thanGuiDi: GuiLenYeuCau[] = []
+      vi.stubGlobal(
+        'fetch',
+        fetchGiaTheoDuong({
+          guiLen: (yc) => {
+            thanGuiDi.push(yc)
+            return ketQuaGuiLenMau({ ketQua: yc.thaoTac.map((t) => ({ maThaoTac: t.maThaoTac, ketQua: 'ap', thongBao: null })) })
+          },
+        }),
+      )
+
+      const hangCho = (await docHangCho(db)) as DongHangChoDongBo[]
+      await guiHangChoVaApDung(phuThuoc, hangCho)
+
+      expect(thanGuiDi).toHaveLength(1)
+      expect(thanGuiDi[0].thaoTac).toHaveLength(2)
+      expect(await docHangCho(db)).toHaveLength(0)
+      db.close()
+    })
+
+    it('hai nhom doan KHAC nhau duoc gui thanh HAI lo rieng, dung gioMayCon hieu chinh cho DUNG doan vua dong', async () => {
+      const db = await moKho(tenKhoRieng())
+      // Neo dong ho don dieu vao GAN dung gio he thong hien tai — de goi soDoanHienTai() trong
+      // khoiTaoPhuThuoc/guiHangChoVaApDung KHONG vo tinh phat hien them mot cu nhay gio moi (se lam
+      // sai lech kich ban dang dung san: doanHienTai=1, doLech=5000ms, dang tin cay).
+      await ghiConTro(db, {
+        mocNeo: tuMocMs(Date.now()),
+        doanHienTai: 1,
+        doLechDoanHienTai: 5000,
+        doLechDoanHienTaiTinCay: true,
+      })
+      const phuThuoc = await khoiTaoPhuThuoc(db)
+
+      // Dong thuoc doan 0 (DA DONG — doanHienTai-1) va dong thuoc doan 1 (doan HIEN TAI).
+      await themVaoHangCho(db, dongMau('tt-doan-cu', { doan: 0 }))
+      await themVaoHangCho(db, dongMau('tt-doan-moi', { doan: 1 }))
+
+      const thanGuiDi: GuiLenYeuCau[] = []
+      vi.stubGlobal(
+        'fetch',
+        fetchGiaTheoDuong({
+          guiLen: (yc) => {
+            thanGuiDi.push(yc)
+            return ketQuaGuiLenMau({ ketQua: yc.thaoTac.map((t) => ({ maThaoTac: t.maThaoTac, ketQua: 'ap', thongBao: null })) })
+          },
+        }),
+      )
+
+      const hangCho = (await docHangCho(db)) as DongHangChoDongBo[]
+      const ketQua = await guiHangChoVaApDung(phuThuoc, hangCho)
+
+      // HAI lo /gui-len rieng — khong gop chung hai doan vao mot yeu cau.
+      expect(thanGuiDi).toHaveLength(2)
+      const loDoanCu = thanGuiDi.find((t) => t.thaoTac[0].maThaoTac === 'tt-doan-cu')
+      const loDoanMoi = thanGuiDi.find((t) => t.thaoTac[0].maThaoTac === 'tt-doan-moi')
+      expect(loDoanCu).toBeDefined()
+      expect(loDoanMoi).toBeDefined()
+
+      const gioTotNhatMs = phuThuoc.donDieu.mocHienTaiMs()
+      // Doan VUA DONG (0 === doanHienTai - 1): gioMayCon = gio tot nhat - doLech (5000ms) — CO Y
+      // gui lech de may chu tu suy ra dung offset can ap cho nhom nay (xem chu thich guiMotLo).
+      expect(Math.abs(mocSangMs(loDoanCu!.gioMayCon) - (gioTotNhatMs - 5000))).toBeLessThan(50)
+      // Doan HIEN TAI (1): KHONG hieu chinh — gioMayCon ~ gio tot nhat hien tai.
+      expect(Math.abs(mocSangMs(loDoanMoi!.gioMayCon) - gioTotNhatMs)).toBeLessThan(50)
+
+      expect(await docHangCho(db)).toHaveLength(0)
+      expect(ketQua.conNua).toBe(false)
+      db.close()
+    })
+
+    it('doan vua dong nhung doLechDangTinCay = false: KHONG hieu chinh, gui thang gio hien tai', async () => {
+      const db = await moKho(tenKhoRieng())
+      await ghiConTro(db, {
+        mocNeo: tuMocMs(Date.now()),
+        doanHienTai: 1,
+        doLechDoanHienTai: 5000,
+        doLechDoanHienTaiTinCay: false, // lan kiem tra dau tien sau tai trang — KHONG dang tin
+      })
+      const phuThuoc = await khoiTaoPhuThuoc(db)
+      await themVaoHangCho(db, dongMau('tt-doan-cu', { doan: 0 }))
+
+      const thanGuiDi: GuiLenYeuCau[] = []
+      vi.stubGlobal(
+        'fetch',
+        fetchGiaTheoDuong({
+          guiLen: (yc) => {
+            thanGuiDi.push(yc)
+            return ketQuaGuiLenMau({ ketQua: yc.thaoTac.map((t) => ({ maThaoTac: t.maThaoTac, ketQua: 'ap', thongBao: null })) })
+          },
+        }),
+      )
+
+      const hangCho = (await docHangCho(db)) as DongHangChoDongBo[]
+      await guiHangChoVaApDung(phuThuoc, hangCho)
+
+      const gioTotNhatMs = phuThuoc.donDieu.mocHienTaiMs()
+      expect(Math.abs(mocSangMs(thanGuiDi[0].gioMayCon) - gioTotNhatMs)).toBeLessThan(50)
       db.close()
     })
   })
@@ -747,6 +855,140 @@ describe('boDongBo (Task 6 — bộ đồng bộ)', () => {
       expect(fetchGia).not.toHaveBeenCalled()
 
       dieuKhien.dung()
+    })
+  })
+
+  describe('layThayDoiNgay (Task 7 muc 4) — tai su dung DUNG phuThuoc cua tab, khong tao PhuThuocBoDongBo thu hai', () => {
+    function nguonSuKienGiaLap(): NguonSuKienDongBo & { anTab: (v: boolean) => void; kichHoat: () => void } {
+      let an = false
+      const nguoiNghe: Array<() => void> = []
+      return {
+        tabDangAn: () => an,
+        dangKy: (fn) => {
+          nguoiNghe.push(fn)
+          return () => {
+            const vt = nguoiNghe.indexOf(fn)
+            if (vt !== -1) nguoiNghe.splice(vt, 1)
+          }
+        },
+        anTab: (v) => {
+          an = v
+        },
+        kichHoat: () => nguoiNghe.forEach((fn) => fn()),
+      }
+    }
+    const nguonKhoaGiaLap: NguonKhoa = {
+      request: (_ten, _tuyChon, xuLy) => xuLy(),
+    }
+    function nguonHenGioGiaLap() {
+      const danhSach: Array<{ ms: number; fn: () => void; huyRoi: boolean }> = []
+      return {
+        dat: vi.fn((ms: number, fn: () => void) => {
+          const muc = { ms, fn, huyRoi: false }
+          danhSach.push(muc)
+          return muc
+        }),
+        huy: vi.fn((id: unknown) => {
+          ;(id as { huyRoi: boolean }).huyRoi = true
+        }),
+      }
+    }
+
+    it('CHUA san sang (con dang khoi tao phu thuoc): tra ve null, khong nem loi', async () => {
+      const db = await moKho(tenKhoRieng())
+      const fetchGia = fetchGiaTheoDuong()
+      vi.stubGlobal('fetch', fetchGia)
+      const dieuKhien = batDauBoDongBo(db, nguonSuKienGiaLap(), nguonHenGioGiaLap(), nguonKhoaGiaLap)
+
+      // Goi NGAY, truoc bat ky await nao khac — dam bao chac chan phuThuocHienTai van con null vi
+      // khoiTaoPhuThuoc (Task 6) la ham bat dong bo, chua kip resolve trong cung mot luot dong bo.
+      const ketQua = await dieuKhien.layThayDoiNgay()
+      expect(ketQua).toBeNull()
+
+      await vi.waitFor(() => expect(fetchGia).toHaveBeenCalledTimes(1))
+      dieuKhien.dung()
+      db.close()
+    })
+
+    it('sau khi san sang: goi /thay-doi va AP KET QUA NGAY, khong doi het chu ky dinh ky', async () => {
+      const db = await moKho(tenKhoRieng())
+      const fetchGia = fetchGiaTheoDuong({
+        thayDoi: () => nhanVeKetQuaMau({ epoch: 'epoch-moi', conTroMoi: 42 }),
+      })
+      vi.stubGlobal('fetch', fetchGia)
+      const dieuKhien = batDauBoDongBo(db, nguonSuKienGiaLap(), nguonHenGioGiaLap(), nguonKhoaGiaLap)
+      await vi.waitFor(() => expect(fetchGia).toHaveBeenCalledTimes(1)) // chu ky tu dong dau tien
+
+      const ketQua = await dieuKhien.layThayDoiNgay()
+      expect(fetchGia).toHaveBeenCalledTimes(2)
+      expect(ketQua?.epoch).toBe('epoch-moi')
+
+      const conTro = await docConTro(db)
+      expect(conTro.epoch).toBe('epoch-moi')
+      expect(conTro.soThuTu).toBe(42)
+
+      dieuKhien.dung()
+      db.close()
+    })
+
+    it('goi CHONG LEN NHAU thi DUNG CHUNG mot luot goi mang, khong ban them yeu cau moi', async () => {
+      const db = await moKho(tenKhoRieng())
+      let soLanGoiThayDoi = 0
+      let thaGiuTiep: (() => void) | null = null
+      const fetchGia = vi.fn(async (url: unknown) => {
+        const u = String(url)
+        if (u.includes('/thay-doi')) {
+          soLanGoiThayDoi += 1
+          if (soLanGoiThayDoi === 1) {
+            // Chu ky tu dong dau tien luc vua tro thanh chu — cho qua ngay.
+            return new Response(JSON.stringify(nhanVeKetQuaMau()), { status: 200 })
+          }
+          // Lan goi THU HAI (tu layThayDoiNgay dau tien) — treo lai de test kip ban lan goi thu ba
+          // CHONG LEN trong luc lan nay con dang cho mang.
+          await new Promise<void>((res) => {
+            thaGiuTiep = res
+          })
+          return new Response(JSON.stringify(nhanVeKetQuaMau()), { status: 200 })
+        }
+        return new Response(JSON.stringify(ketQuaGuiLenMau()), { status: 200 })
+      })
+      vi.stubGlobal('fetch', fetchGia)
+      const dieuKhien = batDauBoDongBo(db, nguonSuKienGiaLap(), nguonHenGioGiaLap(), nguonKhoaGiaLap)
+      await vi.waitFor(() => expect(fetchGia).toHaveBeenCalledTimes(1))
+
+      const p1 = dieuKhien.layThayDoiNgay()
+      await vi.waitFor(() => expect(fetchGia).toHaveBeenCalledTimes(2)) // p1 da bat dau, dang treo
+      const p2 = dieuKhien.layThayDoiNgay() // CHONG LEN trong luc p1 con dang cho mang
+
+      ;(thaGiuTiep as unknown as () => void)()
+      const [k1, k2] = await Promise.all([p1, p2])
+
+      expect(fetchGia).toHaveBeenCalledTimes(2) // KHONG tang len 3 — p2 dung chung dung p1
+      expect(k1).toBe(k2)
+
+      dieuKhien.dung()
+      db.close()
+    })
+
+    it('sau khi may chu di lui (dung han dong bo): tra ve null, KHONG goi mang them', async () => {
+      const db = await moKho(tenKhoRieng())
+      const fetchGia = vi.fn(async (url: unknown) => {
+        const u = String(url)
+        if (u.includes('/thay-doi')) {
+          return new Response(JSON.stringify({ type: 'may-chu-di-lui', title: 'x' }), { status: 409 })
+        }
+        return new Response(JSON.stringify(ketQuaGuiLenMau()), { status: 200 })
+      })
+      vi.stubGlobal('fetch', fetchGia)
+      const dieuKhien = batDauBoDongBo(db, nguonSuKienGiaLap(), nguonHenGioGiaLap(), nguonKhoaGiaLap)
+      await vi.waitFor(() => expect(dieuKhien.trangThai()).toBe('dung_do_may_chu_di_lui'))
+
+      const soLanGoiTruoc = fetchGia.mock.calls.length
+      const ketQua = await dieuKhien.layThayDoiNgay()
+      expect(ketQua).toBeNull()
+      expect(fetchGia).toHaveBeenCalledTimes(soLanGoiTruoc)
+
+      db.close()
     })
   })
 })

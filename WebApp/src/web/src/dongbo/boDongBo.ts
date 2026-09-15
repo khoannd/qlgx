@@ -440,25 +440,104 @@ async function apDungGuiLenKetQua(
   await capNhatDongHoTheoDongNhanVe(phuThuoc, ketQua.dongMoi)
 }
 
-/** Gửi TOÀN BỘ hàng chờ hiện có (kể cả rỗng — xem chú thích đầu file mục 1: một lô rỗng vẫn kéo về
- * `dongMoi` "miễn phí") lên `/gui-len`, rồi áp kết quả (Ràng buộc 3). Trả lại `conNua` để tầng gọi
- * biết có cần hỏi tiếp ngay (không đợi hết chu kỳ) hay không. */
-export async function guiHangChoVaApDung(
+/**
+ * Gửi MỘT lô `/gui-len` cho một NHÓM hàng chờ CÙNG đoạn — tách khỏi `guiHangChoVaApDung` để dùng lại
+ * được cho cả nhánh "một nhóm bình thường" lẫn nhánh "hàng chờ rỗng" (một lô rỗng vẫn kéo về
+ * `dongMoi`/kích hoạt LỚP 2 "miễn phí", xem chú thích đầu file mục 1).
+ *
+ * QUYẾT ĐỊNH MỤC 3, HƯỚNG (a) (báo cáo Task 7 — xem task-7-report.md để có toàn bộ lý do so với
+ * hướng (b)): mỗi NHÓM hàng chờ cùng `doan` được gửi thành một lô `/gui-len` RIÊNG, với `gioMayCon`
+ * hiệu chỉnh riêng cho đúng đoạn đó, thay vì gộp mọi đoạn vào một lô rồi hiệu chỉnh chung — hiệu
+ * chỉnh chung sẽ SAI cho các dòng thuộc đoạn đã đóng từ trước (xem brief mục 3 và
+ * `dongHoMayCon.ts`).
+ *
+ * `gioMayCon` gửi lên cho một nhóm:
+ * - Nhóm rỗng, hoặc thuộc ĐÚNG đoạn hiện tại (`doanHienTai`): các dòng này (nếu có) được ghi khi
+ *   `DongHoDonDieu` đang neo ĐÚNG (chưa có nhảy giờ nào xảy ra kể từ lúc ghi) — gửi thẳng giờ hiện
+ *   tại tốt nhất (`donDieu.mocHienTaiMs()`), không cần hiệu chỉnh gì thêm.
+ * - Nhóm thuộc đúng đoạn NGAY TRƯỚC đoạn hiện tại (`doanHienTai - 1`) VÀ
+ *   `phuThuoc.doan.doLechDangTinCay() === true`: đây là đoạn VỪA đóng — `DoanDongHo` (Task 4) CHỈ
+ *   nhớ độ lệch của ĐÚNG một lần chuyển đoạn gần nhất, nên đây là nhóm DUY NHẤT còn hiệu chỉnh được.
+ *   Gửi một `gioMayCon` CỐ Ý lệch đi đúng độ lệch đã lưu (`mocHienTaiMs() - doLechDoanHienTai()`) để
+ *   máy chủ (tính `offset = gioMayChu - gioMayCon`) tự suy ra ĐÚNG `offset ≈ doLechDoanHienTai()` và
+ *   áp nó cho các dòng vật lý của nhóm này — chuyển chúng về đúng hệ quy chiếu đã biết là đúng thay
+ *   vì hệ quy chiếu SAI mà đồng hồ đơn điệu đã dùng suốt đoạn cũ, trước khi phát hiện ra cú nhảy.
+ * - Mọi trường hợp khác (đoạn CŨ HƠN NỮA, hoặc `doLechDangTinCay() === false` — lần kiểm tra đầu
+ *   tiên sau khi tải trang, xem `DoanDongHo.soDoanHienTai`): KHÔNG hiệu chỉnh gì — gửi thẳng
+ *   `gioMayCon` hiện tại. AN TOÀN NHƯNG CHƯA ĐẦY ĐỦ cho các nhóm này (`DoanDongHo` không giữ lịch sử
+ *   nhiều đoạn về trước — một giới hạn phạm vi ĐÃ BIẾT của Task 7, xem báo cáo, KHÔNG phải một lỗ
+ *   hổng bị bỏ sót: một máy phải đóng offline qua ÍT NHẤT HAI cú nhảy giờ liên tiếp trước khi kịp
+ *   gửi lại mới rơi vào trường hợp này).
+ */
+async function guiMotLo(
   phuThuoc: PhuThuocBoDongBo,
-  hangCho: DongHangChoDongBo[],
+  nhom: DongHangChoDongBo[],
+  doanHienTai: number,
 ): Promise<{ conNua: boolean }> {
   const conTro = await docConTro(phuThuoc.kho)
+  const gioTotNhatMs = phuThuoc.donDieu.mocHienTaiMs()
+
+  const canHieuChinh =
+    nhom.length > 0 && nhom[0].doan === doanHienTai - 1 && phuThuoc.doan.doLechDangTinCay()
+  const gioMayConMs = canHieuChinh ? gioTotNhatMs - phuThuoc.doan.doLechDoanHienTai() : gioTotNhatMs
+
   const yc: GuiLenYeuCau = {
     thietBiId: phuThuoc.thietBiId,
-    gioMayCon: tuMocMs(phuThuoc.donDieu.mocHienTaiMs()),
+    gioMayCon: tuMocMs(gioMayConMs),
     epoch: conTro.epoch,
     conTro: conTro.soThuTu,
-    thaoTac: hangCho.map(thanhThaoTacDto),
+    thaoTac: nhom.map(thanhThaoTacDto),
   }
 
   const ketQua = await guiLen(yc)
-  await apDungGuiLenKetQua(phuThuoc, hangCho, ketQua)
+  await apDungGuiLenKetQua(phuThuoc, nhom, ketQua)
   return { conNua: ketQua.conNua }
+}
+
+/**
+ * Gửi TOÀN BỘ hàng chờ hiện có (kể cả rỗng) lên `/gui-len`, rồi áp kết quả (Ràng buộc 3). Trả lại
+ * `conNua` để tầng gọi biết có cần hỏi tiếp ngay (không đợi hết chu kỳ) hay không.
+ *
+ * Task 7 (quyết định mục 3, hướng (a)): NHÓM `hangCho` theo `doan` rồi gửi TỪNG NHÓM một lô riêng
+ * qua `guiMotLo` — xem chú thích chi tiết ở đó. Mọi hàng chờ hiện có trước Task 7 đều mang `doan = 0`
+ * đồng nhất (mặc định của `hangCho.ts`, chưa ai gắn số đoạn thật), nên với dữ liệu KHÔNG có nhảy giờ
+ * nào, hành vi ở đây giống HỆT bản trước Task 7 (đúng MỘT nhóm, đúng MỘT lô `/gui-len`) — không phá
+ * vỡ test cũ của Task 6.
+ *
+ * `doanHienTaiDaBiet`: tham số TUỲ CHỌN để `motLanDongBo` (đã tự gọi `phuThuoc.doan.soDoanHienTai()`
+ * một lần mỗi chu kỳ, xem M12) truyền lại kết quả đó thay vì để hàm này gọi lại lần thứ hai (tránh
+ * một lượt kiểm tra nhảy giờ thừa mỗi chu kỳ) — bỏ trống (gọi trực tiếp, ví dụ từ test hoặc một nơi
+ * gọi độc lập khác) thì hàm tự gọi `soDoanHienTai()` để vẫn đúng mà không cần biết chi tiết này.
+ */
+export async function guiHangChoVaApDung(
+  phuThuoc: PhuThuocBoDongBo,
+  hangCho: DongHangChoDongBo[],
+  doanHienTaiDaBiet?: number,
+): Promise<{ conNua: boolean }> {
+  const doanHienTai = doanHienTaiDaBiet ?? (await phuThuoc.doan.soDoanHienTai())
+
+  if (hangCho.length === 0) {
+    return guiMotLo(phuThuoc, [], doanHienTai)
+  }
+
+  // Nhóm theo `doan`, GIỮ NGUYÊN thứ tự chèn bên trong từng nhóm (Ràng buộc 9 chỉ đòi đúng
+  // `maThaoTac` được dùng lại, không đòi thứ tự cụ thể giữa các nhóm — nhưng giữ thứ tự chèn bên
+  // trong một nhóm vẫn là thói quen an toàn, tránh xáo trộn không cần thiết khi máy chủ áp thao
+  // tác theo đúng thứ tự mảng `thaoTac` gửi lên).
+  const theoNhom = new Map<number, DongHangChoDongBo[]>()
+  for (const dong of hangCho) {
+    const nhom = theoNhom.get(dong.doan)
+    if (nhom) nhom.push(dong)
+    else theoNhom.set(dong.doan, [dong])
+  }
+
+  let conNua = false
+  for (const doan of [...theoNhom.keys()].sort((a, b) => a - b)) {
+    const nhom = theoNhom.get(doan) as DongHangChoDongBo[]
+    const ketQuaNhom = await guiMotLo(phuThuoc, nhom, doanHienTai)
+    conNua = conNua || ketQuaNhom.conNua
+  }
+  return { conNua }
 }
 
 /**
@@ -485,14 +564,16 @@ export async function motLanDongBo(phuThuoc: PhuThuocBoDongBo, tabAn: boolean): 
   const hangCho = (await docHangCho(phuThuoc.kho)) as DongHangChoDongBo[]
   if (tabAn && hangCho.length === 0) return { conNua: false }
 
-  await phuThuoc.doan.soDoanHienTai()
+  const doanHienTai = await phuThuoc.doan.soDoanHienTai()
 
   if (hangCho.length === 0) {
     const ketQuaThayDoi = await layThayDoiVaApDung(phuThuoc)
     return { conNua: ketQuaThayDoi.conNua }
   }
 
-  const ketQuaGui = await guiHangChoVaApDung(phuThuoc, hangCho)
+  // Truyền lại `doanHienTai` đã biết (Task 7) — tránh `guiHangChoVaApDung` gọi lại
+  // `soDoanHienTai()` lần thứ hai trong CÙNG một chu kỳ (xem chú thích ở đó).
+  const ketQuaGui = await guiHangChoVaApDung(phuThuoc, hangCho, doanHienTai)
   const ketQuaThayDoi = await layThayDoiVaApDung(phuThuoc)
   return { conNua: ketQuaGui.conNua || ketQuaThayDoi.conNua }
 }
@@ -559,6 +640,27 @@ export type DieuKhienBoDongBo = {
    * ghép vòng lặp cốt lõi của Task 6).
    */
   danhThucNgay(): void
+  /**
+   * Mục 4 (Task 7 — brief): gọi `/thay-doi` NGAY VÀ CHỜ kết quả, dùng cho đường "đúng chỗ cần" (spec
+   * 7.3: trước khi mở một hồ sơ ra sửa, trước khi dò trùng lúc tạo người mới) — KHÁC `danhThucNgay()`
+   * (chỉ đánh thức vòng lặp định kỳ, không đợi gì, không dùng được khi màn hình cần đọc dữ liệu MỚI
+   * NHẤT trước khi cho người dùng thao tác tiếp).
+   *
+   * TUYỆT ĐỐI không tự tạo một `PhuThuocBoDongBo` thứ hai để gọi `layThayDoiVaApDung` (I6, xem cảnh
+   * báo ở `khoiTaoPhuThuoc`) — hàm này đóng gói sẵn, tái dùng ĐÚNG `phuThuoc` mà `batDauBoDongBo` đã
+   * tạo MỘT LẦN DUY NHẤT cho tab này, không lộ `phuThuoc` thô ra ngoài.
+   *
+   * Trả về `null` nếu vòng đồng bộ CHƯA từng khởi tạo được `phuThuoc` (còn đang giành khoá chủ, đã
+   * dừng vì `LoiMayChuDiLui`, hoặc gặp lỗi thật khi khởi động — xem `trangThai()`) — nơi gọi (màn
+   * hình) tự quyết định xử lý thế nào (ví dụ: mở hồ sơ với dữ liệu cục bộ hiện có, không chặn người
+   * dùng chỉ vì chưa kịp hỏi máy chủ một lần "đúng chỗ cần").
+   *
+   * GIỚI HẠN PHẠM VI CỐ Ý (mục 5 — brief, đã ghi vào báo cáo Task 7): hàm này gọi `/thay-doi` từ
+   * CHÍNH tab đang gọi nó — nếu tab đó KHÔNG phải tab chủ, nó vẫn tự đọc `/thay-doi` được (đây là một
+   * lần đọc độc lập, không phải vòng gửi liên tục cần khoá chủ), nhưng KHÔNG đồng bộ hoá với vòng
+   * lặp định kỳ của tab chủ — chưa có cầu nối `BroadcastChannel` giữa các tab ở bản này.
+   */
+  layThayDoiNgay(): Promise<NhanVeKetQua | null>
   /** `'dung_do_may_chu_di_lui'` sau khi gặp `LoiMayChuDiLui` — Task 10 đọc để chuyển 🔴.
    * `'khong_chay_duoc'` khi chưa TỪNG chạy được lần nào vì một lỗi thật (I9) — Task 10 đọc để KHÔNG
    * hiện 🟢 sai. */
@@ -668,6 +770,18 @@ export function batDauBoDongBo(
   // có mạng trở lại" (spec 7.3).
   let coTinHieuDanhThuc = false
   let thoiHanKeTiepMs = CHU_KY_YEN_TINH_MS
+  // Mục 4 (Task 7): `phuThuoc` CỦA TAB NÀY, lộ ra ngoài qua `layThayDoiNgay()` — CHỈ gán một lần bên
+  // trong `khiLaChu` (đúng ĐÚNG MỘT `PhuThuocBoDongBo` cho suốt vòng đời tab, xem cảnh báo I6 ở
+  // `khoiTaoPhuThuoc`). `null` cho tới khi vòng đồng bộ khởi tạo xong (hoặc mãi mãi `null` nếu chưa
+  // từng giành được vai trò chủ / gặp lỗi thật khi khởi động, xem I9).
+  let phuThuocHienTai: PhuThuocBoDongBo | null = null
+  // Gộp các lần gọi `/thay-doi` CHỒNG LÊN NHAU thành MỘT lượt gọi mạng dùng chung kết quả — nhiều
+  // lần bấm "mở hồ sơ" liên tiếp trong lúc lượt gọi trước còn treo sẽ CHIA SẺ đúng một Promise thay
+  // vì bắn thêm yêu cầu mới. Không loại được HẲN việc đụng độ với lượt gọi ĐỊNH KỲ của chính vòng lặp
+  // `khiLaChu` bên dưới (hai lượt gọi độc lập vẫn có thể chạy chồng nhau) — nhưng `apDungNhanVe` chỉ
+  // MERGE-PATCH `conTro` và áp lại hiệu lực theo LWW nên chồng lấn tối đa gây ĐỌC LẠI dư một lượt
+  // (an toàn, không mất dữ liệu), không phá hỏng gì — chấp nhận được cho phạm vi Task 7 (xem báo cáo).
+  let goiThayDoiNgayDangChay: Promise<NhanVeKetQua> | null = null
 
   function danhThuc(): void {
     coTinHieuDanhThuc = true
@@ -676,6 +790,7 @@ export function batDauBoDongBo(
 
   async function khiLaChu(tinHieuHuy: AbortSignal): Promise<void> {
     const phuThuoc = await khoiTaoPhuThuoc(kho)
+    phuThuocHienTai = phuThuoc
     const huyDangKy = nguonSuKien.dangKy(danhThuc)
 
     try {
@@ -743,6 +858,22 @@ export function batDauBoDongBo(
 
   troThanhChuKhiCoTheChoDenKhiHuy(khiLaChu, () => {}, dieuKhienHuy.signal, TEN_KHOA_BAU_CHU, nguonKhoaThucTe)
 
+  /** Mục 4 — xem chú thích `DieuKhienBoDongBo.layThayDoiNgay`. */
+  function layThayDoiNgay(): Promise<NhanVeKetQua | null> {
+    // Không còn phuThuoc (chưa khởi tạo xong) HOẶC đã dừng hẳn vì máy chủ đi lùi (LoiMayChuDiLui) —
+    // KHÔNG gọi mạng thêm trong cả hai trường hợp: trường hợp đầu chưa có gì để dùng, trường hợp sau
+    // cố ý tôn trọng đúng tinh thần "dừng hẳn, không tự thử lại" của nhánh LoiMayChuDiLui trong
+    // `khiLaChu` — một lần đọc "đúng chỗ cần" vẫn là một lần gọi `/thay-doi` có thể lặp lại đúng lỗi
+    // đó, không có lý do gì để đối xử khác với vòng lặp định kỳ.
+    if (!phuThuocHienTai || trangThaiHienTai === 'dung_do_may_chu_di_lui') return Promise.resolve(null)
+    if (goiThayDoiNgayDangChay) return goiThayDoiNgayDangChay
+    const p = layThayDoiVaApDung(phuThuocHienTai).finally(() => {
+      goiThayDoiNgayDangChay = null
+    })
+    goiThayDoiNgayDangChay = p
+    return p
+  }
+
   return {
     dung: () => dieuKhienHuy.abort(),
     baoDangGo: () => {
@@ -750,6 +881,7 @@ export function batDauBoDongBo(
       danhThuc()
     },
     danhThucNgay: () => danhThuc(),
+    layThayDoiNgay,
     trangThai: () => trangThaiHienTai,
   }
 }

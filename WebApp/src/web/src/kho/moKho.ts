@@ -64,10 +64,21 @@ export class LoiKhoMoiHonMa extends Error {
  * kiểm thử: mỗi ca kiểm thử dùng một tên kho riêng (tránh lẫn dữ liệu giữa các ca), và ca kiểm thử
  * "nâng cấp phiên bản không làm mất hàng chờ" cần tự mô phỏng một lần nâng cấp thật bằng cách mở
  * lại với số phiên bản lớn hơn.
+ *
+ * Tham số thứ ba `factory` (Task 7, spec 6.6 — chế độ TẮT offline) — mặc định `indexedDB` toàn cục
+ * của trình duyệt (hành vi CŨ, không đổi cho MỌI lời gọi hiện có). Tiêm được một `IDBFactory` khác
+ * để `moKhoRam.ts` (Task 7) dùng LẠI ĐÚNG schema/logic mở kho này với một factory HOÀN TOÀN TRONG
+ * BỘ NHỚ (không ghi gì xuống đĩa) — đây chính là "cùng một đường ghi, chỉ khác cái hộp đựng" mà spec
+ * 6.6 yêu cầu: toàn bộ phần khó (gộp/nhật ký/hộp xem lại ở các kho con) dùng lại nguyên vẹn, không
+ * rẽ nhánh logic nào ở đây hay ở bất kỳ file nào phía trên `moKho()`.
  */
-export function moKho(tenKho: string = TEN_KHO_MAC_DINH, phienBan: number = PHIEN_BAN_KHO): Promise<IDBDatabase> {
+export function moKho(
+  tenKho: string = TEN_KHO_MAC_DINH,
+  phienBan: number = PHIEN_BAN_KHO,
+  factory: IDBFactory = indexedDB,
+): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const yeuCau = indexedDB.open(tenKho, phienBan)
+    const yeuCau = factory.open(tenKho, phienBan)
 
     // CHỈ được THÊM kho con còn thiếu — không bao giờ `deleteObjectStore` một kho đã có dữ liệu
     // người dùng (ràng buộc "onupgradeneeded chỉ được thêm kho con mới"). Nhờ kiểm tra
