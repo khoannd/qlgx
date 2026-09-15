@@ -17,9 +17,16 @@
  * `onupgradeneeded` ở dưới chỉ được phép thêm, không được xoá gì của người dùng (xem ràng buộc 5). */
 export const PHIEN_BAN_KHO = 1
 
-/** Tên mặc định của kho — cố định vì cả ứng dụng chỉ có một kho theo trình duyệt (khoá theo giáo
- * xứ, không theo tài khoản — xem spec mục 6.4 "Đổi người dùng"). Có thể truyền tên khác khi gọi
- * `moKho` (dùng cho kiểm thử, để mỗi ca kiểm thử có một kho riêng, không lẫn dữ liệu vào nhau). */
+/**
+ * Tên kho dùng khi KHÔNG có giáo xứ cụ thể — CHỈ cho kiểm thử và cho biến thể RAM (`moKhoRam.ts`).
+ *
+ * C1 (fix round cuối, review toàn nhánh): tên này KHÔNG chứa `giaoXuId`, nên nó KHÔNG tự nó bảo đảm
+ * được ràng buộc "kho tách theo giáo xứ" của spec mục 6.4 ("Đổi người dùng" — máy chủ phục vụ NHIỀU
+ * giáo xứ, mỗi giáo xứ có `epoch`/chuỗi `so_thu_tu` RIÊNG; hai giáo xứ dùng chung một trình duyệt
+ * mà chung một kho là lộ dữ liệu sổ sách giữa hai xứ). Trách nhiệm đó thuộc về NƠI GỌI THẬT —
+ * `dongbo/khoiDongOffline.ts` truyền vào `moKho(`qlgx-${giaoXuId}`)`. Đừng đọc chú thích này như
+ * một lời bảo đảm rằng `moKho()` không tham số là an toàn cho ứng dụng thật: nó KHÔNG phải vậy.
+ */
 const TEN_KHO_MAC_DINH = 'qlgx'
 
 /** Năm kho con CỐ ĐỊNH — xem bảng "Cấu trúc file" của kế hoạch, mỗi kho con có một file riêng phụ

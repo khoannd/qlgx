@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { dungOffline, khoiDongOffline, layTrangThaiBuLai, layTrangThaiOffline, _resetChoKiemThu } from './khoiDongOffline'
 import * as moKhoModule from '../kho/moKho'
 import * as hangChoModule from '../kho/hangCho'
+import * as soDaNhanModule from '../kho/soDaNhan'
 import * as tepDuPhongModule from './tepDuPhong'
 import * as buSauKhoiPhucModule from './buSauKhoiPhuc'
 
@@ -29,7 +30,7 @@ describe('khoiDongOffline (Task 10 — noi day tang offline vao app shell)', () 
     const fetchGia = vi.fn(async () => new Response(JSON.stringify({ epoch: 'e1', conTroMoi: 0, conNua: false, dong: [] }), { status: 200 }))
     vi.stubGlobal('fetch', fetchGia)
 
-    const ketQua = await khoiDongOffline()
+    const ketQua = await khoiDongOffline('giao-xu-test-1')
 
     expect(ketQua).not.toBeNull()
     expect(ketQua?.kho).toBeInstanceOf(IDBDatabase)
@@ -41,7 +42,7 @@ describe('khoiDongOffline (Task 10 — noi day tang offline vao app shell)', () 
     const fetchGia = vi.fn(async () => new Response(JSON.stringify({ epoch: 'e1', conTroMoi: 0, conNua: false, dong: [] }), { status: 200 }))
     vi.stubGlobal('fetch', fetchGia)
 
-    const [k1, k2, k3] = await Promise.all([khoiDongOffline(), khoiDongOffline(), khoiDongOffline()])
+    const [k1, k2, k3] = await Promise.all([khoiDongOffline('giao-xu-test-1'), khoiDongOffline('giao-xu-test-1'), khoiDongOffline('giao-xu-test-1')])
 
     expect(k1).toBe(k2)
     expect(k2).toBe(k3)
@@ -51,7 +52,7 @@ describe('khoiDongOffline (Task 10 — noi day tang offline vao app shell)', () 
     const fetchGia = vi.fn(async () => new Response(JSON.stringify({ epoch: 'e1', conTroMoi: 0, conNua: false, dong: [] }), { status: 200 }))
     vi.stubGlobal('fetch', fetchGia)
 
-    const phienDau = await khoiDongOffline()
+    const phienDau = await khoiDongOffline('giao-xu-test-1')
     expect(phienDau).not.toBeNull()
     const dungSpy = vi.spyOn(phienDau!.dieuKhien, 'dung')
 
@@ -60,7 +61,7 @@ describe('khoiDongOffline (Task 10 — noi day tang offline vao app shell)', () 
     expect(dungSpy).toHaveBeenCalledOnce()
     expect(layTrangThaiOffline()).toBeNull()
 
-    const phienSau = await khoiDongOffline()
+    const phienSau = await khoiDongOffline('giao-xu-test-1')
     expect(phienSau).not.toBeNull()
     expect(phienSau).not.toBe(phienDau)
   })
@@ -74,7 +75,7 @@ describe('khoiDongOffline (Task 10 — noi day tang offline vao app shell)', () 
     vi.spyOn(buSauKhoiPhucModule, 'xuLyEpochKhongKhopDonLuong').mockRejectedValue(new Error('loi mo phong F1'))
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    const ketQua = await khoiDongOffline()
+    const ketQua = await khoiDongOffline('giao-xu-test-1')
     expect(ketQua).not.toBeNull()
 
     // Vong dong bo chay ngam (khong await tu khoiDongOffline) - doi no bat 410, goi buoc bu lai,
@@ -98,7 +99,7 @@ describe('khoiDongOffline (Task 10 — noi day tang offline vao app shell)', () 
     vi.stubGlobal('fetch', fetchGia)
     const setIntervalSpy = vi.spyOn(globalThis, 'setInterval')
 
-    const promiseDau = khoiDongOffline() // KHONG await ngay - con dang await moKho() ben trong
+    const promiseDau = khoiDongOffline('giao-xu-test-1') // KHONG await ngay - con dang await moKho() ben trong
     dungOffline() // xen vao GIUA luc dang khoi dong
     const ketQua = await promiseDau
 
@@ -111,7 +112,7 @@ describe('khoiDongOffline (Task 10 — noi day tang offline vao app shell)', () 
 
     // Sau race nay, mot lan khoiDongOffline() tiep theo (vi du dang nhap lai) phai van khoi dong
     // duoc binh thuong - khong bi ket cung boi co dangDungGiuaChung con sot lai tu lan truoc.
-    const phienSau = await khoiDongOffline()
+    const phienSau = await khoiDongOffline('giao-xu-test-1')
     expect(phienSau).not.toBeNull()
     expect(layTrangThaiOffline()).toBe(phienSau)
   })
@@ -140,7 +141,7 @@ describe('khoiDongOffline (Task 10 — noi day tang offline vao app shell)', () 
 
     const setIntervalSpy = vi.spyOn(globalThis, 'setInterval')
 
-    const ketQua = await khoiDongOffline()
+    const ketQua = await khoiDongOffline('giao-xu-test-1')
     expect(ketQua).not.toBeNull()
 
     expect(setIntervalSpy).toHaveBeenCalledTimes(1)
@@ -162,6 +163,72 @@ describe('khoiDongOffline (Task 10 — noi day tang offline vao app shell)', () 
     })
   })
 
+  // C1 (fix round cuoi - CRITICAL, spec 6.4): may chu phuc vu NHIEU giao xu tren mot CSDL, moi giao
+  // xu co epoch/chuoi so_thu_tu RIENG. Truoc day ten kho la hang so 'qlgx' — doi tai khoan sang giao
+  // xu KHAC tren cung trinh duyet se mo lai DUNG kho cu, mang nguyen hang cho/so da nhan/con tro cua
+  // giao xu TRUOC sang giao xu MOI (lo du lieu so sach giua hai giao xu). Bat bien: hai giaoXuId
+  // khac nhau -> hai TEN KHO khac nhau.
+  it('C1: hai giao xu khac nhau tren cung trinh duyet -> moKho duoc goi voi HAI ten kho KHAC NHAU', async () => {
+    const fetchGia = vi.fn(async () => new Response(JSON.stringify({ epoch: 'e1', conTroMoi: 0, conNua: false, dong: [] }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchGia)
+    const moKhoSpy = vi.spyOn(moKhoModule, 'moKho')
+
+    await khoiDongOffline('giao-xu-A')
+    dungOffline()
+    await khoiDongOffline('giao-xu-B')
+
+    const tenKhoDaDung = moKhoSpy.mock.calls.map((c) => c[0])
+    expect(tenKhoDaDung).toEqual(['qlgx-giao-xu-A', 'qlgx-giao-xu-B'])
+    expect(tenKhoDaDung[0]).not.toBe(tenKhoDaDung[1])
+  })
+
+  // I1 (fix round cuoi, spec 4.8.2): donSoDaNhanCu() la ma chet truoc day — phai duoc goi trong
+  // CHINH vong lap nen 5 phut da co (khong tao interval moi), voi moc "30 ngay truoc" dang chuoi ISO.
+  it('I1: tick cua vong lap nen goi donSoDaNhanCu voi moc ISO 30 ngay truoc', async () => {
+    const fetchGia = vi.fn(async () => new Response(JSON.stringify({ epoch: 'e1', conTroMoi: 0, conNua: false, dong: [] }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchGia)
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval')
+
+    const ketQua = await khoiDongOffline('giao-xu-test-1')
+    expect(ketQua).not.toBeNull()
+
+    const callback = setIntervalSpy.mock.calls[0]?.[0] as (() => void) | undefined
+    expect(callback).toBeTypeOf('function')
+
+    const donSpy = vi.spyOn(soDaNhanModule, 'donSoDaNhanCu').mockResolvedValue(undefined)
+    vi.spyOn(hangChoModule, 'docHangCho').mockResolvedValue([])
+    vi.spyOn(tepDuPhongModule, 'canTuDongDuPhong').mockReturnValue(false)
+
+    callback!()
+
+    await vi.waitFor(() => expect(donSpy).toHaveBeenCalled())
+    const moc = donSpy.mock.calls[0]?.[1] as string
+    expect(typeof moc).toBe('string')
+    // Chuoi ISO hop le (donSoDaNhanCu so sanh CHUOI theo thu tu tu dien — sai dinh dang la sai het).
+    expect(moc).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
+    const soNgay = (Date.now() - Date.parse(moc)) / (24 * 60 * 60 * 1000)
+    expect(soNgay).toBeGreaterThan(29.9)
+    expect(soNgay).toBeLessThan(30.1)
+  })
+
+  // I1: mot viec hong KHONG duoc keo viec kia chet theo trong cung luot chay (hai viec doc lap).
+  it('I1: docHangCho nem loi -> donSoDaNhanCu VAN duoc goi (try/catch rieng cho tung viec)', async () => {
+    const fetchGia = vi.fn(async () => new Response(JSON.stringify({ epoch: 'e1', conTroMoi: 0, conNua: false, dong: [] }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchGia)
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval')
+
+    await khoiDongOffline('giao-xu-test-1')
+    const callback = setIntervalSpy.mock.calls[0]?.[0] as (() => void) | undefined
+
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(hangChoModule, 'docHangCho').mockRejectedValue(new Error('mo phong loi doc hang cho'))
+    const donSpy = vi.spyOn(soDaNhanModule, 'donSoDaNhanCu').mockResolvedValue(undefined)
+
+    callback!()
+
+    await vi.waitFor(() => expect(donSpy).toHaveBeenCalled())
+  })
+
   it('mo kho THAT BAI: tra ve null, KHONG nem loi ra ngoai, va layTrangThaiOffline() van la null', async () => {
     // Mo phong loi that bang cach lam factory.open nem loi dong bo — dung mot IDBFactory gia don
     // gian nhat co the (khoiDongOffline goi moKho() khong tham so nen dung indexedDB toan cuc,
@@ -169,7 +236,7 @@ describe('khoiDongOffline (Task 10 — noi day tang offline vao app shell)', () 
     vi.spyOn(moKhoModule, 'moKho').mockRejectedValue(new Error('mo phong loi mo kho that (Task 10 test)'))
     const loiConsole = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    const ketQua = await khoiDongOffline()
+    const ketQua = await khoiDongOffline('giao-xu-test-1')
 
     expect(ketQua).toBeNull()
     expect(layTrangThaiOffline()).toBeNull()

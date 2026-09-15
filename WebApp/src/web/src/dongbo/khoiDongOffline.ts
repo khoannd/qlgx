@@ -8,7 +8,15 @@
  * `buSauKhoiPhuc.ts`) — xem tham số `khiEpochKhongKhop` mới thêm vào `batDauBoDongBo`
  * (`boDongBo.ts`).
  *
- * GỌI ĐÚNG MỘT LẦN cho suốt vòng đời một tab (I6, cảnh báo đã có sẵn ở `khoiTaoPhuThuoc`/
+ * GỌI ĐÚNG MỘT LẦN cho mỗi cặp (tab, GIÁO XỨ) — C1 (fix round cuối): kho IndexedDB được đặt tên
+ * theo `giaoXuId` (`qlgx-<giaoXuId>`), nên mỗi giáo xứ có kho RIÊNG (spec 6.4). Nếu
+ * `khoiDongOffline` được gọi lại với `giaoXuId` KHÁC trong khi cache `dangKhoiDong` còn đang trả về
+ * kết quả của giáo xứ TRƯỚC, đó là LỖI LOGIC Ở TẦNG GỌI — lượt gọi sau sẽ nhận nguyên kết quả (kho)
+ * của giáo xứ cũ. `App.tsx` phải bảo đảm luôn `dungOffline()` trước khi đăng nhập bằng giáo xứ
+ * khác; điều này ĐÃ đúng vì mọi lần đổi tài khoản đều đi qua `dangXuat()` (`AuthContext.tsx`), và
+ * `dangXuat()` gọi `dungOffline()` (xoá cache `dangKhoiDong`) từ fix round trước Task 10.
+ *
+ * (I6, cảnh báo đã có sẵn ở `khoiTaoPhuThuoc`/
  * `batDauBoDongBo` — hai lần gọi tạo ra HAI `PhuThuocBoDongBo` độc lập cùng ghi đè `conTro`/đồng hồ
  * logic lên nhau). `khoiDongOffline()` tự chống gọi lại bằng một Promise cache module-level (cùng
  * khuôn mẫu `dangChayEpochKhongKhop` của `buSauKhoiPhuc.ts`) — gọi nhiều lần (ví dụ React StrictMode
@@ -21,6 +29,7 @@
  */
 import { moKho } from '../kho/moKho'
 import { docHangCho } from '../kho/hangCho'
+import { donSoDaNhanCu } from '../kho/soDaNhan'
 import { batDauBoDongBo, type DieuKhienBoDongBo } from './boDongBo'
 import { xuLyEpochKhongKhopDonLuong } from './buSauKhoiPhuc'
 import { canTuDongDuPhong, taiFileDuPhongXuong } from './tepDuPhong'
@@ -87,14 +96,37 @@ function ghiLanDuPhongGanNhat(iso: string) {
 
 let idInterKiemTraDuPhong: ReturnType<typeof setInterval> | null = null
 
+// I1 (fix round cuối, spec 4.8.2): `donSoDaNhanCu()` đã có đủ logic từ Task 5 nhưng KHÔNG nơi nào
+// gọi — mã chết, sổ đã nhận phình vô hạn. Ghép vào ĐÚNG vòng lặp nền 5 phút đã có (không tạo
+// interval mới). Ngưỡng 30 ngày lấy đúng theo JSDoc của `donSoDaNhanCu` — tham số `truocNgay` là
+// một chuỗi ISO 8601 (so sánh chuỗi theo thứ tự từ điển = thứ tự thời gian), KHÔNG phải timestamp số.
+const SO_NGAY_GIU_SO_DA_NHAN = 30
+
+function mocDonSoDaNhan(): string {
+  return new Date(Date.now() - SO_NGAY_GIU_SO_DA_NHAN * 24 * 60 * 60 * 1000).toISOString()
+}
+
+/**
+ * Một lượt "việc nhà" định kỳ của tầng offline. Hai việc bên trong ĐỘC LẬP nhau (tự dự phòng file
+ * vs. dọn sổ đã nhận cũ) nên mỗi việc có try/catch RIÊNG — một việc hỏng không được kéo việc kia
+ * chết theo trong cùng lượt chạy.
+ */
 async function kiemTraTuDongDuPhong(kho: IDBDatabase): Promise<void> {
   try {
     const hangCho = await docHangCho(kho)
-    if (!canTuDongDuPhong(hangCho, docLanDuPhongGanNhat())) return
-    taiFileDuPhongXuong(hangCho)
-    ghiLanDuPhongGanNhat(new Date().toISOString())
+    if (canTuDongDuPhong(hangCho, docLanDuPhongGanNhat())) {
+      taiFileDuPhongXuong(hangCho)
+      ghiLanDuPhongGanNhat(new Date().toISOString())
+    }
   } catch (loi) {
     console.error('Khong kiem tra/tai duoc file du phong tu dong', loi)
+  }
+
+  // I1: dọn sổ đã nhận quá 30 ngày — try/catch RIÊNG, xem JSDoc ở trên.
+  try {
+    await donSoDaNhanCu(kho, mocDonSoDaNhan())
+  } catch (loi) {
+    console.error('Khong don duoc so da nhan cu', loi)
   }
 }
 
@@ -110,8 +142,12 @@ async function kiemTraTuDongDuPhong(kho: IDBDatabase): Promise<void> {
  *
  * `ThanhTrangThai`/các màn hình đọc trạng thái qua `layTrangThaiOffline()` (đồng bộ, không async) —
  * `null` cho tới khi lượt gọi ĐẦU TIÊN này hoàn tất (hoặc mãi mãi `null` nếu thất bại).
+ *
+ * `giaoXuId` (C1): khoá giáo xứ đang đăng nhập — quyết định TÊN KHO IndexedDB (`qlgx-<giaoXuId>`).
+ * BẮT BUỘC truyền, không có giá trị mặc định: một cái tên kho cố định dùng chung cho mọi giáo xứ là
+ * đúng lỗ hổng cách ly dữ liệu mà C1 sinh ra để bịt.
  */
-export function khoiDongOffline(): Promise<TrangThaiOffline | null> {
+export function khoiDongOffline(giaoXuId: string): Promise<TrangThaiOffline | null> {
   if (dangKhoiDong) return dangKhoiDong
 
   // F4: bắt đầu một lượt khởi động MỚI — hạ cờ "đã bị dừng giữa chừng" của lượt trước (nếu có) về
@@ -120,7 +156,8 @@ export function khoiDongOffline(): Promise<TrangThaiOffline | null> {
 
   dangKhoiDong = (async () => {
     try {
-      const kho = await moKho()
+      // C1: kho RIÊNG cho từng giáo xứ (spec 6.4) — xem JSDoc `TEN_KHO_MAC_DINH` ở `moKho.ts`.
+      const kho = await moKho(`qlgx-${giaoXuId}`)
       // I6/`khoiTaoPhuThuoc`: `dieuKhien` được tham chiếu bên trong chính closure truyền cho
       // `batDauBoDongBo` — hợp lệ vì closure chỉ THỰC SỰ đọc `dieuKhien.trangThai` khi callback được
       // GỌI (lúc gặp `LoiEpochKhongKhop`), tại thời điểm đó `const dieuKhien` bên dưới chắc chắn đã

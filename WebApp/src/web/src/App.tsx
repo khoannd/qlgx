@@ -62,9 +62,14 @@ function App() {
   // `khoiDongOffline()` tự chống gọi lại nhiều lần (cache Promise module-level — xem
   // `dongbo/khoiDongOffline.ts`), nên effect này chạy lại mỗi lần `nguoiDung` đổi (kể cả không đổi
   // giá trị logic, chỉ đổi tham chiếu) vẫn an toàn, không mở kho/bắt đầu vòng đồng bộ lần thứ hai.
+  // C1 (fix round cuối): truyền `giaoXuId` xuống để kho IndexedDB được đặt tên RIÊNG theo giáo xứ
+  // (`qlgx-<giaoXuId>`, spec 6.4) — một kho tên cố định dùng chung cho mọi giáo xứ trên cùng trình
+  // duyệt là lỗ hổng cách ly dữ liệu giữa hai giáo xứ. `giaoXuId` là `null` chỉ trong lúc dữ liệu
+  // chưa kịp tải (xem JSDoc `NguoiDungHienTai`) — không nên xảy ra thật, nhưng vẫn phải bỏ qua
+  // thay vì mở kho tên `qlgx-null` dùng chung cho mọi giáo xứ chưa biết khoá.
   useEffect(() => {
-    if (!nguoiDung) return
-    khoiDongOffline()
+    if (!nguoiDung?.giaoXuId) return
+    khoiDongOffline(nguoiDung.giaoXuId)
   }, [nguoiDung])
   const { danhSach, dangChon, mo, chon, dong, dongTatCa, suaTieuDe } = useTabDocs()
   // Đếm số bản ghi mới đang mở dở, giống biến moiDem của bản mẫu — mỗi lần bấm "Thêm mới"
