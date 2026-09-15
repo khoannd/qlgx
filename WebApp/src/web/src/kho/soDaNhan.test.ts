@@ -104,50 +104,94 @@ describe('soDaNhan (Task 3 — so da nhan va don sach 30 ngay)', () => {
     db.close()
   })
 
-  it('docTheoKhoang tra ve theo thu tu soThuTu tang dan', async () => {
+  it('docTheoKhoang tra ve theo thu tu SO HOC cua soThuTu tang dan, khong phai thu tu khoa CHUOI', async () => {
     const db = await moKho(tenKhoRieng())
 
     const dong1: DongDaNhan = {
       epoch: 'e1',
-      soThuTu: 30,
+      soThuTu: 100,
       bang: 'giaoDan',
-      banGhiId: 'id-30',
+      banGhiId: 'id-100',
       truong: 'tenGiaoDan',
       giaTri: 'C',
       dongHoVatLy: '2026-09-15T10:30:00Z',
       dongHoLogic: 100,
       thietBiId: null,
-      giaoDichId: 'gd-30',
+      giaoDichId: 'gd-100',
       ngayNhan: '2026-09-15T10:30:00Z',
     }
 
     const dong2: DongDaNhan = {
       ...dong1,
-      soThuTu: 10,
-      banGhiId: 'id-10',
-      giaoDichId: 'gd-10',
+      soThuTu: 9,
+      banGhiId: 'id-9',
+      giaoDichId: 'gd-9',
       giaTri: 'A',
-      dongHoLogic: 100,
       dongHoVatLy: '2026-09-15T10:10:00Z',
       ngayNhan: '2026-09-15T10:10:00Z',
     }
 
     const dong3: DongDaNhan = {
       ...dong1,
-      soThuTu: 20,
-      banGhiId: 'id-20',
-      giaoDichId: 'gd-20',
+      soThuTu: 10,
+      banGhiId: 'id-10',
+      giaoDichId: 'gd-10',
       giaTri: 'B',
       dongHoVatLy: '2026-09-15T10:20:00Z',
       ngayNhan: '2026-09-15T10:20:00Z',
     }
 
-    // Ghi theo thứ tự 30, 10, 20 (không phải thứ tự tăng dần)
+    // Ghi theo thứ tự 100, 9, 10 — khoá CHUỖI tương ứng "e1:100" < "e1:10" < "e1:9" (so từ điển),
+    // NGƯỢC HẲN thứ tự số học 9 < 10 < 100. Nếu docTheoKhoang chỉ trả về đúng thứ tự cursor duyệt
+    // (thứ tự khoá), test này phải đỏ.
     await ghiSoDaNhan(db, [dong1, dong2, dong3])
 
-    // Doc phải lấy theo thứ tự soThuTu tăng dần (10, 20, 30), không phải thứ tự ghi
     const ketQua = await docTheoKhoang(db, 'e1', 0)
-    expect(ketQua.map((d) => d.soThuTu)).toEqual([10, 20, 30])
+    expect(ketQua.map((d) => d.soThuTu)).toEqual([9, 10, 100])
+
+    db.close()
+  })
+
+  it('hai dong CUNG soThuTu nhung KHAC epoch khong duoc de len nhau (khoa phai gom ca epoch)', async () => {
+    // Kich ban that: may chu xoay epoch sau khi khoi phuc tu ban sao luu (spec 4.8.3/4.8.4) —
+    // chuoi so_thu_tu MOI khoi dong lai tu so nho, nen rat co the trung voi mot soThuTu cua
+    // epoch CU con trong so da nhan. Neu khoa luu tru chi dung soThuTu (bo epoch), dong epoch
+    // CU se bi dong epoch MOI ghi de im lang — dung luc do lai la dong duy nhat Task 8 can de
+    // bu lai cho may chu (spec 4.8.5).
+    const db = await moKho(tenKhoRieng())
+
+    const dongEpochCu: DongDaNhan = {
+      epoch: 'epoch-cu',
+      soThuTu: 4850,
+      bang: 'giaoDan',
+      banGhiId: 'id-cu',
+      truong: 'tenGiaoDan',
+      giaTri: 'Du lieu epoch cu',
+      dongHoVatLy: '2026-09-10T10:00:00Z',
+      dongHoLogic: 100,
+      thietBiId: null,
+      giaoDichId: 'gd-epoch-cu',
+      ngayNhan: '2026-09-10T10:00:00Z',
+    }
+
+    const dongEpochMoi: DongDaNhan = {
+      ...dongEpochCu,
+      epoch: 'epoch-moi',
+      banGhiId: 'id-moi',
+      giaTri: 'Du lieu epoch moi',
+      giaoDichId: 'gd-epoch-moi',
+      ngayNhan: '2026-09-15T10:00:00Z',
+    }
+
+    await ghiSoDaNhan(db, [dongEpochCu, dongEpochMoi])
+
+    const conEpochCu = await docTheoKhoang(db, 'epoch-cu', 0)
+    expect(conEpochCu).toHaveLength(1)
+    expect(conEpochCu[0].giaTri).toBe('Du lieu epoch cu')
+
+    const conEpochMoi = await docTheoKhoang(db, 'epoch-moi', 0)
+    expect(conEpochMoi).toHaveLength(1)
+    expect(conEpochMoi[0].giaTri).toBe('Du lieu epoch moi')
 
     db.close()
   })
@@ -216,6 +260,43 @@ describe('soDaNhan (Task 3 — so da nhan va don sach 30 ngay)', () => {
     db.close()
   })
 
+  it('donSoDaNhanCu phai duyet HET kho, khong dung som sau dong xoa dau tien', async () => {
+    // Neu con trỏ dừng ngay sau khi xoá được MỘT dòng (thiếu con.continue(), hoặc dừng vì tưởng
+    // "đã tìm thấy dòng cần xoá"), các dòng cũ đứng SAU dòng đó theo thứ tự khoá sẽ không bao giờ
+    // bị dọn — sổ đã nhận phình vô hạn, có thể chạm quota IndexedDB và khiến trình duyệt evict cả
+    // database (kể cả hàng chờ chưa gửi). Dựng tình huống: dòng CŨ (cần xoá) đứng SAU dòng MỚI
+    // (không xoá) theo thứ tự khoá chuỗi "epoch:soThuTu" — soThuTu 1 (mới) < 2 (cũ) < 3 (cũ).
+    const db = await moKho(tenKhoRieng())
+
+    const ngayCanBao = '2026-09-15T00:00:00Z'
+    const taoDong = (soThuTu: number, ngayNhan: string): DongDaNhan => ({
+      epoch: 'e1',
+      soThuTu,
+      bang: 'giaoDan',
+      banGhiId: `id-${soThuTu}`,
+      truong: 'tenGiaoDan',
+      giaTri: `gia-tri-${soThuTu}`,
+      dongHoVatLy: ngayNhan,
+      dongHoLogic: 100,
+      thietBiId: null,
+      giaoDichId: `gd-${soThuTu}`,
+      ngayNhan,
+    })
+
+    const dongMoiDungTruoc = taoDong(1, '2026-09-15T10:00:00Z') // moi, khong xoa, khoa "e1:1"
+    const dongCu1 = taoDong(2, '2026-09-14T00:00:00Z') // cu, phai xoa, khoa "e1:2"
+    const dongCu2 = taoDong(3, '2026-09-13T00:00:00Z') // cu, phai xoa, khoa "e1:3"
+
+    await ghiSoDaNhan(db, [dongMoiDungTruoc, dongCu1, dongCu2])
+
+    await donSoDaNhanCu(db, ngayCanBao)
+
+    const conLai = await docTheoKhoang(db, 'e1', 0)
+    expect(conLai.map((d) => d.soThuTu)).toEqual([1])
+
+    db.close()
+  })
+
   it('donSoDaNhanCu voi dieu kien so sanh chuoi ISO 8601 hop le theo thu tu tu dien = thu tu thoi gian', async () => {
     const db = await moKho(tenKhoRieng())
 
@@ -274,7 +355,7 @@ describe('soDaNhan (Task 3 — so da nhan va don sach 30 ngay)', () => {
     db.close()
   })
 
-  it('donSoDaNhanCu voi mang rong khong lam gi va khong nem loi', async () => {
+  it('donSoDaNhanCu voi nguong rat xa trong qua khu thi khong xoa gi ca', async () => {
     const db = await moKho(tenKhoRieng())
 
     const dong: DongDaNhan = {

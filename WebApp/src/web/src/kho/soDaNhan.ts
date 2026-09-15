@@ -35,10 +35,35 @@ export type DongDaNhan = {
   ngayNhan: string
 }
 
+/** Lõi dùng chung, TRÊN MỘT `IDBObjectStore` (`KHO_SO_DA_NHAN`) đã mở sẵn ở chế độ `readwrite` —
+ * không tự mở/đóng giao dịch, để nơi gọi (Task 6: áp thao tác nhận về + tiến con trỏ + ghi sổ đã
+ * nhận + xoá khỏi hàng chờ trong MỘT giao dịch — spec mục 5, ràng buộc 3) ghép được lệnh ghi này
+ * vào giao dịch của chính nó, cùng khuôn mẫu với `xoaKhoiHangChoTrongGiaoDich`/`ghiConTroTrongGiaoDich`.
+ * Không tự `reject` khi ghi lỗi (`baoLoi` để trống nếu nơi gọi đã có `onerror`/`onabort` riêng của
+ * giao dịch bao ngoài). Thiếu hàm này thì Task 6 phải commit riêng con trỏ trước rồi mới ghi sổ đã
+ * nhận sau — sập máy/hết quota đúng giữa hai bước đó khiến con trỏ nói "đã nhận tới X" trong khi sổ
+ * đã nhận không có các dòng đó, và Task 8 (bù lại sau khôi phục) sẽ bù thiếu mà không ai biết. */
+export function ghiSoDaNhanTrongGiaoDich(
+  storeSoDaNhan: IDBObjectStore,
+  dong: DongDaNhan[],
+  baoLoi: (loi: unknown) => void,
+): void {
+  for (const d of dong) {
+    const yc = storeSoDaNhan.put(d, `${d.epoch}:${d.soThuTu}`)
+    yc.onerror = () => baoLoi(yc.error)
+  }
+}
+
 /**
  * Ghi nhiều dòng đã nhận trong MỘT giao dịch `readwrite` duy nhất. Khoá lưu trong kho là
- * `${epoch}:${soThuTu}` — định danh duy nhất một dòng từ một chuỗi so_thu_tu cụ thể. Nếu
- * ghi lại dòng cũ (cùng epoch/soThuTu) thì ghi đè (put, không add).
+ * `${epoch}:${soThuTu}` — định danh duy nhất một dòng từ một chuỗi so_thu_tu cụ thể (BẮT BUỘC
+ * gồm cả `epoch`: khi máy chủ xoay epoch sau khôi phục, chuỗi so_thu_tu mới khởi động lại từ số
+ * nhỏ, nên hai epoch khác nhau có thể trùng soThuTu — bỏ epoch khỏi khoá sẽ khiến dòng epoch CŨ,
+ * đúng thứ Task 8 cần để bù lại, bị ghi đè im lặng). Nếu ghi lại dòng cũ (cùng epoch/soThuTu) thì
+ * ghi đè (put, không add).
+ *
+ * Bản ĐỘC LẬP (tự mở giao dịch riêng) — dùng khi KHÔNG cần ghép chung giao dịch với thao tác nào
+ * khác. Khi cần ghép chung (Task 6), dùng `ghiSoDaNhanTrongGiaoDich` trên store đã mở sẵn.
  */
 export function ghiSoDaNhan(kho: IDBDatabase, dong: DongDaNhan[]): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -48,13 +73,7 @@ export function ghiSoDaNhan(kho: IDBDatabase, dong: DongDaNhan[]): Promise<void>
     }
 
     const gd = kho.transaction(KHO_SO_DA_NHAN, 'readwrite')
-    const store = gd.objectStore(KHO_SO_DA_NHAN)
-
-    // Ghi tất cả dòng trong cùng một giao dịch.
-    for (const d of dong) {
-      const khoa = `${d.epoch}:${d.soThuTu}`
-      store.put(d, khoa)
-    }
+    ghiSoDaNhanTrongGiaoDich(gd.objectStore(KHO_SO_DA_NHAN), dong, () => {})
 
     gd.oncomplete = () => resolve()
     gd.onerror = () => reject(gd.error ?? new Error('Không ghi được sổ đã nhận'))
@@ -69,43 +88,46 @@ export function ghiSoDaNhan(kho: IDBDatabase, dong: DongDaNhan[]): Promise<void>
  */
 export function docTheoKhoang(kho: IDBDatabase, epoch: string, tuSoThuTu: number): Promise<DongDaNhan[]> {
   return new Promise((resolve, reject) => {
-    const store = kho.transaction(KHO_SO_DA_NHAN, 'readonly').objectStore(KHO_SO_DA_NHAN)
+    const gd = kho.transaction(KHO_SO_DA_NHAN, 'readonly')
     const ketQua: DongDaNhan[] = []
 
     // Mở con trỏ để duyệt toàn bộ kho — cần lọc epoch và soThuTu theo điều kiện trong callback
     // (IndexedDB không hỗ trợ lọc compound condition trên một khoá chuỗi dạng "epoch:soThuTu").
-    const yc = store.openCursor()
+    const yc = gd.objectStore(KHO_SO_DA_NHAN).openCursor()
     yc.onsuccess = () => {
       const con = yc.result
       if (con) {
         const d = con.value as DongDaNhan
-        // Chỉ lấy dòng có epoch khớp VÀ soThuTu > tuSoThuTu
+        // `>` KHÔNG `>=`: spec 4.8.5 bước 2 — con trỏ cũ (epoch_cũ, 5000) so với máy chủ còn tối
+        // đa 4900 nghĩa là so_thu_tu <= 4900 máy chủ VẪN CÒN (không mất), chỉ phần > 4900 mới là
+        // phần bị mất cần bù lại. Lấy cả == thì gửi lại một dòng máy chủ chưa từng đánh rơi.
         if (d.epoch === epoch && d.soThuTu > tuSoThuTu) {
           ketQua.push(d)
         }
         con.continue()
-      } else {
-        // Con trỏ hết — sắp xếp theo soThuTu tăng dần trước khi trả về
-        ketQua.sort((a, b) => a.soThuTu - b.soThuTu)
-        resolve(ketQua)
       }
     }
     yc.onerror = () => reject(yc.error)
+    gd.oncomplete = () => {
+      // Sắp xếp SỐ HỌC theo soThuTu (không phải thứ tự duyệt cursor, vốn theo khoá CHUỖI
+      // "epoch:soThuTu" — "e1:100" đứng trước "e1:20" theo so chuỗi dù 100 > 20 theo số).
+      ketQua.sort((a, b) => a.soThuTu - b.soThuTu)
+      resolve(ketQua)
+    }
+    gd.onabort = () => reject(gd.error ?? new Error('Giao dịch đọc sổ đã nhận bị huỷ giữa chừng'))
   })
 }
 
 /**
- * Xoá các dòng có ngayNhan < truocNgay (so sánh chuỗi ISO 8601 hợp lệ theo thứ tự từ điển
- * = thứ tự thời gian). Dòng có ngayNhan >= truocNgay KHÔNG được đụng tới — điều này bắt
- * buộc phải kiểm thử riêng (fact từ brief, xem dòng dưới).
+ * Xoá các dòng có `ngayNhan < truocNgay` (so sánh chuỗi ISO 8601 hợp lệ theo thứ tự từ điển
+ * = thứ tự thời gian). Dòng có `ngayNhan >= truocNgay` KHÔNG được đụng tới.
  *
  * Lý do giữ 30 ngày: spec mục 4.8.2 — máy con giữ bản sao các dòng đã áp để bù lại dữ liệu
  * máy chủ đã mất, nhưng giữ vô hạn thì lưu trữ phình to. Sau 30 ngày nếu vẫn chưa tính được
- * gì từ sổ đã nhận thì an toàn để xoá (máy chủ đã ghi lại dữ liệu cuối cùng của nó).
- *
- * **Fact bắt buộc (từ brief):** dòng có ngayNhan >= truocNgay KHÔNG được đụng tới — viết
- * test khẳng định rõ điều này (không chỉ test "dòng cũ bị xoá", mà còn test "dòng mới còn
- * nguyên" trong cùng một lần gọi).
+ * gì từ sổ đã nhận thì an toàn để xoá (máy chủ đã ghi lại dữ liệu cuối cùng của nó). Duyệt
+ * TOÀN BỘ kho bằng con trỏ (không dừng sớm dù đã xoá được một dòng) vì thứ tự khoá chuỗi
+ * "epoch:soThuTu" không liên quan gì tới thứ tự `ngayNhan` — dòng cần xoá có thể nằm ở bất
+ * kỳ vị trí nào trong lần duyệt.
  */
 export function donSoDaNhanCu(kho: IDBDatabase, truocNgay: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -117,13 +139,13 @@ export function donSoDaNhanCu(kho: IDBDatabase, truocNgay: string): Promise<void
       const con = yc.result
       if (con) {
         const d = con.value as DongDaNhan
-        // Xoá chỉ khi ngayNhan < truocNgay (so sánh chuỗi)
         if (d.ngayNhan < truocNgay) {
           con.delete()
         }
         con.continue()
       }
     }
+    yc.onerror = () => reject(yc.error)
 
     gd.oncomplete = () => resolve()
     gd.onerror = () => reject(gd.error ?? new Error('Không dọn được sổ đã nhận cũ'))
