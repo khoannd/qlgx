@@ -80,6 +80,41 @@ describe('AuthContext', () => {
     expect(screen.getByText('giao-xu:Vo Nhiem')).toBeDefined()
   })
 
+  // Task 10 (brief muc "noi day" #2, spec offline muc 5): navigator.storage.persist() PHAI duoc
+  // goi NGAY sau khi dang nhap thanh cong — thieu buoc nay trinh duyet co the tu y don du lieu
+  // IndexedDB ngoai tuyen bat cu luc nao.
+  it('dangNhap thanh cong tu goi navigator.storage.persist() de xin giu ben du lieu ngoai tuyen', async () => {
+    vi.mocked(api.auth.dangNhap).mockResolvedValue({
+      token: 'token-moi', hetHanSau: 28800,
+      nguoiDung: { id: '1', tenTaiKhoan: 'vanphong', hoTen: 'Van Phong', loaiTaiKhoan: 0, giaoXuId: 'x', tenGiaoXu: 'Vo Nhiem' },
+    })
+    const persistGia = vi.fn().mockResolvedValue(true)
+    vi.stubGlobal('navigator', { ...navigator, storage: { persist: persistGia } })
+
+    render(<AuthProvider><ThamDo /></AuthProvider>)
+    await screen.findByText('chua-dang-nhap')
+    await userEvent.click(screen.getByText('dang-nhap'))
+
+    await waitFor(() => expect(persistGia).toHaveBeenCalledTimes(1))
+  })
+
+  // Trinh duyet khong ho tro navigator.storage (Safari cu, mot so trinh duyet mang LAN giao xu) —
+  // KHONG duoc lam hong luong dang nhap chinh du thieu API nay.
+  it('trinh duyet KHONG co navigator.storage van dang nhap thanh cong binh thuong', async () => {
+    vi.mocked(api.auth.dangNhap).mockResolvedValue({
+      token: 'token-moi', hetHanSau: 28800,
+      nguoiDung: { id: '1', tenTaiKhoan: 'vanphong', hoTen: 'Van Phong', loaiTaiKhoan: 0, giaoXuId: 'x', tenGiaoXu: 'Vo Nhiem' },
+    })
+    const { storage: _storage, ...navigatorKhongCoStorage } = navigator as Navigator & { storage?: unknown }
+    vi.stubGlobal('navigator', navigatorKhongCoStorage)
+
+    render(<AuthProvider><ThamDo /></AuthProvider>)
+    await screen.findByText('chua-dang-nhap')
+    await userEvent.click(screen.getByText('dang-nhap'))
+
+    expect(await screen.findByText('da-dang-nhap:vanphong')).toBeDefined()
+  })
+
   it('dangXuat xoa token va tro ve chua dang nhap', async () => {
     vi.mocked(api.auth.dangNhap).mockResolvedValue({
       token: 'token-moi', hetHanSau: 28800,

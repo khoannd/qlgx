@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { SideNav } from './SideNav'
 import { DoiMatKhauModal } from './DoiMatKhauModal'
 import { useAuth } from '../../api/AuthContext'
+import { ThanhTrangThai } from '../ThanhTrangThai'
 
 type NguoiDungHienTai = {
   tenTaiKhoan: string
@@ -97,6 +98,11 @@ export function AppShell({ dangChonNav, onNavigate, children, nguoiDung }: Props
         </label>
 
         <div className="spacer" />
+
+        {/* Thanh trang thai (ke hoach 5, spec 9.1) — LUON hien, ngay canh cac nut he thong. Tu
+            doc du lieu (khong nhan props ngoai onMoBanGiaoMay — xem ThanhTrangThai.tsx), tu an
+            hoan (return null) cho toi khi tang offline co so lieu that dau tien. */}
+        <ThanhTrangThai onMoBanGiaoMay={() => onNavigate('banGiaoMay')} />
 
         <div ref={khungRef} style={{ display: 'contents' }}>
           <button className="menubtn" type="button" aria-expanded={menuMo === 'm1'}

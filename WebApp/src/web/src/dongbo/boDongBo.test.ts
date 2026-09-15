@@ -23,6 +23,7 @@ import {
   type GuiLenYeuCau,
   type NhanVeKetQua,
   type NguonSuKienDongBo,
+  type PhuThuocBoDongBo,
 } from './boDongBo'
 import type { NguonKhoa } from './bauChu'
 
@@ -959,6 +960,98 @@ describe('boDongBo (Task 6 — bộ đồng bộ)', () => {
       expect(fetchGia).not.toHaveBeenCalled()
 
       dieuKhien.dung()
+    })
+
+    // Task 10 — "noi day" LoiEpochKhongKhop (410) voi buoc bu lai du lieu (Task 8). File nay
+    // (boDongBo.ts) KHONG tu import xuLyEpochKhongKhopDonLuong (tranh vong lap module) — tang tich
+    // hop that truyen no vao qua tham so khiEpochKhongKhop, o day gia lap bang mot spy don gian.
+    describe('khiEpochKhongKhop — diem noi LoiEpochKhongKhop voi buoc bu lai (Task 8)', () => {
+      it('goi khiEpochKhongKhop DUNG MOT LAN va CHO no xong truoc khi tiep tuc chu ky ke tiep', async () => {
+        const db = await moKho(tenKhoRieng())
+        // /thay-doi tra 410 (epoch khong khop) LUON o moi lan goi - du hang cho rong nen moi chu ky
+        // chi co dung mot fetch qua nhanh layThayDoiVaApDung.
+        const fetchGia = vi.fn(async () => new Response(null, { status: 410 }))
+        vi.stubGlobal('fetch', fetchGia)
+        const nguon = nguonSuKienGiaLap()
+        const henGio = nguonHenGioGiaLap()
+
+        let phuThuocNhanDuoc: PhuThuocBoDongBo | null = null
+        let dangCho: (() => void) | null = null
+        const khiEpochKhongKhop = vi.fn((phuThuoc: PhuThuocBoDongBo) => {
+          phuThuocNhanDuoc = phuThuoc
+          return new Promise<void>((resolve) => {
+            dangCho = resolve
+          })
+        })
+
+        const dieuKhien = batDauBoDongBo(db, nguon, henGio, nguonKhoaGiaLap, khiEpochKhongKhop)
+
+        await vi.waitFor(() => expect(khiEpochKhongKhop).toHaveBeenCalledTimes(1))
+        // phuThuoc truyen vao la PhuThuocBoDongBo THAT cua chinh tab nay (co truong `kho` trung
+        // dung db dang dung o test nay) - khong phai mot doi tuong gia/rong.
+        expect(phuThuocNhanDuoc).not.toBeNull()
+        expect((phuThuocNhanDuoc as unknown as PhuThuocBoDongBo).kho).toBe(db)
+
+        // Trong luc khiEpochKhongKhop CON DANG TREO (chua resolve), vong lap KHONG duoc phep chay
+        // tiep chu ky moi (khong dat them hen gio, khong goi fetch them) - day la fact "cho xong
+        // truoc khi tiep tuc" brief yeu cau.
+        await new Promise((r) => setTimeout(r, 20))
+        expect(khiEpochKhongKhop).toHaveBeenCalledTimes(1)
+        expect(henGio.dat).not.toHaveBeenCalled()
+
+        // Cho khiEpochKhongKhop xong - vong lap phai tiep tuc binh thuong (dat hen gio cho ke tiep),
+        // KHONG dung han (khac LoiMayChuDiLui).
+        dangCho!()
+        await vi.waitFor(() => expect(henGio.dat).toHaveBeenCalledTimes(1))
+        expect(dieuKhien.trangThai()).toBe('dang_chay')
+
+        dieuKhien.dung()
+        db.close()
+      })
+
+      it('khong truyen khiEpochKhongKhop: hanh vi CU giu nguyen, chi log roi thu lai chu ky sau (khong nem loi ra ngoai)', async () => {
+        const db = await moKho(tenKhoRieng())
+        const fetchGia = vi.fn(async () => new Response(null, { status: 410 }))
+        vi.stubGlobal('fetch', fetchGia)
+        const nguon = nguonSuKienGiaLap()
+        const henGio = nguonHenGioGiaLap()
+
+        // KHONG truyen tham so thu 5 - dung dung chu ky da co truoc Task 10.
+        const dieuKhien = batDauBoDongBo(db, nguon, henGio, nguonKhoaGiaLap)
+
+        await vi.waitFor(() => expect(henGio.dat).toHaveBeenCalledTimes(1))
+        expect(dieuKhien.trangThai()).toBe('dang_chay')
+
+        dieuKhien.dung()
+        db.close()
+      })
+
+      it('khiEpochKhongKhop NEM LOI: khong lam sup vong lap (bat, ghi log), van tiep tuc chu ky sau', async () => {
+        const db = await moKho(tenKhoRieng())
+        const fetchGia = vi.fn(async () => new Response(null, { status: 410 }))
+        vi.stubGlobal('fetch', fetchGia)
+        const nguon = nguonSuKienGiaLap()
+        const henGio = nguonHenGioGiaLap()
+        const loiBuLai = new Error('mo phong loi that tu buoc bu lai (vi du LoiThieuMocXoayEpoch)')
+        const khiEpochKhongKhop = vi.fn(async () => {
+          throw loiBuLai
+        })
+        const loiConsole = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        const dieuKhien = batDauBoDongBo(db, nguon, henGio, nguonKhoaGiaLap, khiEpochKhongKhop)
+
+        await vi.waitFor(() => expect(khiEpochKhongKhop).toHaveBeenCalledTimes(1))
+        // Vong lap KHONG sup do vi loi nay - van tiep tuc dat hen gio cho chu ky sau, trang thai van
+        // 'dang_chay' (KHAC han LoiMayChuDiLui, vong lap khong duoc DUNG HAN vi mot loi cua rieng
+        // buoc bu lai).
+        await vi.waitFor(() => expect(henGio.dat).toHaveBeenCalledTimes(1))
+        expect(dieuKhien.trangThai()).toBe('dang_chay')
+        expect(loiConsole).toHaveBeenCalledWith(expect.stringContaining('buoc bu lai du lieu cung loi'), loiBuLai)
+
+        dieuKhien.dung()
+        db.close()
+        loiConsole.mockRestore()
+      })
     })
   })
 

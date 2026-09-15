@@ -798,6 +798,23 @@ export function batDauBoDongBo(
   // https/localhost). Không truyền gì thì dùng đúng mặc định của `bauChu.ts` (Web Locks API thật,
   // qua `NGUON_KHOA_THAT` — bản sao tối thiểu ở trên).
   nguonKhoa?: NguonKhoa,
+  /**
+   * Task 10 (mục "nối dây" — brief): điểm nối `LoiEpochKhongKhop` (LỚP 1, phát hiện qua 410) với
+   * `xuLyEpochKhongKhopDonLuong` (Task 8, `buSauKhoiPhuc.ts`) — file này (Task 6, đã đóng) KHÔNG tự
+   * import Task 8 (tránh phụ thuộc ngược/vòng: `buSauKhoiPhuc.ts` đã import NGƯỢC LẠI từ đây —
+   * `taiToanBoVaGiaiNen`, `PhuThuocBoDongBo`, `TrangThaiBoDongBo` — import hai chiều sẽ tạo vòng lặp
+   * module). Tầng tích hợp thật (`khoiDongOffline.ts`) truyền
+   * `khiEpochKhongKhop: (phuThuoc) => xuLyEpochKhongKhopDonLuong(phuThuoc, dieuKhien.trangThai)`.
+   * Không truyền gì (mặc định `undefined`) — hành vi CŨ giữ nguyên: chỉ log, thử lại chu kỳ sau
+   * (đúng hành vi mọi test đã đóng trước Task 10 đang trông cậy vào).
+   *
+   * BẮT BUỘC `await` callback này TRƯỚC KHI vòng lặp tiếp tục (xem `khiLaChu` bên dưới) — bù lại dữ
+   * liệu phải xong XONG HẲN rồi mới cho chu kỳ kế tiếp chạy, tránh một chu kỳ khác xen vào giữa lúc
+   * `conTro`/hàng chờ đang được `xuLyEpochKhongKhop` sửa dở. KHÔNG nuốt lỗi nếu callback ném — một
+   * lỗi thật từ bước bù lại (ví dụ `LoiThieuMocXoayEpoch`) phải lộ ra console.error RÕ RÀNG là lỗi
+   * của BƯỚC BÙ LẠI, không phải trộn lẫn với "lỗi trong một chu kỳ" chung chung.
+   */
+  khiEpochKhongKhop?: (phuThuoc: PhuThuocBoDongBo) => Promise<void>,
 ): DieuKhienBoDongBo {
   const dieuKhienHuy = new AbortController()
   let trangThaiHienTai: TrangThaiBoDongBo = 'dang_chay'
@@ -870,10 +887,23 @@ export function batDauBoDongBo(
             console.error('Dong bo: may chu co dau hieu vua bi dua ve ban cu — DA DUNG dong bo', loi)
             return
           }
-          // LoiEpochKhongKhop hoặc lỗi mạng thường: ghi log rồi thử lại ở chu kỳ kế tiếp — Task 6
-          // KHÔNG tự động tải lại /toan-bo khi gặp LoiEpochKhongKhop (xem giới hạn phạm vi trong
-          // báo cáo: điểm nối `taiToanBoVaGiaiNen` đã sẵn cho Task 8 dùng).
-          console.error('Dong bo: loi trong mot chu ky, se thu lai o chu ky sau', loi)
+          if (loi instanceof LoiEpochKhongKhop && khiEpochKhongKhop) {
+            // Task 10: gọi callback bù lại NGAY, VÀ CHỜ nó xong hẳn trước khi vòng lặp tiếp tục
+            // (xem chú thích tham số `khiEpochKhongKhop` ở chữ ký hàm) — KHÔNG nuốt lỗi nếu callback
+            // ném, để phân biệt rõ với nhánh log chung bên dưới.
+            try {
+              await khiEpochKhongKhop(phuThuoc)
+              console.error('Dong bo: epoch khong khop, da goi bu lai du lieu xong, se thu lai o chu ky sau', loi)
+            } catch (loiBuLai) {
+              console.error('Dong bo: epoch khong khop NHUNG buoc bu lai du lieu cung loi — can nguoi ho tro kiem tra', loiBuLai)
+            }
+          } else {
+            // LoiEpochKhongKhop (khong co khiEpochKhongKhop) hoac loi mang thuong: ghi log roi thu
+            // lai o chu ky ke tiep — Task 6 KHONG tu dong tai lai /toan-bo khi gap LoiEpochKhongKhop
+            // (xem gioi han pham vi trong bao cao: diem noi `taiToanBoVaGiaiNen` da san cho Task 8/10
+            // dung).
+            console.error('Dong bo: loi trong mot chu ky, se thu lai o chu ky sau', loi)
+          }
         }
 
         if (tinHieuHuy.aborted) break

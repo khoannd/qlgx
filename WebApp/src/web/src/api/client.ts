@@ -14,6 +14,7 @@ import type {
   BangTimThayThe, TimThayTheXemTruoc, TimThayTheKetQua,
   MauInDanhSachItem, MauInChiTiet, CachHienThiDungSaiItem,
   TinhTrangSaoLuu, BanSaoLuu, CongViecSaoLuu, LoaiCongViecSaoLuu,
+  CanXemLai,
 } from './types'
 import { authStore } from './authStore'
 
@@ -901,6 +902,20 @@ export const api = {
   /** Khu vực "Cách hiển thị dữ liệu đúng/sai" của màn hình "Quản lý mẫu in" — một lượt GET trả
    * đủ cả 5 biến kèm CẢ HAI cấp (xem CachHienThiDungSaiItemDto), nên không có route GET riêng
    * theo cấp như `mauIn`. */
+  /** Task 10 (PWA offline) — hộp "cần xem lại" (spec 9.2). ĐỌC/GHI qua mạng bình thường (`goi()`),
+   * KHÔNG phải đường `ghiCucBo`/kho IndexedDB — hộp này vốn chỉ có ý nghĩa khi ONLINE (xử lý xung
+   * đột không phải việc offline-first, xem `task-10-brief.md`). Khuôn mẫu đúng ba endpoint thật
+   * của `DongBoEndpoints.cs`/`MapCanXemLai`. */
+  canXemLai: {
+    danhSach: () => goi<CanXemLai[]>('/api/can-xem-lai'),
+    /** `chon` chỉ nhận đúng "A" hoặc "B" (máy chủ từ chối giá trị khác — xem `ChonGiaTriYeuCau`).
+     * Dùng cho mục CÓ cặp giá trị A/B để chọn (khác `danhDauDaXuLy` bên dưới, dùng cho mục KHÔNG
+     * có cặp giá trị, ví dụ `Loai === "khong_luu_duoc"`). */
+    chon: (id: string, chon: 'A' | 'B') =>
+      goi<void>(`/api/can-xem-lai/${id}/chon`, { method: 'POST', body: JSON.stringify({ chon }) }),
+    danhDauDaXuLy: (id: string) =>
+      goi<void>(`/api/can-xem-lai/${id}/danh-dau-da-xu-ly`, { method: 'POST' }),
+  },
   cachHienThi: {
     danhSach: () => goi<CachHienThiDungSaiItem[]>('/api/cach-hien-thi'),
     rieng: {

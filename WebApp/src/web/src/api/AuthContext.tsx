@@ -84,6 +84,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       tenGiaoXu: ketQua.nguoiDung.tenGiaoXu,
       giaoXuId: ketQua.nguoiDung.giaoXuId,
     })
+    // Task 10 (brief mục "nối dây" #2, spec offline mục 5 — RÀNG BUỘC CỨNG): xin trình duyệt "giữ
+    // bền" (persistent) bộ nhớ IndexedDB ngay sau khi đăng nhập thành công — không có bước này,
+    // trình duyệt có thể tự ý dọn dữ liệu ngoại tuyến (hàng chờ, sổ đã nhận...) bất cứ lúc nào nó
+    // thấy máy thiếu dung lượng, đúng thứ toàn bộ kế hoạch offline-first sinh ra để tránh. Bọc
+    // try/catch IM LẶNG: `navigator.storage` không phải trình duyệt nào cũng có (Safari cũ, một số
+    // trình duyệt trong mạng LAN giáo xứ), và một lời từ chối/lỗi ở đây TUYỆT ĐỐI không được làm
+    // hỏng luồng đăng nhập chính — đây chỉ là một lớp tăng cường, không phải điều kiện để vào app.
+    try {
+      await navigator.storage?.persist?.()
+    } catch {
+      // Im lặng bỏ qua — xem chú thích ở trên.
+    }
   }, [])
 
   const value = useMemo(

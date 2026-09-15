@@ -87,6 +87,11 @@ type Props = {
 
 export function SideNav({ dangChonId, onNavigate, laQuanTri, laQuanTriHeThong }: Props) {
   const mucHeThong = [
+    // "Cần xem lại"/"Bàn giao máy này" (kế hoạch 5, offline-first) — MỌI tài khoản thấy, không
+    // gắn cờ quyền nào: đây là việc của CHÍNH CÁI MÁY đang dùng (hàng chờ/hộp xem lại cục bộ),
+    // không phải một năng lực quản trị theo vai trò người dùng.
+    { id: 'canXemLai', nhan: 'Cần xem lại' },
+    { id: 'banGiaoMay', nhan: 'Bàn giao máy này' },
     ...(laQuanTri ? [{ id: 'taiKhoanList', nhan: 'Quản lý tài khoản' }] : []),
     ...(laQuanTriHeThong ? [{ id: 'quanLyGiaoXu', nhan: 'Quản lý giáo xứ' }] : []),
     ...(laQuanTriHeThong ? [{ id: 'nhapDuLieu', nhan: 'Nhập dữ liệu Access' }] : []),

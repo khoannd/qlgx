@@ -40,6 +40,9 @@ import { TrangThaiMangBanner } from './components/TrangThaiMangBanner'
 import { CapNhatPWA } from './components/CapNhatPWA'
 import { BangCanhBaoSaoLuu } from './components/BangCanhBaoSaoLuu'
 import { useTuNhayKhiChonDropdown } from './lib/focusDieuHuong'
+import { khoiDongOffline } from './dongbo/khoiDongOffline'
+import { CanXemLaiPage } from './screens/CanXemLaiPage'
+import { BanGiaoMayPage } from './screens/BanGiaoMayPage'
 
 /** Chỗ giữ chỗ — màn hình Tổng quan thật sẽ được dựng ở task sau. */
 function TongQuan() {
@@ -52,6 +55,17 @@ function App() {
   // trạng hôn phối…) — gắn MỘT LẦN ở gốc ứng dụng để mọi màn hình/mọi ô mới thêm sau này đều tự
   // có, không cần sửa từng nơi. Xem lib/focusDieuHuong.ts.
   useTuNhayKhiChonDropdown()
+  // Task 10 — "nối dây": khởi động tầng offline (mở kho + bắt đầu vòng đồng bộ, Task 1-9) ĐÚNG MỘT
+  // LẦN, sau khi đã đăng nhập — cùng tinh thần với effect "home" bên dưới ("gọi API trước khi có
+  // token chỉ để bị 401 rồi tự đăng xuất lại, vô ích"): vòng đồng bộ tự gọi mạng tới các endpoint
+  // đòi `Authorization`, khởi động sớm hơn lúc có token chỉ tạo ra các lượt gọi thất bại vô ích.
+  // `khoiDongOffline()` tự chống gọi lại nhiều lần (cache Promise module-level — xem
+  // `dongbo/khoiDongOffline.ts`), nên effect này chạy lại mỗi lần `nguoiDung` đổi (kể cả không đổi
+  // giá trị logic, chỉ đổi tham chiếu) vẫn an toàn, không mở kho/bắt đầu vòng đồng bộ lần thứ hai.
+  useEffect(() => {
+    if (!nguoiDung) return
+    khoiDongOffline()
+  }, [nguoiDung])
   const { danhSach, dangChon, mo, chon, dong, dongTatCa, suaTieuDe } = useTabDocs()
   // Đếm số bản ghi mới đang mở dở, giống biến moiDem của bản mẫu — mỗi lần bấm "Thêm mới"
   // là một thẻ nháp riêng, không trùng khoá với thẻ nháp khác đang mở.
@@ -352,6 +366,15 @@ function App() {
     mo({ id: 'saoLuu', tieuDe: 'Sao lưu & Phục hồi', noiDung: <SaoLuuPage /> })
   }
 
+  // Ke hoach 5 (offline-first) — hai man hinh cuc bo cua CHINH MAY nay, khong phai du lieu giao
+  // xu chung (xem SideNav.tsx: khong gan co quyen nao, moi tai khoan tren moi may deu thay).
+  function moCanXemLai() {
+    mo({ id: 'canXemLai', tieuDe: 'Cần xem lại', noiDung: <CanXemLaiPage /> })
+  }
+  function moBanGiaoMay() {
+    mo({ id: 'banGiaoMay', tieuDe: 'Bàn giao máy này', noiDung: <BanGiaoMayPage /> })
+  }
+
   function moThongKeChung() {
     mo({ id: 'thongKeChung', tieuDe: 'Thống kê chung', noiDung: <ThongKeChungPage /> })
   }
@@ -396,6 +419,8 @@ function App() {
     else if (id === 'saoLuu') moSaoLuu()
     else if (id === 'thongKeChung') moThongKeChung()
     else if (id === 'bieuDo') moBieuDo()
+    else if (id === 'canXemLai') moCanXemLai()
+    else if (id === 'banGiaoMay') moBanGiaoMay()
   }
 
   // Đang kiểm tra token cũ (tải lại trang) — không hiện gì để tránh giật từ màn hình đăng

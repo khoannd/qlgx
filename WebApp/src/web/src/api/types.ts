@@ -834,6 +834,27 @@ export type CachHienThiDungSaiItem = {
 
 export type BieuDoGiaoHo = { tenGiaoHo: string; soLuong: number }
 
+// --- Task 10 (PWA offline) — hộp "cần xem lại" (spec 9.2) — ánh xạ 1-1 với CanXemLaiDto phía
+// máy chủ (WebApp/src/Qlgx.Api/Dtos/DongBoDtos.cs). ĐỌC/GHI qua mạng bình thường (KHÔNG phải kho
+// IndexedDB cục bộ — Ruling A của Task 6: máy chủ tự giữ bền vững mục "cần xem lại", xem
+// task-10-brief.md mục "Nguồn dữ liệu cho từng phần UI"). ---
+
+/** Ánh xạ 1-1 với `CanXemLaiDto` — một mục trong hộp cần xem lại. `GiaTriA`/`GiaTriB`/`LyDo` có
+ * thể `null` tuỳ `Loai` (ví dụ `Loai === "khong_luu_duoc"` không có cặp A/B để chọn — chỉ có
+ * `LyDo`, xử lý bằng "Đánh dấu đã xử lý" thay vì "Chọn A/Chọn B", xem `DongBoEndpoints.cs`). */
+export type CanXemLai = {
+  id: string
+  loai: string
+  bang: string
+  banGhiId: string
+  truong: string
+  lyDo: string | null
+  giaTriA: string | null
+  giaTriB: string | null
+  giaTriDangDung: string | null
+  taoLuc: string
+}
+
 /** Ánh xạ 1-1 với LoaiCongViecSaoLuu phía máy chủ (Qlgx.Domain/Entities/CongViecSaoLuu.cs). */
 export type LoaiCongViecSaoLuu =
   | 'sao_luu' | 'phuc_hoi' | 'kiem_tra' | 'dien_tap' | 'tai_ve' | 'dong_bo_danh_sach'
