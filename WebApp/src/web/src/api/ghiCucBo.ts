@@ -59,6 +59,16 @@ export type ThamSoGhiCucBo = {
   /** Bản ghi ĐẦY ĐỦ sau khi áp dụng TẤT CẢ thay đổi trong `truong` — ghi vào kho hiển thị (`banGhi`,
    * Task 1) trong CÙNG giao dịch với mọi dòng hàng chờ (xem chú thích đầu file). */
   banGhi: BanGhiKho
+  /**
+   * I4 (fix round cuối): `tenTaiKhoan` của người đang đăng nhập — gắn vào MỌI dòng hàng chờ của lần
+   * lưu này (xem `DongHangChoDongBo.taiKhoanId`, `boDongBo.ts`).
+   *
+   * Truyền TỪ NGOÀI VÀO (màn hình gọi lấy qua `useAuth()` rồi truyền xuống) chứ KHÔNG import
+   * `AuthContext` vào đây: module này không phải React component/hook, import một React context vào
+   * đây vừa sai tầng vừa làm nó không test được độc lập. Tuỳ chọn để mọi lời gọi cũ (và mọi ca kiểm
+   * thử không quan tâm tới danh tính) vẫn biên dịch/chạy nguyên như trước.
+   */
+  taiKhoanId?: string
 }
 
 /**
@@ -135,6 +145,9 @@ export async function ghiCucBo(kho: IDBDatabase, phuThuoc: PhuThuocBoDongBo, tso
     vatLy: dau.vatLy,
     logic: dau.logic,
     giaoDichId,
+    // I4: CHỈ gắn khi nơi gọi thật sự biết mình là ai — không bịa một giá trị rỗng/'?' làm danh
+    // tính giả, một dòng KHÔNG có `taiKhoanId` nói đúng sự thật "không biết ai tạo" hơn hẳn.
+    ...(tso.taiKhoanId ? { taiKhoanId: tso.taiKhoanId } : {}),
   }))
 
   if (dsThaoTac.length === 1) {

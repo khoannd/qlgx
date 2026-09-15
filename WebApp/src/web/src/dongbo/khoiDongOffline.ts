@@ -31,7 +31,7 @@ import { moKho } from '../kho/moKho'
 import { docHangCho } from '../kho/hangCho'
 import { donSoDaNhanCu } from '../kho/soDaNhan'
 import { batDauBoDongBo, type DieuKhienBoDongBo } from './boDongBo'
-import { xuLyEpochKhongKhopDonLuong } from './buSauKhoiPhuc'
+import { quenLuotBuDangChay, xuLyEpochKhongKhopDonLuong } from './buSauKhoiPhuc'
 import { canTuDongDuPhong, taiFileDuPhongXuong } from './tepDuPhong'
 
 export type TrangThaiOffline = {
@@ -247,6 +247,10 @@ export function dungOffline(): void {
   // khoản (A đăng xuất, B đăng nhập) có thể thấy nhầm dòng tổng kết "Đã gửi lại N thay đổi." của
   // tài khoản trước còn sót lại trong `ThanhTrangThai`.
   trangThaiBuLai = { dangBu: false, soDongDaBu: null }
+  // N5 (fix round cuối): quên luôn lượt bù đang treo của `buSauKhoiPhuc.ts` — xem JSDoc
+  // `quenLuotBuDangChay()` ở đó (khoá "đang chạy" giữ Promise của giáo xứ CŨ qua cả lần đăng nhập
+  // sau nếu không dọn).
+  quenLuotBuDangChay()
 }
 
 /** CHỈ dùng cho kiểm thử — reset cache module-level giữa các ca kiểm thử (mỗi ca cần gọi lại
@@ -260,4 +264,5 @@ export function _resetChoKiemThu(): void {
   }
   // F3 (fix round 2): reset luôn giữa các ca kiểm thử — xem chú thích ở dungOffline().
   trangThaiBuLai = { dangBu: false, soDongDaBu: null }
+  quenLuotBuDangChay()
 }

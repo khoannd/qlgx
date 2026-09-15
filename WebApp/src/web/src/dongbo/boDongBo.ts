@@ -298,6 +298,20 @@ export type DongHangChoDongBo = DongHangCho & {
    * để trần `string` (không phải một kiểu Guid riêng có kiểm tra) vì TypeScript không có kiểu Guid
    * built-in; KHÔNG coi việc kiểu-check qua được là bằng chứng giá trị đúng định dạng. */
   giaoDichId: string
+  /**
+   * I4 (fix round cuối): DANH TÍNH TÀI KHOẢN đã tạo ra dòng hàng chờ này — `tenTaiKhoan` của người
+   * đang đăng nhập lúc `ghiCucBo` được gọi (xem `api/ghiCucBo.ts`).
+   *
+   * TUỲ CHỌN, và máy chủ HIỆN CHƯA dùng tới trường này (`thanhThaoTacDto` không gửi nó lên — hợp
+   * đồng `ThaoTacDto` phía C# không đổi). Đây là bước CHUẨN BỊ: một máy dùng chung có thể có hàng
+   * chờ do tài khoản A tạo còn đọng lại khi tài khoản B đang đăng nhập, và khi "Task 7b" thực sự
+   * nối `ghiCucBo` vào các màn hình nghiệp vụ thì việc quy trách nhiệm nhật ký cần đúng người tạo,
+   * không phải người tình cờ đang đăng nhập lúc dòng đó được gửi đi. Trước mắt nó dùng cho MỘT lớp
+   * cảnh báo cục bộ lúc đăng xuất (`AuthContext.tsx`).
+   *
+   * `undefined` ở các dòng cũ/dòng do mã chưa cập nhật tạo ra — mọi nơi đọc phải chịu được điều đó.
+   */
+  taiKhoanId?: string
   /** Chỉ có giá trị với thao tác BÙ LẠI sau khi máy chủ bị khôi phục (Task 8, spec 4.8.5) —
    * `undefined`/`null` ở thao tác bình thường. */
   nguonGocEpoch?: string | null

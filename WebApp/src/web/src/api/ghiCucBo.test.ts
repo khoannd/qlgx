@@ -274,4 +274,39 @@ describe('ghiCucBo (Task 7 — spec 7.1: đường ghi luôn-lưu-vào-máy-trư
 
     db.close()
   })
+  // I4 (fix round cuoi): DongHangChoDongBo co them truong TUY CHON `taiKhoanId` — danh tinh tai
+  // khoan da tao ra dong hang cho. Buoc CHUAN BI cho Task 7b (may chu HIEN CHUA dung truong nay).
+  it('I4: truyen taiKhoanId -> MOI dong hang cho cua lan luu deu mang dung gia tri do', async () => {
+    const db = await moKho(tenKhoRieng())
+    const phuThuoc = await khoiTaoPhuThuoc(db)
+
+    await ghiCucBo(db, phuThuoc, {
+      loai: 'sua', bang: 'GiaoDan', banGhiId: 'gd-i4',
+      truong: [{ truong: 'HoTen', giaTri: 'A' }, { truong: 'NgaySinh', giaTri: '1990-01-01' }],
+      banGhi: { khoa: 'GiaoDan:gd-i4', giaTri: { hoTen: 'A' } },
+      taiKhoanId: 'cha.an',
+    })
+
+    const hangCho = (await docHangCho(db)) as DongHangChoDongBo[]
+    expect(hangCho).toHaveLength(2)
+    expect(hangCho.every((d) => d.taiKhoanId === 'cha.an')).toBe(true)
+
+    db.close()
+  })
+
+  it('I4: KHONG truyen taiKhoanId -> dong hang cho KHONG co truong do (khong bia danh tinh gia)', async () => {
+    const db = await moKho(tenKhoRieng())
+    const phuThuoc = await khoiTaoPhuThuoc(db)
+
+    await ghiCucBo(db, phuThuoc, {
+      loai: 'sua', bang: 'GiaoDan', banGhiId: 'gd-i4b',
+      truong: [{ truong: 'HoTen', giaTri: 'B' }],
+      banGhi: { khoa: 'GiaoDan:gd-i4b', giaTri: { hoTen: 'B' } },
+    })
+
+    const [dong] = (await docHangCho(db)) as DongHangChoDongBo[]
+    expect('taiKhoanId' in dong).toBe(false)
+
+    db.close()
+  })
 })

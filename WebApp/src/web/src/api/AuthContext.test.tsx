@@ -1,3 +1,5 @@
+// I4 (fix round cuoi): canh bao luc dang xuat doc hang cho IndexedDB — jsdom khong cai IndexedDB.
+import 'fake-indexeddb/auto'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -5,6 +7,8 @@ import { AuthProvider, useAuth } from './AuthContext'
 import { api, ChuaDangNhap } from './client'
 import { authStore } from './authStore'
 import { banNhapKhoa, docBanNhap, luuBanNhap } from '../lib/banNhap'
+import { moKho, KHO_HANG_CHO } from '../kho/moKho'
+import * as khoiDongOfflineModule from '../dongbo/khoiDongOffline'
 
 vi.mock('./client', () => ({
   api: { auth: { dangNhap: vi.fn(), toi: vi.fn() } },
@@ -278,5 +282,68 @@ describe('AuthContext', () => {
     expect(docBanNhap<{ hoTen: string }>(khoa, 'vanphong')?.duLieu).toEqual({
       hoTen: 'Đang gõ dở lúc hết hạn token',
     })
+  })
+  // I4 (fix round cuoi): hang cho con dong do TAI KHOAN KHAC tao ra luc nguoi nay dang xuat -> phai
+  // canh bao ro rang (console.warn), khong duoc im lang. KHONG chan dang xuat: `dangXuat` van la ham
+  // DONG BO (moi noi goi deu khong await), viec doc hang cho la ban-roi-quen.
+  it('I4: dang xuat khi hang cho con dong cua TAI KHOAN KHAC -> console.warn, va van dang xuat duoc', async () => {
+    const db = await moKho('qlgx-test-AuthContext-I4')
+    await new Promise<void>((resolve, reject) => {
+      const gd = db.transaction(KHO_HANG_CHO, 'readwrite')
+      gd.objectStore(KHO_HANG_CHO).add({ maThaoTac: 'tt-1', doan: 0, taiKhoanId: 'so.maria' }, 1)
+      gd.oncomplete = () => resolve()
+      gd.onerror = () => reject(gd.error)
+    })
+    vi.spyOn(khoiDongOfflineModule, 'layTrangThaiOffline').mockReturnValue({
+      kho: db,
+      dieuKhien: { dung: () => {}, baoDangGo: () => {}, danhThucNgay: () => {}, layThayDoiNgay: async () => null, trangThai: () => 'dang_chay' },
+    })
+    // dungOffline() that se dong `db` — khong sao cho giao dich da mo, nhung chan han cho gon.
+    vi.spyOn(khoiDongOfflineModule, 'dungOffline').mockImplementation(() => {})
+    const canhBao = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.mocked(api.auth.dangNhap).mockResolvedValue({
+      token: 't', hetHanSau: 28800, nguoiDung: { id: 'nd-cha-an', tenTaiKhoan: 'cha.an', hoTen: 'Cha An', loaiTaiKhoan: 0, giaoXuId: 'x', tenGiaoXu: 'Vo Nhiem' },
+    })
+
+    render(<AuthProvider><ThamDo /></AuthProvider>)
+    await userEvent.click(await screen.findByText('dang-nhap'))
+    await screen.findByText('da-dang-nhap:cha.an')
+
+    await userEvent.click(screen.getByText('dang-xuat'))
+
+    expect(await screen.findByText('chua-dang-nhap')).toBeDefined()
+    await waitFor(() => expect(canhBao).toHaveBeenCalled())
+    expect(String(canhBao.mock.calls[0]?.[0])).toContain('so.maria')
+
+    db.close()
+  })
+
+  it('I4: hang cho toan dong cua CHINH tai khoan dang thoat -> KHONG canh bao gi', async () => {
+    const db = await moKho('qlgx-test-AuthContext-I4b')
+    await new Promise<void>((resolve, reject) => {
+      const gd = db.transaction(KHO_HANG_CHO, 'readwrite')
+      gd.objectStore(KHO_HANG_CHO).add({ maThaoTac: 'tt-2', doan: 0, taiKhoanId: 'cha.an' }, 1)
+      gd.oncomplete = () => resolve()
+      gd.onerror = () => reject(gd.error)
+    })
+    vi.spyOn(khoiDongOfflineModule, 'layTrangThaiOffline').mockReturnValue({
+      kho: db,
+      dieuKhien: { dung: () => {}, baoDangGo: () => {}, danhThucNgay: () => {}, layThayDoiNgay: async () => null, trangThai: () => 'dang_chay' },
+    })
+    vi.spyOn(khoiDongOfflineModule, 'dungOffline').mockImplementation(() => {})
+    const canhBao = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.mocked(api.auth.dangNhap).mockResolvedValue({
+      token: 't', hetHanSau: 28800, nguoiDung: { id: 'nd-cha-an', tenTaiKhoan: 'cha.an', hoTen: 'Cha An', loaiTaiKhoan: 0, giaoXuId: 'x', tenGiaoXu: 'Vo Nhiem' },
+    })
+
+    render(<AuthProvider><ThamDo /></AuthProvider>)
+    await userEvent.click(await screen.findByText('dang-nhap'))
+    await screen.findByText('da-dang-nhap:cha.an')
+
+    await userEvent.click(screen.getByText('dang-xuat'))
+    await screen.findByText('chua-dang-nhap')
+
+    expect(canhBao).not.toHaveBeenCalled()
+    db.close()
   })
 })

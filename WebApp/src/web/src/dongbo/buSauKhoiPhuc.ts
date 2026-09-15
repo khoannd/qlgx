@@ -329,3 +329,20 @@ export function xuLyEpochKhongKhopDonLuong(
   dangChayEpochKhongKhop = p
   return p
 }
+
+/**
+ * N5 (fix round cuối): quên lượt bù đang treo — gọi từ `dungOffline()` (`khoiDongOffline.ts`) lúc
+ * đăng xuất/đổi tài khoản.
+ *
+ * Không có bước này, khoá "đang chạy" ở trên vẫn giữ Promise của GIÁO XỨ CŨ sau khi đăng xuất: một
+ * lượt `xuLyEpochKhongKhopDonLuong` gọi sau khi đăng nhập bằng giáo xứ KHÁC sẽ nhận lại nguyên kết
+ * quả của lượt cũ (tính trên `phuThuoc`/kho của giáo xứ cũ) thay vì tự chạy — đúng họ lỗi mà C1 đã
+ * bịt ở tầng kho. Thực tế nó tự dọn qua `.finally()` nên cửa sổ rất hẹp, nhưng "hẹp" không phải
+ * "không có", và chi phí đóng hẳn lại chỉ là mấy dòng này.
+ *
+ * KHÔNG huỷ được lượt đang chạy (Promise không huỷ được) — chỉ thôi dùng lại nó. Lượt cũ chạy nốt
+ * trên kho đã đóng, cùng lắm ném lỗi và được `boDongBo.ts` bắt/log như mọi lỗi bù khác.
+ */
+export function quenLuotBuDangChay(): void {
+  dangChayEpochKhongKhop = null
+}

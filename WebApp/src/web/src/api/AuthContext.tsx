@@ -2,7 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { api, ChuaDangNhap } from './client'
 import { authStore } from './authStore'
 import { xoaTatCaBanNhapCuaTaiKhoan } from '../lib/banNhap'
-import { dungOffline } from '../dongbo/khoiDongOffline'
+import { dungOffline, layTrangThaiOffline } from '../dongbo/khoiDongOffline'
+import { docHangCho } from '../kho/hangCho'
 
 type NguoiDungHienTai = {
   tenTaiKhoan: string
@@ -57,6 +58,37 @@ function xoaCacheNguoiDung() {
   }
 }
 
+/**
+ * I4 (fix round cuối) — lớp CẢNH BÁO cục bộ: hàng chờ còn dòng do một tài khoản KHÁC tạo ra mà
+ * người đang đăng xuất không phải người đó. Không chặn đăng xuất (spec không đòi chặn cứng), chỉ
+ * không được IM LẶNG: người hỗ trợ từ xa cần manh mối này khi đi tìm "vì sao dữ liệu của cha X
+ * lại được gửi lên dưới tên sơ Y".
+ *
+ * KHÔNG `await` (và `dangXuat` KHÔNG được thành `async` — mọi nơi gọi `dangXuat()` đều không
+ * `await`): bắn-rồi-quên. Gọi `docHangCho(kho)` NGAY (đồng bộ) trước `dungOffline()` là đủ an
+ * toàn — `docHangCho` mở giao dịch IndexedDB ngay tại lời gọi, và `IDBDatabase.close()` chờ các
+ * giao dịch đang treo chạy xong mới thật sự đóng.
+ */
+function canhBaoHangChoKhacTaiKhoan(tenTaiKhoanDangThoat: string | null) {
+  const tt = layTrangThaiOffline()
+  if (!tt || !tenTaiKhoanDangThoat) return
+  docHangCho(tt.kho)
+    .then((ds) => {
+      const dongLa = ds.filter((d) => typeof d.taiKhoanId === 'string' && d.taiKhoanId !== tenTaiKhoanDangThoat)
+      if (dongLa.length === 0) return
+      const cacTaiKhoan = [...new Set(dongLa.map((d) => String(d.taiKhoanId)))]
+      console.warn(
+        `Dang xuat "${tenTaiKhoanDangThoat}" trong khi hang cho con ${dongLa.length} viec chua gui ` +
+          `do tai khoan KHAC tao ra (${cacTaiKhoan.join(', ')}). Nhung viec nay van nam trong may ` +
+          'va se duoc gui len o lan dang nhap sau — khong mat du lieu, nhung nguoi gui len se khong ' +
+          'phai nguoi da tao ra chung.',
+      )
+    })
+    .catch((loi) => {
+      console.error('Khong doc duoc hang cho de kiem tra tai khoan luc dang xuat', loi)
+    })
+}
+
 type AuthContextValue = {
   /** null = chưa xác định xong (đang kiểm token cũ lúc tải trang) — hiện màn hình chờ, KHÔNG
    * được hiện màn hình đăng nhập nhầm rồi lại nhảy sang đã đăng nhập (giật màn hình). */
@@ -83,6 +115,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => { nguoiDungRef.current = nguoiDung }, [nguoiDung])
 
   const dangXuat = useCallback((xoaCaBanNhap = true) => {
+    // I4 (fix round cuối): đọc hàng chờ để cảnh báo (bắn-rồi-quên, KHÔNG chặn đăng xuất) NGAY
+    // TRƯỚC `dungOffline()` — xem JSDoc `canhBaoHangChoKhacTaiKhoan` ở đầu file.
+    canhBaoHangChoKhacTaiKhoan(nguoiDungRef.current?.tenTaiKhoan ?? null)
     // I4 (fix round 1): dừng vòng đồng bộ + đóng kho IndexedDB TRƯỚC khi xoá token — nếu không,
     // vòng đồng bộ/kho đã mở của tài khoản/giáo xứ CŨ có thể còn hoạt động trong lúc token đã đổi
     // sang tài khoản MỚI (đăng xuất rồi đăng nhập lại bằng tài khoản khác trên cùng tab), rủi ro

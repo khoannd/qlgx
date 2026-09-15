@@ -485,8 +485,14 @@ báo lỗi**.
    hồi đã lưu. Thiếu cái này: thao tác bị nghi trùng không sinh dòng nào, gửi lại sẽ sinh mục hộp
    thứ hai, và người dùng bấm "Hai người khác nhau" hai lần sẽ tạo **ba bản ghi cho một người**.
 10. **`navigator.storage.persist()` phải được gọi ngay sau đăng nhập** trên máy bật offline. Đây
-    là biện pháp duy nhất ngăn trình duyệt tự dọn kho khi thiếu chỗ đĩa. Bị từ chối thì **không
-    bật chế độ offline cho máy đó**, chạy online thuần.
+    là biện pháp duy nhất ngăn trình duyệt tự dọn kho khi thiếu chỗ đĩa. **Bị từ chối thì VẪN chạy
+    chế độ offline** — chỉ là chạy với rủi ro cao hơn (trình duyệt có thể tự dọn kho khi thiếu chỗ
+    đĩa), không phải lý do tắt offline. Câu chữ cũ ở đây ("không bật chế độ offline cho máy đó,
+    chạy online thuần") đã bị **thay bằng ruling G1** sau khi Task 11 ĐO ĐƯỢC trên máy thật rằng
+    Chrome từ chối `persist()` với mọi site chưa có tương tác/bookmark: theo câu chữ cũ thì gần như
+    KHÔNG máy giáo xứ nào được chạy offline, tức là vô hiệu hoá toàn bộ kế hoạch này. Lý lẽ đầy đủ
+    và cách giảm rủi ro (hướng dẫn cài PWA/ghim trang, file dự phòng 7.10) ở **mục 11** — không
+    nhắc lại ở đây.
 
 ## 6. Phiên đăng nhập, thiết bị, và quyền lưu offline
 
