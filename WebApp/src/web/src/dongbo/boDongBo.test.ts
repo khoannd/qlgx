@@ -700,12 +700,10 @@ describe('boDongBo (Task 6 — bộ đồng bộ)', () => {
       db.close()
     })
 
-    // GHI CHU (I9): test nay CO Y kich hoat dung con duong "loi that, khong phai huy" ma bauChu.ts
-    // TU Y de lo ra ngoai nhu mot unhandled rejection (xem chu thich `troThanhChuKhiCoTheChoDenKhiHuy`
-    // trong bauChu.ts — CO Y KHONG nuot loi that). Vi vay `npx vitest run` co the in mot khoi "Unhandled
-    // Errors" khi chay rieng test nay — DA XAC NHAN no KHONG lam test that bai (exit code 0, assertion
-    // duoi day van chay dung) — day la dau hieu cua CHINH loi dang duoc mo phong, khong phai loi cua
-    // test. `bauChu.test.ts` (Task 5) cung khong co test nao cho duong nay vi cung ly do.
+    // I9, duong (1): request() TU NO reject TRUOC KHI kip goi khiLaChu (mo phong navigator.locks
+    // khong kha dung). nguonKhoaVoiBaoLoi (boDongBo.ts) bat va XU LY XONG loi nay tai cho (dat
+    // trangThai + ghi log), KHONG nem lai — vi vay `npx vitest run` khong con in "Unhandled Errors"
+    // cho duong nay nua (khac ban truoc review vong sua 1, xem N1 trong task-6-report.md).
     it('I9: nguonKhoa reject (loi that, mo phong navigator.locks khong kha dung) bao trang thai khong_chay_duoc', async () => {
       const db = await moKho(tenKhoRieng())
       const fetchGia = fetchGiaTheoDuong()
@@ -724,6 +722,31 @@ describe('boDongBo (Task 6 — bộ đồng bộ)', () => {
 
       dieuKhien.dung()
       db.close()
+    })
+
+    // I9, duong (2) — N2 tu review scoped: khiLaChu (khong phai request() ben ngoai) tu nem loi
+    // THAT, vi du kich ban that "kho IndexedDB bi loi/bi chan giua chung o mot may giao xu". Duong
+    // nay CHUA co test nao truoc ban sua N2 (chi duong (1) co) — mo phong bang cach dong `db` NGAY
+    // TRUOC khi batDauBoDongBo goi khoiTaoPhuThuoc (doc conTro qua mot transaction tren kho da
+    // dong se nem loi that, khong phai AbortError).
+    it('I9: khiLaChu tu nem loi that (vi du kho IndexedDB hong giua chung) cung bao trang thai khong_chay_duoc', async () => {
+      const db = await moKho(tenKhoRieng())
+      const fetchGia = fetchGiaTheoDuong()
+      vi.stubGlobal('fetch', fetchGia)
+      const nguon = nguonSuKienGiaLap()
+      const henGio = nguonHenGioGiaLap()
+      const nguonKhoaThat: NguonKhoa = {
+        request: (_ten, _tuyChon, xuLy) => xuLy(),
+      }
+
+      db.close() // kho da dong TRUOC khi khiLaChu kip khoi tao phu thuoc - moi thao tac tren no nem loi that
+
+      const dieuKhien = batDauBoDongBo(db, nguon, henGio, nguonKhoaThat)
+
+      await vi.waitFor(() => expect(dieuKhien.trangThai()).toBe('khong_chay_duoc'))
+      expect(fetchGia).not.toHaveBeenCalled()
+
+      dieuKhien.dung()
     })
   })
 })

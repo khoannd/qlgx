@@ -618,15 +618,25 @@ const NGUON_KHOA_THAT: NguonKhoa['request'] = (tenKhoa, tuyChon, xuLy) => {
  * `AbortError` hợp lệ (khi `tinHieuHuy.aborted`) để im lặng — mọi lỗi thật khác bị `throw err` lại
  * thành một unhandled rejection, và không có ai đặt lại `trangThai()` — `batDauBoDongBo` vẫn báo
  * `'dang_chay'` SAI dù đồng bộ chưa từng chạy được (Task 10 sẽ hiện 🟢 sai). Bọc ở đây để `baoLoi`
- * chạy TRƯỚC khi lỗi tiếp tục lan truyền, kịp cho `batDauBoDongBo` đặt `'khong_chay_duoc'`.
+ * chạy TRƯỚC khi lỗi được coi là đã xử lý xong — KHÔNG ném lại nữa sau đó (khác với `bauChu.ts`,
+ * nơi không ai xử lý gì nên phải lộ ra ngoài; ở đây `baoLoi` đã đặt `'khong_chay_duoc'` + ghi log,
+ * xem thân hàm bên dưới).
  */
 function nguonKhoaVoiBaoLoi(nguonGoc: NguonKhoa, baoLoi: (loi: unknown) => void): NguonKhoa {
   return {
-    request<T>(tenKhoa: string, tuyChon: { signal: AbortSignal }, xuLy: () => Promise<T>): Promise<T> {
-      return nguonGoc.request(tenKhoa, tuyChon, xuLy).catch((loi: unknown) => {
-        if (!tuyChon.signal.aborted) baoLoi(loi)
-        throw loi
-      })
+    async request<T>(tenKhoa: string, tuyChon: { signal: AbortSignal }, xuLy: () => Promise<T>): Promise<T> {
+      try {
+        return await nguonGoc.request(tenKhoa, tuyChon, xuLy)
+      } catch (loi) {
+        if (tuyChon.signal.aborted) throw loi // huy binh thuong - de nguyen cho bauChu.ts tu loc
+        // Loi THAT: da xu ly xong o day (baoLoi dat trangThai + ghi log, xem batDauBoDongBo) -
+        // KHONG nem lai nua. Khac voi bauChu.ts (khong ai xu ly gi ca nen phai lo ra ngoai thanh
+        // unhandled rejection), o day co nguoi xu ly that - nem tiep chi tao tieng on gia trong
+        // test/console (xac nhan qua review vong sua 1, muc N1: npx vitest run bi dem la loi/exit
+        // code khac 0 du moi assertion deu dung) ma khong them thong tin nao moi cho ai.
+        baoLoi(loi)
+        return undefined as T
+      }
     },
   }
 }
