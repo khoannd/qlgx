@@ -117,6 +117,36 @@ describe('moKho (Task 1 — kho IndexedDB và các ràng buộc mở kho)', () =
     }
   })
 
+  it('mot ket noi khac giu kho o phien ban cu thi moKho() TU CHOI thay vi treo mai', async () => {
+    // Quy so mo hai tab QLGX. Tab A dang mo ket noi kho o phien ban cu VA KHONG DONG (vi du tab
+    // do dang xu ly do dang lam, hoac don gian chi la mo). Tab B tai ban moi (PHIEN_BAN_KHO tang)
+    // va goi moKho() de nang cap. IndexedDB se KHONG chay onupgradeneeded cho toi khi tab A dong
+    // ket noi cu — day la `onblocked`. Neu moKho() khong xu ly nhanh nay, promise treo VO THOI
+    // HAN: khong resolve, khong reject, man hinh tab B dung loading mai mai.
+    const tenKho = tenKhoRieng()
+
+    // Dung san kho o phien ban 1, va GIU MOT KET NOI MO toi kho do — mo phong tab A khong dong.
+    const ketNoiCu = await moKho(tenKho, 1)
+
+    // Tab B co PHIEN_BAN_KHO cao hon, se kich hoat nang cap va bi `onblocked` do ketNoiCu con mo.
+    const ketQua = moKho(tenKho, 2)
+
+    // NEU dua thang `ketQua` vao `expect(...).rejects...` thi bai test se TREO CHO TOI KHI mot
+    // trong hai thu xay ra — mot nguong thoi gian rieng (KHONG duoc phep tu no cung reject, chi
+    // duoc RESOLVE ve mot gia tri linh canh) moi phan biet duoc "moKho() tu bat duoc onblocked va
+    // reject nhanh" voi "moKho() treo mai, chi vitest timeout mac dinh moi cuu duoc bai test".
+    const linhCanhTreo = Symbol('treo')
+    const nguongThoiGian = new Promise((giaiQuyet) => setTimeout(() => giaiQuyet(linhCanhTreo), 500))
+    const ketQuaCoBatLoi = ketQua.catch((loi: unknown) => loi)
+
+    const aiToiTruoc = await Promise.race([ketQuaCoBatLoi, nguongThoiGian])
+
+    ketNoiCu.close()
+
+    expect(aiToiTruoc).not.toBe(linhCanhTreo)
+    expect(aiToiTruoc).toBeInstanceOf(Error)
+  })
+
   it('khong truyen phien ban thi dung dung PHIEN_BAN_KHO da cong bo', async () => {
     // moKho(tenKho) không truyền phiên bản — phải mở đúng bằng PHIEN_BAN_KHO hiện tại, không phải
     // một số cứng nào khác (nếu ai đó sau này tăng PHIEN_BAN_KHO mà quên đổi giá trị mặc định của
