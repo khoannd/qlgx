@@ -51,8 +51,6 @@ sẽ **vô hiệu hoá chính thao tác quay lui** mà quản trị viên vừa 
 
 ## Hợp đồng đồng hồ lai — phải khớp TỪNG BIT với bản C# (R6/R7 sổ thi công kế hoạch 4)
 
-## Hợp đồng đồng hồ lai — phải khớp TỪNG BIT với bản C# (R6/R7 sổ thi công kế hoạch 4)
-
 Bản TypeScript của `DongHoLai` phải cho **cùng một kết quả** với `WebApp/src/Qlgx.Data/DongBo/DongHoLai.cs`
 trên cùng đầu vào. Lệch một chỗ là hai bản sao phân kỳ vĩnh viễn **mà không có bất kỳ lỗi nào hiện ra** —
 loại hỏng tệ nhất trong hệ thống này, vì nó chỉ lộ ra sau nhiều tháng, khi đã không còn cách nào biết
@@ -138,8 +136,14 @@ Bắt buộc:
 - Thanh trạng thái phải **đếm** chúng, vì một mục nằm im trong hộp mà không ai mở hộp thì cũng như mất.
 - Không được lặng lẽ xoá khỏi hàng chờ rồi thôi.
 
-- **Task 6 phải có một test vector dùng chung**: một file JSON liệt kê các cặp đầu vào/đầu ra, được
-  **cả** bộ test C# **và** bộ test TypeScript đọc. Không nhân bản ca kiểm thử bằng tay ở hai nơi — nhân
+- **Task 4 (đồng hồ máy con) phải có một test vector dùng chung** — không phải "Task 6" như bản ghi
+  trước đó lỡ ghi nhầm số: đồng hồ lai được port ở Task 4 (`dongHoMayCon.ts`), Task 6 chỉ GHÉP các
+  task lại thành vòng chạy. Một file JSON liệt kê các cặp đầu vào/đầu ra (`SoSanh`, `SoSanhGuid`,
+  `CatMicroGiay`, `NangDau`), đặt ở `WebApp/dong-ho-lai-vector.json` (thư mục gốc `WebApp/`, ngoài
+  cả `src/Qlgx.Data` lẫn `src/web`, để cả hai bộ test đọc được mà không phải import chéo dự án).
+  **Cả** bộ test C# (`WebApp/tests/Qlgx.Data.Tests/DongHoLaiTests.cs` — kế hoạch 4 Task 2 đã đóng,
+  nhưng thêm một test đọc file vector KHÔNG đổi hành vi cũ, chỉ thêm một lưới mới) **và** bộ test
+  TypeScript của Task 4 đều đọc CÙNG file đó. Không nhân bản ca kiểm thử bằng tay ở hai nơi — nhân
   bản là cách hai bản trôi khỏi nhau.
 
 ---
@@ -205,6 +209,22 @@ describe('moKho', () => {
 
 **Interfaces:**
 - Produces: `ghiVaXepHang(kho, banGhi, thaoTac): Promise<void>` — **một** giao dịch bao cả hai; `docHangCho(kho, gioiHan)`; `xoaKhoiHangCho(kho, maThaoTac[])`; `demHangCho(kho)`.
+- Produces (`conTro.ts` — brief bản trước liệt kê file này nhưng bỏ sót giao diện, sửa ở đây):
+  `docConTro(kho): Promise<ConTro>`, `ghiConTro(kho, sua: Partial<ConTro>): Promise<void>` (ghi ĐÈ
+  một phần — chỉ cập nhật các trường có mặt trong `sua`, giữ nguyên các trường khác, vì Task 4 sẽ
+  ghi các trường đồng hồ của nó mà không được xoá mất `epoch`/`soThuTu` Task 6 đang giữ, và ngược
+  lại). Kiểu `ConTro` là **một object mở rộng được** —
+  `{ epoch: string | null, soThuTu: number, cheDo: "binh_thuong" | "cho_khoi_phuc" | ... }` cộng
+  các trường Task 4 sẽ thêm (`mocNeo`, `msTaiNeo`, `doanHienTai`, `doLechDoanHienTai`) — **đừng
+  khai một kiểu TypeScript đóng kín** (không `interface ConTro { epoch; soThuTu }` cứng), vì Task 4
+  thi công sau Task 2 và phải thêm trường vào đúng kiểu này mà không sửa lại chữ ký các hàm ở đây.
+  Cách làm gợi ý: `type ConTro = { epoch: string | null; soThuTu: number } & Record<string, unknown>`
+  hoặc một `interface` có thể `extends`. Chỉ một dòng duy nhất trong kho `conTro` (không có khoá,
+  hoặc khoá cố định `"chinh"`) — không phải một danh sách.
+- Mỗi dòng hàng chờ (`hangCho`) mang thêm trường `doan: number` (số hiệu đoạn đồng hồ nó thuộc về)
+  — Task 4 cần trường này để biết thao tác nào hiệu chỉnh theo độ lệch nào; để sẵn cột này trong
+  hình dạng bản ghi hàng chờ ngay từ Task 2, mặc định `doan: 0`, để Task 4 không phải viết một
+  migration kho chỉ để thêm một cột.
 
 - [ ] **Step 1: Viết test — trong đó có một fact mô phỏng đứt giữa chừng**
 
@@ -233,19 +253,79 @@ Spec 4.8.2. Máy con giữ **bản sao các dòng `hieu_luc` đã áp**, kèm `e
 
 ---
 
-## Task 4: Đồng hồ máy con
+## Task 4: Đồng hồ máy con — VÀ port `DongHoLai` (đọc kỹ, task này rộng hơn tên gọi)
 
-**Files:** `src/dongbo/dongHoMayCon.ts` + test
+**Files:** `src/dongbo/dauDongHo.ts` (port `DongHoLai`), `src/dongbo/dongHoMayCon.ts` (ba lớp đồng
+hồ máy con), `WebApp/dong-ho-lai-vector.json` (test vector dùng chung), test tương ứng, một test
+mới thêm vào `WebApp/tests/Qlgx.Data.Tests/DongHoLaiTests.cs` (kế hoạch 4, **đã đóng** — thêm một
+lưới mới không đổi hành vi cũ, không phải "mở lại" kế hoạch đó).
 
-Spec 4.3. Ba lớp:
+**Task này chịu HAI trách nhiệm, đừng chỉ làm một:**
 
-1. **Đồng hồ đơn điệu** — mỗi thao tác lưu `(mốc neo lần đồng bộ gần nhất, số ms đã trôi theo `performance.now()`)`. `performance.now()` không bị đồng hồ hệ thống ảnh hưởng.
-2. **Đoạn đồng hồ** — theo dõi chênh lệch giữa `Date.now()` và đồng hồ đơn điệu; phát hiện nhảy thì mở một **đoạn** mới trong hàng chờ. Mỗi đoạn hiệu chỉnh bằng một độ lệch riêng.
-3. **Đồng hồ logic** — nâng lên khi nhận dòng có mốc lớn hơn.
+### Phần A — Port `DongHoLai` (Global Constraints "Hợp đồng đồng hồ lai")
 
-**Kịch bản hỏng nếu làm sai** (spec 4.3): máy phòng xứ chạy lệch +3 ngày nhiều năm; ngày 1/9 mất mạng; ngày 5/9 ai đó chỉnh lại đồng hồ về đúng; ngày 10/9 nối mạng gửi lô. Nếu dùng **một** độ lệch đo lúc gửi cho cả lô, các mốc ghi trước lúc chỉnh sẽ bị dịch sai hướng và **âm thầm đè lên dữ liệu đúng** của máy khác.
+Đọc **toàn bộ** `WebApp/src/Qlgx.Data/DongBo/DongHoLai.cs` trước khi viết một dòng TypeScript nào.
+Port nguyên văn logic (không phải chép cú pháp) của:
 
-- [ ] **Step 1:** Viết test, gồm fact tái hiện đúng kịch bản trên. → Step 2-4 như thường lệ.
+- `DauDongHo` — kiểu dữ liệu `{ vatLy: number (mili giây kể từ epoch Unix, ĐÃ cắt về micro giây
+  — xem dưới), logic: number, thietBiId: string | null, maThaoTac: string }`.
+- `CatMicroGiay(moc)` — cắt mili giây... **khoan, `Date.getTime()` của JS chỉ có độ phân giải mili
+  giây, KHÔNG có micro giây để cắt.** Vì vậy hàm dựng `DauDongHo` ở TypeScript không cần tự cắt gì
+  (mili giây vốn đã "thô" hơn micro giây của C#) — nhưng PHẢI tài liệu hoá rõ điều này trong chú
+  thích, vì đây là một sai khác thật giữa hai nền tảng, không phải một lỗ hổng: khi máy chủ trả về
+  một mốc (giữ độ chính xác micro giây trong `timestamptz`), máy con đọc nó qua JSON, và JSON chỉ
+  chứa được đúng độ chính xác máy chủ đã serialize — nếu máy chủ dùng `DateTimeOffset.ToString("o")`
+  (giữ tick) thì máy con PHẢI parse đủ độ chính xác trước khi ép về `number` mili giây, HOẶC giữ
+  nguyên chuỗi ISO gốc cho việc SO SÁNH bằng chuỗi (so chuỗi ISO 8601 cùng độ dài, cùng múi giờ UTC,
+  cho kết quả thứ tự đúng bằng so từ điển — **kiểm tra giả định này bằng một test** trước khi dùng).
+  **Quyết định của bạn: chọn MỘT trong hai cách (ép `number` mili giây, hay giữ chuỗi ISO so từ
+  điển) và ghi rõ lý do trong báo cáo** — đừng để mặc định ngầm.
+- `SoSanh(a, b)` — bốn tầng đúng thứ tự: vật lý → logic → `SoSanhGuid(thietBiId)` → `SoSanhGuid(maThaoTac)`.
+- `SoSanhGuid(a, b)` — **so chuỗi dạng chữ thường, ordinal** (`a < b ? -1 : a > b ? 1 : 0` theo mã
+  điểm UTF-16 của JS, tương đương ordinal ASCII vì GUID chỉ gồm hex + dấu gạch). `null` xếp TRƯỚC
+  mọi giá trị có danh tính — viết `if (a === null) return b === null ? 0 : -1; if (b === null) return 1;`
+  tường minh, **đừng** quy `null` về chuỗi rỗng hay UUID toàn số 0.
+- `NangDau(dauCuoiCuaTa, nhanDuoc, gioHienTai)` — trả `{ vatLy, logic }`. Đọc kỹ chú thích của bản
+  C# về vì sao cần cả ba tham số và thứ tự các nhánh — đừng chỉ dịch code, hiểu rồi viết lại.
+
+**Test vector dùng chung** (`WebApp/dong-ho-lai-vector.json`): một mảng object, mỗi phần tử
+`{ ham: "SoSanh" | "SoSanhGuid" | "NangDau", vao: {...}, ra: {...} }` — tối thiểu 15 ca, bao đủ:
+hai dấu cùng vật lý khác logic; khác `thietBiId`; `thietBiId` null so với có danh tính (cả hai
+chiều); phá hoà cuối cùng bằng `maThaoTac`; `NangDau` với `nhanDuoc = null`; `NangDau` khi giờ hiện
+tại đã vượt qua mọi mốc (logic về 0); `NangDau` khi đồng hồ máy chủ bị lùi (không được lùi theo).
+Viết vector này **trước**, dùng nó để viết CẢ hai bộ test (TS ở đây, và một test C# mới đọc đúng
+file này thêm vào `DongHoLaiTests.cs`) — không viết hai bộ ca kiểm thử độc lập rồi mới cố khớp.
+
+### Phần B — Ba lớp đồng hồ máy con (spec 4.3)
+
+1. **Đồng hồ đơn điệu** — mỗi thao tác lưu `(mốc neo lần đồng bộ gần nhất, số ms đã trôi theo
+   `performance.now()`)`. `performance.now()` không bị đồng hồ hệ thống ảnh hưởng.
+2. **Đoạn đồng hồ** — theo dõi chênh lệch giữa `Date.now()` và đồng hồ đơn điệu; phát hiện nhảy thì
+   mở một **đoạn** mới. "Đoạn" là một **trường trên từng dòng hàng chờ** (số hiệu đoạn thao tác đó
+   thuộc về), không phải một kho riêng — đọc lại Task 2 (hàng chờ) trước khi quyết định hình dạng
+   một dòng hàng chờ, việc thêm trường này có thể cần phối hợp ngược với brief Task 2 nếu Task 2
+   thi công trước và chưa để chỗ cho trường này (nếu vậy, sửa thẳng vào brief Task 2 trước khi
+   dispatch, đừng chờ tới Task 4 rồi mới phát hiện).
+3. **Đồng hồ logic** — chính là việc gọi `NangDau` (Phần A) mỗi khi nhận một dòng `hieu_luc` từ
+   máy chủ (Global Constraints đã nói: bỏ qua bước này thì bản sửa của người dùng thua chính bản
+   ghi nó vừa đọc).
+
+**Nơi lưu trạng thái đồng hồ (mốc neo, đoạn hiện tại, độ lệch của đoạn đó):** dùng CHUNG kho
+`conTro` (Task 1 tạo) — Task 1 phải thiết kế dòng lưu trong `conTro` là **một object có thể mở
+rộng thêm trường** (không phải một kiểu cứng chỉ có `epoch`/`soThuTu`), để Task 4 thêm trường của
+mình vào mà không phải đổi schema kho. Đừng tạo kho `IndexedDB` mới chỉ cho vài trường vô hướng.
+
+**Kịch bản hỏng nếu làm sai** (spec 4.3): máy phòng xứ chạy lệch +3 ngày nhiều năm; ngày 1/9 mất
+mạng; ngày 5/9 ai đó chỉnh lại đồng hồ về đúng; ngày 10/9 nối mạng gửi lô. Nếu dùng **một** độ lệch
+đo lúc gửi cho cả lô, các mốc ghi trước lúc chỉnh sẽ bị dịch sai hướng và **âm thầm đè lên dữ liệu
+đúng** của máy khác.
+
+- [ ] **Step 1:** Viết vector JSON dùng chung, viết test TypeScript đọc nó cho Phần A, viết test
+  cho ba lớp đồng hồ ở Phần B (gồm fact tái hiện đúng kịch bản trên). → Step 2-4 như thường lệ.
+- [ ] **Step 5:** Thêm MỘT test C# mới vào `DongHoLaiTests.cs` đọc cùng file vector, chạy
+  `dotnet test WebApp/tests/Qlgx.Data.Tests --filter DongHoLaiTests -o "<thư mục tạm riêng>"` xác
+  nhận toàn bộ (kể cả các test cũ) vẫn xanh. `git add` đúng ba file: file vector, file test C# mới
+  sửa, và file TypeScript mới — không `git add -A`.
 
 ---
 
