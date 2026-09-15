@@ -1,9 +1,8 @@
 // jsdom không cài IndexedDB — polyfill bằng fake-indexeddb (xem moKho.test.ts, cùng khuôn mẫu).
 import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { khoiDongOffline, layTrangThaiOffline, _resetChoKiemThu } from './khoiDongOffline'
+import { dungOffline, khoiDongOffline, layTrangThaiOffline, _resetChoKiemThu } from './khoiDongOffline'
 import * as moKhoModule from '../kho/moKho'
-import * as boDongBoModule from './boDongBo'
 
 describe('khoiDongOffline (Task 10 — noi day tang offline vao app shell)', () => {
   beforeEach(() => {
@@ -36,8 +35,6 @@ describe('khoiDongOffline (Task 10 — noi day tang offline vao app shell)', () 
   })
 
   it('goi NHIEU LAN: dung mot Promise cache, KHONG mo kho/bat dau vong dong bo lan thu hai', async () => {
-    const moKhoSpy = vi.spyOn(moKhoModule, 'moKho')
-    const batDauSpy = vi.spyOn(boDongBoModule, 'batDauBoDongBo')
     const fetchGia = vi.fn(async () => new Response(JSON.stringify({ epoch: 'e1', conTroMoi: 0, conNua: false, dong: [] }), { status: 200 }))
     vi.stubGlobal('fetch', fetchGia)
 
@@ -45,11 +42,24 @@ describe('khoiDongOffline (Task 10 — noi day tang offline vao app shell)', () 
 
     expect(k1).toBe(k2)
     expect(k2).toBe(k3)
-    // Luu y: khoiDongOffline.ts KHONG tu goi lai moKho/batDauBoDongBo o day (mock spy chi xac nhan
-    // duoc goi it nhat mot lan qua module that vi Vitest khong the spy tren import tinh ma khong
-    // qua namespace — kiem tra qua ket qua giong het nhau la bang chung chinh cho hanh vi cache).
-    void moKhoSpy
-    void batDauSpy
+  })
+
+  it('dungOffline(): dung vong dong bo + dong kho, lan khoiDongOffline() sau tao PHIEN MOI (khong dung lai cache cu)', async () => {
+    const fetchGia = vi.fn(async () => new Response(JSON.stringify({ epoch: 'e1', conTroMoi: 0, conNua: false, dong: [] }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchGia)
+
+    const phienDau = await khoiDongOffline()
+    expect(phienDau).not.toBeNull()
+    const dungSpy = vi.spyOn(phienDau!.dieuKhien, 'dung')
+
+    dungOffline()
+
+    expect(dungSpy).toHaveBeenCalledOnce()
+    expect(layTrangThaiOffline()).toBeNull()
+
+    const phienSau = await khoiDongOffline()
+    expect(phienSau).not.toBeNull()
+    expect(phienSau).not.toBe(phienDau)
   })
 
   it('mo kho THAT BAI: tra ve null, KHONG nem loi ra ngoai, va layTrangThaiOffline() van la null', async () => {

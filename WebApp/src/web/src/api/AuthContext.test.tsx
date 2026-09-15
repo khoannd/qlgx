@@ -115,6 +115,24 @@ describe('AuthContext', () => {
     expect(await screen.findByText('da-dang-nhap:vanphong')).toBeDefined()
   })
 
+  // I1 (fix round 1): mot so trinh duyet (Firefox) bat hop thoai xin phep khi goi
+  // navigator.storage.persist() va treo Promise do cho toi khi nguoi dung tra loi — dangNhap KHONG
+  // duoc await Promise nay, neu khong man hinh dang nhap se treo theo.
+  it('persist() tra ve Promise KHONG BAO GIO resolve -> dangNhap van hoan tat (khong bi treo)', async () => {
+    vi.mocked(api.auth.dangNhap).mockResolvedValue({
+      token: 'token-moi', hetHanSau: 28800,
+      nguoiDung: { id: '1', tenTaiKhoan: 'vanphong', hoTen: 'Van Phong', loaiTaiKhoan: 0, giaoXuId: 'x', tenGiaoXu: 'Vo Nhiem' },
+    })
+    const persistTreoMai = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('navigator', { ...navigator, storage: { persist: persistTreoMai } })
+
+    render(<AuthProvider><ThamDo /></AuthProvider>)
+    await screen.findByText('chua-dang-nhap')
+    await userEvent.click(screen.getByText('dang-nhap'))
+
+    expect(await screen.findByText('da-dang-nhap:vanphong')).toBeDefined()
+  })
+
   it('dangXuat xoa token va tro ve chua dang nhap', async () => {
     vi.mocked(api.auth.dangNhap).mockResolvedValue({
       token: 'token-moi', hetHanSau: 28800,

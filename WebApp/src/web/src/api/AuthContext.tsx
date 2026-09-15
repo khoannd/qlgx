@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { api } from './client'
 import { authStore } from './authStore'
 import { xoaTatCaBanNhapCuaTaiKhoan } from '../lib/banNhap'
+import { dungOffline } from '../dongbo/khoiDongOffline'
 
 type NguoiDungHienTai = {
   tenTaiKhoan: string
@@ -45,6 +46,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => { nguoiDungRef.current = nguoiDung }, [nguoiDung])
 
   const dangXuat = useCallback((xoaCaBanNhap = true) => {
+    // I4 (fix round 1): dừng vòng đồng bộ + đóng kho IndexedDB TRƯỚC khi xoá token — nếu không,
+    // vòng đồng bộ/kho đã mở của tài khoản/giáo xứ CŨ có thể còn hoạt động trong lúc token đã đổi
+    // sang tài khoản MỚI (đăng xuất rồi đăng nhập lại bằng tài khoản khác trên cùng tab), rủi ro
+    // trộn dữ liệu hai giáo xứ. Xem `dungOffline()` (`dongbo/khoiDongOffline.ts`) — chỉ ĐÓNG kho,
+    // không xoá dữ liệu, lần đăng nhập sau mở lại đúng kho đó.
+    dungOffline()
     if (xoaCaBanNhap && nguoiDungRef.current) xoaTatCaBanNhapCuaTaiKhoan(nguoiDungRef.current.tenTaiKhoan)
     authStore.xoaToken()
     setNguoiDung(null)
@@ -87,15 +94,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Task 10 (brief mục "nối dây" #2, spec offline mục 5 — RÀNG BUỘC CỨNG): xin trình duyệt "giữ
     // bền" (persistent) bộ nhớ IndexedDB ngay sau khi đăng nhập thành công — không có bước này,
     // trình duyệt có thể tự ý dọn dữ liệu ngoại tuyến (hàng chờ, sổ đã nhận...) bất cứ lúc nào nó
-    // thấy máy thiếu dung lượng, đúng thứ toàn bộ kế hoạch offline-first sinh ra để tránh. Bọc
-    // try/catch IM LẶNG: `navigator.storage` không phải trình duyệt nào cũng có (Safari cũ, một số
-    // trình duyệt trong mạng LAN giáo xứ), và một lời từ chối/lỗi ở đây TUYỆT ĐỐI không được làm
-    // hỏng luồng đăng nhập chính — đây chỉ là một lớp tăng cường, không phải điều kiện để vào app.
-    try {
-      await navigator.storage?.persist?.()
-    } catch {
+    // thấy máy thiếu dung lượng, đúng thứ toàn bộ kế hoạch offline-first sinh ra để tránh.
+    //
+    // I1 (fix round 1): KHÔNG được `await` — ở một số trình duyệt (Firefox) `persist()` có thể bật
+    // hộp thoại xin phép và treo tới khi người dùng trả lời; `await` bên trong `dangNhap` sẽ treo
+    // luôn màn hình đăng nhập theo. Bắn-rồi-quên: bọc trong `Promise.resolve()` để hứng cả lỗi ném
+    // ĐỒNG BỘ (ví dụ `navigator.storage` không tồn tại ở trình duyệt cũ) lẫn Promise bị reject, rồi
+    // `.catch()` im lặng — một lời từ chối/lỗi ở đây TUYỆT ĐỐI không được làm hỏng luồng đăng nhập
+    // chính, đây chỉ là một lớp tăng cường, không phải điều kiện để vào app.
+    void Promise.resolve(navigator.storage?.persist?.()).catch(() => {
       // Im lặng bỏ qua — xem chú thích ở trên.
-    }
+    })
   }, [])
 
   const value = useMemo(

@@ -81,6 +81,28 @@ export function layTrangThaiOffline(): TrangThaiOffline | null {
   return trangThaiHienTai
 }
 
+/**
+ * I4 (fix round 1): dừng tầng offline khi đăng xuất/đổi tài khoản trên cùng tab — không có bước
+ * này, vòng đồng bộ (`dieuKhien`) và kho IndexedDB đã mở vẫn tiếp tục hoạt động với dữ liệu của
+ * tài khoản/giáo xứ CŨ trong khi token đã đổi sang tài khoản mới, rủi ro trộn dữ liệu hai giáo xứ.
+ *
+ * QUAN TRỌNG — spec mục 5.4: chỉ ĐÓNG kho (`kho.close()`), TUYỆT ĐỐI KHÔNG xoá
+ * (`indexedDB.deleteDatabase`) — hàng chờ có thể chưa rỗng và dữ liệu chưa gửi lên máy chủ. Đóng
+ * kho không xoá dữ liệu đã lưu; lần đăng nhập sau (`moKho()`) sẽ mở lại đúng kho đó.
+ *
+ * Sau khi gọi, cache module-level (`dangKhoiDong`/`trangThaiHienTai`) bị xoá — lượt gọi
+ * `khoiDongOffline()` tiếp theo (ví dụ sau khi đăng nhập lại) sẽ mở một phiên MỚI, không dùng lại
+ * Promise cache cũ.
+ */
+export function dungOffline(): void {
+  if (trangThaiHienTai) {
+    trangThaiHienTai.dieuKhien.dung()
+    trangThaiHienTai.kho.close()
+  }
+  trangThaiHienTai = null
+  dangKhoiDong = null
+}
+
 /** CHỈ dùng cho kiểm thử — reset cache module-level giữa các ca kiểm thử (mỗi ca cần gọi lại
  * `khoiDongOffline()` từ đầu, không dính kết quả cache của ca trước). KHÔNG gọi trong mã sản phẩm. */
 export function _resetChoKiemThu(): void {
