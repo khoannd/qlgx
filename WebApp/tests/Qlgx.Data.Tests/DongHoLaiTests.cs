@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using FluentAssertions;
 using Qlgx.Data.DongBo;
 
@@ -312,5 +314,90 @@ public class DongHoLaiTests
         var b = new DauDongHo(Moc.AddSeconds(1), 0, null, Guid.NewGuid());
 
         a.CompareTo(b).Should().Be(DongHoLai.SoSanh(a, b));
+    }
+
+    // ---- Ke hoach 4 (Task 4 ban TypeScript): mot luoi MOI, khong doi hanh vi cu ----
+    //
+    // Ke hoach nay THEM MOT test doc file "WebApp/dong-ho-lai-vector.json" - vector kiem thu DUNG
+    // CHUNG voi ban TypeScript o "src/web/src/dongbo/dauDongHo.test.ts" (xem task-4-brief.md). Ca
+    // hai bo test doc CUNG mot file de khong viet hai bo ca kiem thu doc lap roi moi co khop.
+    //
+    // Duong dan file duoc tinh tu vi tri THUC CUA CHINH FILE .cs NAY (qua [CallerFilePath]), KHONG
+    // phai tu thu muc lam viec hien hanh cua tien trinh dotnet test - da chay thu de xac nhan
+    // duong dan dung, khong doan (brief yeu cau kiem tra that).
+
+    private static string DuongDanTepNay([CallerFilePath] string duongDan = "") => duongDan;
+
+    private static DauDongHo DocDauDongHo(JsonElement el)
+    {
+        var vatLy = DateTimeOffset.Parse(el.GetProperty("vatLy").GetString()!,
+            null, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal);
+        var logic = el.GetProperty("logic").GetInt64();
+        var thietBiIdEl = el.GetProperty("thietBiId");
+        Guid? thietBiId = thietBiIdEl.ValueKind == JsonValueKind.Null ? null : Guid.Parse(thietBiIdEl.GetString()!);
+        var maThaoTac = Guid.Parse(el.GetProperty("maThaoTac").GetString()!);
+        return new DauDongHo(vatLy, logic, thietBiId, maThaoTac);
+    }
+
+    private static Guid? DocGuidHoacNull(JsonElement el)
+        => el.ValueKind == JsonValueKind.Null ? null : Guid.Parse(el.GetString()!);
+
+    [Fact]
+    public void Vector_dung_chung_voi_ban_TypeScript_phai_khop_ket_qua_C()
+    {
+        var duongDanVector = Path.Combine(
+            Path.GetDirectoryName(DuongDanTepNay())!, "..", "..", "dong-ho-lai-vector.json");
+        File.Exists(duongDanVector).Should().BeTrue(
+            $"file vector dung chung phai ton tai tai '{duongDanVector}' (goc WebApp/)");
+
+        using var doc = JsonDocument.Parse(File.ReadAllText(duongDanVector));
+        var soCa = 0;
+
+        foreach (var ca in doc.RootElement.EnumerateArray())
+        {
+            soCa++;
+            var ham = ca.GetProperty("ham").GetString();
+            var vao = ca.GetProperty("vao");
+            var ra = ca.GetProperty("ra");
+
+            switch (ham)
+            {
+                case "SoSanhGuid":
+                {
+                    var a = DocGuidHoacNull(vao.GetProperty("a"));
+                    var b = DocGuidHoacNull(vao.GetProperty("b"));
+                    Math.Sign(DongHoLai.SoSanhGuid(a, b)).Should().Be(ra.GetProperty("dau").GetInt32());
+                    break;
+                }
+                case "SoSanh":
+                {
+                    var a = DocDauDongHo(vao.GetProperty("a"));
+                    var b = DocDauDongHo(vao.GetProperty("b"));
+                    Math.Sign(DongHoLai.SoSanh(a, b)).Should().Be(ra.GetProperty("dau").GetInt32());
+                    break;
+                }
+                case "NangDau":
+                {
+                    var dauCuoiCuaTa = DocDauDongHo(vao.GetProperty("dauCuoiCuaTa"));
+                    var nhanDuocEl = vao.GetProperty("nhanDuoc");
+                    DauDongHo? nhanDuoc = nhanDuocEl.ValueKind == JsonValueKind.Null ? null : DocDauDongHo(nhanDuocEl);
+                    var gioHienTai = DateTimeOffset.Parse(vao.GetProperty("gioHienTai").GetString()!,
+                        null, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal);
+
+                    var phat = DongHoLai.NangDau(dauCuoiCuaTa, nhanDuoc, gioHienTai);
+
+                    var kyVongVatLy = DateTimeOffset.Parse(ra.GetProperty("vatLy").GetString()!,
+                        null, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal);
+
+                    phat.VatLy.Should().Be(kyVongVatLy);
+                    phat.Logic.Should().Be(ra.GetProperty("logic").GetInt64());
+                    break;
+                }
+                default:
+                    throw new InvalidOperationException($"Ham khong ro trong vector: '{ham}'");
+            }
+        }
+
+        soCa.Should().BeGreaterThanOrEqualTo(15, "vector dung chung phai co toi thieu 15 ca (yeu cau cua brief)");
     }
 }
