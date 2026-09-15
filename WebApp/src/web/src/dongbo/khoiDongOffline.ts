@@ -33,6 +33,17 @@ export type TrangThaiOffline = {
 let dangKhoiDong: Promise<TrangThaiOffline | null> | null = null
 let trangThaiHienTai: TrangThaiOffline | null = null
 
+// F4 (fix round 2): chống race "dungOffline() gọi giữa lúc khoiDongOffline() còn dở" (vd. đăng xuất
+// đúng lúc đang await moKho()) — nếu không có cờ này, dungOffline() chạy khi idInterKiemTraDuPhong
+// còn null (chưa có gì để clearInterval), rồi thân hàm async của khoiDongOffline() tiếp tục chạy
+// xong và GÁN ĐÈ trangThaiHienTai/đặt interval mới, làm tầng offline "sống lại" sau khi tưởng đã
+// dừng. Cờ module-level đơn giản là đủ cho ca hẹp này: `khoiDongOffline()` đặt cờ về `false` mỗi lần
+// BẮT ĐẦU một lượt khởi động mới (không phải lượt trả về cache); `dungOffline()` luôn bật cờ lên
+// `true` mỗi lần được gọi. `khoiDongOffline()` đọc lại cờ này ngay TRƯỚC khi gán
+// `trangThaiHienTai`/đặt interval ở cuối — nếu thấy cờ đã bật (nghĩa là `dungOffline()` xen vào giữa
+// lúc đang khởi động), tự dọn luôn (đóng kho, dừng `dieuKhien`) thay vì gán làm trạng thái hiện tại.
+let dangDungGiuaChung = false
+
 // L3 (fix round Task 11, spec 4.8.6): trạng thái "đang bù lại" sau khi phát hiện epoch không khớp
 // (máy chủ vừa được khôi phục) — `ThanhTrangThai` đọc biến này (qua `layTrangThaiBuLai()`) để hiện
 // câu "Máy chủ vừa được khôi phục..." trong lúc bù, và dòng tổng kết "Đã gửi lại N thay đổi." sau
@@ -103,6 +114,10 @@ async function kiemTraTuDongDuPhong(kho: IDBDatabase): Promise<void> {
 export function khoiDongOffline(): Promise<TrangThaiOffline | null> {
   if (dangKhoiDong) return dangKhoiDong
 
+  // F4: bắt đầu một lượt khởi động MỚI — hạ cờ "đã bị dừng giữa chừng" của lượt trước (nếu có) về
+  // false; dungOffline() sẽ bật lại cờ này nếu xen vào TRONG lúc lượt khởi động dưới đây đang chạy.
+  dangDungGiuaChung = false
+
   dangKhoiDong = (async () => {
     try {
       const kho = await moKho()
@@ -116,9 +131,27 @@ export function khoiDongOffline(): Promise<TrangThaiOffline | null> {
         // đặt lại `soDongDaBu` (bỏ qua kết quả trả về trước đây là cố ý — nay đọc lại để hiện dòng
         // tổng kết) sau khi bù xong.
         trangThaiBuLai = { dangBu: true, soDongDaBu: null }
-        const { soDongDaBu } = await xuLyEpochKhongKhopDonLuong(phuThuoc, dieuKhien.trangThai)
-        trangThaiBuLai = { dangBu: false, soDongDaBu }
+        try {
+          const { soDongDaBu } = await xuLyEpochKhongKhopDonLuong(phuThuoc, dieuKhien.trangThai)
+          trangThaiBuLai = { dangBu: false, soDongDaBu }
+        } catch (loi) {
+          // F1 (fix round 2): nếu bước bù ném lỗi (vd. LoiThieuMocXoayEpoch — boDongBo.ts:894-899 bắt
+          // lỗi này rồi chỉ log, vòng lặp đồng bộ chạy tiếp), PHẢI đặt lại cờ về false TRƯỚC KHI ném
+          // lại lỗi — không thì `dangBu: true` kẹt vĩnh viễn, che mất nhánh 🔴 "Cần xem lại" trong
+          // `tinhTrangThai` (đứng sau nhánh dangBuLai). Ném lại nguyên lỗi để boDongBo.ts vẫn log
+          // đúng như cũ, không đổi hành vi log.
+          trangThaiBuLai = { dangBu: false, soDongDaBu: null }
+          throw loi
+        }
       })
+      // F4: kiểm tra ngay trước khi gán trạng thái cuối cùng — nếu dungOffline() đã xen vào TRONG
+      // lúc đang await moKho()/batDauBoDongBo() ở trên, tự dọn (đóng kho, dừng dieuKhien) thay vì
+      // "sống lại" bằng cách gán làm trạng thái hiện tại/đặt interval mới.
+      if (dangDungGiuaChung) {
+        dieuKhien.dung()
+        kho.close()
+        return null
+      }
       trangThaiHienTai = { kho, dieuKhien }
       // L4: bắt đầu vòng lặp nền kiểm tra định kỳ "có cần tự dự phòng không" — chạy một lượt ngay
       // (không đợi hết chu kỳ đầu) rồi lặp lại mỗi CHU_KY_KIEM_TRA_DU_PHONG_MS.
@@ -158,6 +191,9 @@ export function layTrangThaiOffline(): TrangThaiOffline | null {
  * Promise cache cũ.
  */
 export function dungOffline(): void {
+  // F4: báo cho một lượt khoiDongOffline() có thể đang dở (await moKho()/batDauBoDongBo()) biết là
+  // đã bị dừng — xem chú thích ở khai báo dangDungGiuaChung và ở khoiDongOffline().
+  dangDungGiuaChung = true
   if (trangThaiHienTai) {
     trangThaiHienTai.dieuKhien.dung()
     trangThaiHienTai.kho.close()
@@ -170,6 +206,10 @@ export function dungOffline(): void {
   }
   trangThaiHienTai = null
   dangKhoiDong = null
+  // F3 (fix round 2): reset luôn trạng thái "đang bù lại" — không có bước này, máy dùng chung tài
+  // khoản (A đăng xuất, B đăng nhập) có thể thấy nhầm dòng tổng kết "Đã gửi lại N thay đổi." của
+  // tài khoản trước còn sót lại trong `ThanhTrangThai`.
+  trangThaiBuLai = { dangBu: false, soDongDaBu: null }
 }
 
 /** CHỈ dùng cho kiểm thử — reset cache module-level giữa các ca kiểm thử (mỗi ca cần gọi lại
@@ -181,4 +221,6 @@ export function _resetChoKiemThu(): void {
     clearInterval(idInterKiemTraDuPhong)
     idInterKiemTraDuPhong = null
   }
+  // F3 (fix round 2): reset luôn giữa các ca kiểm thử — xem chú thích ở dungOffline().
+  trangThaiBuLai = { dangBu: false, soDongDaBu: null }
 }

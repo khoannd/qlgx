@@ -40,7 +40,12 @@ function ghiCacheNguoiDung(nd: NguoiDungHienTai) {
   try {
     localStorage.setItem(KHOA_CACHE, JSON.stringify(nd))
   } catch {
-    // localStorage có thể bị chặn — không sao, chỉ mất tác dụng cache, không hỏng luồng chính.
+    // F5 (fix round Task 11 - round 2): nếu ghi thất bại (vd. quota đầy) NGAY SAU KHI đăng nhập
+    // bằng tài khoản MỚI (authStore.datToken đã đổi token trước đó), cache CŨ (của tài khoản
+    // trước) sẽ còn nguyên trong khi token đã đổi — tải lại trang lúc mất mạng sau đó sẽ hiện
+    // NHẦM danh tính/giaoXuId của tài khoản CŨ. Xoá hẳn cache thay vì im lặng bỏ qua — thà không
+    // có cache còn hơn có cache sai người.
+    xoaCacheNguoiDung()
   }
 }
 
