@@ -1123,3 +1123,122 @@ migration cuối (`ThemBangSaoLuu`, `ThemBangNhatKyThayDoi`, `ThemKhoaChinhChoBa
 update` lùi lại đã bị hệ thống chặn vì là thao tác phá huỷ — **chưa dọn được**, để lại nguyên trạng
 cho người điều phối quyết định (xem báo cáo Task 8 để biết chi tiết và câu lệnh dọn đề xuất). Sau đó
 đã chạy lại đúng với `QLGX_TEST_PG` có `Database=qlgx_thu` và xác nhận `qlgx_thu` đã đúng migration.
+
+---
+
+### 14.1 Kiểm thử trên trình duyệt thật — 17 ca (Task 11, kế hoạch PWA offline-first)
+
+**Ngày kiểm chứng:** 2026-09-15/16. Nhánh `webapp-phase-1`, database RIÊNG `qlgx_task11_test`
+(Postgres cục bộ, không đụng dữ liệu nào khác), giáo xứ thử nghiệm `Giao xu Task11 Test`
+(`ad6c03e4-6419-4bd8-8ac3-36341a0e5ddd`) với 30 giáo dân tự tạo. `Qlgx.Api` cổng **5299** (cờ
+`--urls` + `--no-launch-profile`, KHÔNG dùng `ASPNETCORE_URLS` — xem bẫy đã ghi ở Task 8), Vite cổng
+**5288**; cổng 5096/5173 của phiên song song không bị đụng tới. Hai tài khoản: `task11_test`
+(LoaiTaiKhoan=0) và `task11_sysadmin` (LoaiTaiKhoan=9, để gọi được
+`/api/quan-tri/dong-bo/xoay-epoch`). Báo cáo đầy đủ từng ca:
+`.superpowers/sdd/2026-09-13-pwa-offline/task-11-report.md`.
+
+**Ngắt mạng là thật** (CDP `Network.emulateNetworkConditions`, không giả lập bằng hàm nội bộ), và
+phần lớn các ca chạy trên **bản BUILD** phục vụ từ chính `Qlgx.Api/wwwroot` chứ không phải Vite dev —
+vì `vite-plugin-pwa` không sinh service worker ở chế độ dev, mà không có service worker thì "tải lại
+trang khi mất mạng" không đo được thứ người dùng thật gặp. "Hai máy" (ca 9, 10) dùng hai browser
+context độc lập, hai `thietBiId` khác nhau, xác nhận qua `can_xem_lai.thiet_bi_a/thiet_bi_b`.
+
+**Kết quả: 11 PASS / 6 FAIL trên 17.**
+
+| # | Ca | Kết quả |
+|---|---|---|
+| 1 | Sửa giáo dân khi online | PASS |
+| 2 | Ngắt mạng, sửa ba giáo dân | FAIL |
+| 3 | Tải lại trang khi vẫn mất mạng | FAIL |
+| 4 | Nối mạng lại, tự gửi | PASS |
+| 5 | Tắt hẳn máy chủ rồi bật lại | PASS |
+| 6 | Tìm kiếm khi mất mạng | FAIL |
+| 7 | Tạo người mới offline rồi gán vào gia đình | FAIL |
+| 8 | Hai tab — chỉ một tab gọi máy chủ | PASS |
+| 9 | Hai máy sửa hai ô khác nhau | PASS |
+| 10 | Hai máy sửa cùng ô nhạy cảm (ngày sinh) | PASS |
+| 11 | Chọn giá trị cũ hơn ở hộp cần xem lại | PASS |
+| 12 | Khôi phục máy chủ chế độ `lay_lai` | PASS (dữ liệu) — thiếu câu chữ 4.8.6 |
+| 13 | Khôi phục chế độ `bo_han` | PASS |
+| 14 | Khôi phục CSDL bằng tay, quên xoay `epoch` | PASS |
+| 15 | Hàng chờ tồn đọng quá ngưỡng | FAIL |
+| 16 | Đóng tab khi còn hàng chờ (chế độ tắt offline) | FAIL |
+| 17 | Các màn hình chính không hồi quy | PASS |
+
+**Ba ca 4.8 — lý do tồn tại của cả thiết kế — đều đạt phần dữ liệu, kiểm chứng bằng SQL.**
+
+- **Ca 12 (`lay_lai`)**: `pg_dump` ở `so_tiep_theo = 43` → sửa tiếp sinh `hieu_luc` 43/44 → máy con
+  kéo về đủ (`conTro = 44`, `soDaNhan = 44`) → `pg_restore` (máy chủ còn 42) →
+  `POST /api/quan-tri/dong-bo/xoay-epoch {"CheDo":"lay_lai"}` → `bo_dem_hieu_luc` thành
+  `epoch = 310dfd56-…, cho_phep_bu_lai = t, so_thu_tu_luc_xoay = 42`. Máy con nhận **410** ở
+  `/thay-doi`, chạy trọn mục 4.8.5: lọc sổ đã nhận theo **đúng `soThuTuLucXoayGanNhat = 42`** (không
+  phải con trỏ hiện tại), tải **file dự phòng trước** rồi nạp 2 dòng vào hàng chờ kèm danh tính gốc
+  `(nguonGocEpoch = 1f972287-…, nguonGocSoThuTu = 43/44)`, tiến `conTro` sang epoch mới. Kết quả:
+  `dien_thoai = 0999000010`, `ghi_chu = 'SUA SAU KHI SAO LUU'` **quay lại đầy đủ**, tái ghi thành
+  `hieu_luc` 43/44 dưới epoch mới, `can_xem_lai` mở = 0.
+- **Ca 13 (`bo_han`)**: cùng kịch bản, `cho_phep_bu_lai = f`. **File dự phòng vẫn được tạo TRƯỚC khi
+  bỏ** (đúng ruling của `buSauKhoiPhuc.ts`), rồi máy chủ trả `tu_choi` — *"May chu dang o che do quay
+  lui co chu y — khong nhan du lieu bu"*. `ghi_chu` **không sống lại**, `hieu_luc` không có dòng nào
+  mới, không sinh mục cần xem lại (đúng thiết kế).
+- **Ca 14 (LỚP 2)**: mô phỏng bằng SQL trực tiếp —
+  `delete from hieu_luc where so_thu_tu > 39; update bo_dem_hieu_luc set so_tiep_theo = 40;`
+  **không đụng `epoch`**. Máy con (`conTro.soThuTu = 44`) nhận **409 `may-chu-di-lui`**, chuyển 🔴
+  *"Máy chủ có dấu hiệu vừa bị đưa về bản cũ — cần người hỗ trợ kiểm tra trước khi tiếp tục"*, và
+  **dừng hẳn**: đo `performance.getEntriesByType('resource')` trong 90 giây liên tục — **0 lượt gọi
+  `/api/dong-bo/*` mới**. Chạy `xoay-epoch` chế độ `lay_lai` rồi tải lại trang thì đồng bộ chạy lại
+  bình thường (có đường thoát khỏi 🔴).
+
+Ca 9/10/11 cũng đạt sạch: ô KHÔNG nhạy cảm gộp im lặng (`DienThoai` + `NoiSinh` cùng một giáo dân,
+cả hai còn, 0 mục xem lại); ô nhạy cảm `NgaySinh` sinh **đúng một** mục `o_nhay_cam` ghi đủ
+`gia_tri_a/gia_tri_b/thiet_bi_a/thiet_bi_b`, giá trị mới hơn thắng; chọn giá trị **cũ hơn** ở hộp
+xem lại được phát lại thành **một dòng hiệu lực MỚI mang dấu mới nhất** (`so_thu_tu = 42`,
+`thiet_bi_id` rỗng = quyết định của máy chủ) nên **không bị tự đổi lại** ở các lần đồng bộ sau.
+
+**Sáu ca FAIL — không ca nào là lỗi của lõi giao thức.** Tất cả là "chưa nối dây" hoặc xử lý lỗi sai
+ở tầng đăng nhập:
+
+1. **Lỗi thật, mức Critical cho kế hoạch — `api/AuthContext.tsx:80`.** Lúc tải trang,
+   `api.auth.toi().catch(() => authStore.xoaToken())` **không phân biệt "máy chủ từ chối token" với
+   "không gọi được máy chủ"**: tải lại trang khi mất mạng làm **xoá token** và đá người dùng ra màn
+   hình đăng nhập — mà offline thì không đăng nhập lại được. Việc trong hàng chờ vẫn nằm nguyên
+   trong IndexedDB (không mất dữ liệu) nhưng bị kẹt, và thanh trạng thái biến mất nên người dùng
+   không còn lời trấn an nào. Đây là ca 3.
+2. **Ca 2, 6, 7 — giới hạn phạm vi ĐÃ BIẾT, không phải lỗi mới.** Không màn hình nghiệp vụ nào gọi
+   `ghiCucBo` (hoãn có chủ ý sang "Task 7b", xem `task-10-brief.md` mục 4), và ảnh chụp `/toan-bo`
+   chưa được ghi vào kho `banGhi` (`apDungToanBo` chưa viết, chú thích cuối `boDongBo.ts`). Hệ quả
+   đo được: mất mạng thì **không mở nổi một hồ sơ nào**, không sửa, không tạo, không tìm — mọi lần
+   lưu báo *"Mất kết nối mạng…"* và không có gì vào hàng chờ. Khi nạp thẳng việc vào hàng chờ (mô
+   phỏng đúng thứ `ghiCucBo` sẽ ghi) thì thanh trạng thái hiện **đúng nguyên văn** "Đã lưu ở máy này
+   (3) — đang gửi về", tức phần hiển thị của mục 9.1 đúng, chỉ thiếu đường ghi.
+3. **Ca 15** — `canTuDongDuPhong()` (mục 7.10) **không có nơi gọi trong mã sản phẩm**: 25 việc tồn
+   đọng suốt 6 phút, không file dự phòng nào tự tải xuống. Vế còn lại của ca này thì đạt — nạp lại
+   file dự phòng bằng tay chạy đúng, và nạp **cùng một file hai lần** tuy sinh hai dòng hàng chờ
+   trùng `maThaoTac` (có chủ ý, xem JSDoc `napLaiFileDuPhong`) nhưng **không sinh bản ghi trùng**:
+   máy chủ nhận ra qua `thao_tac_da_nhan` và trả lại nguyên phản hồi cũ.
+4. **Ca 16** — "chế độ TẮT offline" (mục 6.6) **chưa tồn tại trong sản phẩm**: `moKhoRam()` và
+   `chanDongTabKhiConHangCho()` đều không có nơi gọi, không có thiết lập nào để bật. Kiểm chứng với
+   hàng chờ khác rỗng: `dispatchEvent(new Event('beforeunload', {cancelable:true}))` **không bị
+   huỷ** — không có trình xử lý nào đăng ký.
+5. **Ca 12 thiếu một nửa của mục 4.8.6.** Trong lúc bù, thanh chỉ hiện câu chung "Đã lưu ở máy này
+   (2) — đang gửi về", **không** có "Máy chủ vừa được khôi phục. Đang gửi lại N thay đổi mà máy này
+   còn giữ", và **không** có dòng tổng kết "Đã gửi lại N thay đổi" — `ThanhTrangThai.tinhTrangThai`
+   không có trạng thái cho tình huống khôi phục, còn `khoiDongOffline.ts` vứt bỏ `{ soDongDaBu }`
+   mà `xuLyEpochKhongKhopDonLuong` trả về.
+
+**Ba điều đo được, không phải lỗi mã nhưng đe doạ thật tới máy giáo xứ:**
+
+- `navigator.storage.persisted()` trả **`false`** sau khi đăng nhập. Mã CÓ gọi `persist()` đúng chỗ,
+  nhưng Chrome **từ chối** với một site chưa có tương tác/bookmark — nghĩa là ràng buộc cứng của
+  mục 5 ("trình duyệt không được tự dọn IndexedDB") **chưa thật sự được bảo đảm** trên máy mới cài.
+  Cần hoặc hướng dẫn cài PWA/ghim trang, hoặc nói rõ giới hạn này trong tài liệu triển khai.
+- Chrome **chặn tải file tự động từ lần thứ hai trở đi** trên cùng một origin khi không có thao tác
+  người dùng (quan sát ở ca 13: file dự phòng chỉ ghi xuống đĩa khoảng 2 phút sau, sau khi cổng "cho
+  phép tải nhiều file" được mở). Lớp an toàn "luôn sao lưu trước khi bỏ" hiện trông cậy hoàn toàn
+  vào `<a download>`; nếu người dùng bấm "Chặn" thì nó im lặng không bao giờ chạy. Nên có đường dự
+  phòng thứ hai (giữ một bản trong IndexedDB, cho tải tay từ thanh trạng thái).
+- Sau khi bù lại xong, các dòng bù có thể nằm trong hàng chờ tới **5 phút** (`CHU_KY_YEN_TINH_MS`)
+  mới thực sự được gửi, vì vòng lặp không `continue` ngay sau nhánh `khiEpochKhongKhop`.
+
+Ngoài ra, hộp "Cần xem lại" hiện **tên kỹ thuật và JSON thô** (`GiaoDan — NgaySinh`,
+`Giá trị A: "1969-03-12"`) thay vì câu đời thường mà mục 9.2 đòi — đúng cơ chế, sai ngôn ngữ, và với
+quý cha quý sơ thì dòng hiện tại gần như vô nghĩa.
