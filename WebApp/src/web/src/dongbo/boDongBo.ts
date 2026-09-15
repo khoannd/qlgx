@@ -15,27 +15,44 @@
  *
  * ## Lịch chạy bốn nguồn kích hoạt (spec 7.3) — xem `batDauBoDongBo`
  *
- * 1. Máy chủ trả kèm dòng mới MỖI LẦN gửi lô lên (`GuiLenKetQua.dongMoi`) — vì `DongBoService.GuiLen`
- *    phía máy chủ luôn gọi `NhanVe` nội bộ (kể cả lô `thaoTac` RỖNG), một lần gọi `guiHangChoVaApDung`
- *    dưới đây LUÔN đồng thời là một lần "hỏi dữ liệu mới" — không cần gọi `/thay-doi` riêng cho vòng
- *    lặp định kỳ, chỉ cần MỘT loại lệnh gọi cho cả gửi lẫn nhận.
+ * 1. **Mỗi chu kỳ đều phải cho LỚP 2 (phát hiện "máy chủ đi lùi", spec 4.8.4) cơ hội chạy THẬT — xem
+ *    C1, review vòng sửa 1.** Máy chủ chỉ áp LỚP 2 khi `NhanVe` nhận `epoch` THẬT (không `null`);
+ *    `POST /gui-len` phía máy chủ gọi `NhanVe` NỘI BỘ với `epoch: null` (xem `DongBoService.cs`), nên
+ *    409 "may-chu-di-lui" KHÔNG BAO GIỜ tới từ `/gui-len` — CHỈ `GET /thay-doi` (epoch thật) mới kích
+ *    hoạt được. Bản trước chỉ gọi `/gui-len` (kể cả rỗng, để "hỏi dữ liệu mới" trá hình qua
+ *    `dongMoi`) khiến LỚP 2 là mã chết trong vòng chạy thật — SỬA: `motLanDongBo` LUÔN gọi
+ *    `layThayDoiVaApDung` (`/thay-doi`) ít nhất một lần mỗi chu kỳ. Hàng chờ RỖNG: gọi THẲNG
+ *    `layThayDoiVaApDung` thay cho một `/gui-len` rỗng (đúng ngữ nghĩa "hỏi dữ liệu mới" hơn, VÀ kích
+ *    hoạt được LỚP 2). Hàng chờ CÓ gì: vẫn `/gui-len` trước (Ràng buộc 9), rồi gọi thêm
+ *    `layThayDoiVaApDung` NGAY sau đó trong CÙNG chu kỳ.
  * 2/3. `visibilitychange` (khi tab hiện lại)/`focus`/`online` — đánh thức vòng lặp ngay lập tức
  *    (`NguonSuKienDongBo.dangKy`), không đợi hết chu kỳ định kỳ.
  * 4. Định kỳ co giãn: `baoDangGo()` rút ngắn chu kỳ chờ tiếp theo xuống `CHU_KY_DANG_GO_MS`, các chu
  *    kỳ sau đó tự giãn về `CHU_KY_YEN_TINH_MS` nếu không có `baoDangGo()` nào thêm. Tab ẩn
- *    (`document.hidden`) làm `motLanDongBo` bỏ qua việc gửi lô NẾU hàng chờ rỗng (tức bỏ việc "hỏi dữ
- *    liệu mới" tốn một lượt gọi không cần thiết khi không ai nhìn màn hình) — nhưng hàng chờ CÓ gì
- *    thì luôn gửi, không bao giờ bị chặn bởi tab ẩn (quý sơ hay mở tab rồi để đó cả ngày).
+ *    (`document.hidden`) làm `motLanDongBo` bỏ qua HẲN lượt gọi mạng NẾU hàng chờ rỗng (không "hỏi dữ
+ *    liệu mới" trá hình khi không ai nhìn màn hình) — nhưng hàng chờ CÓ gì thì luôn gửi, không bao
+ *    giờ bị chặn bởi tab ẩn (quý sơ hay mở tab rồi để đó cả ngày). GIỚI HẠN PHẠM VI CỐ Ý (I4, ruling
+ *    B của điều phối viên, vòng sửa 1): `tabAn`/`tabDangAn()` CHỈ phản ánh đúng `document.hidden` của
+ *    CHÍNH tab đang chạy vòng lặp này (tab đang là chủ) — nếu tab CHỦ đang ẩn trong khi một tab KHÁC
+ *    đang hiện (và không phải chủ), tab hiện đó KHÔNG có cách nào giục tab chủ chạy ngay ở bản này;
+ *    nó phải đợi tab chủ tự thức theo lịch riêng. Cầu nối liên-tab (ví dụ `BroadcastChannel`) cho
+ *    tình huống này để dành cho Task 7, KHÔNG coi là đã xử lý đầy đủ ở đây.
  *
  * ## Ràng buộc 3 — MỘT giao dịch IndexedDB
  *
- * `apDungGuiLenKetQua` mở ĐÚNG MỘT `kho.transaction([...], 'readwrite')` bao cả bốn việc: ghi sổ đã
- * nhận (`ghiSoDaNhanTrongGiaoDich`), tiến con trỏ (`ghiConTroTrongGiaoDich`), ghi mục cần xem lại
- * cho kết quả `tu_choi` (`ghiCanXemLaiTrongGiaoDich`), và xoá các thao tác đã xử lý xong khỏi hàng
- * chờ (`xoaKhoiHangChoTrongGiaoDich`). Tách bốn việc này ra nhiều giao dịch sẽ tạo đúng lỗ hổng ràng
- * buộc 3 cấm: hỏng giữa chừng có thể để con trỏ đã tiến nhưng sổ đã nhận trống (Task 8 bù thiếu mà
- * không ai biết), hoặc một thao tác `tu_choi` đã bị xoá khỏi hàng chờ nhưng CHƯA kịp vào hộp cần xem
- * lại (dữ liệu người dùng nhập biến mất không dấu vết).
+ * `apDungGuiLenKetQua` mở ĐÚNG MỘT `kho.transaction([...], 'readwrite')` bao cả ba việc: ghi sổ đã
+ * nhận (`ghiSoDaNhanTrongGiaoDich`), tiến con trỏ (`ghiConTroTrongGiaoDich`), và xoá các thao tác đã
+ * xử lý xong khỏi hàng chờ (`xoaKhoiHangChoTrongGiaoDich`). Tách ba việc này ra nhiều giao dịch sẽ
+ * tạo đúng lỗ hổng ràng buộc 3 cấm: hỏng giữa chừng có thể để con trỏ đã tiến nhưng sổ đã nhận trống
+ * (Task 8 bù thiếu mà không ai biết).
+ *
+ * **Kết quả `tu_choi` — RULING A (điều phối viên, vòng sửa 1).** Máy chủ
+ * (`DongBoService.TuChoiThaoTac`) ĐÃ TỰ ghi một mục "cần xem lại" (`CanXemLai`, `Loai =
+ * "khong_luu_duoc"`) BỀN VỮNG cho MỌI thao tác bị từ chối, giữ nguyên `GiaTriB` người dùng đã gõ, đọc
+ * được qua `GET /api/can-xem-lai`. Task 6 (bản trước) tự ghi THÊM một kho `canXemLai` RIÊNG của
+ * client cho việc này — SAI, vì brief ban đầu không biết máy chủ đã làm việc đó. Đã BỎ HẲN: việc DUY
+ * NHẤT Task 6 làm với `tu_choi` giờ là xoá đúng dòng đó khỏi hàng chờ (máy chủ đã xử lý xong VÀ đã tự
+ * ghi sổ — không cần gửi lại, không cần ghi gì thêm vào IndexedDB máy con).
  *
  * ## `thietBiId`
  *
@@ -46,16 +63,10 @@
  * chính nó phát ra.
  */
 import { authStore } from '../api/authStore'
-import {
-  KHO_CAN_XEM_LAI,
-  KHO_CON_TRO,
-  KHO_HANG_CHO,
-  KHO_SO_DA_NHAN,
-} from '../kho/moKho'
+import { KHO_CON_TRO, KHO_HANG_CHO, KHO_SO_DA_NHAN } from '../kho/moKho'
 import { docHangCho, xoaKhoiHangChoTrongGiaoDich, type DongHangCho } from '../kho/hangCho'
 import { docConTro, ghiConTroTrongGiaoDich } from '../kho/conTro'
 import { ghiSoDaNhanTrongGiaoDich, type DongDaNhan } from '../kho/soDaNhan'
-import { ghiCanXemLaiTrongGiaoDich, type DongCanXemLai } from '../kho/canXemLai'
 import { GUID_RONG, chuanHoaMocMayChu, soSanh, tuMocMs, type DauDongHo } from './dauDongHo'
 import { DoanDongHo, DongHoDonDieu, DongHoLogicMayCon } from './dongHoMayCon'
 import { TEN_KHOA_BAU_CHU, troThanhChuKhiCoTheChoDenKhiHuy, type NguonKhoa } from './bauChu'
@@ -238,6 +249,14 @@ export type PhuThuocBoDongBo = {
   dongHoLogic: DongHoLogicMayCon
 }
 
+/**
+ * TUYỆT ĐỐI không gọi hàm này lần thứ hai trong CÙNG một tab (I6, review vòng sửa 1 — ghi nhận cho
+ * Task 7, chưa sửa cấu trúc ở đây) — mỗi lần gọi tự khởi tạo một `DongHoLogicMayCon` MỚI đọc lại
+ * `dauCuoi*` từ `conTro` tại đúng thời điểm gọi; hai bản độc lập cùng đọc rồi cùng tự `ghiConTro` sẽ
+ * ghi ĐÈ LÊN NHAU (bản chạy sau lấn bản chạy trước), có thể đẩy `dauCuoi*` LÙI lại giá trị cũ hơn của
+ * chính bản đầu — đúng lỗi Global Constraints cảnh báo. Dùng ĐÚNG MỘT `PhuThuocBoDongBo` cho suốt
+ * vòng đời một tab (xem cách `batDauBoDongBo` chỉ gọi hàm này MỘT LẦN trong `khiLaChu`).
+ */
 export async function khoiTaoPhuThuoc(kho: IDBDatabase): Promise<PhuThuocBoDongBo> {
   const thietBiId = layThietBiId()
   const donDieu = await DongHoDonDieu.khoiTao(kho)
@@ -262,6 +281,10 @@ export type DongHangChoDongBo = DongHangCho & {
    * `ghiVaXepHang` được gọi (Task 7), KHÔNG phải giờ hệ thống thô. */
   vatLy: string
   logic: number
+  /** M13 (review vòng sửa 1): `giaoDichId` (cũng như `maThaoTac` kế thừa từ `DongHangCho`) PHẢI là
+   * một chuỗi Guid dạng "D" chữ thường hợp lệ (xem `soSanhGuid` trong `dauDongHo.ts`) — kiểu ở đây
+   * để trần `string` (không phải một kiểu Guid riêng có kiểm tra) vì TypeScript không có kiểu Guid
+   * built-in; KHÔNG coi việc kiểu-check qua được là bằng chứng giá trị đúng định dạng. */
   giaoDichId: string
   /** Chỉ có giá trị với thao tác BÙ LẠI sau khi máy chủ bị khôi phục (Task 8, spec 4.8.5) —
    * `undefined`/`null` ở thao tác bình thường. */
@@ -359,9 +382,11 @@ async function apDungNhanVe(phuThuoc: PhuThuocBoDongBo, ketQua: NhanVeKetQua): P
 
 /**
  * Gọi `/thay-doi` một lần và áp kết quả — dùng cho lần gọi "đúng chỗ cần" (spec 7.3: ngay trước khi
- * mở một hồ sơ ra sửa, và trước khi dò trùng lúc tạo người mới), TÁCH KHỎI vòng lặp định kỳ (vòng
- * lặp định kỳ dùng `guiHangChoVaApDung` — LUÔN kèm "hỏi dữ liệu mới" miễn phí qua `dongMoi`, không
- * cần gọi `/thay-doi` riêng, xem chú thích đầu file mục 1).
+ * mở một hồ sơ ra sửa, và trước khi dò trùng lúc tạo người mới) VÀ cho phần "hỏi dữ liệu mới"/kiểm
+ * tra LỚP 2 mỗi chu kỳ của `motLanDongBo` (xem chú thích đầu file mục 1, và C1 review vòng sửa 1).
+ *
+ * CHÚ Ý (I6): dùng `phuThuoc` do `khoiTaoPhuThuoc` tạo ra — TUYỆT ĐỐI không tự tạo một
+ * `PhuThuocBoDongBo` thứ hai trong cùng tab để gọi hàm này (xem cảnh báo ở `khoiTaoPhuThuoc`).
  */
 export async function layThayDoiVaApDung(phuThuoc: PhuThuocBoDongBo, toiDa?: number): Promise<NhanVeKetQua> {
   const conTro = await docConTro(phuThuoc.kho)
@@ -371,47 +396,41 @@ export async function layThayDoiVaApDung(phuThuoc: PhuThuocBoDongBo, toiDa?: num
 }
 
 /**
- * RÀNG BUỘC 3 — áp kết quả một lô gửi lên: sổ đã nhận + con trỏ + cần-xem-lại (kết quả `tu_choi`) +
- * xoá hàng chờ, TRONG MỘT `kho.transaction([...], 'readwrite')` DUY NHẤT. Xem chú thích đầu file.
+ * RÀNG BUỘC 3 — áp kết quả một lô gửi lên: sổ đã nhận + con trỏ + xoá hàng chờ, TRONG MỘT
+ * `kho.transaction([...], 'readwrite')` DUY NHẤT. Xem chú thích đầu file.
  *
  * Mọi `KetQuaThaoTacDto` (`ap`/`thua`/`tu_choi`/`trung`) đều khiến dòng hàng chờ tương ứng bị xoá —
  * máy chủ đã XỬ LÝ XONG thao tác đó theo MỘT trong bốn cách, không còn gì để gửi lại: `ap` (đã ghi),
- * `thua` (luật gộp mức trường quyết định có cái mới hơn — kết quả gộp bình thường, KHÔNG phải lỗi,
- * không vào hộp cần xem lại), `trung` (đã nhận ở một lô trước — xác nhận lại việc RÀNG BUỘC 9 đã
- * làm đúng), và `tu_choi` (bị từ chối — xoá khỏi hàng chờ nhưng PHẢI ghi vào cần-xem-lại TRƯỚC/CÙNG
- * lúc xoá, không thì dữ liệu người dùng đã gõ biến mất không dấu vết, xem `task-6-brief.md`).
+ * `thua` (luật gộp mức trường quyết định có cái mới hơn — kết quả gộp bình thường, KHÔNG phải lỗi),
+ * `trung` (đã nhận ở một lô trước — xác nhận lại việc RÀNG BUỘC 9 đã làm đúng), và `tu_choi` (bị từ
+ * chối — RULING A: máy chủ ĐÃ TỰ ghi mục "cần xem lại" bền vững của riêng nó, Task 6 chỉ cần xoá
+ * khỏi hàng chờ, không ghi gì thêm — xem chú thích đầu file).
+ *
+ * I7 (review vòng sửa 1): xây `canXoaKhoiHangCho` bằng cách DUYỆT `hangChoDaGui` (danh sách TA đã
+ * gửi, giữ khoá GỐC do TA quản), so `maThaoTac` KHÔNG PHÂN BIỆT hoa/thường với chuỗi `maThaoTac` máy
+ * chủ trả về trong `ketQua.ketQua` — rồi đẩy `dong.maThaoTac` (khoá GỐC của TA) vào danh sách cần
+ * xoá, KHÔNG phải chuỗi server trả lại. Bản trước duyệt `ketQua.ketQua` rồi dùng thẳng
+ * `kq.maThaoTac` (chuỗi SERVER trả về) làm khoá xoá — nếu vì bất kỳ lý do gì chuỗi đó lệch hoa/thường
+ * với khoá TA lưu, dòng đó KẸT VĨNH VIỄN trong hàng chờ (không bao giờ xoá được, gửi lại mãi mãi).
  */
 async function apDungGuiLenKetQua(
   phuThuoc: PhuThuocBoDongBo,
   hangChoDaGui: DongHangChoDongBo[],
   ketQua: GuiLenKetQua,
 ): Promise<void> {
-  const theoMa = new Map(hangChoDaGui.map((d) => [d.maThaoTac, d]))
   const ngayNhan = tuMocMs(phuThuoc.donDieu.mocHienTaiMs())
 
-  const canXoaKhoiHangCho: string[] = []
-  const canXemLaiMoi: DongCanXemLai[] = []
-
-  for (const kq of ketQua.ketQua) {
-    canXoaKhoiHangCho.push(kq.maThaoTac)
-    if (kq.ketQua === 'tu_choi') {
-      const dongGoc = theoMa.get(kq.maThaoTac)
-      // `dongGoc` luôn phải có mặt trong luồng bình thường (máy chủ chỉ trả kết quả cho thao tác
-      // ta vừa gửi) — bỏ qua nếu thiếu (phòng hờ dữ liệu bất thường) thay vì ném lỗi làm hỏng cả
-      // giao dịch của MỌI kết quả khác trong cùng lô.
-      if (dongGoc) {
-        canXemLaiMoi.push({ maThaoTac: kq.maThaoTac, thongBao: kq.thongBao, dongHangChoGoc: dongGoc, taoLuc: ngayNhan })
-      }
-    }
-  }
+  const maDaXuLyThuongHoa = new Set(ketQua.ketQua.map((kq) => kq.maThaoTac.toLowerCase()))
+  const canXoaKhoiHangCho = hangChoDaGui
+    .filter((dong) => maDaXuLyThuongHoa.has(dong.maThaoTac.toLowerCase()))
+    .map((dong) => dong.maThaoTac)
 
   const soDaNhanMoi = ketQua.dongMoi.map((d) => dongHieuLucThanhDaNhan(d, ketQua.epoch, ngayNhan))
 
   await new Promise<void>((resolve, reject) => {
-    const gd = phuThuoc.kho.transaction([KHO_SO_DA_NHAN, KHO_CON_TRO, KHO_HANG_CHO, KHO_CAN_XEM_LAI], 'readwrite')
+    const gd = phuThuoc.kho.transaction([KHO_SO_DA_NHAN, KHO_CON_TRO, KHO_HANG_CHO], 'readwrite')
     ghiSoDaNhanTrongGiaoDich(gd.objectStore(KHO_SO_DA_NHAN), soDaNhanMoi, () => {})
     ghiConTroTrongGiaoDich(gd.objectStore(KHO_CON_TRO), { epoch: ketQua.epoch, soThuTu: ketQua.conTroMoi }, () => {})
-    ghiCanXemLaiTrongGiaoDich(gd.objectStore(KHO_CAN_XEM_LAI), canXemLaiMoi, () => {})
     xoaKhoiHangChoTrongGiaoDich(gd.objectStore(KHO_HANG_CHO), canXoaKhoiHangCho, () => {})
     gd.oncomplete = () => resolve()
     gd.onerror = () => reject(gd.error ?? new Error('Không áp được kết quả gửi lên'))
@@ -443,20 +462,39 @@ export async function guiHangChoVaApDung(
 }
 
 /**
- * Một chu kỳ đồng bộ đầy đủ: cập nhật phát hiện nhảy giờ (`DoanDongHo.soDoanHienTai`, xem
- * `dongHoMayCon.ts` — phải gọi trước khi gắn số đoạn cho các dòng SẼ được xếp hàng sau đó, dù ở
- * ĐÂY ta chỉ ĐỌC hàng chờ hiện có, không tự ghi thêm dòng nào), rồi gửi hàng chờ.
+ * Một chu kỳ đồng bộ đầy đủ.
  *
- * `tabAn = true` VÀ hàng chờ rỗng: bỏ qua hẳn lượt gọi mạng — đây chính là "tab ẩn thì ngừng hỏi dữ
- * liệu mới" (không có gì để gửi thì gọi `/gui-len` rỗng chỉ để "hỏi dữ liệu mới" một cách trá hình,
- * không cần thiết khi không ai nhìn màn hình). `tabAn = true` NHƯNG hàng chờ CÓ gì: vẫn gửi bình
+ * `tabAn = true` VÀ hàng chờ rỗng: bỏ qua HẲN lượt gọi mạng (kể cả `/thay-doi`) — đây chính là "tab
+ * ẩn thì ngừng hỏi dữ liệu mới" (spec 7.3 mục 4). `tabAn = true` NHƯNG hàng chờ CÓ gì: vẫn gửi bình
  * thường — "KHÔNG BAO GIỜ ngừng gửi hàng chờ" (spec 7.3).
+ *
+ * M12 (review vòng sửa 1): `DoanDongHo.soDoanHienTai()` (có tác dụng phụ ghi `conTro`, có thể mở
+ * một "đoạn" mới nếu phát hiện nhảy giờ) CHỈ được gọi SAU khi đã biết chắc KHÔNG bỏ qua lượt gọi
+ * mạng — gọi nó dù không có gì để gửi/nhận (nhánh tab ẩn + hàng chờ rỗng) là không cần thiết và có
+ * thể mở một "đoạn" mới không đúng lúc.
+ *
+ * C1 (review vòng sửa 1 — BẮT BUỘC, xem chú thích đầu file mục 1): LỚP 2 (phát hiện "máy chủ đi
+ * lùi", spec 4.8.4) CHỈ được máy chủ kiểm tra qua `GET /thay-doi` (epoch thật) — KHÔNG BAO GIỜ qua
+ * `POST /gui-len` (máy chủ gọi `NhanVe` nội bộ với `epoch: null`). Vì vậy hàm này LUÔN gọi
+ * `layThayDoiVaApDung` ít nhất một lần: hàng chờ RỖNG → gọi THẲNG nó thay cho một `/gui-len` rỗng
+ * (đúng ngữ nghĩa "hỏi dữ liệu mới" hơn, và kích hoạt được LỚP 2); hàng chờ CÓ gì → gửi qua
+ * `guiHangChoVaApDung` trước (Ràng buộc 9), RỒI gọi thêm `layThayDoiVaApDung` ngay sau đó trong CÙNG
+ * chu kỳ, để LỚP 2 luôn thực sự được kiểm tra mỗi chu kỳ, không phải mã chết.
  */
 export async function motLanDongBo(phuThuoc: PhuThuocBoDongBo, tabAn: boolean): Promise<{ conNua: boolean }> {
-  await phuThuoc.doan.soDoanHienTai()
   const hangCho = (await docHangCho(phuThuoc.kho)) as DongHangChoDongBo[]
   if (tabAn && hangCho.length === 0) return { conNua: false }
-  return guiHangChoVaApDung(phuThuoc, hangCho)
+
+  await phuThuoc.doan.soDoanHienTai()
+
+  if (hangCho.length === 0) {
+    const ketQuaThayDoi = await layThayDoiVaApDung(phuThuoc)
+    return { conNua: ketQuaThayDoi.conNua }
+  }
+
+  const ketQuaGui = await guiHangChoVaApDung(phuThuoc, hangCho)
+  const ketQuaThayDoi = await layThayDoiVaApDung(phuThuoc)
+  return { conNua: ketQuaGui.conNua || ketQuaThayDoi.conNua }
 }
 
 // ============================================================================================
@@ -498,7 +536,13 @@ const NGUON_SU_KIEN_MAC_DINH: NguonSuKienDongBo = {
   },
 }
 
-export type TrangThaiBoDongBo = 'dang_chay' | 'dung_do_may_chu_di_lui'
+/** `'khong_chay_duoc'` (I9, review vòng sửa 1): vòng đồng bộ CHƯA TỪNG chạy được lần nào, vì gặp một
+ * lỗi THẬT (không phải huỷ, không phải `LoiMayChuDiLui`) trước/trong khi giành quyền làm chủ — ví
+ * dụ `navigator.locks` không khả dụng (secure context không đủ: http thường trong mạng LAN giáo xứ
+ * thay vì https/localhost), hoặc `khoiTaoPhuThuoc` hỏng (IndexedDB lỗi). Task 10 đọc trạng thái này
+ * để KHÔNG hiện 🟢 sai (mặc định `'dang_chay'` trước đây khiến trạng thái trông như đang chạy tốt dù
+ * đồng bộ chưa từng chạy được). */
+export type TrangThaiBoDongBo = 'dang_chay' | 'dung_do_may_chu_di_lui' | 'khong_chay_duoc'
 
 export type DieuKhienBoDongBo = {
   /** Dừng hẳn vòng đồng bộ (huỷ `AbortSignal` truyền cho `troThanhChuKhiCoTheChoDenKhiHuy`) — gọi
@@ -515,7 +559,9 @@ export type DieuKhienBoDongBo = {
    * ghép vòng lặp cốt lõi của Task 6).
    */
   danhThucNgay(): void
-  /** `'dung_do_may_chu_di_lui'` sau khi gặp `LoiMayChuDiLui` — Task 10 đọc để chuyển 🔴. */
+  /** `'dung_do_may_chu_di_lui'` sau khi gặp `LoiMayChuDiLui` — Task 10 đọc để chuyển 🔴.
+   * `'khong_chay_duoc'` khi chưa TỪNG chạy được lần nào vì một lỗi thật (I9) — Task 10 đọc để KHÔNG
+   * hiện 🟢 sai. */
   trangThai(): TrangThaiBoDongBo
 }
 
@@ -534,18 +580,55 @@ const NGUON_HEN_GIO_MAC_DINH: NguonHenGio = {
   huy: (id) => clearTimeout(id as ReturnType<typeof setTimeout>),
 }
 
+/** M11 (review vòng sửa 1): gỡ NGAY listener `abort` khỏi `tinHieuHuy` khi hẹn giờ tự nổ bình
+ * thường — bản trước chỉ dựa vào `{ once: true }` (tự gỡ khi CHÍNH sự kiện `abort` xảy ra), nên nếu
+ * hẹn giờ thắng cuộc trước (trường hợp bình thường, xảy ra MỖI chu kỳ của một tab mở cả ngày —
+ * đúng kịch bản spec), listener vẫn treo trên `tinHieuHuy` cho tới tận lúc tab đóng, tích luỹ
+ * hàng trăm/nghìn listener không bao giờ được gọi tới. */
 function moiThoiGian(ms: number, tinHieuHuy: AbortSignal, henGio: NguonHenGio): Promise<void> {
   return new Promise((resolve) => {
-    const id = henGio.dat(ms, resolve)
-    tinHieuHuy.addEventListener(
-      'abort',
-      () => {
-        henGio.huy(id)
-        resolve()
-      },
-      { once: true },
-    )
+    const khiHuy = () => {
+      henGio.huy(id)
+      resolve()
+    }
+    const id = henGio.dat(ms, () => {
+      tinHieuHuy.removeEventListener('abort', khiHuy)
+      resolve()
+    })
+    tinHieuHuy.addEventListener('abort', khiHuy, { once: true })
   })
+}
+
+/** Bản sao TỐI THIỂU của `NGUON_KHOA_MAC_DINH` NỘI BỘ (không export) của `bauChu.ts` — cần một bản
+ * ở đây để bọc thêm phần bắt lỗi thật (I9, xem `nguonKhoaVoiBaoLoi`) mà KHÔNG phải sửa `bauChu.ts`
+ * (ngoài phạm vi Task 6). Giữ Y HỆT hành vi bản gốc: `navigator.locks` không tồn tại (secure context
+ * không đủ — http thường ngoài localhost, trình duyệt cũ) → reject thay vì ném đồng bộ. */
+const NGUON_KHOA_THAT: NguonKhoa['request'] = (tenKhoa, tuyChon, xuLy) => {
+  if (typeof navigator === 'undefined' || !navigator.locks) {
+    return Promise.reject(new Error('navigator.locks khong kha dung (can secure context: https hoac localhost)'))
+  }
+  return navigator.locks.request(tenKhoa, tuyChon, xuLy)
+}
+
+/**
+ * I9 (review vòng sửa 1): bọc một `NguonKhoa` để BẮT được lỗi THẬT (không phải huỷ) từ CẢ HAI chỗ
+ * có thể ném — (1) chính `request()` reject TRƯỚC KHI kịp gọi `xuLy` (`khiLaChu`) — ví dụ
+ * `navigator.locks` không khả dụng — và (2) `xuLy` (`khiLaChu`) tự ném lỗi thật (ví dụ
+ * `khoiTaoPhuThuoc` hỏng vì IndexedDB lỗi). `troThanhChuKhiCoTheChoDenKhiHuy` (bauChu.ts) chỉ BẮT
+ * `AbortError` hợp lệ (khi `tinHieuHuy.aborted`) để im lặng — mọi lỗi thật khác bị `throw err` lại
+ * thành một unhandled rejection, và không có ai đặt lại `trangThai()` — `batDauBoDongBo` vẫn báo
+ * `'dang_chay'` SAI dù đồng bộ chưa từng chạy được (Task 10 sẽ hiện 🟢 sai). Bọc ở đây để `baoLoi`
+ * chạy TRƯỚC khi lỗi tiếp tục lan truyền, kịp cho `batDauBoDongBo` đặt `'khong_chay_duoc'`.
+ */
+function nguonKhoaVoiBaoLoi(nguonGoc: NguonKhoa, baoLoi: (loi: unknown) => void): NguonKhoa {
+  return {
+    request<T>(tenKhoa: string, tuyChon: { signal: AbortSignal }, xuLy: () => Promise<T>): Promise<T> {
+      return nguonGoc.request(tenKhoa, tuyChon, xuLy).catch((loi: unknown) => {
+        if (!tuyChon.signal.aborted) baoLoi(loi)
+        throw loi
+      })
+    },
+  }
 }
 
 /**
@@ -560,23 +643,38 @@ export function batDauBoDongBo(
   nguonSuKien: NguonSuKienDongBo = NGUON_SU_KIEN_MAC_DINH,
   nguonHenGio: NguonHenGio = NGUON_HEN_GIO_MAC_DINH,
   // Chỉ dùng để kiểm thử: `navigator.locks` không có sẵn trong jsdom (cần secure context —
-  // https/localhost). Không truyền gì thì dùng đúng mặc định của `bauChu.ts` (Web Locks API thật).
+  // https/localhost). Không truyền gì thì dùng đúng mặc định của `bauChu.ts` (Web Locks API thật,
+  // qua `NGUON_KHOA_THAT` — bản sao tối thiểu ở trên).
   nguonKhoa?: NguonKhoa,
 ): DieuKhienBoDongBo {
   const dieuKhienHuy = new AbortController()
   let trangThaiHienTai: TrangThaiBoDongBo = 'dang_chay'
   let danhThucVongHienTai: (() => void) | null = null
+  // I2 (review vòng sửa 1): cờ ĐỘC LẬP với `danhThucVongHienTai` — cờ này ghi nhận "có một tín hiệu
+  // đánh thức đã bắn ra" ngay cả khi `danhThucVongHienTai` đang là `null` (tức đang ở giữa một
+  // `motLanDongBo` đang treo chờ mạng, KHÔNG phải đang ở bước `Promise.race` chờ hẹn giờ). Thiếu cờ
+  // này, một tín hiệu bắn ra ĐÚNG lúc `await motLanDongBo(...)` đang chạy sẽ gọi `null?.()` và biến
+  // mất — máy phải đợi hết `CHU_KY_YEN_TINH_MS` (5 phút) dù mạng vừa có trở lại, vi phạm "ngay khi
+  // có mạng trở lại" (spec 7.3).
+  let coTinHieuDanhThuc = false
   let thoiHanKeTiepMs = CHU_KY_YEN_TINH_MS
+
+  function danhThuc(): void {
+    coTinHieuDanhThuc = true
+    danhThucVongHienTai?.()
+  }
 
   async function khiLaChu(tinHieuHuy: AbortSignal): Promise<void> {
     const phuThuoc = await khoiTaoPhuThuoc(kho)
-    const huyDangKy = nguonSuKien.dangKy(() => danhThucVongHienTai?.())
+    const huyDangKy = nguonSuKien.dangKy(danhThuc)
 
     try {
       while (!tinHieuHuy.aborted) {
         const tabAn = nguonSuKien.tabDangAn()
+        let conNua = false
         try {
-          await motLanDongBo(phuThuoc, tabAn)
+          const ketQua = await motLanDongBo(phuThuoc, tabAn)
+          conNua = ketQua.conNua
         } catch (loi) {
           if (loi instanceof LoiMayChuDiLui) {
             // DỪNG HẲN — không tự thử lại (spec 4.8.4: đây là dấu hiệu sự cố nghiêm trọng phía máy
@@ -595,6 +693,20 @@ export function batDauBoDongBo(
 
         if (tinHieuHuy.aborted) break
 
+        // I3 (review vòng sửa 1): `conNua === true` nghĩa là máy chủ còn dữ liệu chưa gửi hết trong
+        // lần vừa rồi (`NhanVeKetQua.conNua`/`GuiLenKetQua.conNua`) — máy con offline lâu ngày sẽ
+        // mất nhiều chu kỳ (mỗi `CHU_KY_YEN_TINH_MS`) mới bắt kịp nếu cứ đợi hết hẹn giờ mới hỏi
+        // tiếp. Lặp lại NGAY, bỏ qua hẳn bước chờ.
+        if (conNua) continue
+
+        // I2: có tín hiệu đánh thức đã bắn ra trong lúc `motLanDongBo` ở trên đang treo (không mất
+        // như trước) — bỏ qua bước chờ, chạy chu kỳ tiếp theo ngay, KHÔNG đụng `thoiHanKeTiepMs`
+        // (giá trị đó chỉ có ý nghĩa cho một bước chờ THẬT sự diễn ra).
+        if (coTinHieuDanhThuc) {
+          coTinHieuDanhThuc = false
+          continue
+        }
+
         const doiMs = thoiHanKeTiepMs
         thoiHanKeTiepMs = CHU_KY_YEN_TINH_MS // tự giãn về yên tĩnh nếu không có baoDangGo() nào thêm
         await Promise.race([
@@ -604,21 +716,30 @@ export function batDauBoDongBo(
           moiThoiGian(doiMs, tinHieuHuy, nguonHenGio),
         ])
         danhThucVongHienTai = null
+        coTinHieuDanhThuc = false
       }
     } finally {
       huyDangKy()
     }
   }
 
-  troThanhChuKhiCoTheChoDenKhiHuy(khiLaChu, () => {}, dieuKhienHuy.signal, TEN_KHOA_BAU_CHU, nguonKhoa)
+  const nguonKhoaThucTe = nguonKhoaVoiBaoLoi(nguonKhoa ?? { request: NGUON_KHOA_THAT }, (loi) => {
+    // I9: lỗi thật (không phải huỷ), xảy ra trước/trong khi giành quyền làm chủ — đồng bộ CHƯA TỪNG
+    // chạy được lần nào. Không override nếu đã dừng vì LoiMayChuDiLui (không nên xảy ra đồng thời,
+    // nhưng ưu tiên giữ trạng thái cụ thể hơn nếu có).
+    if (trangThaiHienTai === 'dang_chay') trangThaiHienTai = 'khong_chay_duoc'
+    console.error('Dong bo: khong khoi dong duoc (loi that, khong phai huy) — dung o trang thai khong_chay_duoc', loi)
+  })
+
+  troThanhChuKhiCoTheChoDenKhiHuy(khiLaChu, () => {}, dieuKhienHuy.signal, TEN_KHOA_BAU_CHU, nguonKhoaThucTe)
 
   return {
     dung: () => dieuKhienHuy.abort(),
     baoDangGo: () => {
       thoiHanKeTiepMs = CHU_KY_DANG_GO_MS
-      danhThucVongHienTai?.()
+      danhThuc()
     },
-    danhThucNgay: () => danhThucVongHienTai?.(),
+    danhThucNgay: () => danhThuc(),
     trangThai: () => trangThaiHienTai,
   }
 }
