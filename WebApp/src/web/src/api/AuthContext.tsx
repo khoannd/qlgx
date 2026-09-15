@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { api } from './client'
+import { api, ChuaDangNhap } from './client'
 import { authStore } from './authStore'
 import { xoaTatCaBanNhapCuaTaiKhoan } from '../lib/banNhap'
 import { dungOffline } from '../dongbo/khoiDongOffline'
@@ -18,6 +18,38 @@ type NguoiDungHienTai = {
    * nhau KHÔNG được thấy gợi ý lẫn nhau. `null` chỉ trong lúc dữ liệu chưa kịp tải, cùng lý do
    * `tenGiaoXu`. */
   giaoXuId: string | null
+}
+
+// L1 (fix round Task 11): cache "ai vừa đăng nhập" ở localStorage, riêng khỏi token — dùng để vẫn
+// cho vào app (ở trạng thái "biết ai đang dùng") khi tải lại trang lúc MẤT MẠNG, thay vì đá về màn
+// hình đăng nhập oan chỉ vì không gọi được /api/auth/toi (xem effect kiểm tra phiên cũ bên dưới).
+// Bọc try/catch cùng khuôn `authStore.ts` — localStorage có thể bị chặn (chế độ riêng tư nghiêm
+// ngặt), khi đó cache chỉ mất tác dụng, không được làm hỏng luồng chính.
+const KHOA_CACHE = 'qlgx.nguoiDungCache'
+
+function docCacheNguoiDung(): NguoiDungHienTai | null {
+  try {
+    const tho = localStorage.getItem(KHOA_CACHE)
+    return tho ? (JSON.parse(tho) as NguoiDungHienTai) : null
+  } catch {
+    return null
+  }
+}
+
+function ghiCacheNguoiDung(nd: NguoiDungHienTai) {
+  try {
+    localStorage.setItem(KHOA_CACHE, JSON.stringify(nd))
+  } catch {
+    // localStorage có thể bị chặn — không sao, chỉ mất tác dụng cache, không hỏng luồng chính.
+  }
+}
+
+function xoaCacheNguoiDung() {
+  try {
+    localStorage.removeItem(KHOA_CACHE)
+  } catch {
+    // Xem ghi chú ở ghiCacheNguoiDung.
+  }
 }
 
 type AuthContextValue = {
@@ -54,6 +86,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     dungOffline()
     if (xoaCaBanNhap && nguoiDungRef.current) xoaTatCaBanNhapCuaTaiKhoan(nguoiDungRef.current.tenTaiKhoan)
     authStore.xoaToken()
+    // L1: chỉ xoá cache người dùng khi đăng xuất CHỦ ĐỘNG — giữ nguyên khi bị đăng xuất BUỘC do
+    // 401 (xoaCaBanNhap === false, xem chú thích JSDoc của tham số này) vì lỡ token hết hạn đúng
+    // lúc mất mạng, cache vẫn còn hữu ích để vào app ở chế độ offline cho tới khi đăng nhập lại được.
+    if (xoaCaBanNhap) xoaCacheNguoiDung()
     setNguoiDung(null)
   }, [])
 
@@ -73,24 +109,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Token có trong localStorage từ phiên trước — xác nhận nó còn hợp lệ (chưa hết hạn) và
     // lấy lại họ tên/vai trò mới nhất trước khi cho vào thẳng ứng dụng.
     api.auth.toi()
-      .then((tt) => setNguoiDung({
-        tenTaiKhoan: tt.tenTaiKhoan, hoTen: tt.hoTen, loaiTaiKhoan: tt.loaiTaiKhoan, tenGiaoXu: tt.tenGiaoXu,
-        giaoXuId: tt.giaoXuId,
-      }))
-      .catch(() => { authStore.xoaToken() })
+      .then((tt) => {
+        const nd: NguoiDungHienTai = {
+          tenTaiKhoan: tt.tenTaiKhoan, hoTen: tt.hoTen, loaiTaiKhoan: tt.loaiTaiKhoan, tenGiaoXu: tt.tenGiaoXu,
+          giaoXuId: tt.giaoXuId,
+        }
+        setNguoiDung(nd)
+        ghiCacheNguoiDung(nd)
+      })
+      .catch((loi) => {
+        // L1 (CRITICAL): phải phân biệt "máy chủ TỪ CHỐI token" (401 thật, ChuaDangNhap) với
+        // "không gọi được máy chủ vì mất mạng" (Error thường, client.ts's goi()) — trước đây xoá
+        // token trong CẢ HAI trường hợp, nghĩa là tải lại trang lúc mất mạng mất token OAN, đá ra
+        // màn hình đăng nhập, không đăng nhập lại được vì đang offline (vô hiệu hoá toàn bộ câu
+        // chuyện offline-first dù hàng chờ IndexedDB vẫn còn nguyên).
+        if (loi instanceof ChuaDangNhap) {
+          authStore.xoaToken()
+          return
+        }
+        // Lỗi khác (mạng, máy chủ chết) — GIỮ NGUYÊN token, và nếu có cache người dùng từ lần
+        // đăng nhập/kiểm tra thành công gần nhất thì vẫn cho vào app ở chế độ "biết ai đang dùng,
+        // dùng dữ liệu cache" dù chưa xác nhận lại được với máy chủ. Không có cache (phiên đầu
+        // tiên trên máy, chưa từng đăng nhập thành công lúc còn mạng) thì đành chịu, giữ
+        // nguoiDung = null — không có gì để hiện, giới hạn hợp lý.
+        const cache = docCacheNguoiDung()
+        if (cache) setNguoiDung(cache)
+      })
       .finally(() => setDangKiemTraPhien(false))
   }, [])
 
   const dangNhap = useCallback(async (tenTaiKhoan: string, matKhau: string, giaoXuId?: string) => {
     const ketQua = await api.auth.dangNhap(tenTaiKhoan, matKhau, giaoXuId)
     authStore.datToken(ketQua.token)
-    setNguoiDung({
+    const nd: NguoiDungHienTai = {
       tenTaiKhoan: ketQua.nguoiDung.tenTaiKhoan,
       hoTen: ketQua.nguoiDung.hoTen,
       loaiTaiKhoan: ketQua.nguoiDung.loaiTaiKhoan,
       tenGiaoXu: ketQua.nguoiDung.tenGiaoXu,
       giaoXuId: ketQua.nguoiDung.giaoXuId,
-    })
+    }
+    setNguoiDung(nd)
+    ghiCacheNguoiDung(nd)
     // Task 10 (brief mục "nối dây" #2, spec offline mục 5 — RÀNG BUỘC CỨNG): xin trình duyệt "giữ
     // bền" (persistent) bộ nhớ IndexedDB ngay sau khi đăng nhập thành công — không có bước này,
     // trình duyệt có thể tự ý dọn dữ liệu ngoại tuyến (hàng chờ, sổ đã nhận...) bất cứ lúc nào nó

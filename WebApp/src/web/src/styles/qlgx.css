@@ -390,19 +390,43 @@ button, input, select, textarea { font: inherit; color: inherit; }
   background: linear-gradient(150deg, rgba(222, 233, 250, .74), rgba(205, 221, 246, .64));
   border-color: rgba(255, 255, 255, .72);
 }
+/* `.tabstrip` có thể tràn ngang khi mở nhiều thẻ trong một buổi làm việc (thao tác hằng ngày,
+   không phải trường hợp biên) — `.tabstrip-row` giữ nút "Đóng tất cả" CỐ ĐỊNH ngoài vùng
+   cuộn, để luôn bấm được dù thanh tab đang cuộn tới đâu, thay vì trôi mất theo `.tabstrip`. */
+.tabstrip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 0;
+}
 .tabstrip {
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 10px 12px 0;
+  padding: 0;
   overflow-x: auto;
-  flex: none;
+  flex: 1;
+  min-width: 0;
 }
 /* Thanh cuộn ngang mảnh, giống hệt `.nav-scroll` của SideNav (xem cùng khai báo phía trên) —
    trước đây dùng thanh cuộn mặc định của hệ điều hành, dày và thô, lệch hẳn phong cách phần
    còn lại của giao diện. */
 .tabstrip::-webkit-scrollbar { height: 8px; }
 .tabstrip::-webkit-scrollbar-thumb { background: rgba(14,32,76,.14); border-radius: 99px; }
+.tabstrip-dong-tat-ca {
+  flex: none;
+  appearance: none;
+  border: 1px solid rgba(14,32,76,.16);
+  background: rgba(255,255,255,.55);
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1;
+  padding: 7px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tabstrip-dong-tat-ca:hover { background: rgba(255,255,255,.9); color: var(--brand-ink); }
 .tab {
   display: flex;
   align-items: center;
@@ -1680,3 +1704,68 @@ fieldset legend { padding: 0 6px; font-size: 12px; font-weight: 600; color: var(
    .table-card` phía trên: cho ĐÚNG `.table-card` (không phải div bọc ngoài) một chiều cao thật
    qua CSS, không dựa vào inline style của div cha nữa. */
 .fixed-h-grid > .table-card { height: var(--fixed-h-grid, 320px); }
+
+/* --- Thanh trạng thái đồng bộ (ThanhTrangThai.tsx) — fix round Task 11, người dùng phát hiện qua
+   ảnh chụp: panel dùng nút/border mặc định trình duyệt, không đồng bộ "tấm kính" dùng ở mọi nơi
+   khác (.menu-pop). Dùng lại đúng token đã có (--brand-ink, --ink-faint, --r-card, --hair-soft),
+   không bịa màu mới. Đặt trong .topbar (đã position: relative sẵn) để định vị panel bên dưới. */
+.trang-thai-dongbo {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.trang-thai-dongbo:hover { background: rgba(255,255,255,.62); color: var(--brand-ink); }
+.trang-thai-dongbo[aria-expanded="true"] {
+  background: var(--brand-soft);
+  border-color: rgba(29,93,219,.28);
+  color: var(--brand-ink);
+  font-weight: 600;
+}
+/* Panel mở rộng — công thức ĐÚNG như `.menu-pop`, canh PHẢI (nút này nằm gần rìa phải topbar,
+   khác `.menu-pop` của menu Hệ thống canh trái) và rộng/cao hơn vì nội dung nhiều chữ + danh sách
+   hàng chờ có thể dài. */
+.trang-thai-dongbo-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 340px;
+  max-width: 380px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 12px 14px;
+  z-index: 60;
+  border-radius: var(--r-card);
+  background: rgba(255,255,255,.97);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255,255,255,.9);
+  box-shadow: 0 18px 40px -18px rgba(14,32,76,.42), 0 2px 6px rgba(14,32,76,.08);
+  font-size: 12.5px;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.trang-thai-dongbo-panel p { margin: 0 0 8px; }
+.trang-thai-dongbo-panel ul { margin: 0 0 8px; padding-left: 18px; }
+.trang-thai-dongbo-panel summary {
+  cursor: pointer;
+  color: var(--ink-faint);
+  font-weight: 500;
+}
+.trang-thai-dongbo-panel summary:hover { color: var(--brand-ink); }
+.trang-thai-dongbo-panel pre {
+  background: var(--brand-mist);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 8px 0;
+  font-size: 11px;
+}
+.trang-thai-dongbo-inline { margin-left: 8px; }

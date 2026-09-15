@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { demHangCho, docHangCho, type DongHangCho } from '../kho/hangCho'
 import { docNoiDungFileDuPhong, napLaiFileDuPhong } from '../dongbo/tepDuPhong'
 import { layThietBiId, type TrangThaiBoDongBo } from '../dongbo/boDongBo'
-import { layTrangThaiOffline } from '../dongbo/khoiDongOffline'
+import { layTrangThaiOffline, layTrangThaiBuLai } from '../dongbo/khoiDongOffline'
 import { api } from '../api/client'
 
 /**
@@ -28,11 +28,22 @@ export function tinhTrangThai(
   soHangCho: number,
   soCanXemLai: number,
   trangThaiBo: TrangThaiBoDongBo | null,
+  // L3 (fix round Task 11, spec 4.8.6): đang bù lại hàng chờ sau khi phát hiện máy chủ vừa được
+  // khôi phục (epoch không khớp) — ưu tiên THẤP hơn `dung_do_may_chu_di_lui` (lỗi nghiêm trọng hơn,
+  // xét trước) nhưng CAO hơn `soCanXemLai > 0`/hàng chờ thường, vì đây là một trạng thái tạm thời
+  // cần người dùng biết NGAY đang có chuyện gì xảy ra, khác câu chữ "đang gửi về" bình thường.
+  dangBuLai = false,
 ): KetQuaTinhTrangThai {
   if (trangThaiBo === 'dung_do_may_chu_di_lui') {
     return {
       mau: 'do',
       dongChu: 'Máy chủ có dấu hiệu vừa bị đưa về bản cũ — cần người hỗ trợ kiểm tra trước khi tiếp tục',
+    }
+  }
+  if (dangBuLai) {
+    return {
+      mau: 'vang',
+      dongChu: `Máy chủ vừa được khôi phục. Đang gửi lại ${soHangCho} thay đổi mà máy này còn giữ.`,
     }
   }
   if (soCanXemLai > 0) {
@@ -63,6 +74,13 @@ export function ThanhTrangThai({ onMoBanGiaoMay }: { onMoBanGiaoMay?: () => void
   // biệt "chưa từng hỏi được" với "hỏi được, và đúng là 0".
   const [daHoiCanXemLaiLanDau, setDaHoiCanXemLaiLanDau] = useState(false)
   const [trangThaiBo, setTrangThaiBo] = useState<TrangThaiBoDongBo | null>(null)
+  // L3 (spec 4.8.6): trạng thái "đang bù lại" — đọc từ `khoiDongOffline.ts` (poll cùng nhịp với
+  // `lamMoiHangCho`, không cần interval riêng). `tongKetBuLai` là dòng tổng kết "Đã gửi lại N thay
+  // đổi." hiện MỘT LẦN khi phát hiện `soDongDaBu` mới (so với giá trị trước đó qua `useRef` —
+  // tránh đặt lại state mỗi 5 giây trong lúc `soDongDaBu` không đổi).
+  const [dangBuLai, setDangBuLai] = useState(false)
+  const [tongKetBuLai, setTongKetBuLai] = useState<string | null>(null)
+  const soDongDaBuTruocRef = useRef<number | null>(null)
   const [moRong, setMoRong] = useState(false)
   const [moKyThuat, setMoKyThuat] = useState(false)
   const [hangChoChiTiet, setHangChoChiTiet] = useState<DongHangCho[]>([])
@@ -91,7 +109,15 @@ export function ThanhTrangThai({ onMoBanGiaoMay }: { onMoBanGiaoMay?: () => void
   }, [])
 
   // I5: đếm hàng chờ (đọc IndexedDB cục bộ — rẻ) — giữ nguyên chu kỳ 5 giây cũ.
+  // L3: đọc `layTrangThaiBuLai()` CÙNG nhịp — không cần interval riêng cho trạng thái "đang bù lại".
   const lamMoiHangCho = useCallback(async () => {
+    const trangThaiBu = layTrangThaiBuLai()
+    setDangBuLai(trangThaiBu.dangBu)
+    if (trangThaiBu.soDongDaBu !== null && trangThaiBu.soDongDaBu !== soDongDaBuTruocRef.current) {
+      soDongDaBuTruocRef.current = trangThaiBu.soDongDaBu
+      setTongKetBuLai(`Đã gửi lại ${trangThaiBu.soDongDaBu} thay đổi.`)
+    }
+
     const tt = layTrangThaiOffline()
     if (!tt) return
     try {
@@ -208,19 +234,18 @@ export function ThanhTrangThai({ onMoBanGiaoMay }: { onMoBanGiaoMay?: () => void
   // Chưa có số liệu THẬT nào — không hiện gì (xem chú thích khai báo state ở trên).
   if (soHangCho === null) return null
 
-  const { mau, dongChu } = tinhTrangThai(soHangCho, soCanXemLai, trangThaiBo)
+  const { mau, dongChu } = tinhTrangThai(soHangCho, soCanXemLai, trangThaiBo, dangBuLai)
 
   return (
-    <div className="thanh-trang-thai" style={{ fontSize: 13 }}>
+    <div className="thanh-trang-thai">
       <button
         type="button"
+        className="trang-thai-dongbo"
         onClick={() => setMoRong((v) => !v)}
         aria-expanded={moRong}
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none',
-          cursor: 'pointer', padding: '4px 8px', color: 'inherit',
-        }}
       >
+        {/* Chấm màu là màu ĐỘNG theo state (xanh/vàng/đỏ) — giữ inline style riêng phần tô màu,
+            không hợp để đặt cứng trong CSS class tĩnh; kích thước/bo góc cũng để cùng chỗ cho gọn. */}
         <span
           aria-hidden="true"
           style={{
@@ -231,13 +256,17 @@ export function ThanhTrangThai({ onMoBanGiaoMay }: { onMoBanGiaoMay?: () => void
       </button>
 
       {moRong && (
-        <div role="region" aria-label="Chi tiết trạng thái lưu dữ liệu" style={{ padding: 12, border: '1px solid #ddd', borderRadius: 6, marginTop: 4 }}>
+        <div className="trang-thai-dongbo-panel" role="region" aria-label="Chi tiết trạng thái lưu dữ liệu">
           <p>
             Những thay đổi này đã lưu trong máy và sẽ tự gửi lên khi có mạng. Anh/chị không cần làm
             gì, cũng không mất dữ liệu.
           </p>
 
           <p>Số việc đang chờ gửi: {soHangCho}</p>
+          {/* L3 (spec 4.8.6): dòng tổng kết sau khi bù xong lần gần nhất — hiện tới khi có lần bù
+              tiếp theo/tải lại trang, không tự ẩn sau một khoảng thời gian (xem chú thích khai báo
+              trangThaiBuLai ở khoiDongOffline.ts). */}
+          {tongKetBuLai && <p>{tongKetBuLai}</p>}
           {/* N4: chưa hỏi máy chủ được lần nào -> soCanXemLai (khởi tạo 0) có thể chưa đúng thật,
               khác han soHangCho (khởi tạo null, đã có gác ở trên) — báo rõ để tránh hiểu nhầm "0" là
               "đã biết chắc = 0". */}
@@ -261,7 +290,7 @@ export function ThanhTrangThai({ onMoBanGiaoMay }: { onMoBanGiaoMay?: () => void
           )}
 
           <div>
-            <button type="button" onClick={() => inputTepRef.current?.click()} disabled={dangNap}>
+            <button type="button" className="btn btn-sm btn-quiet" onClick={() => inputTepRef.current?.click()} disabled={dangNap}>
               Nạp lại file dự phòng
             </button>
             <input
@@ -274,12 +303,12 @@ export function ThanhTrangThai({ onMoBanGiaoMay }: { onMoBanGiaoMay?: () => void
                 if (tep) napLaiFileDuPhongTuMay(tep)
               }}
             />
-            {thongBaoNap && <span style={{ marginLeft: 8 }}>{thongBaoNap}</span>}
+            {thongBaoNap && <span className="trang-thai-dongbo-inline">{thongBaoNap}</span>}
           </div>
 
           {onMoBanGiaoMay && (
             <p>
-              <button type="button" onClick={onMoBanGiaoMay}>Bàn giao máy này</button>
+              <button type="button" className="btn btn-sm btn-quiet" onClick={onMoBanGiaoMay}>Bàn giao máy này</button>
             </p>
           )}
 
@@ -288,14 +317,14 @@ export function ThanhTrangThai({ onMoBanGiaoMay }: { onMoBanGiaoMay?: () => void
               sau (xem `thongTinKyThuat()` ở trên), không phải bỏ sót. */}
           <details open={moKyThuat} onToggle={(e) => setMoKyThuat((e.target as HTMLDetailsElement).open)}>
             <summary>Thông tin kỹ thuật</summary>
-            <pre style={{ fontSize: 11, whiteSpace: 'pre-wrap' }}>
+            <pre style={{ whiteSpace: 'pre-wrap' }}>
               {JSON.stringify(thongTinKyThuat(), null, 2)}
             </pre>
-            <button type="button" onClick={saoChepThongTinKyThuat}>
+            <button type="button" className="btn btn-sm btn-quiet" onClick={saoChepThongTinKyThuat}>
               {daSaoChep ? 'Đã sao chép' : 'Sao chép để gửi người hỗ trợ'}
             </button>
             {loiSaoChep && (
-              <span role="alert" style={{ marginLeft: 8 }}>
+              <span role="alert" className="trang-thai-dongbo-inline">
                 Không sao chép được — xin chọn rồi sao chép tay đoạn chữ ở trên.
               </span>
             )}

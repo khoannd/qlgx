@@ -59,6 +59,34 @@ describe('tinhTrangThai (Task 10, spec 9.1) — hàm thuần quyết định mà
     expect(kq.dongChu).toMatch(/máy chủ/i)
     expect(kq.dongChu).not.toContain('Cần xem lại')
   })
+
+  // L3 (fix round Task 11, spec 4.8.6): dang bu lai sau khi may chu vua duoc khoi phuc.
+  it('dangBuLai=true -> vang, dung cau chu spec 4.8.6, dung soHangCho trong cau', () => {
+    const kq = tinhTrangThai(47, 0, 'dang_chay', true)
+    expect(kq).toEqual({
+      mau: 'vang',
+      dongChu: 'Máy chủ vừa được khôi phục. Đang gửi lại 47 thay đổi mà máy này còn giữ.',
+    })
+  })
+
+  it('dangBuLai=true nhung trangThaiBo la dung_do_may_chu_di_lui -> VAN do (uu tien cao hon)', () => {
+    const kq = tinhTrangThai(3, 0, 'dung_do_may_chu_di_lui', true)
+    expect(kq.mau).toBe('do')
+    expect(kq.dongChu).toMatch(/máy chủ/i)
+    expect(kq.dongChu).not.toContain('Đang gửi lại')
+  })
+
+  it('dangBuLai=true UU TIEN HON ca soCanXemLai > 0 (dung ngay sau dung_do_may_chu_di_lui)', () => {
+    const kq = tinhTrangThai(5, 3, 'dang_chay', true)
+    expect(kq.mau).toBe('vang')
+    expect(kq.dongChu).toContain('Máy chủ vừa được khôi phục')
+  })
+
+  it('khong truyen dangBuLai (mac dinh false) -> giu nguyen hanh vi cu', () => {
+    expect(tinhTrangThai(3, 0, 'dang_chay')).toEqual({
+      mau: 'vang', dongChu: 'Đã lưu ở máy này (3) — đang gửi về',
+    })
+  })
 })
 
 describe('ThanhTrangThai (component) — doc tu tang offline that + /api/can-xem-lai', () => {
@@ -141,5 +169,38 @@ describe('ThanhTrangThai (component) — doc tu tang offline that + /api/can-xem
     await waitFor(() => expect(vi.mocked(api.canXemLai.danhSach)).toHaveBeenCalled())
 
     expect(container.textContent).toBe('')
+  })
+
+  // L3 (fix round Task 11, spec 4.8.6): dang bu lai -> hien vang dung cau, va sau khi bu xong hien
+  // dong tong ket trong bang giai thich.
+  it('dang bu lai (layTrangThaiBuLai.dangBu=true) -> hien vang voi cau "May chu vua duoc khoi phuc..."', async () => {
+    const db = await moKho(tenKhoRieng())
+    const fetchGia = vi.fn(async () => new Response(JSON.stringify({ epoch: 'e', conTroMoi: 0, conNua: false, dong: [] }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchGia)
+    const dieuKhien = batDauBoDongBo(db, undefined, undefined, nguonKhoaGiaLap)
+    vi.spyOn(khoiDongOfflineModule, 'layTrangThaiOffline').mockReturnValue({ kho: db, dieuKhien })
+    vi.spyOn(khoiDongOfflineModule, 'layTrangThaiBuLai').mockReturnValue({ dangBu: true, soDongDaBu: null })
+
+    render(<ThanhTrangThai />)
+
+    expect(await screen.findByText(/Máy chủ vừa được khôi phục/)).toBeDefined()
+    dieuKhien.dung()
+  })
+
+  it('bu xong (dangBu chuyen false, co soDongDaBu) -> mo bang giai thich hien dong tong ket "Da gui lai N thay doi."', async () => {
+    const db = await moKho(tenKhoRieng())
+    const fetchGia = vi.fn(async () => new Response(JSON.stringify({ epoch: 'e', conTroMoi: 0, conNua: false, dong: [] }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchGia)
+    const dieuKhien = batDauBoDongBo(db, undefined, undefined, nguonKhoaGiaLap)
+    vi.spyOn(khoiDongOfflineModule, 'layTrangThaiOffline').mockReturnValue({ kho: db, dieuKhien })
+    vi.spyOn(khoiDongOfflineModule, 'layTrangThaiBuLai').mockReturnValue({ dangBu: false, soDongDaBu: 5 })
+
+    render(<ThanhTrangThai />)
+    await screen.findByText('Đã lưu an toàn')
+
+    await userEvent.click(screen.getByRole('button', { name: /Đã lưu an toàn/ }))
+    expect(await screen.findByText('Đã gửi lại 5 thay đổi.')).toBeDefined()
+
+    dieuKhien.dung()
   })
 })

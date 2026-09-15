@@ -20,8 +20,10 @@
  * giữ kỷ luật một điểm gọi duy nhất để dễ suy luận.
  */
 import { moKho } from '../kho/moKho'
+import { docHangCho } from '../kho/hangCho'
 import { batDauBoDongBo, type DieuKhienBoDongBo } from './boDongBo'
 import { xuLyEpochKhongKhopDonLuong } from './buSauKhoiPhuc'
+import { canTuDongDuPhong, taiFileDuPhongXuong } from './tepDuPhong'
 
 export type TrangThaiOffline = {
   kho: IDBDatabase
@@ -30,6 +32,60 @@ export type TrangThaiOffline = {
 
 let dangKhoiDong: Promise<TrangThaiOffline | null> | null = null
 let trangThaiHienTai: TrangThaiOffline | null = null
+
+// L3 (fix round Task 11, spec 4.8.6): trạng thái "đang bù lại" sau khi phát hiện epoch không khớp
+// (máy chủ vừa được khôi phục) — `ThanhTrangThai` đọc biến này (qua `layTrangThaiBuLai()`) để hiện
+// câu "Máy chủ vừa được khôi phục..." trong lúc bù, và dòng tổng kết "Đã gửi lại N thay đổi." sau
+// khi bù xong. KHÔNG cần tự reset về trạng thái ban đầu sau một khoảng thời gian — giữ nguyên tới
+// lần bù kế tiếp/tải lại trang là đủ, `ThanhTrangThai` tự quyết định hiện dòng tổng kết trong bao
+// lâu bằng state riêng của nó.
+let trangThaiBuLai: { dangBu: boolean; soDongDaBu: number | null } = { dangBu: false, soDongDaBu: null }
+
+export function layTrangThaiBuLai() {
+  return trangThaiBuLai
+}
+
+// L4 (fix round Task 11, spec 7.10): `canTuDongDuPhong()` đã có đầy đủ logic từ Task 9 nhưng chưa
+// có nơi nào GỌI nó — mã chết. `khoiDongOffline` là nơi hợp lý nhất để bắt đầu vòng lặp nền kiểm
+// tra định kỳ này, vì đã có sẵn `kho` trong tay và đã là nơi "khởi động các vòng lặp nền" của tầng
+// offline (cùng tinh thần vòng đồng bộ `batDauBoDongBo` ở trên).
+//
+// Ngưỡng đòi tự dự phòng (spec 7.10) là "quá 2 NGÀY hoặc quá 20 việc" — không cần kiểm tra liên
+// tục, kiểm tra mỗi vài phút là đủ nhạy mà không tốn tài nguyên đọc IndexedDB (`docHangCho`) vô ích.
+const CHU_KY_KIEM_TRA_DU_PHONG_MS = 5 * 60 * 1000
+
+// Mốc lần tự-dự-phòng gần nhất — lưu ở localStorage để "hãm" chống spam (xem JSDoc
+// `canTuDongDuPhong`, tepDuPhong.ts) sống sót qua lần tải lại trang, không chỉ trong bộ nhớ tab.
+const KHOA_LAN_DU_PHONG_GAN_NHAT = 'qlgx.lanTuDongDuPhongGanNhat'
+
+function docLanDuPhongGanNhat(): string | null {
+  try {
+    return localStorage.getItem(KHOA_LAN_DU_PHONG_GAN_NHAT)
+  } catch {
+    return null
+  }
+}
+
+function ghiLanDuPhongGanNhat(iso: string) {
+  try {
+    localStorage.setItem(KHOA_LAN_DU_PHONG_GAN_NHAT, iso)
+  } catch {
+    // localStorage có thể bị chặn — không sao, chỉ mất tác dụng "hãm" chống spam, không hỏng gì.
+  }
+}
+
+let idInterKiemTraDuPhong: ReturnType<typeof setInterval> | null = null
+
+async function kiemTraTuDongDuPhong(kho: IDBDatabase): Promise<void> {
+  try {
+    const hangCho = await docHangCho(kho)
+    if (!canTuDongDuPhong(hangCho, docLanDuPhongGanNhat())) return
+    taiFileDuPhongXuong(hangCho)
+    ghiLanDuPhongGanNhat(new Date().toISOString())
+  } catch (loi) {
+    console.error('Khong kiem tra/tai duoc file du phong tu dong', loi)
+  }
+}
 
 /**
  * Khởi động tầng offline: mở kho rồi bắt đầu vòng đồng bộ, nối sẵn `khiEpochKhongKhop` với
@@ -55,12 +111,19 @@ export function khoiDongOffline(): Promise<TrangThaiOffline | null> {
       // GỌI (lúc gặp `LoiEpochKhongKhop`), tại thời điểm đó `const dieuKhien` bên dưới chắc chắn đã
       // gán xong (JS đóng biến theo binding, không theo giá trị tại thời điểm tạo closure).
       const dieuKhien = batDauBoDongBo(kho, undefined, undefined, undefined, async (phuThuoc) => {
-        // `xuLyEpochKhongKhopDonLuong` trả `{ soDongDaBu }` (Task 8) — `batDauBoDongBo` chỉ cần
-        // `Promise<void>` (chỉ quan tâm "đã xong hay chưa"/"có ném lỗi hay không"), bỏ qua giá trị
-        // trả về ở đây là cố ý, không phải quên đọc kết quả.
-        await xuLyEpochKhongKhopDonLuong(phuThuoc, dieuKhien.trangThai)
+        // L3 (spec 4.8.6): đặt `dangBu = true` TRƯỚC khi gọi `xuLyEpochKhongKhopDonLuong` để
+        // `ThanhTrangThai` hiện được câu "Máy chủ vừa được khôi phục..." NGAY khi bắt đầu bù, rồi
+        // đặt lại `soDongDaBu` (bỏ qua kết quả trả về trước đây là cố ý — nay đọc lại để hiện dòng
+        // tổng kết) sau khi bù xong.
+        trangThaiBuLai = { dangBu: true, soDongDaBu: null }
+        const { soDongDaBu } = await xuLyEpochKhongKhopDonLuong(phuThuoc, dieuKhien.trangThai)
+        trangThaiBuLai = { dangBu: false, soDongDaBu }
       })
       trangThaiHienTai = { kho, dieuKhien }
+      // L4: bắt đầu vòng lặp nền kiểm tra định kỳ "có cần tự dự phòng không" — chạy một lượt ngay
+      // (không đợi hết chu kỳ đầu) rồi lặp lại mỗi CHU_KY_KIEM_TRA_DU_PHONG_MS.
+      void kiemTraTuDongDuPhong(kho)
+      idInterKiemTraDuPhong = setInterval(() => { void kiemTraTuDongDuPhong(kho) }, CHU_KY_KIEM_TRA_DU_PHONG_MS)
       return trangThaiHienTai
     } catch (loi) {
       console.error(
@@ -99,6 +162,12 @@ export function dungOffline(): void {
     trangThaiHienTai.dieuKhien.dung()
     trangThaiHienTai.kho.close()
   }
+  // L4: dừng vòng lặp nền kiểm tra tự dự phòng cùng lúc — không có bước này, interval của phiên CŨ
+  // vẫn tiếp tục chạy trên `kho` đã đóng sau khi đăng xuất/đổi tài khoản.
+  if (idInterKiemTraDuPhong !== null) {
+    clearInterval(idInterKiemTraDuPhong)
+    idInterKiemTraDuPhong = null
+  }
   trangThaiHienTai = null
   dangKhoiDong = null
 }
@@ -108,4 +177,8 @@ export function dungOffline(): void {
 export function _resetChoKiemThu(): void {
   dangKhoiDong = null
   trangThaiHienTai = null
+  if (idInterKiemTraDuPhong !== null) {
+    clearInterval(idInterKiemTraDuPhong)
+    idInterKiemTraDuPhong = null
+  }
 }

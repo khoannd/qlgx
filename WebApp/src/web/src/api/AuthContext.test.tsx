@@ -2,12 +2,15 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider, useAuth } from './AuthContext'
-import { api } from './client'
+import { api, ChuaDangNhap } from './client'
 import { authStore } from './authStore'
 import { banNhapKhoa, docBanNhap, luuBanNhap } from '../lib/banNhap'
 
 vi.mock('./client', () => ({
   api: { auth: { dangNhap: vi.fn(), toi: vi.fn() } },
+  // L1: dung DUNG class ma AuthContext import (khong phai Error thuong) de test phan biet duoc
+  // "may chu TU CHOI token" voi "loi mang" - xem client.ts's ChuaDangNhap that.
+  ChuaDangNhap: class ChuaDangNhap extends Error {},
 }))
 
 /** Component thăm dò tối giản — hiện trạng thái đăng nhập và các nút gọi dangNhap/dangXuat,
@@ -55,14 +58,54 @@ describe('AuthContext', () => {
     expect(screen.getByText('giao-xu:Vo Nhiem')).toBeDefined()
   })
 
-  it('token cu khong con hop le thi xoa token va coi nhu chua dang nhap', async () => {
+  // L1 (fix round Task 11): dung DUNG ChuaDangNhap (may chu TU CHOI token that su, vi du 401) -
+  // truoc day test nay dung mot Error thuong, khong con dung voi hanh vi that cua client.ts's goi()
+  // sau khi sua L1 (chi Error KIEU ChuaDangNhap moi lam xoa token, Error thuong = loi mang).
+  it('token cu bi may chu TU CHOI (ChuaDangNhap, vi du 401 that) thi xoa token va coi nhu chua dang nhap', async () => {
     authStore.datToken('token-het-han')
-    vi.mocked(api.auth.toi).mockRejectedValue(new Error('401'))
+    vi.mocked(api.auth.toi).mockRejectedValue(new ChuaDangNhap('Phien dang nhap da het han.'))
 
     render(<AuthProvider><ThamDo /></AuthProvider>)
 
     expect(await screen.findByText('chua-dang-nhap')).toBeDefined()
     expect(authStore.layToken()).toBeNull()
+  })
+
+  // L1 (CRITICAL, fix round Task 11): mat mang luc tai lai trang KHONG duoc xoa token oan - truoc
+  // day .catch() khong phan biet duoc "may chu TU CHOI token" (ChuaDangNhap) voi "khong goi duoc may
+  // chu vi mat mang" (Error thuong tu client.ts's goi()), xoa token trong CA HAI truong hop khien
+  // nguoi dung mat mang bi da ra man hinh dang nhap va KHONG dang nhap lai duoc vi dang offline.
+  it('mat mang luc tai lai trang, SAU KHI da tung dang nhap thanh cong -> van vao duoc app tu cache, token KHONG bi xoa', async () => {
+    vi.mocked(api.auth.dangNhap).mockResolvedValue({
+      token: 'token-cu-con-hieu-luc', hetHanSau: 28800,
+      nguoiDung: { id: '1', tenTaiKhoan: 'vanphong', hoTen: 'Van Phong', loaiTaiKhoan: 0, giaoXuId: 'x', tenGiaoXu: 'Vo Nhiem' },
+    })
+    const { unmount } = render(<AuthProvider><ThamDo /></AuthProvider>)
+    await screen.findByText('chua-dang-nhap')
+    await userEvent.click(screen.getByText('dang-nhap'))
+    await screen.findByText('da-dang-nhap:vanphong')
+    unmount() // Mo phong dong tab — cache nguoiDung da duoc ghi luc dangNhap thanh cong o tren.
+
+    // Tai lai trang: token con trong localStorage nhung /api/auth/toi khong goi duoc vi MAT MANG
+    // (Error thuong, khong phai ChuaDangNhap).
+    vi.mocked(api.auth.toi).mockRejectedValue(new Error('Mất kết nối mạng. Dữ liệu bạn đã nhập vẫn được giữ nguyên trên máy — hãy thử lại khi có mạng.'))
+    render(<AuthProvider><ThamDo /></AuthProvider>)
+
+    expect(await screen.findByText('da-dang-nhap:vanphong')).toBeDefined()
+    expect(authStore.layToken()).toBe('token-cu-con-hieu-luc')
+  })
+
+  // L1: khong co cache nao (chua tung dang nhap thanh cong tren may nay) va mat mang luc tai trang
+  // -> khong crash, khong hien app voi du lieu rong/sai, o lai trang thai chua dang nhap.
+  it('mat mang luc tai lai trang, KHONG CO cache nao tu truoc -> van o trang thai chua dang nhap, khong crash', async () => {
+    authStore.datToken('token-chua-tung-xac-nhan-duoc')
+    vi.mocked(api.auth.toi).mockRejectedValue(new Error('Mất kết nối mạng.'))
+
+    render(<AuthProvider><ThamDo /></AuthProvider>)
+
+    expect(await screen.findByText('chua-dang-nhap')).toBeDefined()
+    // Token GIU NGUYEN (khong phai ChuaDangNhap) — chi khong co gi de hien vi chua co cache.
+    expect(authStore.layToken()).toBe('token-chua-tung-xac-nhan-duoc')
   })
 
   it('dangNhap thanh cong luu token va cap nhat nguoiDung', async () => {
