@@ -23,6 +23,11 @@
  * mật — trang web có thể lừa người dùng bằng thông báo giả) — gọi `preventDefault()` VÀ gán
  * `returnValue` (cách cũ, một số trình duyệt vẫn cần cả hai) là đủ để trình duyệt tự hiện hộp thoại
  * xác nhận CHUẨN của chính nó, không cần/không thể tự viết nội dung.
+ *
+ * `returnValue` PHẢI là một giá trị KHÁC RỖNG (đặc tả HTML: `returnValue = ''` không kích hoạt hộp
+ * thoại — chỉ giá trị "truthy" mới có tác dụng) — nhiều máy phòng xứ chạy trình duyệt/Windows cũ
+ * (Chrome/Edge < 119 còn cần đúng `returnValue`, không chỉ `preventDefault()`), nên KHÔNG được để
+ * chuỗi rỗng dù các trình duyệt mới nhất có thể tha thứ được lỗi này.
  */
 export function chanDongTabKhiConHangCho(laySoHangCho: () => number): () => void {
   if (typeof window === 'undefined') return () => {}
@@ -30,7 +35,7 @@ export function chanDongTabKhiConHangCho(laySoHangCho: () => number): () => void
   const xuLy = (e: BeforeUnloadEvent): void => {
     if (laySoHangCho() > 0) {
       e.preventDefault()
-      e.returnValue = ''
+      e.returnValue = true
     }
   }
 

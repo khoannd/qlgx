@@ -777,11 +777,31 @@ export function batDauBoDongBo(
   let phuThuocHienTai: PhuThuocBoDongBo | null = null
   // Gộp các lần gọi `/thay-doi` CHỒNG LÊN NHAU thành MỘT lượt gọi mạng dùng chung kết quả — nhiều
   // lần bấm "mở hồ sơ" liên tiếp trong lúc lượt gọi trước còn treo sẽ CHIA SẺ đúng một Promise thay
-  // vì bắn thêm yêu cầu mới. Không loại được HẲN việc đụng độ với lượt gọi ĐỊNH KỲ của chính vòng lặp
-  // `khiLaChu` bên dưới (hai lượt gọi độc lập vẫn có thể chạy chồng nhau) — nhưng `apDungNhanVe` chỉ
-  // MERGE-PATCH `conTro` và áp lại hiệu lực theo LWW nên chồng lấn tối đa gây ĐỌC LẠI dư một lượt
-  // (an toàn, không mất dữ liệu), không phá hỏng gì — chấp nhận được cho phạm vi Task 7 (xem báo cáo).
+  // vì bắn thêm yêu cầu mới.
   let goiThayDoiNgayDangChay: Promise<NhanVeKetQua> | null = null
+
+  // C1 (review Task 7): `layThayDoiNgay()` và vòng lặp định kỳ (`motLanDongBo` trong `khiLaChu`)
+  // ĐỀU có thể gọi vào CÙNG một `phuThuoc` (cùng `DongHoLogicMayCon`). Review ban đầu nghi đây là
+  // một lỗ hổng MẤT AN TOÀN dữ liệu (dấu NHỎ ghi bền SAU dấu LỚN, đẩy `conTro.dauCuoi*` LÙI). Tự
+  // kiểm chứng bằng mutation (bỏ hàng đợi bên dưới) cho thấy KHÔNG PHẢI vậy:
+  // `DongHoLogicMayCon.phatDau` gán `this.cuoiCung` ĐỒNG BỘ (không có `await` xen giữa đọc và ghi)
+  // và `nangDau()` luôn lấy `max(cuoiCung hiện tại, dấu vừa nhận) + 1` — hai lượt gọi chồng nhau
+  // theo BẤT KỲ thứ tự nào vẫn cho ra một chuỗi TĂNG DẦN, không bao giờ lùi (đã đo: chồng lấn cho
+  // kết quả 1001 thay vì 1000 — khác, nhưng vẫn lớn hơn, không phải một giá trị sai/lùi).
+  //
+  // Vẫn giữ hàng đợi tuần tự này vì hai lý do KHÁC (không phải sửa mất-an-toàn-dữ-liệu):
+  // (1) kết quả XÁC ĐỊNH, không phụ thuộc độ trễ mạng ngẫu nhiên của từng lượt gọi riêng lẻ — dễ
+  //     suy luận/kiểm thử hơn; (2) tránh hai lượt `/thay-doi` chạy chồng chéo không cần thiết khi
+  //     một lượt đã đủ (đỡ một cuộc gọi mạng dư mỗi lần đụng độ).
+  // Mọi lượt gọi (định kỳ LẪN "đúng chỗ cần") đi qua ĐÚNG MỘT hàng đợi tuần tự
+  // (`chayTrongHangDoiDongBo`) — lượt sau luôn đợi lượt trước NGƯNG HẲN (dù thành công hay lỗi) mới
+  // bắt đầu.
+  let hangDoiDongBo: Promise<unknown> = Promise.resolve()
+  function chayTrongHangDoiDongBo<T>(viec: () => Promise<T>): Promise<T> {
+    const ketQua = hangDoiDongBo.then(viec, viec)
+    hangDoiDongBo = ketQua.catch(() => {}) // giu chuoi tiep tuc du luot nay loi, khong chan luot sau
+    return ketQua
+  }
 
   function danhThuc(): void {
     coTinHieuDanhThuc = true
@@ -798,7 +818,7 @@ export function batDauBoDongBo(
         const tabAn = nguonSuKien.tabDangAn()
         let conNua = false
         try {
-          const ketQua = await motLanDongBo(phuThuoc, tabAn)
+          const ketQua = await chayTrongHangDoiDongBo(() => motLanDongBo(phuThuoc, tabAn))
           conNua = ketQua.conNua
         } catch (loi) {
           if (loi instanceof LoiMayChuDiLui) {
@@ -867,7 +887,10 @@ export function batDauBoDongBo(
     // đó, không có lý do gì để đối xử khác với vòng lặp định kỳ.
     if (!phuThuocHienTai || trangThaiHienTai === 'dung_do_may_chu_di_lui') return Promise.resolve(null)
     if (goiThayDoiNgayDangChay) return goiThayDoiNgayDangChay
-    const p = layThayDoiVaApDung(phuThuocHienTai).finally(() => {
+    const phuThuoc = phuThuocHienTai
+    // C1: đi qua ĐÚNG hàng đợi tuần tự dùng chung với vòng lặp định kỳ — xem chú thích khai báo
+    // `hangDoiDongBo` ở trên.
+    const p = chayTrongHangDoiDongBo(() => layThayDoiVaApDung(phuThuoc)).finally(() => {
       goiThayDoiNgayDangChay = null
     })
     goiThayDoiNgayDangChay = p

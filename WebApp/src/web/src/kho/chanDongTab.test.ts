@@ -12,7 +12,7 @@ describe('chanDongTabKhiConHangCho (Task 7 — spec 6.6, chế độ tắt offli
     vi.restoreAllMocks()
   })
 
-  it('hang cho CO gi: goi preventDefault() va gan returnValue', () => {
+  it('hang cho CO gi: goi preventDefault() va gan returnValue KHAC RONG (Chrome/Edge cu can gia tri nay)', () => {
     const huy = chanDongTabKhiConHangCho(() => 3)
     const ev = baoUnload()
     const spy = vi.spyOn(ev, 'preventDefault')
@@ -20,7 +20,8 @@ describe('chanDongTabKhiConHangCho (Task 7 — spec 6.6, chế độ tắt offli
     window.dispatchEvent(ev)
 
     expect(spy).toHaveBeenCalled()
-    expect(ev.returnValue).toBe('')
+    // returnValue = '' KHONG kich hoat hop thoai theo dac ta HTML — phai la mot gia tri "truthy".
+    expect(ev.returnValue).toBeTruthy()
     huy()
   })
 

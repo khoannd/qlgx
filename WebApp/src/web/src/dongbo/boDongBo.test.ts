@@ -252,6 +252,56 @@ describe('boDongBo (Task 6 — bộ đồng bộ)', () => {
       db.close()
     })
 
+    it('I1 (review): doan CU HON NUA (doanHienTai - 2) KHONG duoc hieu chinh — chi DUNG mot doan vua dong moi duoc', async () => {
+      // Gioi han da biet cua huong (a): DoanDongHo (Task 4) chi nho doLech cua DUNG MOT the he doan
+      // gan nhat. Neu mot nhom thuoc doan CU HON NUA (doanHienTai - 2 tro ve truoc) vo tinh dung
+      // NHAM doLech cua doan vua dong (doanHienTai - 1) de hieu chinh, no se bi dich SAI huong (do
+      // lech cua hai doan khac nhau, khong lien quan gi nhau). Test nay chot dung dieu kien
+      // `nhom[0].doan === doanHienTai - 1` (khong phai `< doanHienTai`) bang mot hang cho co BA
+      // nhom doan: 0 (cu hon nua), 1 (vua dong), 2 (hien tai).
+      const db = await moKho(tenKhoRieng())
+      await ghiConTro(db, {
+        mocNeo: tuMocMs(Date.now()),
+        doanHienTai: 2,
+        doLechDoanHienTai: 5000,
+        doLechDoanHienTaiTinCay: true,
+      })
+      const phuThuoc = await khoiTaoPhuThuoc(db)
+
+      await themVaoHangCho(db, dongMau('tt-doan-0', { doan: 0 })) // cu hon nua — KHONG duoc hieu chinh
+      await themVaoHangCho(db, dongMau('tt-doan-1', { doan: 1 })) // vua dong — DUOC hieu chinh
+      await themVaoHangCho(db, dongMau('tt-doan-2', { doan: 2 })) // hien tai — khong can hieu chinh
+
+      const thanGuiDi: GuiLenYeuCau[] = []
+      vi.stubGlobal(
+        'fetch',
+        fetchGiaTheoDuong({
+          guiLen: (yc) => {
+            thanGuiDi.push(yc)
+            return ketQuaGuiLenMau({ ketQua: yc.thaoTac.map((t) => ({ maThaoTac: t.maThaoTac, ketQua: 'ap', thongBao: null })) })
+          },
+        }),
+      )
+
+      const hangCho = (await docHangCho(db)) as DongHangChoDongBo[]
+      await guiHangChoVaApDung(phuThuoc, hangCho)
+
+      expect(thanGuiDi).toHaveLength(3)
+      const gioTotNhatMs = phuThuoc.donDieu.mocHienTaiMs()
+      const loDoan0 = thanGuiDi.find((t) => t.thaoTac[0].maThaoTac === 'tt-doan-0')!
+      const loDoan1 = thanGuiDi.find((t) => t.thaoTac[0].maThaoTac === 'tt-doan-1')!
+      const loDoan2 = thanGuiDi.find((t) => t.thaoTac[0].maThaoTac === 'tt-doan-2')!
+
+      // Doan 0 (cu hon nua) — KHONG hieu chinh, du co doLech luu san cho doan KHAC.
+      expect(Math.abs(mocSangMs(loDoan0.gioMayCon) - gioTotNhatMs)).toBeLessThan(50)
+      // Doan 1 (vua dong, DUNG doanHienTai - 1) — CO hieu chinh dung doLech.
+      expect(Math.abs(mocSangMs(loDoan1.gioMayCon) - (gioTotNhatMs - 5000))).toBeLessThan(50)
+      // Doan 2 (hien tai) — khong hieu chinh.
+      expect(Math.abs(mocSangMs(loDoan2.gioMayCon) - gioTotNhatMs)).toBeLessThan(50)
+
+      db.close()
+    })
+
     it('doan vua dong nhung doLechDangTinCay = false: KHONG hieu chinh, gui thang gio hien tai', async () => {
       const db = await moKho(tenKhoRieng())
       await ghiConTro(db, {
@@ -988,6 +1038,80 @@ describe('boDongBo (Task 6 — bộ đồng bộ)', () => {
       expect(ketQua).toBeNull()
       expect(fetchGia).toHaveBeenCalledTimes(soLanGoiTruoc)
 
+      db.close()
+    })
+
+    it('C1: layThayDoiNgay() ban ra trong luc vong lap DINH KY dang treo cho mang cho ra KET QUA XAC DINH, khong phu thuoc thu tu mang tra ve', async () => {
+      // C1 (review Task 7): ban dau nghi day la mot lo hong mat du lieu (dauCuoi* co the bi ghi
+      // LUI neu hai luot goi phatDau() chong nhau). Tu kiem chung bang mutation (bo hang doi tuan
+      // tu): ket qua KHONG PHAI mot gia tri "sai/lui" ma la mot gia tri KHAC (1001 thay vi 1000) -
+      // van dung tang (khong lui), vi nangDau() luon lay max(cuoiCung hien tai, dau vua nhan) + 1,
+      // va viec gan `this.cuoiCung` trong phatDau() la DONG BO (khong co await xen giua doc va ghi)
+      // nen tu lanh du hai loi goi chong nhau theo bat ky thu tu nao - Global Constraints (khong bi
+      // dao nguoc nhan qua) VAN duoc giu dung ca khi khong co hang doi.
+      //
+      // Hang doi tuan tu (da them) khong sua mot loi mat an toan du lieu (khong co), nhung VAN
+      // dang gia giu: (1) ket qua XAC DINH, khong phu thuoc do tre mang cua tung luot goi rieng le
+      // (de kiem thu/gia lap hon), (2) tranh hai lan goi /thay-doi chong cheo khong can thiet khi
+      // mot lan da du. Test nay khoa hanh vi XAC DINH do (dungCuoiLogic phai la 1000 - ket qua cua
+      // dung THU TU goi: dinh ky truoc, layThayDoiNgay sau).
+      const db = await moKho(tenKhoRieng())
+
+      let laLanDau = true
+      let thaLuotDau: (() => void) | null = null
+      const fetchGia = vi.fn(async (url: unknown) => {
+        const u = String(url)
+        if (u.includes('/thay-doi')) {
+          if (laLanDau) {
+            laLanDau = false
+            // Luot DAU (vong lap dinh ky) - treo lai cho toi khi test chu dong tha ra, mo phong
+            // mang cham. Mang mot dong co dau NHO (dongHoLogic thap).
+            await new Promise<void>((res) => {
+              thaLuotDau = res
+            })
+            return new Response(
+              JSON.stringify(
+                nhanVeKetQuaMau({
+                  dong: [dongHieuLucMau(1, { dongHoVatLy: '2026-09-15T09:00:00Z', dongHoLogic: 1 })],
+                }),
+              ),
+              { status: 200 },
+            )
+          }
+          // Luot HAI (layThayDoiNgay) - phan hoi NGAY (khong treo), mang mot dong co dau LON hon
+          // han (dongHoLogic cao hon nhieu).
+          return new Response(
+            JSON.stringify(
+              nhanVeKetQuaMau({
+                dong: [dongHieuLucMau(2, { dongHoVatLy: '2026-09-15T09:00:00Z', dongHoLogic: 999 })],
+              }),
+            ),
+            { status: 200 },
+          )
+        }
+        return new Response(JSON.stringify(ketQuaGuiLenMau()), { status: 200 })
+      })
+      vi.stubGlobal('fetch', fetchGia)
+
+      const dieuKhien = batDauBoDongBo(db, nguonSuKienGiaLap(), nguonHenGioGiaLap(), nguonKhoaGiaLap)
+      // Cho luot dinh ky dau tien BAT DAU va TREO (dang cho mang) truoc khi ban layThayDoiNgay.
+      await vi.waitFor(() => expect(fetchGia).toHaveBeenCalledTimes(1))
+
+      const p2 = dieuKhien.layThayDoiNgay() // luot HAI, ban ra trong luc luot dau con dang treo
+
+      // Tha luot dau ra SAU KHI da ban luot hai — neu khong co hang doi tuan tu, ca hai co the dang
+      // chay xen ke; voi hang doi, luot hai phai CHUA he goi mang cho toi khi luot dau settle.
+      await new Promise((r) => setTimeout(r, 0))
+      ;(thaLuotDau as unknown as () => void)()
+
+      await p2
+
+      const conTro = await docConTro(db)
+      // dauCuoi* cuoi cung PHAI la dau LON (dongHoLogic 999, tu luot hai) — khong bi luot dau (dau
+      // nho, dongHoLogic 1, settle SAU do vi bi tha ra sau) ghi de len mot cach sai thu tu.
+      expect(conTro.dauCuoiLogic).toBe(1000) // phatDau nang len tren 999 nhan duoc -> +1
+
+      dieuKhien.dung()
       db.close()
     })
   })

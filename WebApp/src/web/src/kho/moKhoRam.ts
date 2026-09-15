@@ -13,26 +13,33 @@
  *   liệu mà thật ra chỉ nằm trong bộ nhớ tạm của phiên làm việc hiện tại.
  * - `fake-indexeddb` trước đây CHỈ là devDependency (dùng để giả lập IndexedDB cho jsdom trong test,
  *   xem các file `*.test.ts` cùng thư mục) — Task 7 chuyển nó sang dependency PRODUCTION thật (xem
- *   `package.json`) vì giờ nó được dùng khi ỨNG DỤNG CHẠY THẬT ở chế độ tắt offline, không chỉ khi
- *   chạy test.
+ *   `package.json`, GHIM đúng phiên bản — không dùng dải `^` — vì đây giờ là một cam kết runtime,
+ *   không chỉ một công cụ test có thể tự do lên phiên bản mới).
+ * - **IMPORT ĐỘNG** (`await import('fake-indexeddb')`), KHÔNG import tĩnh ở đầu file: nếu import
+ *   tĩnh, MỌI người dùng (kể cả người chưa từng bật chế độ tắt offline) đều tải cả gói này trong
+ *   chunk chính của ứng dụng — chỉ người THỰC SỰ gọi `moKhoRam()` (bật chế độ tắt offline) mới cần
+ *   tải nó. Xem chú thích trong `moKho()` (Task 1) — tham số `factory` của nó nhận kiểu `IDBFactory`
+ *   CHUẨN CỦA DOM (không phải kiểu riêng của `fake-indexeddb`) nên không có gì buộc phải import kiểu
+ *   đó ra ngoài — `fake-indexeddb`'s `IDBFactory` cài đặt ĐÚNG giao diện DOM này (đó là mục đích tồn
+ *   tại của gói), nên gán trực tiếp được mà không cần khai kiểu riêng ở đây.
  *
- * Mỗi lời gọi `moKhoRam()` KHÔNG truyền `factory` sẽ tự tạo một `new IDBFactory()` MỚI (bộ nhớ hoàn
- * toàn riêng, không chia sẻ với factory nào khác, kể cả một lần gọi `moKhoRam()` khác trong cùng
- * tab) — đúng ý "một hộp đựng mới mỗi khi cần", và cho phép kiểm thử tự tiêm một factory dùng chung
- * để xác nhận hai lần mở với CÙNG factory thấy CÙNG dữ liệu (giống cách `moKho()` thật hai lần mở
- * cùng tên kho vẫn thấy dữ liệu cũ).
+ * Mỗi lời gọi `moKhoRam()` KHÔNG truyền `factory` sẽ tự tạo một factory MỚI (bộ nhớ hoàn toàn riêng,
+ * không chia sẻ với factory nào khác, kể cả một lần gọi `moKhoRam()` khác trong cùng tab) — đúng ý
+ * "một hộp đựng mới mỗi khi cần", và cho phép kiểm thử tự tiêm một factory dùng chung để xác nhận
+ * hai lần mở với CÙNG factory thấy CÙNG dữ liệu (giống cách `moKho()` thật hai lần mở cùng tên kho
+ * vẫn thấy dữ liệu cũ).
  */
-import { IDBFactory } from 'fake-indexeddb'
 import { moKho, PHIEN_BAN_KHO } from './moKho'
 
 /** Tên kho mặc định cho bản RAM — khác tên mặc định của `moKho()` thật (`'qlgx'`) chỉ để dễ phân
  * biệt khi gỡ lỗi (hai factory đã tách biệt hoàn toàn nên trùng tên không gây lẫn dữ liệu thật). */
 const TEN_KHO_RAM_MAC_DINH = 'qlgx-ram'
 
-export function moKhoRam(
+export async function moKhoRam(
   tenKho: string = TEN_KHO_RAM_MAC_DINH,
   phienBan: number = PHIEN_BAN_KHO,
-  factory: IDBFactory = new IDBFactory(),
+  factory?: IDBFactory,
 ): Promise<IDBDatabase> {
-  return moKho(tenKho, phienBan, factory)
+  const factoryThucTe = factory ?? new (await import('fake-indexeddb')).IDBFactory()
+  return moKho(tenKho, phienBan, factoryThucTe)
 }

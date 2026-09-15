@@ -240,4 +240,38 @@ describe('ghiCucBo (Task 7 — spec 7.1: đường ghi luôn-lưu-vào-máy-trư
 
     db.close()
   })
+
+  it('I2 (review): soDoanHienTai() PHAI duoc goi TRUOC khi tinh vatLy — mot cu nhay gio phat hien trong buoc do phai duoc phan anh dung', async () => {
+    // dongHoMayCon.ts: soDoanHienTai() co tac dung phu neoLai() DongHoDonDieu khi phat hien nhay
+    // gio. Neu ghiCucBo lo goi phatDau() (dung donDieu.mocHienTaiMs()) TRUOC khi goi
+    // soDoanHienTai(), dong hang cho se mang vatLy o he quy chieu CU (truoc khi neo lai) trong khi
+    // lai gan so `doan` MOI — dong do vinh vien khong bao gio duoc hieu chinh dung boi guiMotLo
+    // (guiMotLo chi hieu chinh theo doLech cua dung mot doan, gia dinh moi dong trong doan da o
+    // dung he quy chieu cua doan do tai luc ghi). Mo phong bang cach cho soDoanHienTai() tu neo lai
+    // donDieu vao mot moc THAT XA (nhu DoanDongHo that lam trong linh tinh vong dong bo that), roi
+    // kiem tra vatLy ghi ra PHAI phan anh moc MOI, khong phai moc truoc khi neo.
+    const db = await moKho(tenKhoRieng())
+    const phuThuoc = await khoiTaoPhuThuoc(db)
+
+    const mocMoiMs = Date.now() + 3 * 24 * 60 * 60 * 1000 // +3 ngay — mo phong admin sua gio
+    vi.spyOn(phuThuoc.doan, 'soDoanHienTai').mockImplementation(async () => {
+      await phuThuoc.donDieu.neoLai(mocMoiMs) // dung nhu DoanDongHo that lam khi phat hien nhay
+      return 1
+    })
+
+    await ghiCucBo(db, phuThuoc, {
+      loai: 'sua', bang: 'GiaoDan', banGhiId: 'gd-nhay-gio',
+      truong: [{ truong: 'HoTen', giaTri: 'D' }],
+      banGhi: { khoa: 'GiaoDan:gd-nhay-gio', giaTri: { hoTen: 'D' } },
+    })
+
+    const [dong] = (await docHangCho(db)) as DongHangChoDongBo[]
+    expect(dong.doan).toBe(1)
+    // vatLy phai o QUANH moc MOI (+3 ngay), khong phai moc he thong that (chua neo lai) — chenh
+    // lech phai gan 3 ngay, khong gan 0.
+    const vatLyMs = new Date(dong.vatLy).getTime()
+    expect(Math.abs(vatLyMs - mocMoiMs)).toBeLessThan(5000)
+
+    db.close()
+  })
 })
