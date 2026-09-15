@@ -176,6 +176,55 @@ describe('DoanDongHo (Task 4 Phần B, lớp 2) — phat hien nhay gio, mo doan 
 
     kho.close()
   })
+
+  it('doLechDangTinCay: nhay o LAN KIEM TRA DAU TIEN (sau khi tai trang) la KHONG dang tin - co the chi la thoi gian app dong, khong phai nhay gio that', async () => {
+    // Kich ban: app dong 3 NGAY (khong he co cu nhay gio nao, dong ho van dung), roi mo lai. Vi
+    // performance.now() dat lai mot ve 0 moi phien, DoanDongHo.khoiTao/soDoanHienTai() KHONG THE
+    // phan biet duoc "3 ngay da troi qua that su trong luc dong app" voi "dong ho vua bi nhay 3
+    // ngay" — ca hai deu cho ra dung mot con so lech. Neu tang goi (Task 6/7) coi day la mot do
+    // lech dang tin roi tu dong hieu chinh du lieu, no se dich sai cac moc vua ghi that di 3 ngay.
+    const tenKho = tenKhoRieng()
+    const kho = await moKho(tenKho)
+    const nguon = dungNguonGia(1_000_000)
+    const donDieu = await DongHoDonDieu.khoiTao(kho, nguon)
+    await donDieu.neoLai(1_000_000) // lan dong bo cuoi cung truoc khi dong app
+
+    // App dong 3 ngay — KHONG mo phong bang troiQua (vi performance.now() se dat lai ve 0 khi mo
+    // lai trang, khong con lien tuc voi phien nay nua). Thay vao do, dung mot NGUON MOI (mo phong
+    // phien moi sau khi tai trang) voi gio he thong da nhay +3 ngay so voi luc dong (chinh la dieu
+    // xay ra that trong doi song: thoi gian THAT da troi qua trong luc app dong).
+    const baNgayMs = 3 * 24 * 60 * 60 * 1000
+    const nguonPhienMoi = dungNguonGia(1_000_000 + baNgayMs) // gio he thong: da qua 3 ngay that su
+    const donDieuPhienMoi = await DongHoDonDieu.khoiTao(kho, nguonPhienMoi) // doc lai mocNeo=1_000_000 tu conTro
+    const doan = await DoanDongHo.khoiTao(kho, donDieuPhienMoi, nguonPhienMoi)
+
+    const soDoan = await doan.soDoanHienTai()
+    expect(soDoan).toBe(1) // van mo doan moi - dung, vi khong biet chac day khong phai nhay that
+    expect(doan.doLechDangTinCay()).toBe(false) // NHUNG khong duoc coi la dang tin
+
+    kho.close()
+  })
+
+  it('doLechDangTinCay: nhay o lan kiem tra THU HAI tro di (cung mot phien, dong ho don dieu van dang chay lien tuc) LA dang tin', async () => {
+    const tenKho = tenKhoRieng()
+    const kho = await moKho(tenKho)
+    const nguon = dungNguonGia(1_000_000)
+    const donDieu = await DongHoDonDieu.khoiTao(kho, nguon)
+    await donDieu.neoLai(1_000_000)
+    const doan = await DoanDongHo.khoiTao(kho, donDieu, nguon)
+
+    // Lan kiem tra dau tien: khong nhay gi ca (dung nhu binh thuong ngay sau khi neo).
+    expect(await doan.soDoanHienTai()).toBe(0)
+
+    // Lan kiem tra THU HAI, VAN TRONG CUNG PHIEN (dong ho don dieu lien tuc chay, khong tai lai
+    // trang) — admin sua gio nhay +1 gio. Day la mot cu nhay THAT SU quan sat duoc, khong phai do
+    // performance.now() vua dat lai.
+    nguon.heThong += 60 * 60 * 1000
+    expect(await doan.soDoanHienTai()).toBe(1)
+    expect(doan.doLechDangTinCay()).toBe(true)
+
+    kho.close()
+  })
 })
 
 describe('DongHoLogicMayCon (Task 4 Phần B, lớp 3) — boc nangDau, tu quan ly dau cuoi cung', () => {

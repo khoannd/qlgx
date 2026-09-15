@@ -133,6 +133,10 @@ export class DoanDongHo {
   private readonly nguon: NguonThoiGian
   private doanHienTaiSo: number
   private doLechHienTai: number
+  private doLechTinCayHienTai: boolean
+  /** `true` cho tới lần `soDoanHienTai()` ĐẦU TIÊN kể từ khi khởi tạo (kể từ lần tải trang này).
+   * Xem chú thích `soDoanHienTai` về vì sao lần đầu tiên phải được đánh dấu riêng. */
+  private laLanKiemTraDauTien = true
 
   private constructor(
     kho: IDBDatabase,
@@ -140,19 +144,25 @@ export class DoanDongHo {
     nguon: NguonThoiGian,
     doanBanDau: number,
     doLechBanDau: number,
+    doLechTinCayBanDau: boolean,
   ) {
     this.kho = kho
     this.donDieu = donDieu
     this.nguon = nguon
     this.doanHienTaiSo = doanBanDau
     this.doLechHienTai = doLechBanDau
+    this.doLechTinCayHienTai = doLechTinCayBanDau
   }
 
   static async khoiTao(kho: IDBDatabase, donDieu: DongHoDonDieu, nguon: NguonThoiGian = NGUON_MAC_DINH): Promise<DoanDongHo> {
     const conTro = await docConTro(kho)
     const doan = typeof conTro.doanHienTai === 'number' ? conTro.doanHienTai : 0
     const doLech = typeof conTro.doLechDoanHienTai === 'number' ? conTro.doLechDoanHienTai : 0
-    return new DoanDongHo(kho, donDieu, nguon, doan, doLech)
+    // Mac dinh true (dang tin cay) neu chua tung luu gi (chua tung mo doan nao) — khong co gi de
+    // nghi ngo. Neu DA tung luu, giu dung trang thai tin cay tu lan phien truoc (mot doan duoc mo
+    // luc khoi dong phien truoc van la "khong dang tin" khi doc lai o phien nay).
+    const doLechTinCay = typeof conTro.doLechDoanHienTaiTinCay === 'boolean' ? conTro.doLechDoanHienTaiTinCay : true
+    return new DoanDongHo(kho, donDieu, nguon, doan, doLech, doLechTinCay)
   }
 
   /**
@@ -167,25 +177,54 @@ export class DoanDongHo {
    * được (`thuc`). Thiếu bước này, lần gọi KẾ TIẾP sẽ so `donDieu.mocHienTaiMs()` (vẫn tính theo
    * mốc neo CŨ, chưa hề biết cú nhảy vừa xảy ra) với giờ hệ thống (đã ở mức mới) và phát hiện lại
    * ĐÚNG cú nhảy đó lần nữa — mở đoạn mới liên tục dù không có nhảy nào thêm.
+   *
+   * **Vì sao lần kiểm tra ĐẦU TIÊN sau khi tải trang KHÔNG đáng tin bằng các lần sau (xem
+   * `doLechDangTinCay`):** `performance.now()` đặt lại mốc 0 mỗi lần tải trang, nên ngay sau khi mở
+   * lại app, `DongHoDonDieu` chưa hề đo được "đã trôi bao lâu" — nó chỉ biết mốc neo LẦN CUỐI đã
+   * lưu (`mocNeo`). Nếu app bị đóng 3 ngày rồi mở lại (không hề có cú nhảy giờ nào, đồng hồ vẫn
+   * đúng), `thuc - duKien` ở lần kiểm tra đầu tiên sẽ ra ĐÚNG 3 NGÀY — giống hệt như một cú nhảy
+   * giờ thật, dù thực ra chỉ là thời gian THẬT đã trôi qua trong lúc app đóng. Không có cách nào
+   * phân biệt hai tình huống này CHỈ bằng đồng hồ đơn điệu + đồng hồ hệ thống (cần một nguồn thứ ba
+   * đáng tin, ví dụ giờ máy chủ tại lần đồng bộ tiếp theo) — nên thay vì ÂM THẦM coi độ lệch đo
+   * được ở lần đầu là một độ lệch đáng tin để hiệu chỉnh dữ liệu, hàm này ĐÁNH DẤU nó là KHÔNG ĐÁNG
+   * TIN (`doLechDangTinCay() === false`) để tầng gọi (Task 6/7) tự quyết định cách xử lý (ví dụ:
+   * không tự động hiệu chỉnh, đưa vào hộp cần xem lại) thay vì áp một con số có thể sai hoàn toàn.
    */
   async soDoanHienTai(): Promise<number> {
     const duKien = this.donDieu.mocHienTaiMs()
     const thuc = this.nguon.gioHeThongMs()
     const lech = thuc - duKien
+    const laLanDau = this.laLanKiemTraDauTien
+    this.laLanKiemTraDauTien = false
     if (Math.abs(lech) > NGUONG_NHAY_GIO_MS) {
       this.doanHienTaiSo += 1
       this.doLechHienTai = lech
+      this.doLechTinCayHienTai = !laLanDau
       await this.donDieu.neoLai(thuc)
-      await ghiConTro(this.kho, { doanHienTai: this.doanHienTaiSo, doLechDoanHienTai: this.doLechHienTai })
+      await ghiConTro(this.kho, {
+        doanHienTai: this.doanHienTaiSo,
+        doLechDoanHienTai: this.doLechHienTai,
+        doLechDoanHienTaiTinCay: this.doLechTinCayHienTai,
+      })
     }
     return this.doanHienTaiSo
   }
 
   /** Độ lệch (giờ hệ thống trừ giờ ước tính từ đồng hồ đơn điệu, mili giây) của đoạn HIỆN TẠI —
    * dương nghĩa là đồng hồ hệ thống hiện ĐI NHANH hơn dự đoán. Dùng khi tầng gọi cần hiệu chỉnh một
-   * mốc vừa ghi bằng giờ hệ thống thô về gần đúng giờ đáng tin của đoạn đó. */
+   * mốc vừa ghi bằng giờ hệ thống thô về gần đúng giờ đáng tin của đoạn đó — CHỈ khi
+   * `doLechDangTinCay()` trả về `true` (xem chú thích `soDoanHienTai`). */
   doLechDoanHienTai(): number {
     return this.doLechHienTai
+  }
+
+  /** `false` nghĩa là độ lệch của đoạn hiện tại được đo ở LẦN KIỂM TRA ĐẦU TIÊN sau khi tải trang
+   * — có thể chỉ là thời gian thật đã trôi qua trong lúc app đóng, KHÔNG chắc là một cú nhảy giờ
+   * thật (xem chú thích chi tiết ở `soDoanHienTai`). Tầng gọi (Task 6/7) KHÔNG nên tự động dùng
+   * `doLechDoanHienTai()` để hiệu chỉnh dữ liệu khi giá trị này là `false` — nên đưa vào hộp cần
+   * xem lại hoặc bỏ qua bước hiệu chỉnh tự động cho đoạn đó thay vì áp một con số có thể sai. */
+  doLechDangTinCay(): boolean {
+    return this.doLechTinCayHienTai
   }
 }
 

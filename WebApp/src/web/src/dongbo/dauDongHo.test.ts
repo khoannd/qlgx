@@ -2,7 +2,17 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { catMicroGiay, dungDauDongHo, mocSangMs, nangDau, soSanh, soSanhGuid, tuMocMs, type DauDongHo } from './dauDongHo'
+import {
+  catMicroGiay,
+  chuanHoaMocMayChu,
+  dungDauDongHo,
+  mocSangMs,
+  nangDau,
+  soSanh,
+  soSanhGuid,
+  tuMocMs,
+  type DauDongHo,
+} from './dauDongHo'
 
 /**
  * Vector kiểm thử DÙNG CHUNG với `WebApp/tests/Qlgx.Data.Tests/DongHoLaiTests.cs` — cả hai bộ test
@@ -118,6 +128,45 @@ describe('catMicroGiay/tuMocMs/mocSangMs', () => {
   it('dungDauDongHo tu dong cat vatLy giong constructor DauDongHo ben C#', () => {
     const dau = dungDauDongHo('2026-09-13T10:00:00.1237890Z', 0, null, '00000000-0000-0000-0000-000000000000')
     expect(dau.vatLy).toBe('2026-09-13T10:00:00.123789Z')
+  })
+})
+
+describe('chuanHoaMocMayChu — chuan hoa dinh dang JSON that ma may chu (System.Text.Json) phat ra', () => {
+  it('mocMayChu khong co phan le giay (Z) duoc dem thanh 6 chu so 0', () => {
+    // System.Text.Json cat het chu so 0 cuoi phan le - khong co phan le giay nao thi KHONG in dau
+    // cham, dung "Z" thang sau giay.
+    expect(chuanHoaMocMayChu('2026-09-13T10:00:00Z')).toBe('2026-09-13T10:00:00.000000Z')
+  })
+
+  it('mocMayChu chi co 3 chu so (mili giay) duoc dem them 0 cho du 6', () => {
+    expect(chuanHoaMocMayChu('2026-09-13T10:00:00.123Z')).toBe('2026-09-13T10:00:00.123000Z')
+  })
+
+  it('mocMayChu du 7 chu so (tick .NET, gan nhu khong bao gio xay ra nhung van phai xu ly) duoc CAT ve 6', () => {
+    expect(chuanHoaMocMayChu('2026-09-13T10:00:00.1234567Z')).toBe('2026-09-13T10:00:00.123456Z')
+  })
+
+  it('hau to +00:00/-00:00 (cung mot khoanh khac voi Z) duoc chap nhan, doi thanh Z', () => {
+    expect(chuanHoaMocMayChu('2026-09-13T10:00:00.123456+00:00')).toBe('2026-09-13T10:00:00.123456Z')
+    expect(chuanHoaMocMayChu('2026-09-13T10:00:00.123456-00:00')).toBe('2026-09-13T10:00:00.123456Z')
+  })
+
+  it('KET QUA CHUAN HOA phai khop y het catMicroGiay/tuMocMs cho CUNG mot khoanh khac - khong duoc lech dinh dang du chi 1 ky tu', () => {
+    // Day la fact quan trong nhat: neu ham nay tra ve mot dinh dang du chi khac 1 ky tu so voi
+    // catMicroGiay/tuMocMs, so chuoi giua mot DauDongHo "may con tu tao" va mot DauDongHo "tu may
+    // chu gui ve" se SAI dù cùng khoảnh khắc — đúng lỗ hổng I2 mà hàm này sinh ra để vá.
+    const tuMayChu = chuanHoaMocMayChu('2026-09-13T10:00:00+00:00')
+    const tuMayCon = catMicroGiay('2026-09-13T10:00:00.000000Z')
+    expect(tuMayChu).toBe(tuMayCon)
+  })
+
+  it('nem loi neu offset KHAC 0 (thiet ke chi ho tro may chu luon gui UTC)', () => {
+    expect(() => chuanHoaMocMayChu('2026-09-13T10:00:00.000000+07:00')).toThrow()
+    expect(() => chuanHoaMocMayChu('2026-09-13T17:00:00.000000-07:00')).toThrow()
+  })
+
+  it('nem loi neu dinh dang la rac hoan toan', () => {
+    expect(() => chuanHoaMocMayChu('khong-phai-mot-moc-thoi-gian')).toThrow()
   })
 })
 

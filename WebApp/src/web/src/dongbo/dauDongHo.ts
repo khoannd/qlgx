@@ -87,6 +87,41 @@ export function catMicroGiay(moc: string): string {
   return `${goc}${micro}Z`
 }
 
+/**
+ * Chuẩn hoá một mốc `DongHoVatLy` NHẬN TỪ MÁY CHỦ (JSON của `DongHieuLucDto`,
+ * `WebApp/src/Qlgx.Api/Dtos/DongBoDtos.cs`) về đúng định dạng cố định của hệ thống. BẮT BUỘC gọi
+ * hàm này (không gán thẳng chuỗi JSON vào `DauDongHo.vatLy`) ở MỌI nơi dựng `DauDongHo` từ dữ liệu
+ * máy chủ (Task 6/7) — xem vì sao ở dưới.
+ *
+ * `System.Text.Json` serialize `DateTimeOffset` theo định dạng round-trip "O": có thể CẮT chữ số 0
+ * cuối phần thập phân (`"...10:00:00Z"` khi không có phần lẻ giây, `"...10:00:00.123Z"` khi lẻ vừa
+ * đủ mili giây) và mang HẬU TỐ MÚI GIỜ dạng `+00:00` thay vì `Z` tuỳ cấu hình. `catMicroGiay` chỉ
+ * chấp nhận ĐÚNG 1 dạng cố định (6 chữ số, hậu tố `Z`) nên sẽ NÉM LỖI nếu nhận thẳng chuỗi JSON gốc
+ * — đúng ý (fail-loud), nhưng nếu tầng gọi lỡ KHÔNG đi qua `catMicroGiay`/hàm này mà gán thẳng
+ * (`{ vatLy: dto.dongHoVatLy, ... }`), hai chuỗi biểu diễn CÙNG một khoảnh khắc
+ * (`"...10:00:00+00:00"` so với `"...10:00:00.000000Z"`) sẽ so ra KHÁC NHAU (`'+'` mã 0x2B nhỏ hơn
+ * `'.'` mã 0x2E) — hỏng ÂM THẦM, không một lỗi nào hiện ra, đúng đúng thứ toàn bộ file này sinh ra
+ * để chặn.
+ *
+ * CHỈ chấp nhận múi giờ UTC (`Z` hoặc `+00:00`/`-00:00`, cả hai cùng một khoảnh khắc) — thiết kế hệ
+ * thống giả định máy chủ LUÔN gửi giờ UTC (xem Global Constraints). Một offset khác 0 lẽ ra đòi hỏi
+ * phép cộng/trừ ngày-giờ đầy đủ (kéo theo tràn qua ngày/tháng/năm) mà biểu diễn CHUỖI không làm được
+ * — nếu gặp, NÉM LỖI thay vì suy đoán sai, vì đó là dấu hiệu máy chủ đã đổi hợp đồng.
+ */
+export function chuanHoaMocMayChu(moc: string): string {
+  const khop = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d+))?(Z|[+-]00:00)$/.exec(moc)
+  if (!khop) {
+    throw new Error(
+      `Mốc thời gian từ máy chủ không đúng định dạng UTC hỗ trợ "${moc}" ` +
+        '(cần dạng yyyy-MM-ddTHH:mm:ss[.ffffff…](Z|+00:00|-00:00))',
+    )
+  }
+  const goc = khop[1]
+  const phanThapPhan = khop[2] ?? ''
+  const micro = (phanThapPhan + '000000').slice(0, 6)
+  return `${goc}.${micro}Z`
+}
+
 /** Chuyển một mốc `number` (mili giây kể từ epoch Unix, giá trị của `Date.getTime()`) sang dạng
  * chuỗi cố định của hệ thống. 3 chữ số cuối của phần micro giây LUÔN là `000` vì JS không có độ
  * phân giải mịn hơn mili giây (xem chú thích đầu file) — đây KHÔNG phải một giá trị giả, mà là biểu
