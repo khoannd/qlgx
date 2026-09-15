@@ -462,6 +462,65 @@ public class KhoiPhucDongBoTests(QlgxApiFactory f) : IClassFixture<QlgxApiFactor
             "khoi phuc deu bi bao 'may chu di lui' va tu dung dong bo — dung luc no can dong bo nhat");
     }
 
+    [Fact]
+    public async Task SoThuTuLucXoayGanNhat_giu_nguyen_moc_luc_xoay_du_co_ghi_them_SAU_do_con_tro_thi_tang_tiep()
+    {
+        // C2 (BAT BUOC, review vong sua 1 cua Task 8): ToanBoKetQua.SoThuTuLucXoayGanNhat phai la
+        // ngưỡng CO DINH tai thoi diem xoay epoch, KHAC ConTro (con tro TAI THOI DIEM hoi, tiep
+        // tuc tang neu co ai ghi them SAU khi xoay). Dung nham ConTro lam nguong loc phia may con
+        // se bo sot cac dong bi mat nam GIUA hai moc do — day chinh la lo hong C2 ma vong sua nay
+        // vien vim.
+        var client = f.CreateAuthClient();
+        var id = await TaoGiaoDan(9313, "Goc Xoay Epoch Nguong");
+        await Gui(client, DateTimeOffset.UtcNow, SuaThuong(id, "GhiChu", "\"truoc khoi phuc\"", MocTruocSuCo));
+
+        await XoayEpoch("lay_lai");
+
+        var anhChupNgaySauXoay = await client.GetFromJsonAsync<ToanBoKetQua>("/api/dong-bo/toan-bo");
+        anhChupNgaySauXoay!.SoThuTuLucXoayGanNhat.Should().NotBeNull(
+            "giao xu nay VUA duoc xoay epoch — phai co mot moc luc xoay, khong the con null");
+        anhChupNgaySauXoay.SoThuTuLucXoayGanNhat.Should().Be(anhChupNgaySauXoay.ConTro,
+            "chua ai ghi gi them sau khi xoay — hai moc phai TRUNG NHAU dung luc nay");
+
+        // Ai do ghi them SAU khi xoay (vi du: van phong sua tren web, HOAC mot may con khac cung
+        // bu lai truoc) — ConTro phai TANG TIEP, nhung SoThuTuLucXoayGanNhat phai GIU NGUYEN moc
+        // cu (khong duoc "chay theo" ConTro).
+        var idKhac = await TaoGiaoDan(9314, "Ai Do Ghi Them Sau Khoi Phuc");
+        await Gui(client, DateTimeOffset.UtcNow,
+            SuaThuong(idKhac, "GhiChu", "\"ghi them sau khi xoay\"", DateTimeOffset.UtcNow));
+
+        var anhChupSauKhiGhiThem = await client.GetFromJsonAsync<ToanBoKetQua>("/api/dong-bo/toan-bo");
+        anhChupSauKhiGhiThem!.ConTro.Should().BeGreaterThan(anhChupNgaySauXoay.ConTro,
+            "mot lo moi vua duoc ghi — con tro PHAI tien len");
+        anhChupSauKhiGhiThem.SoThuTuLucXoayGanNhat.Should().Be(anhChupNgaySauXoay.SoThuTuLucXoayGanNhat,
+            "moc LUC XOAY la co dinh, khong duoc doi theo cac lan ghi SAU do — day la ly do C2 " +
+            "bat buoc phai co mot cot RIENG (SoThuTuLucXoay), khong the dung lai ConTro/SoTiepTheo");
+    }
+
+    [Fact]
+    public async Task SoThuTuLucXoayGanNhat_la_null_khi_giao_xu_CHUA_TUNG_duoc_xoay_epoch()
+    {
+        // f.GiaoXuId la giao xu DUNG CHUNG cho ca lop test nay (cac test khac cung xoay epoch tren
+        // no), nen KHONG dung duoc de kiem "chua tung xoay" — phai tu tao mot giao xu MOI TOANH,
+        // rieng cho test nay, cung khuon mau voi cac file test khac (vd DongBoNhanVeTests.cs).
+        var giaoXuMoi = Guid.NewGuid();
+        await using (var db = f.TaoContextThuan())
+        {
+            db.GiaoXu.Add(new GiaoXu { Id = giaoXuMoi, TenGiaoXu = "Giao xu chua tung khoi phuc", MaGiaoXuCu = 9312 });
+            await db.SaveChangesAsync();
+        }
+
+        var client = f.CreateAuthClient(giaoXuId: giaoXuMoi);
+        // Dam bao co dong bo dem (BaoDamCoEpoch) nhung KHONG goi XoayEpoch cho giao xu nay.
+        await BaoDamCoEpoch(client);
+
+        var anhChup = await client.GetFromJsonAsync<ToanBoKetQua>("/api/dong-bo/toan-bo");
+
+        anhChup!.SoThuTuLucXoayGanNhat.Should().BeNull(
+            "giao xu chua tung duoc khoi phuc — Task 8 phia may con phai coi day la dau hieu " +
+            "khong nen tu goi ham bu lai, khong duoc doan bua mot gia tri nao khac");
+    }
+
     // ==================================================================
     //  Xung đột với người sửa SAU khôi phục (spec 4.8.5, đoạn cuối)
     // ==================================================================

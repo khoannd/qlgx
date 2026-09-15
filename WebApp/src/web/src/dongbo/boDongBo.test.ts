@@ -175,6 +175,60 @@ describe('boDongBo (Task 6 — bộ đồng bộ)', () => {
     })
   })
 
+  describe('apDungGuiLenKetQua/guiHangChoVaApDung — C3 (review vong sua 1): /gui-len tra epoch KHAC epoch dang giu phai nem LoiEpochKhongKhop, khong duoc am tham ghi de conTro', () => {
+    it('epoch tra ve tu /gui-len khac epoch dang giu TRUOC khi gui: nem LoiEpochKhongKhop, conTro KHONG doi', async () => {
+      const db = await moKho(tenKhoRieng())
+      const phuThuoc = await khoiTaoPhuThuoc(db)
+      await ghiConTro(db, { epoch: 'epoch-cu', soThuTu: 42 })
+      await themVaoHangCho(db, dongMau('tt-1'))
+
+      // May chu tra ve epoch KHAC (vd may chu vua duoc khoi phuc, xoay epoch) — /gui-len KHONG tu
+      // kiem tra khop epoch (goi NhanVe noi bo voi epoch: null, xem DongBoService.cs) nen van tra
+      // ve HOP LE ve mat HTTP, chi khac epoch thoi.
+      vi.stubGlobal(
+        'fetch',
+        fetchGiaTheoDuong({
+          guiLen: () => ketQuaGuiLenMau({ epoch: 'epoch-moi-sau-khoi-phuc', conTroMoi: 5, ketQua: [{ maThaoTac: 'tt-1', ketQua: 'ap', thongBao: null }] }),
+        }),
+      )
+
+      const hangCho = (await docHangCho(db)) as DongHangChoDongBo[]
+      await expect(guiHangChoVaApDung(phuThuoc, hangCho)).rejects.toBeInstanceOf(LoiEpochKhongKhop)
+
+      // conTro PHAI giu nguyen epoch/soThuTu CU — khong bi ghi de am tham sang epoch moi.
+      const conTroSau = await docConTro(db)
+      expect(conTroSau).toMatchObject({ epoch: 'epoch-cu', soThuTu: 42 })
+
+      // Hang cho KHONG bi xoa — thao tac chua duoc coi la da xu ly xong.
+      expect(await docHangCho(db)).toHaveLength(1)
+
+      db.close()
+    })
+
+    it('epoch tra ve KHOP epoch dang giu: ap binh thuong, khong nem gi ca', async () => {
+      const db = await moKho(tenKhoRieng())
+      const phuThuoc = await khoiTaoPhuThuoc(db)
+      await ghiConTro(db, { epoch: 'epoch-1', soThuTu: 0 })
+      await themVaoHangCho(db, dongMau('tt-1'))
+
+      vi.stubGlobal(
+        'fetch',
+        fetchGiaTheoDuong({
+          guiLen: () => ketQuaGuiLenMau({ epoch: 'epoch-1', conTroMoi: 5, ketQua: [{ maThaoTac: 'tt-1', ketQua: 'ap', thongBao: null }] }),
+        }),
+      )
+
+      const hangCho = (await docHangCho(db)) as DongHangChoDongBo[]
+      await guiHangChoVaApDung(phuThuoc, hangCho)
+
+      expect(await docHangCho(db)).toHaveLength(0)
+      const conTroSau = await docConTro(db)
+      expect(conTroSau).toMatchObject({ epoch: 'epoch-1', soThuTu: 5 })
+
+      db.close()
+    })
+  })
+
   describe('guiHangChoVaApDung — Task 7 muc 3 (huong a): nhom theo doan, hieu chinh rieng doan vua dong', () => {
     it('hai dong CUNG mot doan (mac dinh 0) van gui THANH MOT lo duy nhat — khong pha vo hanh vi cu', async () => {
       const db = await moKho(tenKhoRieng())

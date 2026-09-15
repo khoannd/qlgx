@@ -50,11 +50,21 @@ public class KhoiPhucDongBoService(IConfiguration cauHinh)
         // gen_random_uuid() nằm TRONG câu SQL để mỗi giáo xứ nhận một epoch RIÊNG. Sinh một Guid
         // ở C# rồi gán cho mọi dòng sẽ cho tất cả giáo xứ chung một epoch — hai chuỗi số thứ tự
         // khác nhau mang cùng một danh tính, đúng kiểu lẫn lộn mà epoch sinh ra để chặn.
+        //
+        // C2 (BẮT BUỘC, review vòng sửa 1 của Task 8): `so_thu_tu_luc_xoay = so_tiep_theo - 1`
+        // ĐỌC `so_tiep_theo` NGAY TRONG câu UPDATE này, dưới khoá hàng đang được ĐÚNG câu UPDATE
+        // này giữ — KHÔNG tách thành một SELECT riêng chạy TRƯỚC, để tránh race giữa đọc và ghi
+        // (một giao dịch ghi khác chen vào giữa SELECT và UPDATE sẽ làm ngưỡng này SAI ngay từ
+        // lúc xoay). Xem `BoDemHieuLuc.SoThuTuLucXoay` vì sao cột này BẮT BUỘC phải khác
+        // `SoTiepTheo` (con trỏ hiện tại, tiếp tục tăng sau khi xoay) — dùng `SoTiepTheo` đọc lại
+        // SAU NÀY (lúc máy con hỏi) làm ngưỡng lọc sổ đã nhận phía máy con (Task 8) sẽ bỏ sót các
+        // dòng bị mất nếu có ai ghi thêm gì đó SAU khi xoay epoch nhưng TRƯỚC KHI máy con kịp hỏi.
         const string cauLenh = """
             UPDATE bo_dem_hieu_luc
                SET epoch = gen_random_uuid(),
                    cho_phep_bu_lai = {0},
-                   xoay_epoch_luc = {1}
+                   xoay_epoch_luc = {1},
+                   so_thu_tu_luc_xoay = so_tiep_theo - 1
             """;
 
         // TẠO TRƯỚC dòng đếm còn thiếu. Một giáo xứ chưa từng có lần ghi nào đi qua giao thức

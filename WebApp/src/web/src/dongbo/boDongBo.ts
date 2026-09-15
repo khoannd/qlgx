@@ -90,7 +90,19 @@ export type DongHieuLucDto = {
 
 export type NhanVeKetQua = { epoch: string; conTroMoi: number; conNua: boolean; dong: DongHieuLucDto[] }
 
-export type ToanBoKetQua = { epoch: string; conTro: number; chupLuc: string; duLieuNen: string }
+/** `soThuTuLucXoayGanNhat` (C2, review vòng sửa 1 của Task 8) — số thứ tự lớn nhất TẠI THỜI ĐIỂM
+ * epoch hiện tại được xoay (khác `conTro`, con trỏ TẠI THỜI ĐIỂM máy con hỏi, có thể ĐÃ LỚN HƠN
+ * nếu có ai ghi gì đó SAU khi khôi phục nhưng TRƯỚC KHI máy con này kịp hỏi). Task 8 (bù lại dữ
+ * liệu sau khôi phục, `buSauKhoiPhuc.ts`) PHẢI dùng trường này, KHÔNG PHẢI `conTro`, làm ngưỡng
+ * lọc sổ đã nhận — xem `ToanBoKetQua.SoThuTuLucXoayGanNhat` phía `DongBoDtos.cs` để có giải thích
+ * đầy đủ. `null` nghĩa là giáo xứ này CHƯA TỪNG được xoay epoch (chưa từng khôi phục). */
+export type ToanBoKetQua = {
+  epoch: string
+  conTro: number
+  chupLuc: string
+  duLieuNen: string
+  soThuTuLucXoayGanNhat: number | null
+}
 
 export type ThaoTacDto = {
   maThaoTac: string
@@ -412,12 +424,32 @@ export async function layThayDoiVaApDung(phuThuoc: PhuThuocBoDongBo, toiDa?: num
  * xoá, KHÔNG phải chuỗi server trả lại. Bản trước duyệt `ketQua.ketQua` rồi dùng thẳng
  * `kq.maThaoTac` (chuỗi SERVER trả về) làm khoá xoá — nếu vì bất kỳ lý do gì chuỗi đó lệch hoa/thường
  * với khoá TA lưu, dòng đó KẸT VĨNH VIỄN trong hàng chờ (không bao giờ xoá được, gửi lại mãi mãi).
+ *
+ * C3 (BẮT BUỘC, review vòng sửa 1) — `epochLucBatDauGui`: epoch ĐANG GIỮ TRONG `conTro` NGAY TRƯỚC
+ * KHI bất kỳ lô nào của lượt `guiHangChoVaApDung` này được gửi (đọc MỘT LẦN ở đầu hàm đó, truyền
+ * xuyên suốt qua `guiMotLo` xuống đây — xem `guiHangChoVaApDung`/`guiMotLo`). PHẢI so `ketQua.epoch`
+ * với giá trị này TRƯỚC KHI ghi bất cứ gì vào `conTro`: `/gui-len` phía máy chủ gọi `NhanVe` NỘI BỘ
+ * với `epoch: null` (xem `DongBoService.cs`), nên KHÔNG kiểm tra khớp/không khớp — một epoch mới
+ * (do máy chủ vừa được khôi phục) vẫn trả về HỢP LỆ qua đường này. Nếu không tự so ở đây, `conTro`
+ * bị ghi đè ÂM THẦM sang epoch mới TRƯỚC KHI lệnh `layThayDoiVaApDung` gọi sau đó (cùng chu kỳ,
+ * `motLanDongBo`) kịp phát hiện qua 410 — lệnh đó thấy `conTro.epoch` ĐÃ LÀ epoch mới, tưởng đã
+ * khớp, không còn 410 nào kích hoạt LỚP 1/Task 8 nữa, trong khi `conTro.soThuTu` đã bị ghi một giá
+ * trị SAI (con trỏ cũ, không đúng cho epoch mới) — máy con bỏ sót vĩnh viễn các dòng thật giữa hai
+ * điểm đó. Khác epoch: NÉM `LoiEpochKhongKhop` NGAY, KHÔNG ghi `conTro`/sổ đã nhận/xoá hàng chờ gì
+ * cả — `khiLaChu`'s catch (xem cuối file) đã tự nhiên xử lý đúng ở nhánh "khác LoiMayChuDiLui" (ghi
+ * log, thử lại chu kỳ sau); việc GỌI `xuLyEpochKhongKhop` khi bắt được lỗi này là việc tích hợp của
+ * Task 10, ngoài phạm vi vòng sửa này.
  */
 async function apDungGuiLenKetQua(
   phuThuoc: PhuThuocBoDongBo,
   hangChoDaGui: DongHangChoDongBo[],
   ketQua: GuiLenKetQua,
+  epochLucBatDauGui: string | null,
 ): Promise<void> {
+  if (epochLucBatDauGui !== null && ketQua.epoch !== epochLucBatDauGui) {
+    throw new LoiEpochKhongKhop()
+  }
+
   const ngayNhan = tuMocMs(phuThuoc.donDieu.mocHienTaiMs())
 
   const maDaXuLyThuongHoa = new Set(ketQua.ketQua.map((kq) => kq.maThaoTac.toLowerCase()))
@@ -473,6 +505,7 @@ async function guiMotLo(
   phuThuoc: PhuThuocBoDongBo,
   nhom: DongHangChoDongBo[],
   doanHienTai: number,
+  epochLucBatDauGui: string | null,
 ): Promise<{ conNua: boolean }> {
   const conTro = await docConTro(phuThuoc.kho)
   const gioTotNhatMs = phuThuoc.donDieu.mocHienTaiMs()
@@ -490,7 +523,7 @@ async function guiMotLo(
   }
 
   const ketQua = await guiLen(yc)
-  await apDungGuiLenKetQua(phuThuoc, nhom, ketQua)
+  await apDungGuiLenKetQua(phuThuoc, nhom, ketQua, epochLucBatDauGui)
   return { conNua: ketQua.conNua }
 }
 
@@ -508,6 +541,12 @@ async function guiMotLo(
  * một lần mỗi chu kỳ, xem M12) truyền lại kết quả đó thay vì để hàm này gọi lại lần thứ hai (tránh
  * một lượt kiểm tra nhảy giờ thừa mỗi chu kỳ) — bỏ trống (gọi trực tiếp, ví dụ từ test hoặc một nơi
  * gọi độc lập khác) thì hàm tự gọi `soDoanHienTai()` để vẫn đúng mà không cần biết chi tiết này.
+ *
+ * C3 (BẮT BUỘC, review vòng sửa 1): đọc `conTro.epoch` ĐÚNG MỘT LẦN ở đây, TRƯỚC KHI bất kỳ lô nào
+ * được gửi, rồi truyền xuyên suốt (qua `guiMotLo`) xuống MỌI lô của lượt gọi này (kể cả khi hàng
+ * chờ có nhiều nhóm `doan`, gửi thành nhiều lô riêng) — xem chú thích đầy đủ ở `apDungGuiLenKetQua`
+ * vì sao đây phải là epoch NGAY LÚC BẮT ĐẦU, không phải epoch đọc lại mỗi lô (vốn có thể đã bị một
+ * lô TRƯỚC trong CÙNG lượt này ghi đè).
  */
 export async function guiHangChoVaApDung(
   phuThuoc: PhuThuocBoDongBo,
@@ -515,9 +554,10 @@ export async function guiHangChoVaApDung(
   doanHienTaiDaBiet?: number,
 ): Promise<{ conNua: boolean }> {
   const doanHienTai = doanHienTaiDaBiet ?? (await phuThuoc.doan.soDoanHienTai())
+  const epochLucBatDauGui = (await docConTro(phuThuoc.kho)).epoch
 
   if (hangCho.length === 0) {
-    return guiMotLo(phuThuoc, [], doanHienTai)
+    return guiMotLo(phuThuoc, [], doanHienTai, epochLucBatDauGui)
   }
 
   // Nhóm theo `doan`, GIỮ NGUYÊN thứ tự chèn bên trong từng nhóm (Ràng buộc 9 chỉ đòi đúng
@@ -534,7 +574,7 @@ export async function guiHangChoVaApDung(
   let conNua = false
   for (const doan of [...theoNhom.keys()].sort((a, b) => a - b)) {
     const nhom = theoNhom.get(doan) as DongHangChoDongBo[]
-    const ketQuaNhom = await guiMotLo(phuThuoc, nhom, doanHienTai)
+    const ketQuaNhom = await guiMotLo(phuThuoc, nhom, doanHienTai, epochLucBatDauGui)
     conNua = conNua || ketQuaNhom.conNua
   }
   return { conNua }
@@ -918,7 +958,14 @@ export function batDauBoDongBo(
 // ketQua)` (CHƯA VIẾT) sẽ nhận đúng object `{ epoch, conTro, chupLuc, duLieu }` mà hàm này trả về.
 // ============================================================================================
 
-export type ToanBoDaGiaiNen = { epoch: string; conTro: number; chupLuc: string; duLieu: Record<string, unknown[]> }
+export type ToanBoDaGiaiNen = {
+  epoch: string
+  conTro: number
+  chupLuc: string
+  duLieu: Record<string, unknown[]>
+  /** C2 (review vòng sửa 1 của Task 8) — xem `ToanBoKetQua.soThuTuLucXoayGanNhat`. */
+  soThuTuLucXoayGanNhat: number | null
+}
 
 export async function taiToanBoVaGiaiNen(): Promise<ToanBoDaGiaiNen> {
   const ketQua = await layToanBo()
@@ -926,7 +973,13 @@ export async function taiToanBoVaGiaiNen(): Promise<ToanBoDaGiaiNen> {
   const luongDaGiaiNen = new Blob([nhiPhan]).stream().pipeThrough(new DecompressionStream('gzip'))
   const van = await new Response(luongDaGiaiNen).text()
   const duLieu = JSON.parse(van) as Record<string, unknown[]>
-  return { epoch: ketQua.epoch, conTro: ketQua.conTro, chupLuc: ketQua.chupLuc, duLieu }
+  return {
+    epoch: ketQua.epoch,
+    conTro: ketQua.conTro,
+    chupLuc: ketQua.chupLuc,
+    duLieu,
+    soThuTuLucXoayGanNhat: ketQua.soThuTuLucXoayGanNhat,
+  }
 }
 
 // Xuất lại type NguonKhoa để tránh tầng gọi (Task 7/10) phải import trực tiếp từ bauChu.ts khi chỉ

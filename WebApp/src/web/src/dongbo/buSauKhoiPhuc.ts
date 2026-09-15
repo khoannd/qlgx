@@ -34,20 +34,28 @@
  *
  * 1. Đọc `conTro.epoch` HIỆN TẠI (`docConTro`) — đây là "epoch_cũ", PHẢI đọc TRƯỚC khi bất kỳ
  *    bước nào khác có thể ghi đè `conTro`.
- * 2. Gọi `taiToanBoVaGiaiNen()` (Task 6, đã có sẵn) lấy `{ epoch: epoch_mới, conTro: soLonNhat }`
- *    — `soLonNhat` là "số lớn nhất hiện tại của máy chủ" (server KHÔNG reset `so_thu_tu` khi xoay
- *    epoch, chỉ đổi danh tính chuỗi — số này tiếp nối đúng từ thời điểm phục hồi).
- * 3. Lọc sổ đã nhận (`docTheoKhoang(kho, epoch_cũ, soLonNhat)`, Task 3) — CHÍNH XÁC các dòng
- *    `epoch_cũ` có `so_thu_tu > soLonNhat` là phần máy chủ đã mất mà máy này còn giữ.
- * 4. Không có dòng nào: chỉ cần đưa `conTro` sang `epoch_mới`/`soLonNhat` rồi dừng — không có gì
- *    để bù (Task 6 chưa có `apDungToanBo` để tự làm việc này, xem `boDongBo.ts` cuối file — module
- *    này là nơi đầu tiên thực sự gọi `taiToanBoVaGiaiNen()`, nên phải tự cập nhật `conTro`).
+ * 2. Gọi `taiToanBoVaGiaiNen()` (Task 6, đã có sẵn) lấy `{ epoch: epoch_mới, conTro:
+ *    conTroHienTaiMayChu, soThuTuLucXoayGanNhat: nguongLoc }`.
+ * 3. C2 (BẮT BUỘC, review vòng sửa 1) — LỌC sổ đã nhận bằng `docTheoKhoang(kho, epoch_cũ,
+ *    nguongLoc)` (Task 3), KHÔNG PHẢI `conTroHienTaiMayChu`: `nguongLoc` (`soThuTuLucXoayGanNhat`)
+ *    là số thứ tự lớn nhất TẠI THỜI ĐIỂM epoch được xoay — CỐ ĐỊNH — trong khi `conTroHienTaiMayChu`
+ *    là con trỏ TẠI THỜI ĐIỂM máy con này hỏi, có thể ĐÃ LỚN HƠN nếu có ai ghi thêm gì đó (máy con
+ *    khác, hoặc văn phòng qua web) SAU khi khôi phục nhưng TRƯỚC KHI máy con này kịp hỏi. Dùng nhầm
+ *    `conTroHienTaiMayChu` sẽ BỎ SÓT các dòng thật sự bị mất nằm giữa hai mốc đó — mất dữ liệu im
+ *    lặng, không báo lỗi. `nguongLoc === null` (giáo xứ chưa từng xoay epoch — không nên xảy ra ở
+ *    đây) ném `LoiThieuMocXoayEpoch` thay vì tự đoán ngưỡng.
+ * 4. Không có dòng nào: chỉ cần đưa `conTro` sang `epoch_mới`/`conTroHienTaiMayChu` rồi dừng —
+ *    không có gì để bù (Task 6 chưa có `apDungToanBo` để tự làm việc này, xem `boDongBo.ts` cuối
+ *    file — module này là nơi đầu tiên thực sự gọi `taiToanBoVaGiaiNen()`, nên phải tự cập nhật
+ *    `conTro`).
  * 5. Có dòng: dựng `DongHangChoDongBo[]` từ mỗi `DongDaNhan`, GIỮ NGUYÊN `dongHoVatLy`→`vatLy` và
  *    `dongHoLogic`→`logic` (KHÔNG qua `DongHoLogicMayCon.phatDau`/`donDieu.mocHienTaiMs()` — đây
  *    là sự thật lịch sử, không phải thao tác mới), gán `nguonGocEpoch`/`nguonGocSoThuTu`, sinh
- *    `maThaoTac`/`giaoDichId` MỚI (một lần gửi MỚI về giao thức, dù nội dung là lịch sử cũ — sổ
- *    chống trùng phía máy chủ dựa vào `(NguonGocEpoch, NguonGocSoThuTu)` cho ca này, KHÔNG dựa
- *    vào `MaThaoTac`, xem `DongBoService.cs` dòng ~404-406 và ~766-768).
+ *    `maThaoTac` MỚI (một lần gửi MỚI về giao thức, dù nội dung là lịch sử cũ — sổ chống trùng
+ *    phía máy chủ dựa vào `(NguonGocEpoch, NguonGocSoThuTu)` cho ca này, KHÔNG dựa vào
+ *    `MaThaoTac`, xem `DongBoService.cs` dòng ~404-406 và ~766-768). `giaoDichId` NGƯỢC LẠI —
+ *    KHÔNG sinh mới, dùng thẳng `dong.giaoDichId` gốc (C1/I3, review vòng sửa 1 — xem chú thích
+ *    `dongDaNhanThanhHangCho` bên dưới).
  * 6. LUÔN gọi `taiFileDuPhongXuong` với đúng các dòng vừa dựng ở bước 5, TRƯỚC bước 7 (xem Ruling
  *    ở trên).
  * 7. Nạp các dòng vào hàng chờ bằng `napLaiFileDuPhong` (Task 9, TÁI SỬ DỤNG NGUYÊN VẸN — nó chỉ
@@ -75,6 +83,7 @@
  * Đây là chỗ BẮT BUỘC phải có theo brief (fact test 2), nên không thể bỏ qua hoàn toàn.
  */
 import { docConTro, ghiConTro } from '../kho/conTro'
+import { docHangCho, type DongHangCho } from '../kho/hangCho'
 import { docTheoKhoang, type DongDaNhan } from '../kho/soDaNhan'
 import { taiToanBoVaGiaiNen, type DongHangChoDongBo, type PhuThuocBoDongBo, type TrangThaiBoDongBo } from './boDongBo'
 import { napLaiFileDuPhong, taiFileDuPhongXuong } from './tepDuPhong'
@@ -87,6 +96,17 @@ import { napLaiFileDuPhong, taiFileDuPhongXuong } from './tepDuPhong'
  * SAI so với những thay đổi thật đã xảy ra ở máy chủ SAU khi dữ liệu này bị mất (spec 4.8.5,
  * "Xung đột với người đã sửa sau khi khôi phục" — máy chủ còn kẹp thêm `min(mốc, giờ máy chủ)`
  * để chặn một mốc bịa ở tương lai, nhưng đó là việc của máy chủ, không phải của máy con).
+ *
+ * C1 (BẮT BUỘC, review vòng sửa 1) — `loai` PHẢI phân biệt "tao" và "sua" theo `dong.truong`,
+ * KHÔNG được hardcode `'sua'`. Xác nhận qua `DongBoService.cs`'s `ApThaoTacTao` (dòng ~863): một
+ * thao tác "tao" ghi ĐÚNG MỘT dòng `hieu_luc` với `Truong = ""` và `GiaTri` = JSON CẢ THỰC THỂ —
+ * máy chủ KHÔNG khai triển "tao" thành N dòng "sua" (bản trước hiểu SAI điều này). Vậy một dòng
+ * đã nhận có `truong === ''` LÀ MỘT DÒNG TẠO, không phải sửa. Gửi nó lại với `loai: 'sua'` khiến
+ * máy chủ tìm một bản ghi ĐÃ MẤT qua đường sửa ô (`banGhiId` đó không tồn tại) →
+ * `LoiKhongTimThayBanGhi` → từ chối CẢ NHÓM → ghi biên nhận theo danh tính gốc → không máy con
+ * nào khác bù lại được nữa → bản ghi mất VĨNH VIỄN. `truong`/`giaTri` GIỮ NGUYÊN either way — với
+ * dòng "tao", `dong.truong` vốn đã là `''` và `dong.giaTri` vốn đã là JSON cả thực thể (đúng hình
+ * dạng máy chủ cần), không cần biến đổi gì thêm.
  */
 function dongDaNhanThanhHangCho(dong: DongDaNhan, nguonGocEpoch: string): DongHangChoDongBo {
   return {
@@ -96,23 +116,71 @@ function dongDaNhanThanhHangCho(dong: DongDaNhan, nguonGocEpoch: string): DongHa
     // (dùng để hiệu chỉnh ĐỘ LỆCH giờ hiện tại, spec 4.3) không có ý nghĩa gì với một dấu quá khứ
     // đã đúng từ trước — không cần và không nên gán số đoạn hiện tại của máy này vào đây.
     doan: 0,
-    // Mọi dòng `hieu_luc` là kết quả TRIỂN KHAI mức trường phía máy chủ (spec 4.1: "tao" được
-    // khai triển thành N dòng "sua" ngay khi máy chủ nhận) — nên gửi lại luôn là "sua", kể cả nếu
-    // thao tác gốc từng là "tao".
-    loai: 'sua',
+    loai: dong.truong === '' ? 'tao' : 'sua',
     bang: dong.bang,
     banGhiId: dong.banGhiId,
     truong: dong.truong,
     giaTri: dong.giaTri,
     vatLy: dong.dongHoVatLy,
     logic: dong.dongHoLogic,
-    // Sinh MỚI — đây LÀ một lần gửi mới về mặt giao thức, dù nội dung là lịch sử cũ. Chống trùng
-    // giữa nhiều máy con cùng bù lại một dòng dựa vào `nguonGocEpoch`/`nguonGocSoThuTu` phía dưới
-    // (xem `DongBoService.cs` dòng ~404-406, ~766-768), KHÔNG dựa vào `giaoDichId` này.
-    giaoDichId: crypto.randomUUID(),
+    // I3 (Important, review vòng sửa 1) — dùng THẲNG `dong.giaoDichId` GỐC, KHÔNG sinh mới. Nhiều
+    // dòng `DongDaNhan` có thể cùng chung một `giaoDichId` gốc (nhiều trường của MỘT lần lưu gốc,
+    // xem `DongDaNhan.giaoDichId` đã có sẵn trong sổ đã nhận) — sinh `giaoDichId` MỚI cho TỪNG
+    // DÒNG (bản trước) cắt vụn một lần lưu gốc thành N giao dịch không liên quan gì nhau phía máy
+    // chủ, phá vỡ bất biến "một GiaoDichId gom đúng các dòng của MỘT lần lưu, không được áp nửa
+    // chừng" (xem `GhiThayDoi`/chú thích liên quan `GiaoDichId` trong `DongBoService.cs`). Lý do
+    // "sinh MỚI vì đây là lần gửi mới về giao thức" (comment cũ) ĐÚNG cho `maThaoTac` ở trên —
+    // chống trùng giữa nhiều máy con cùng bù lại một dòng dựa vào `nguonGocEpoch`/`nguonGocSoThuTu`
+    // phía dưới, KHÔNG dựa vào `maThaoTac`/`giaoDichId` — nhưng lý do đó SAI khi áp dụng cho
+    // `giaoDichId`: nhóm giao dịch gốc phải được giữ nguyên, không phải phát minh lại.
+    giaoDichId: dong.giaoDichId,
     nguonGocEpoch,
     nguonGocSoThuTu: dong.soThuTu,
   }
+}
+
+/** I4 (Important, review vòng sửa 1) — lỗi riêng cho LỚP 2 (spec 4.8.4), thay vì một `Error` trần
+ * chung chung. Tầng tích hợp sau (Task 10) `instanceof` kiểm tra được lớp lỗi này khi cần phân
+ * biệt "đồng bộ đang tạm dừng vì máy chủ có dấu hiệu đi lùi" với các lỗi khác của module này. */
+export class LoiDangDungViMayChuDiLui extends Error {
+  constructor(thongBao?: string) {
+    super(
+      thongBao ??
+        'Dong bo dang tam dung vi may chu co dau hieu vua bi dua ve ban cu (LOP 2, spec 4.8.4) — ' +
+          'khong tu bu lai du lieu. Can nguoi ho tro kiem tra truoc khi tiep tuc.',
+    )
+    this.name = 'LoiDangDungViMayChuDiLui'
+  }
+}
+
+/** C2 (BẮT BUỘC, review vòng sửa 1) — ném khi `/toan-bo` trả `soThuTuLucXoayGanNhat: null` NGAY
+ * TẠI thời điểm module này đã xác định CẦN bù lại (epoch cũ khác `null`, tức máy con đã từng đồng
+ * bộ và vừa phát hiện epoch đổi). Về lý thuyết tình huống này không nên xảy ra: epoch chỉ đổi khi
+ * máy chủ đã XOAY nó (`KhoiPhucDongBoService.XoayEpoch`), và câu UPDATE đó LUÔN ghi kèm
+ * `so_thu_tu_luc_xoay` cùng lúc — nên "epoch đã đổi nhưng chưa từng xoay" là dấu hiệu dữ liệu máy
+ * chủ KHÔNG NHẤT QUÁN (ví dụ dữ liệu cũ từ trước khi cột này tồn tại, hoặc một đường ghi khác lỡ bỏ
+ * qua bước đó). Máy con KHÔNG được tự đoán một ngưỡng lọc (`0` hay `conTro` đều SAI, xem C2) — phải
+ * dừng lại và báo lỗi rõ ràng để người hỗ trợ kiểm tra trực tiếp CSDL máy chủ. */
+export class LoiThieuMocXoayEpoch extends Error {
+  constructor() {
+    super(
+      'May chu bao epoch da doi nhung khong co moc "so_thu_tu_luc_xoay" (soThuTuLucXoayGanNhat ' +
+        'la null) — du lieu may chu khong nhat quan. KHONG the tu suy doan nguong loc de bu lai du ' +
+        'lieu (dung 0 hoac con tro hien tai deu co the bo sot hoac gui du du lieu). Can nguoi ho tro ' +
+        'kiem tra truc tiep bang bo_dem_hieu_luc cua giao xu nay truoc khi tiep tuc.',
+    )
+    this.name = 'LoiThieuMocXoayEpoch'
+  }
+}
+
+/** Danh tính gốc `(nguonGocEpoch, nguonGocSoThuTu)` của một dòng hàng chờ, dùng để chống trùng cục
+ * bộ (I2) — `null` nếu dòng không mang danh tính gốc hợp lệ (thao tác bình thường, không phải một
+ * dòng bù lại). Đọc qua ép kiểu `Record<string, unknown>` vì hai trường này nằm trong phần mở của
+ * `DongHangCho` (xem `hangCho.ts`/`DongHangChoDongBo`), không phải MỌI dòng hàng chờ đều có. */
+function danhTinhGocCuaDong(dong: DongHangCho): string | null {
+  const d = dong as Record<string, unknown>
+  if (typeof d.nguonGocEpoch !== 'string' || typeof d.nguonGocSoThuTu !== 'number') return null
+  return `${d.nguonGocEpoch}:${d.nguonGocSoThuTu}`
 }
 
 /**
@@ -121,6 +189,14 @@ function dongDaNhanThanhHangCho(dong: DongDaNhan, nguonGocEpoch: string): DongHa
  *
  * `layTrangThai`: xem "QUYẾT ĐỊNH THIẾT KẾ" ở đầu file — mặc định coi như đang chạy bình thường
  * nếu không truyền, để lời gọi với đúng MỘT tham số `phuThuoc` (brief) vẫn hợp lệ.
+ *
+ * I2 (Important, review vòng sửa 1): hàm LÕI này KHÔNG tự khoá "đang chạy" — dùng
+ * `xuLyEpochKhongKhopDonLuong` (cuối file) khi cần đảm bảo hai lời gọi chồng lên nhau không cùng
+ * chạy. Hàm lõi vẫn tự chống trùng CỤC BỘ ở BƯỚC 5.5 bên dưới (đọc hàng chờ hiện có, loại các
+ * dòng đã có sẵn cùng danh tính gốc) — cần thiết vì ngay cả khi gọi qua khoá "đang chạy", MỘT
+ * dòng bù lại có thể đã được một lượt gọi TRƯỚC ĐÓ (đã chạy xong, không còn "đang chạy" nữa) nạp
+ * vào hàng chờ rồi nhưng CHƯA kịp máy chủ xác nhận xong (vẫn còn nguyên trong hàng chờ) khi hàm
+ * này chạy lại lần nữa (ví dụ hai `LoiEpochKhongKhop` liên tiếp cách nhau vài chu kỳ).
  */
 export async function xuLyEpochKhongKhop(
   phuThuoc: PhuThuocBoDongBo,
@@ -128,10 +204,7 @@ export async function xuLyEpochKhongKhop(
 ): Promise<{ soDongDaBu: number }> {
   // LỚP 2 (spec 4.8.4) — kiểm tra TRƯỚC bất kỳ lời gọi mạng/đọc kho nào (xem chú thích đầu file).
   if (layTrangThai() === 'dung_do_may_chu_di_lui') {
-    throw new Error(
-      'Dong bo dang tam dung vi may chu co dau hieu vua bi dua ve ban cu (LOP 2, spec 4.8.4) — ' +
-        'khong tu bu lai du lieu. Can nguoi ho tro kiem tra truoc khi tiep tuc.',
-    )
+    throw new LoiDangDungViMayChuDiLui()
   }
 
   // BƯỚC 1 (spec 4.8.5 bước 1): đọc epoch HIỆN TẠI trước khi bất kỳ bước nào khác có thể ghi đè
@@ -142,38 +215,80 @@ export async function xuLyEpochKhongKhop(
   // BƯỚC 2: tải lại toàn bộ trạng thái MỚI của máy chủ (Task 6, đã có sẵn — `taiToanBoVaGiaiNen`
   // CHƯA từng được gọi ở bất kỳ đâu khác trong mã đã đóng, nên KHÔNG có ai khác ghi `conTro` xen
   // giữa bước 1 và đây — việc đọc epoch_cũ TRƯỚC vẫn là thói quen đúng, phòng khi thứ tự này bị
-  // đổi sau này). `conTro` trong kết quả trả về chính là "số lớn nhất hiện tại của máy chủ".
+  // đổi sau này). `conTroHienTaiMayChu` dùng để CẬP NHẬT `conTro` cục bộ (bước 4/cuối).
+  //
+  // C2 (BẮT BUỘC, review vòng sửa 1) — `nguongLoc` PHẢI là `soThuTuLucXoayGanNhat` (mốc CỐ ĐỊNH
+  // tại thời điểm epoch được xoay), KHÔNG PHẢI `conTroHienTaiMayChu` (con trỏ TẠI THỜI ĐIỂM máy
+  // con này hỏi — có thể ĐÃ LỚN HƠN nếu có ai ghi thêm gì đó SAU khi khôi phục nhưng TRƯỚC KHI máy
+  // con này kịp hỏi). Dùng nhầm `conTroHienTaiMayChu` sẽ BỎ SÓT các dòng thật sự bị mất nằm giữa
+  // hai mốc đó — mất dữ liệu im lặng, không báo lỗi, không mục xem lại (xem `ToanBoKetQua.SoThuTuLucXoayGanNhat`
+  // phía `DongBoDtos.cs` để có giải thích đầy đủ).
   const ketQuaToanBo = await taiToanBoVaGiaiNen()
   const epochMoi = ketQuaToanBo.epoch
-  const soLonNhat = ketQuaToanBo.conTro
+  const conTroHienTaiMayChu = ketQuaToanBo.conTro
+  const nguongLoc = ketQuaToanBo.soThuTuLucXoayGanNhat
 
-  // BƯỚC 3: lọc sổ đã nhận — CHÍNH XÁC các dòng epoch_cũ có so_thu_tu > soLonNhat là phần máy chủ
-  // đã mất mà máy này còn giữ. `epochCu === null` nghĩa là máy này CHƯA từng đồng bộ lần nào —
-  // không có sổ đã nhận nào thuộc một epoch cụ thể để so (`docTheoKhoang` cần một epoch dạng
-  // chuỗi) — xử lý an toàn bằng mảng rỗng thay vì giả định "chuyện đó không xảy ra".
-  const dongCanBu: DongDaNhan[] =
-    epochCu === null ? [] : await docTheoKhoang(phuThuoc.kho, epochCu, soLonNhat)
+  // BƯỚC 3a: `epochCu === null` nghĩa là máy này CHƯA từng đồng bộ lần nào — không có sổ đã nhận
+  // nào thuộc một epoch cụ thể để so, và cũng không có gì để bù (máy chưa từng giữ dữ liệu nào từ
+  // một epoch cũ). Xử lý an toàn: chỉ cập nhật `conTro` rồi dừng, không cần xét `nguongLoc`.
+  if (epochCu === null) {
+    await ghiConTro(phuThuoc.kho, { epoch: epochMoi, soThuTu: conTroHienTaiMayChu })
+    return { soDongDaBu: 0 }
+  }
 
-  // BƯỚC 4: không có gì để bù (hoặc chưa từng có epoch để so) — chỉ cần đưa `conTro` sang
-  // epoch_mới/soLonNhat rồi dừng. Sau lệnh `if` này, TypeScript tự thu hẹp `epochCu` về `string`
-  // (loại trừ `null`) cho phần còn lại của hàm — không cần ép kiểu thủ công.
-  if (epochCu === null || dongCanBu.length === 0) {
-    await ghiConTro(phuThuoc.kho, { epoch: epochMoi, soThuTu: soLonNhat })
+  // BƯỚC 3b (C2): `nguongLoc === null` nghĩa là giáo xứ CHƯA TỪNG được xoay epoch — về lý thuyết
+  // không nên xảy ra ở đây (hàm chỉ được gọi khi ĐÃ phát hiện epoch đổi, tức máy chủ ĐÃ xoay), vẫn
+  // phải xử lý AN TOÀN: ném lỗi rõ ràng thay vì âm thầm dùng `0`/`conTroHienTaiMayChu` — dấu hiệu
+  // dữ liệu máy chủ không nhất quán, cần người kiểm tra chứ không phải máy con tự đoán ngưỡng lọc.
+  if (nguongLoc === null) {
+    throw new LoiThieuMocXoayEpoch()
+  }
+
+  // BƯỚC 3c: lọc sổ đã nhận — CHÍNH XÁC các dòng epoch_cũ có so_thu_tu > nguongLoc là phần máy chủ
+  // đã mất mà máy này còn giữ.
+  const dongCanBu: DongDaNhan[] = await docTheoKhoang(phuThuoc.kho, epochCu, nguongLoc)
+
+  // BƯỚC 4: không có gì để bù — chỉ cần đưa `conTro` sang epoch_mới/conTroHienTaiMayChu rồi dừng.
+  if (dongCanBu.length === 0) {
+    await ghiConTro(phuThuoc.kho, { epoch: epochMoi, soThuTu: conTroHienTaiMayChu })
     return { soDongDaBu: 0 }
   }
 
   // BƯỚC 5: dựng DongHangChoDongBo[] — GIỮ NGUYÊN vatLy/logic gốc, gán danh tính gốc.
   const hangChoBu = dongCanBu.map((dong) => dongDaNhanThanhHangCho(dong, epochCu))
 
+  // BƯỚC 5.5 (I2, review vòng sửa 1) — chống trùng CỤC BỘ: loại các dòng trong `hangChoBu` đã có
+  // SẴN một dòng trùng `(nguonGocEpoch, nguonGocSoThuTu)` trong hàng chờ hiện có (ví dụ hai lần
+  // chạy chồng lên nhau, hoặc một lần chạy trước đã nạp dòng đó rồi nhưng máy chủ chưa kịp xác
+  // nhận xong — xem chú thích JSDoc của hàm). Không có bước này, hai lần chạy chồng sinh HAI dòng
+  // hàng chờ giống hệt nhau cho cùng một bản ghi đã mất (gửi trùng, lãng phí, và dễ gây nhầm lẫn
+  // khi xem hộp "cần xem lại" nếu một trong hai bị từ chối).
+  const hangChoHienCo = await docHangCho(phuThuoc.kho)
+  const danhTinhDaCoTrongHangCho = new Set(
+    hangChoHienCo.map(danhTinhGocCuaDong).filter((d): d is string => d !== null),
+  )
+  const hangChoBuSauLoc = hangChoBu.filter(
+    (dong) => !danhTinhDaCoTrongHangCho.has(`${dong.nguonGocEpoch}:${dong.nguonGocSoThuTu}`),
+  )
+
+  // Sau khi lọc không còn dòng nào — mọi dòng máy chủ vừa báo mất ĐÃ CÓ SẴN trong hàng chờ (đang
+  // chờ gửi) — không có gì mới để bù. BỎ QUA HẲN việc tải file dự phòng (không tải một file dự
+  // phòng RỖNG hoặc TRÙNG HỆT file trước đó vô nghĩa), chỉ cần tiến `conTro` rồi dừng, giống hệt
+  // nhánh BƯỚC 4 ở trên.
+  if (hangChoBuSauLoc.length === 0) {
+    await ghiConTro(phuThuoc.kho, { epoch: epochMoi, soThuTu: conTroHienTaiMayChu })
+    return { soDongDaBu: 0 }
+  }
+
   // BƯỚC 6: LUÔN sao lưu TRƯỚC khi thử nạp vào hàng chờ (xem Ruling ở đầu file) — máy con không
   // có cách nào biết trước cửa "cho phép bù lại" phía máy chủ đang mở hay đóng.
-  taiFileDuPhongXuong(hangChoBu)
+  taiFileDuPhongXuong(hangChoBuSauLoc)
 
   // BƯỚC 7: nạp vào hàng chờ — TÁI SỬ DỤNG NGUYÊN VẸN `napLaiFileDuPhong` (Task 9). Vòng đồng bộ
   // bình thường (Task 6) sẽ tự gửi các dòng này ở chu kỳ kế tiếp — module này KHÔNG tự gọi mạng.
-  await napLaiFileDuPhong(phuThuoc.kho, hangChoBu)
+  await napLaiFileDuPhong(phuThuoc.kho, hangChoBuSauLoc)
 
-  // Cập nhật `conTro` sang epoch_mới/soLonNhat SAU KHI đã nạp an toàn vào hàng chờ, KHÔNG PHẢI
+  // Cập nhật `conTro` sang epoch_mới/conTroHienTaiMayChu SAU KHI đã nạp an toàn vào hàng chờ, KHÔNG PHẢI
   // trước — quyết định thiết kế: nếu tiến trình bị ngắt (mất điện, đóng tab) GIỮA bước nạp và
   // bước này, `conTro` vẫn còn giữ epoch_cũ, nên lần đồng bộ sau máy con lại nhận 410 và CHẠY LẠI
   // đúng quy trình này — an toàn nhờ máy chủ chống trùng theo danh tính gốc (xem
@@ -182,7 +297,35 @@ export async function xuLyEpochKhongKhop(
   // epoch_mới nên không còn 410 nào kích hoạt lại quy trình này nữa, trong khi hàng chờ có thể
   // chưa kịp nhận đủ (hoặc chưa nhận gì) — đúng loại mất dữ liệu im lặng mà toàn bộ mục 4.8 sinh
   // ra để ngăn.
-  await ghiConTro(phuThuoc.kho, { epoch: epochMoi, soThuTu: soLonNhat })
+  await ghiConTro(phuThuoc.kho, { epoch: epochMoi, soThuTu: conTroHienTaiMayChu })
 
-  return { soDongDaBu: hangChoBu.length }
+  return { soDongDaBu: hangChoBuSauLoc.length }
+}
+
+// ============================================================================================
+// I2 (Important, review vòng sửa 1) — khoá "đang chạy" đơn giản, TỰ LÀM RIÊNG ở đây (KHÔNG sửa
+// `boDongBo.ts`, dù cùng khuôn mẫu với `goiThayDoiNgayDangChay` ở đó): hai lời gọi
+// `xuLyEpochKhongKhop` chồng lên nhau (ví dụ LỚP 1 bị bắt gần như đồng thời từ cả `/thay-doi` VÀ
+// `/gui-len` trong cùng một chu kỳ `motLanDongBo`, xem `boDongBo.ts`) sẽ TÁI SỬ DỤNG đúng MỘT
+// Promise đang treo thay vì chạy hai lượt song song — tránh hai lần tải file dự phòng (spam thư
+// mục Tải về) và hai giao dịch IndexedDB ghi chồng lên hàng chờ gần như đồng thời.
+// ============================================================================================
+
+let dangChayEpochKhongKhop: Promise<{ soDongDaBu: number }> | null = null
+
+/** Bọc `xuLyEpochKhongKhop` với khoá "đang chạy" — dùng hàm này (thay vì gọi thẳng
+ * `xuLyEpochKhongKhop`) ở tầng tích hợp thật, nơi có nguy cơ hai lời gọi chồng lên nhau. Lời gọi
+ * THỨ HAI trong lúc lời gọi ĐẦU còn đang chạy nhận lại ĐÚNG kết quả của lời gọi đầu (không tự
+ * chạy một lượt riêng) — an toàn vì `xuLyEpochKhongKhop` là idempotent theo `phuThuoc`/`layTrangThai`
+ * hiện có (không phụ thuộc tham số nào khác giữa hai lời gọi). */
+export function xuLyEpochKhongKhopDonLuong(
+  phuThuoc: PhuThuocBoDongBo,
+  layTrangThai?: () => TrangThaiBoDongBo,
+): Promise<{ soDongDaBu: number }> {
+  if (dangChayEpochKhongKhop) return dangChayEpochKhongKhop
+  const p = xuLyEpochKhongKhop(phuThuoc, layTrangThai).finally(() => {
+    dangChayEpochKhongKhop = null
+  })
+  dangChayEpochKhongKhop = p
+  return p
 }

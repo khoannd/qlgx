@@ -175,7 +175,10 @@ public class DongBoService(QlgxDbContext db, IBoiCanhGiaoXu boiCanh, ILogger<Don
         var json = JsonSerializer.SerializeToUtf8Bytes(goi, TaoTuyChonJsonAnhChup());
         var duLieuNen = NenGzipBase64(json);
 
-        return new ToanBoKetQua(dem.Epoch, conTro, chupLuc, duLieuNen);
+        // C2 (review vòng sửa 1 của Task 8): trả kèm ngưỡng lọc CHÍNH XÁC cho Task 8 (bù lại dữ
+        // liệu sau khôi phục) — xem ToanBoKetQua.SoThuTuLucXoayGanNhat vì sao KHÔNG được dùng
+        // `conTro` (con trỏ hiện tại) cho việc này.
+        return new ToanBoKetQua(dem.Epoch, conTro, chupLuc, duLieuNen, dem.SoThuTuLucXoay);
     }
 
     // ================================================================================

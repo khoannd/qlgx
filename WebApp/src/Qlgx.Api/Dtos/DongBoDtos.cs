@@ -21,8 +21,18 @@ public record NhanVeKetQua(Guid Epoch, long ConTroMoi, bool ConNua, List<DongHie
 /// trình duyệt hỗ trợ PWA đều giải nén gzip nguyên bản qua <c>DecompressionStream('gzip')</c>
 /// không cần kéo thêm thư viện nào vào gói cài đặt, còn <c>DecompressionStream</c> KHÔNG nhận
 /// <c>'br'</c> (Brotli) làm tham số — muốn giải Brotli phía trình duyệt phải tự vác theo một thư
-/// viện WASM. Giáo xứ 4074 giáo dân nén còn ≈ 500 KB (spec 1.2), gzip đã đủ nhẹ cho một lần tải.</summary>
-public record ToanBoKetQua(Guid Epoch, long ConTro, DateTimeOffset ChupLuc, string DuLieuNen);
+/// viện WASM. Giáo xứ 4074 giáo dân nén còn ≈ 500 KB (spec 1.2), gzip đã đủ nhẹ cho một lần tải.
+///
+/// <see cref="SoThuTuLucXoayGanNhat"/> (C2, review vòng sửa 1 của Task 8): số thứ tự lớn nhất TẠI
+/// THỜI ĐIỂM epoch hiện tại được xoay (xem <see cref="Qlgx.Domain.Entities.BoDemHieuLuc.SoThuTuLucXoay"/>)
+/// — KHÁC <see cref="ConTro"/> (con trỏ TẠI THỜI ĐIỂM máy con hỏi, có thể ĐÃ LỚN HƠN nếu có ai ghi
+/// gì đó — máy con khác, hoặc văn phòng qua web — SAU khi khôi phục nhưng TRƯỚC KHI máy con này
+/// kịp hỏi). Task 8 (bù lại dữ liệu sau khôi phục) PHẢI dùng giá trị này, KHÔNG PHẢI <see cref="ConTro"/>,
+/// làm ngưỡng lọc sổ đã nhận phía máy con — dùng nhầm <see cref="ConTro"/> sẽ bỏ sót các dòng bị
+/// mất nằm giữa hai mốc đó, mất dữ liệu im lặng. <c>null</c> nghĩa là giáo xứ này CHƯA TỪNG được
+/// xoay epoch (chưa từng khôi phục) — Task 8 khi đó không nên gọi hàm bù lại (không có gì để bù).</summary>
+public record ToanBoKetQua(Guid Epoch, long ConTro, DateTimeOffset ChupLuc, string DuLieuNen,
+    long? SoThuTuLucXoayGanNhat);
 
 /// <summary>
 /// MỘT thay đổi máy con muốn ghi lên: đúng một Ô của đúng một bản ghi (hoặc cả bản ghi mới, khi

@@ -31,6 +31,15 @@ public class BoDemHieuLuc
     public DateTimeOffset? XoayEpochLuc { get; set; }
 
     /// <summary>
+    /// Số thứ tự lớn nhất TẠI THỜI ĐIỂM epoch này được xoay (khác <see cref="SoTiepTheo"/>, vốn
+    /// tiếp tục tăng sau đó) — dùng làm ngưỡng lọc CHÍNH XÁC cho sổ đã nhận phía máy con khi bù
+    /// lại dữ liệu sau khôi phục (spec 4.8.5); dùng <see cref="SoTiepTheo"/> hiện tại thay vì
+    /// cột này sẽ bỏ sót các dòng bị mất nếu có ai ghi thêm gì đó sau khi xoay epoch nhưng trước
+    /// khi máy con này kịp hỏi.
+    /// </summary>
+    public long? SoThuTuLucXoay { get; set; }
+
+    /// <summary>
     /// ĐỒNG HỒ LAI CỦA CHÍNH MÁY CHỦ — mốc gần nhất máy chủ đã PHÁT RA cho giáo xứ này
     /// (<c>DongHoLai.NangDau</c> cần nó làm <c>dauCuoiCuaTa</c>).
     ///
