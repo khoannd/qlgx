@@ -76,8 +76,17 @@ describe('tinhTrangThai (Task 10, spec 9.1) — hàm thuần quyết định mà
     expect(kq.dongChu).not.toContain('Đang gửi lại')
   })
 
-  it('dangBuLai=true UU TIEN HON ca soCanXemLai > 0 (dung ngay sau dung_do_may_chu_di_lui)', () => {
+  // N2 (fix round cuoi): DAO thu tu so voi truoc — soCanXemLai > 0 (do) UU TIEN HON dangBuLai
+  // (vang). Canh bao do bao co viec can nguoi dung QUYET DINH, quan trong hon mot thong bao tien
+  // trinh dang tu chay; truoc day dangBuLai CHE mat canh bao do trong suot pha bu.
+  it('N2: soCanXemLai > 0 UU TIEN HON dangBuLai -> do "Can xem lai", KHONG phai vang "dang bu"', () => {
     const kq = tinhTrangThai(5, 3, 'dang_chay', true)
+    expect(kq.mau).toBe('do')
+    expect(kq.dongChu).toBe('Cần xem lại (3)')
+  })
+
+  it('N2: dangBuLai=true nhung soCanXemLai = 0 -> VAN vang "May chu vua duoc khoi phuc" (uu tien hon hang cho thuong)', () => {
+    const kq = tinhTrangThai(5, 0, 'dang_chay', true)
     expect(kq.mau).toBe('vang')
     expect(kq.dongChu).toContain('Máy chủ vừa được khôi phục')
   })
@@ -184,6 +193,81 @@ describe('ThanhTrangThai (component) — doc tu tang offline that + /api/can-xem
     render(<ThanhTrangThai />)
 
     expect(await screen.findByText(/Máy chủ vừa được khôi phục/)).toBeDefined()
+    dieuKhien.dung()
+  })
+
+  // I3 (fix round cuoi): cau tran an trong bang giai thich PHAI bam theo mau/trangThaiBo — truoc day
+  // render vo dieu kien, nen ngay duoi mot cham DO van hien "se tu gui len... khong can lam gi",
+  // mau thuan voi chinh cham do phia tren va SAI SU THAT o trang thai do.
+  it('I3: hang cho co viec (vang) -> bang giai thich VAN hien cau tran an cu (dung su that o trang thai nay)', async () => {
+    const db = await moKho(tenKhoRieng())
+    await new Promise<void>((resolve, reject) => {
+      const gd = db.transaction(KHO_HANG_CHO, 'readwrite')
+      gd.objectStore(KHO_HANG_CHO).add({ maThaoTac: 'tt-i3', doan: 0 }, 1)
+      gd.oncomplete = () => resolve()
+      gd.onerror = () => reject(gd.error)
+    })
+    const fetchGia = vi.fn(async () => new Response(JSON.stringify({ epoch: 'e', conTroMoi: 0, conNua: false, ketQua: [], dongMoi: [] }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchGia)
+    const dieuKhien = batDauBoDongBo(db, undefined, undefined, nguonKhoaGiaLap)
+    vi.spyOn(khoiDongOfflineModule, 'layTrangThaiOffline').mockReturnValue({ kho: db, dieuKhien })
+
+    render(<ThanhTrangThai />)
+    await userEvent.click(await screen.findByRole('button', { name: /Đã lưu ở máy này/ }))
+
+    expect(await screen.findByText(/sẽ tự gửi lên khi có mạng/)).toBeDefined()
+    dieuKhien.dung()
+  })
+
+  it('I3: co muc can xem lai (do) -> KHONG hien cau "khong can lam gi", hien cau nhac co viec can xem lai', async () => {
+    const db = await moKho(tenKhoRieng())
+    const fetchGia = vi.fn(async () => new Response(JSON.stringify({ epoch: 'e', conTroMoi: 0, conNua: false, dong: [] }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchGia)
+    const dieuKhien = batDauBoDongBo(db, undefined, undefined, nguonKhoaGiaLap)
+    vi.spyOn(khoiDongOfflineModule, 'layTrangThaiOffline').mockReturnValue({ kho: db, dieuKhien })
+    vi.mocked(api.canXemLai.danhSach).mockResolvedValue([
+      { id: '1', loai: 'xung_dot', bang: 'GiaoDan', banGhiId: 'gd-1', truong: 'ngaySinh', lyDo: null, giaTriA: 'a', giaTriB: 'b', giaTriDangDung: 'b', taoLuc: '2026-09-15T00:00:00Z' },
+    ])
+
+    render(<ThanhTrangThai />)
+    await userEvent.click(await screen.findByRole('button', { name: /Cần xem lại/ }))
+
+    await screen.findByRole('region', { name: 'Chi tiết trạng thái lưu dữ liệu' })
+    expect(screen.queryByText(/không cần làm gì/)).toBeNull()
+    expect(screen.getByText(/cần anh\/chị xem lại/)).toBeDefined()
+    dieuKhien.dung()
+  })
+
+  it('I3: LOP 2 (dung_do_may_chu_di_lui) -> cau khac han, KHONG noi "se tu gui len"/"khong can lam gi"', async () => {
+    const db = await moKho(tenKhoRieng())
+    const dieuKhienGia = {
+      dung: () => {}, baoDangGo: () => {}, danhThucNgay: () => {}, layThayDoiNgay: async () => null,
+      trangThai: () => 'dung_do_may_chu_di_lui' as const,
+    }
+    vi.spyOn(khoiDongOfflineModule, 'layTrangThaiOffline').mockReturnValue({ kho: db, dieuKhien: dieuKhienGia })
+
+    render(<ThanhTrangThai />)
+    await userEvent.click(await screen.findByRole('button', { name: /đưa về bản cũ/ }))
+
+    await screen.findByRole('region', { name: 'Chi tiết trạng thái lưu dữ liệu' })
+    expect(screen.queryByText(/sẽ tự gửi lên khi có mạng/)).toBeNull()
+    expect(screen.queryByText(/không cần làm gì/)).toBeNull()
+    expect(screen.getByText(/báo người hỗ trợ/)).toBeDefined()
+  })
+
+  it('I3: xanh (khong co gi cho) -> KHONG hien cau tran an nao ca', async () => {
+    const db = await moKho(tenKhoRieng())
+    const fetchGia = vi.fn(async () => new Response(JSON.stringify({ epoch: 'e', conTroMoi: 0, conNua: false, dong: [] }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchGia)
+    const dieuKhien = batDauBoDongBo(db, undefined, undefined, nguonKhoaGiaLap)
+    vi.spyOn(khoiDongOfflineModule, 'layTrangThaiOffline').mockReturnValue({ kho: db, dieuKhien })
+
+    render(<ThanhTrangThai />)
+    await userEvent.click(await screen.findByRole('button', { name: /Đã lưu an toàn/ }))
+
+    await screen.findByRole('region', { name: 'Chi tiết trạng thái lưu dữ liệu' })
+    expect(screen.queryByText(/sẽ tự gửi lên khi có mạng/)).toBeNull()
+    expect(screen.queryByText(/cần anh\/chị xem lại/)).toBeNull()
     dieuKhien.dung()
   })
 

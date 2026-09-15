@@ -19,19 +19,24 @@ export type MauTrangThai = 'xanh' | 'vang' | 'do'
 export type KetQuaTinhTrangThai = { mau: MauTrangThai; dongChu: string }
 
 /**
- * Quy tắc màu (spec 9.1) — thứ tự kiểm tra CỐ Ý: 🔴 (hai lý do độc lập, câu chữ khác nhau — spec
- * 4.8.6/task-10-brief.md) LUÔN được xét TRƯỚC 🟡/🟢, rồi mới tới 🟡 (hàng chờ chưa rỗng), CUỐI CÙNG
- * mới tới 🟢. Nhờ thứ tự này, 🟢 CHỈ có thể trả về khi `soHangCho === 0` — đây chính là bất biến
- * "không bao giờ hiện xanh khi hàng chờ chưa rỗng" mà brief yêu cầu kiểm thử tường minh.
+ * Quy tắc màu (spec 9.1) — thứ tự kiểm tra CỐ Ý: MỌI nhánh 🔴 được xét TRƯỚC mọi nhánh 🟡, rồi cuối
+ * cùng mới tới 🟢. Nhờ thứ tự này, 🟢 CHỈ có thể trả về khi `soHangCho === 0` — đây chính là bất
+ * biến "không bao giờ hiện xanh khi hàng chờ chưa rỗng" mà brief yêu cầu kiểm thử tường minh.
+ *
+ * N2 (fix round cuối): thứ tự đầy đủ là `dung_do_may_chu_di_lui` (🔴) → `soCanXemLai > 0` (🔴) →
+ * `dangBuLai` (🟡) → `soHangCho > 0` (🟡) → 🟢. Trước đây `dangBuLai` đứng TRƯỚC `soCanXemLai > 0`
+ * và do đó CHE mất cảnh báo đỏ "Cần xem lại" trong suốt lúc đang bù (một pha có thể kéo dài). Cảnh
+ * báo đỏ báo có việc cần người dùng QUYẾT ĐỊNH, quan trọng hơn hẳn một thông báo tiến trình đang tự
+ * chạy — người dùng cần biết có việc cần mình trước.
  */
 export function tinhTrangThai(
   soHangCho: number,
   soCanXemLai: number,
   trangThaiBo: TrangThaiBoDongBo | null,
   // L3 (fix round Task 11, spec 4.8.6): đang bù lại hàng chờ sau khi phát hiện máy chủ vừa được
-  // khôi phục (epoch không khớp) — ưu tiên THẤP hơn `dung_do_may_chu_di_lui` (lỗi nghiêm trọng hơn,
-  // xét trước) nhưng CAO hơn `soCanXemLai > 0`/hàng chờ thường, vì đây là một trạng thái tạm thời
-  // cần người dùng biết NGAY đang có chuyện gì xảy ra, khác câu chữ "đang gửi về" bình thường.
+  // khôi phục (epoch không khớp) — đây là một trạng thái tạm thời cần người dùng biết đang có
+  // chuyện gì xảy ra, nên câu chữ khác hẳn "đang gửi về" bình thường; nhưng vẫn là nhánh 🟡, xét
+  // SAU mọi nhánh 🔴 (xem N2 ở JSDoc trên).
   dangBuLai = false,
 ): KetQuaTinhTrangThai {
   if (trangThaiBo === 'dung_do_may_chu_di_lui') {
@@ -40,14 +45,14 @@ export function tinhTrangThai(
       dongChu: 'Máy chủ có dấu hiệu vừa bị đưa về bản cũ — cần người hỗ trợ kiểm tra trước khi tiếp tục',
     }
   }
+  if (soCanXemLai > 0) {
+    return { mau: 'do', dongChu: `Cần xem lại (${soCanXemLai})` }
+  }
   if (dangBuLai) {
     return {
       mau: 'vang',
       dongChu: `Máy chủ vừa được khôi phục. Đang gửi lại ${soHangCho} thay đổi mà máy này còn giữ.`,
     }
-  }
-  if (soCanXemLai > 0) {
-    return { mau: 'do', dongChu: `Cần xem lại (${soCanXemLai})` }
   }
   if (soHangCho > 0) {
     return { mau: 'vang', dongChu: `Đã lưu ở máy này (${soHangCho}) — đang gửi về` }
@@ -257,10 +262,30 @@ export function ThanhTrangThai({ onMoBanGiaoMay }: { onMoBanGiaoMay?: () => void
 
       {moRong && (
         <div className="trang-thai-dongbo-panel" role="region" aria-label="Chi tiết trạng thái lưu dữ liệu">
-          <p>
-            Những thay đổi này đã lưu trong máy và sẽ tự gửi lên khi có mạng. Anh/chị không cần làm
-            gì, cũng không mất dữ liệu.
-          </p>
+          {/* I3 (fix round cuối): câu này TRƯỚC ĐÂY render vô điều kiện — nghĩa là ngay dưới một
+              chấm ĐỎ ("Cần xem lại", hoặc "máy chủ vừa bị đưa về bản cũ") vẫn hiện nguyên câu
+              "sẽ tự gửi lên... không cần làm gì, cũng không mất dữ liệu". Ở hai trạng thái đỏ đó câu
+              ấy KHÔNG ĐÚNG SỰ THẬT: khi bộ đồng bộ đã tự dừng thì không có gì "sẽ tự gửi lên" cả, và
+              khi có mục cần xem lại thì đúng là có việc người dùng phải làm. Câu chữ nay bám theo
+              `mau`/`trangThaiBo` đã tính ở trên. Màu xanh: bỏ hẳn — không có gì "đang chờ" để trấn an. */}
+          {mau === 'do' && trangThaiBo === 'dung_do_may_chu_di_lui' && (
+            <p>
+              Việc gửi dữ liệu đã tạm dừng để tránh làm hỏng thêm dữ liệu. Xin báo người hỗ trợ,
+              đừng tự thử lại và đừng xoá dữ liệu trên máy này.
+            </p>
+          )}
+          {mau === 'do' && trangThaiBo !== 'dung_do_may_chu_di_lui' && (
+            <p>
+              Những thay đổi này đã lưu trong máy, nhưng có vài chỗ cần anh/chị xem lại và quyết định
+              trước khi tiếp tục.
+            </p>
+          )}
+          {mau === 'vang' && (
+            <p>
+              Những thay đổi này đã lưu trong máy và sẽ tự gửi lên khi có mạng. Anh/chị không cần làm
+              gì, cũng không mất dữ liệu.
+            </p>
+          )}
 
           <p>Số việc đang chờ gửi: {soHangCho}</p>
           {/* L3 (spec 4.8.6): dòng tổng kết sau khi bù xong lần gần nhất — hiện tới khi có lần bù
