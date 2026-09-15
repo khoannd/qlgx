@@ -46,6 +46,10 @@ export function tinhTrangThai(
 
 const MAU_CHAM: Record<MauTrangThai, string> = { xanh: '#1a7f37', vang: '#b98900', do: '#c22c2c' }
 const CHU_KY_LAM_MOI_MS = 5000
+// I5 (fix round 1): hỏi máy chủ (`/api/can-xem-lai`) không cần nhanh bằng đếm hàng chờ cục bộ (đọc
+// IndexedDB — rẻ) — giãn ra một chu kỳ riêng, dài hơn hẳn, để giảm số lượt gọi mạng khi thanh trạng
+// thái luôn hiện (mọi màn hình, mọi lúc).
+const CHU_KY_HOI_MAY_CHU_MS = 30000
 
 export function ThanhTrangThai({ onMoBanGiaoMay }: { onMoBanGiaoMay?: () => void } = {}) {
   // `null` = CHƯA đọc được lần nào (tầng offline chưa khởi động xong, hoặc lượt đọc đầu chưa
@@ -54,6 +58,10 @@ export function ThanhTrangThai({ onMoBanGiaoMay }: { onMoBanGiaoMay?: () => void
   // (return null) cho tới khi có số liệu THẬT đầu tiên.
   const [soHangCho, setSoHangCho] = useState<number | null>(null)
   const [soCanXemLai, setSoCanXemLai] = useState(0)
+  // N4: cờ đánh dấu ĐÃ hỏi máy chủ (`/api/can-xem-lai`) thành công ít nhất một lần — khác `soHangCho`
+  // (vốn dùng `null` để phân biệt "chưa biết"), `soCanXemLai` khởi tạo `0` nên cần cờ riêng để phân
+  // biệt "chưa từng hỏi được" với "hỏi được, và đúng là 0".
+  const [daHoiCanXemLaiLanDau, setDaHoiCanXemLaiLanDau] = useState(false)
   const [trangThaiBo, setTrangThaiBo] = useState<TrangThaiBoDongBo | null>(null)
   const [moRong, setMoRong] = useState(false)
   const [moKyThuat, setMoKyThuat] = useState(false)
@@ -61,34 +69,69 @@ export function ThanhTrangThai({ onMoBanGiaoMay }: { onMoBanGiaoMay?: () => void
   const [dangNap, setDangNap] = useState(false)
   const [thongBaoNap, setThongBaoNap] = useState<string | null>(null)
   const [daSaoChep, setDaSaoChep] = useState(false)
+  const [loiSaoChep, setLoiSaoChep] = useState(false)
+  // I2: phiên bản phần mềm (khối "Thông tin kỹ thuật") — cùng cách `SideNav.tsx` lấy (`GET
+  // /api/suc-khoe`, ẩn danh). `null` khi chưa tải xong hoặc gọi lỗi.
+  const [phienBan, setPhienBan] = useState<string | null>(null)
+  // I2: lỗi gần nhất gặp phải khi tự làm mới (đếm hàng chờ hoặc hỏi "cần xem lại") — hiện trong khối
+  // "Thông tin kỹ thuật" để người hỗ trợ từ xa có manh mối, không chỉ có trong console.
+  const [loiGanNhat, setLoiGanNhat] = useState<string | null>(null)
   const inputTepRef = useRef<HTMLInputElement | null>(null)
 
-  const lamMoi = useCallback(async () => {
+  useEffect(() => {
+    let huy = false
+    api.he.sucKhoe()
+      .then((tt) => { if (!huy) setPhienBan(tt.phienBan) })
+      .catch(() => { if (!huy) setPhienBan(null) })
+    return () => { huy = true }
+  }, [])
+
+  const ghiLoiGanNhat = useCallback((loi: unknown) => {
+    setLoiGanNhat(`${new Date().toLocaleString('vi-VN')}: ${loi instanceof Error ? loi.message : String(loi)}`)
+  }, [])
+
+  // I5: đếm hàng chờ (đọc IndexedDB cục bộ — rẻ) — giữ nguyên chu kỳ 5 giây cũ.
+  const lamMoiHangCho = useCallback(async () => {
     const tt = layTrangThaiOffline()
-    if (tt) {
-      try {
-        const n = await demHangCho(tt.kho)
-        setSoHangCho(n)
-      } catch (loi) {
-        console.error('ThanhTrangThai: khong dem duoc hang cho', loi)
-      }
-      setTrangThaiBo(tt.dieuKhien.trangThai())
+    if (!tt) return
+    try {
+      const n = await demHangCho(tt.kho)
+      setSoHangCho(n)
+    } catch (loi) {
+      console.error('ThanhTrangThai: khong dem duoc hang cho', loi)
+      ghiLoiGanNhat(loi)
     }
+    setTrangThaiBo(tt.dieuKhien.trangThai())
+  }, [ghiLoiGanNhat])
+
+  // I5: hỏi máy chủ (`/api/can-xem-lai`) — chu kỳ RIÊNG, dài hơn (30s), và bỏ qua hẳn khi biết chắc
+  // đang offline (tránh lỗi ồn ào + tránh nguy cơ đá người dùng ra do 401 giữa lúc token có thể còn
+  // hợp lệ khi có mạng lại).
+  const lamMoiCanXemLai = useCallback(async () => {
+    if (!navigator.onLine) return
     try {
       const ds = await api.canXemLai.danhSach()
       setSoCanXemLai(ds.length)
+      setDaHoiCanXemLaiLanDau(true)
     } catch (loi) {
       // Mat mang/loi may chu khi hoi so "can xem lai" KHONG duoc lam sap thanh trang thai — giu
       // gia tri cu (co the hoi cu nhung van con hon lam nguoi dung hoang mang vi bien mat).
       console.error('ThanhTrangThai: khong hoi duoc /api/can-xem-lai', loi)
+      ghiLoiGanNhat(loi)
     }
-  }, [])
+  }, [ghiLoiGanNhat])
 
   useEffect(() => {
-    lamMoi()
-    const id = setInterval(lamMoi, CHU_KY_LAM_MOI_MS)
+    lamMoiHangCho()
+    const id = setInterval(lamMoiHangCho, CHU_KY_LAM_MOI_MS)
     return () => clearInterval(id)
-  }, [lamMoi])
+  }, [lamMoiHangCho])
+
+  useEffect(() => {
+    lamMoiCanXemLai()
+    const id = setInterval(lamMoiCanXemLai, CHU_KY_HOI_MAY_CHU_MS)
+    return () => clearInterval(id)
+  }, [lamMoiCanXemLai])
 
   // Nạp lại danh sách chi tiết hàng chờ CHỈ khi bảng giải thích đang mở (tránh đọc thêm một
   // transaction IndexedDB mỗi 5 giây khi không ai xem tới).
@@ -97,9 +140,11 @@ export function ThanhTrangThai({ onMoBanGiaoMay }: { onMoBanGiaoMay?: () => void
     const tt = layTrangThaiOffline()
     if (!tt) return
     let huy = false
-    docHangCho(tt.kho).then((ds) => {
-      if (!huy) setHangChoChiTiet(ds)
-    })
+    docHangCho(tt.kho)
+      .then((ds) => {
+        if (!huy) setHangChoChiTiet(ds)
+      })
+      .catch((loi) => console.error('ThanhTrangThai: khong doc duoc chi tiet hang cho', loi))
     return () => {
       huy = true
     }
@@ -118,7 +163,8 @@ export function ThanhTrangThai({ onMoBanGiaoMay }: { onMoBanGiaoMay?: () => void
       const hangCho = docNoiDungFileDuPhong(vanBan)
       await napLaiFileDuPhong(tt.kho, hangCho)
       setThongBaoNap(`Đã nạp lại ${hangCho.length} việc từ file dự phòng.`)
-      await lamMoi()
+      await lamMoiHangCho()
+      await lamMoiCanXemLai()
     } catch (loi) {
       setThongBaoNap(loi instanceof Error ? loi.message : 'Không nạp được file dự phòng.')
     } finally {
@@ -127,24 +173,35 @@ export function ThanhTrangThai({ onMoBanGiaoMay }: { onMoBanGiaoMay?: () => void
     }
   }
 
+  // I2 (fix round 1, spec 9.1): khối "Thông tin kỹ thuật" — dùng chung cho cả bản hiện trên màn
+  // hình lẫn bản sao chép clipboard, tránh hai nơi lệch nhau. "Lần gửi gần nhất"/"lần lấy dữ liệu
+  // gần nhất" CỐ Ý CHƯA có ở đây — `DieuKhienBoDongBo` (`dongbo/boDongBo.ts`) chưa lưu hai mốc thời
+  // gian này, việc thêm nằm NGOÀI phạm vi fix round này (xem task-10-fix-round-1-brief.md mục I2) —
+  // hoãn có chủ ý sang task sau, không phải bỏ sót.
+  function thongTinKyThuat() {
+    return {
+      thietBiId: layThietBiId(),
+      phienBanPhanMem: phienBan,
+      trangThaiBoDongBo: trangThaiBo,
+      soViecChuaGui: soHangCho,
+      soMucCanXemLai: soCanXemLai,
+      loiGanNhat,
+      thoiDiem: new Date().toISOString(),
+    }
+  }
+
   async function saoChepThongTinKyThuat() {
-    const noiDung = JSON.stringify(
-      {
-        thietBiId: layThietBiId(),
-        trangThaiBoDongBo: trangThaiBo,
-        soViecChuaGui: soHangCho,
-        soMucCanXemLai: soCanXemLai,
-        thoiDiem: new Date().toISOString(),
-      },
-      null,
-      2,
-    )
+    const noiDung = JSON.stringify(thongTinKyThuat(), null, 2)
     try {
       await navigator.clipboard.writeText(noiDung)
       setDaSaoChep(true)
+      setLoiSaoChep(false)
       setTimeout(() => setDaSaoChep(false), 3000)
     } catch (loi) {
+      // N2: loi sao chep (vi du trinh duyet chan Clipboard API) phai bao cho nguoi dung, khong chi
+      // nam trong console — ho can biet de tu chon roi sao chep tay.
       console.error('ThanhTrangThai: khong sao chep duoc thong tin ky thuat', loi)
+      setLoiSaoChep(true)
     }
   }
 
@@ -181,11 +238,24 @@ export function ThanhTrangThai({ onMoBanGiaoMay }: { onMoBanGiaoMay?: () => void
           </p>
 
           <p>Số việc đang chờ gửi: {soHangCho}</p>
-          {moRong && hangChoChiTiet.length > 0 && (
+          {/* N4: chưa hỏi máy chủ được lần nào -> soCanXemLai (khởi tạo 0) có thể chưa đúng thật,
+              khác han soHangCho (khởi tạo null, đã có gác ở trên) — báo rõ để tránh hiểu nhầm "0" là
+              "đã biết chắc = 0". */}
+          {!daHoiCanXemLaiLanDau && (
+            <p>Chưa hỏi được máy chủ lần nào — số mục cần xem lại có thể chưa cập nhật.</p>
+          )}
+          {hangChoChiTiet.length > 0 && (
             <ul>
-              {hangChoChiTiet.slice(0, 20).map((d) => (
-                <li key={d.maThaoTac}>{String((d as Record<string, unknown>).bang ?? '')} — {String((d as Record<string, unknown>).truong ?? '')}</li>
-              ))}
+              {hangChoChiTiet.slice(0, 20).map((d) => {
+                // N3: DongHangCho đã có `& Record<string, unknown>` sẵn (kho/hangCho.ts) — không cần
+                // ép kiểu. Thiếu cả bang lẫn truong -> hiện maThaoTac thay vì " — " rỗng nghĩa.
+                const bang = d.bang
+                const truong = d.truong
+                const nhan = bang == null && truong == null
+                  ? String(d.maThaoTac)
+                  : `${String(bang ?? '')} — ${String(truong ?? '')}`
+                return <li key={d.maThaoTac}>{nhan}</li>
+              })}
               {hangChoChiTiet.length > 20 && <li>… và {hangChoChiTiet.length - 20} việc khác</li>}
             </ul>
           )}
@@ -213,17 +283,22 @@ export function ThanhTrangThai({ onMoBanGiaoMay }: { onMoBanGiaoMay?: () => void
             </p>
           )}
 
+          {/* I2: "lần gửi gần nhất"/"lần lấy dữ liệu gần nhất" (spec 9.1) CHƯA có nguồn dữ liệu ở
+              tầng này — `DieuKhienBoDongBo` chưa lưu hai mốc thời gian này. Hoãn có chủ ý sang task
+              sau (xem `thongTinKyThuat()` ở trên), không phải bỏ sót. */}
           <details open={moKyThuat} onToggle={(e) => setMoKyThuat((e.target as HTMLDetailsElement).open)}>
             <summary>Thông tin kỹ thuật</summary>
             <pre style={{ fontSize: 11, whiteSpace: 'pre-wrap' }}>
-              {JSON.stringify(
-                { thietBiId: layThietBiId(), trangThaiBoDongBo: trangThaiBo, soViecChuaGui: soHangCho, soMucCanXemLai: soCanXemLai },
-                null, 2,
-              )}
+              {JSON.stringify(thongTinKyThuat(), null, 2)}
             </pre>
             <button type="button" onClick={saoChepThongTinKyThuat}>
               {daSaoChep ? 'Đã sao chép' : 'Sao chép để gửi người hỗ trợ'}
             </button>
+            {loiSaoChep && (
+              <span role="alert" style={{ marginLeft: 8 }}>
+                Không sao chép được — xin chọn rồi sao chép tay đoạn chữ ở trên.
+              </span>
+            )}
           </details>
         </div>
       )}

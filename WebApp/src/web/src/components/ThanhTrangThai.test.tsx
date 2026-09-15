@@ -11,7 +11,7 @@ import { api } from '../api/client'
 import type { NguonKhoa } from '../dongbo/bauChu'
 
 vi.mock('../api/client', () => ({
-  api: { canXemLai: { danhSach: vi.fn() } },
+  api: { canXemLai: { danhSach: vi.fn() }, he: { sucKhoe: vi.fn() } },
 }))
 
 describe('tinhTrangThai (Task 10, spec 9.1) — hàm thuần quyết định màu/câu chữ', () => {
@@ -73,6 +73,7 @@ describe('ThanhTrangThai (component) — doc tu tang offline that + /api/can-xem
   beforeEach(() => {
     _resetChoKiemThu()
     vi.mocked(api.canXemLai.danhSach).mockResolvedValue([])
+    vi.mocked(api.he.sucKhoe).mockResolvedValue({ trangThai: 'ok', phienBan: '1.2.3' })
   })
   afterEach(() => {
     vi.unstubAllGlobals()
