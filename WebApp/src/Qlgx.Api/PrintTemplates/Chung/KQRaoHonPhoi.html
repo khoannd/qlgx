@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Times New Roman", "Liberation Serif", Georgia, serif;
+    font-size: 12pt;
+    color: #000;
+    margin: 0;
+    padding: 0;
+  }
+  .quoc-hieu { text-align: center; margin-bottom: 4mm; }
+  .quoc-hieu .dong1 { font-weight: bold; letter-spacing: 0.5px; }
+  .quoc-hieu .dong2 { font-style: italic; }
+  .dau-phan { text-align: center; margin: 1mm 0 6mm 0; }
+  .dau-phan hr { display: inline-block; width: 40mm; border: none; border-top: 1px solid #000; }
+
+  .giao-xu-info { text-align: center; margin-bottom: 6mm; line-height: 1.5; }
+  .giao-xu-info .ten-giao-xu { font-weight: bold; font-size: 14pt; text-transform: uppercase; }
+
+  .tieu-de { text-align: center; margin: 6mm 0; }
+  .tieu-de h1 { font-size: 17pt; margin: 0; letter-spacing: 1px; }
+
+  .kinh-gui { margin: 3mm 0; font-style: italic; text-align: center; }
+  .linh-muc-gui { margin: 3mm 0; text-align: center; }
+  .chung-nhan { text-align: center; font-weight: bold; margin: 5mm 0; letter-spacing: 1px; }
+
+  .hai-ben { display: flex; gap: 6mm; margin: 4mm 0; }
+  .mot-ben { flex: 1; min-width: 0; }
+  .mot-ben .ben-tieu-de { font-weight: bold; text-transform: uppercase; text-align: center;
+    border-bottom: 1px solid #000; padding-bottom: 1mm; margin-bottom: 2mm; }
+  .mot-ben .dong { margin: 1.4mm 0; line-height: 1.5; }
+
+  .khoi { margin-top: 4mm; }
+  .khoi-tieu-de { font-weight: bold; }
+  .rao-hon-phoi { white-space: pre-line; margin: 2mm 0 2mm 4mm; }
+
+  .doan-ket-qua { margin: 5mm 0; text-align: justify; line-height: 1.6; }
+
+  .ky-ten { margin-top: 8mm; text-align: center; }
+  .ky-ten .ngay-thang { font-style: italic; margin-bottom: 14mm; display: block; }
+  .ky-ten .chuc-danh { font-weight: bold; }
+
+  .ghi-chu-cuoi { margin-top: 8mm; font-size: 10pt; font-style: italic; color: #333; }
+</style>
+</head>
+<body>
+  <div class="quoc-hieu">
+    <div class="dong1">CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+    <div class="dong2">Độc lập – Tự do – Hạnh phúc</div>
+  </div>
+  <div class="dau-phan"><hr /></div>
+
+  <div class="giao-xu-info">
+    <div>Giáo phận {{TenGiaoPhan}}</div>
+    <div class="ten-giao-xu">GIÁO XỨ {{TenGiaoXu}}</div>
+  </div>
+
+  <div class="tieu-de">
+    <h1>GIẤY KẾT QUẢ RAO HÔN PHỐI</h1>
+  </div>
+
+  <div class="kinh-gui">Kính gửi: Cha xứ {{TenGiaoXuNhan}}, Giáo Phận {{TenGiaoPhanNhan}}</div>
+  <div class="linh-muc-gui">Linh mục chánh xứ: {{TenLinhMucGui}}</div>
+
+  <div class="chung-nhan">CHỨNG NHẬN</div>
+
+  <div class="hai-ben">
+    <div class="mot-ben">
+      <div class="ben-tieu-de">BÊN {{Phai1}}</div>
+      <div class="dong">{{AnhChi1}}: {{HoTen1}}</div>
+      <div class="dong">Điện thoại: {{DienThoai1}}</div>
+      <div class="dong">Sinh ngày: {{NgaySinh1}}; tại: {{NoiSinh1}}</div>
+      <div class="dong">{{MoTaRuaToi1}}</div>
+      <div class="dong">{{MoTaThemSuc1}}</div>
+      <div class="dong">Con Ông: {{TenCha1}}</div>
+      <div class="dong">và Bà: {{TenMe1}}</div>
+      <div class="dong">Thuộc Giáo xứ: {{TenGiaoXu1}}</div>
+      <div class="dong">Giáo phận: {{TenGiaoPhan1}}</div>
+      <div class="dong">Địa chỉ: {{DiaChi1}}</div>
+    </div>
+    <div class="mot-ben">
+      <div class="ben-tieu-de">BÊN {{Phai2}}</div>
+      <div class="dong">{{AnhChi2}}: {{HoTen2}}</div>
+      <div class="dong">Điện thoại: {{DienThoai2}}</div>
+      <div class="dong">Sinh ngày: {{NgaySinh2}}; tại: {{NoiSinh2}}</div>
+      <div class="dong">{{MoTaRuaToi2}}</div>
+      <div class="dong">{{MoTaThemSuc2}}</div>
+      <div class="dong">Con Ông: {{TenCha2}}</div>
+      <div class="dong">và Bà: {{TenMe2}}</div>
+      <div class="dong">Thuộc Giáo xứ: {{TenGiaoXu2}}</div>
+      <div class="dong">Giáo phận: {{TenGiaoPhan2}}</div>
+      <div class="dong">Địa chỉ: {{DiaChi2}}</div>
+    </div>
+  </div>
+
+  <div class="khoi">
+    <div class="khoi-tieu-de">Đã điều tra và rao ba lần vào các ngày:</div>
+    <div class="rao-hon-phoi">{{RaoHonPhoi}}</div>
+  </div>
+
+  <div class="doan-ket-qua">
+    Kết quả: Hết hạn rao 3 Chúa Nhật trên không thấy ai thưa ngăn trở gì.<br />
+    Xin Cha thương Chứng hôn cho anh chị tại Giáo xứ của Cha.<br />
+    Xin Chúa chúc lành cho công việc Tông Đồ của Cha.
+  </div>
+
+  <div class="ky-ten">
+    <span class="ngay-thang">Làm tại {{TenGiaoXu}}, {{NgayThangNamIn}}</span>
+    <span class="chuc-danh">LINH MỤC PHỤ TRÁCH</span>
+  </div>
+
+  <div class="ghi-chu-cuoi">Giấy in trực tiếp từ hệ thống quản lý giáo xứ — không có giá trị khi có tẩy xoá, sửa chữa.</div>
+</body>
+</html>

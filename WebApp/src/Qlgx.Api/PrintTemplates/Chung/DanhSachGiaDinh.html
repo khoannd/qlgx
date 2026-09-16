@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Times New Roman", "Liberation Serif", Georgia, serif;
+    font-size: 9pt;
+    color: #000;
+    margin: 0;
+    padding: 0;
+  }
+  .tieu-de { text-align: center; margin-bottom: 2mm; }
+  .tieu-de h1 { font-size: 14pt; margin: 0 0 1mm 0; letter-spacing: 0.5px; }
+  .tieu-de .giao-xu { font-size: 10pt; font-weight: bold; text-transform: uppercase; }
+  .tieu-de .phu-de { font-size: 9pt; }
+
+  table.ds { width: 100%; border-collapse: collapse; }
+  table.ds th, table.ds td { border: 1px solid #999; padding: 1mm 1.5mm; text-align: left; }
+  table.ds thead { display: table-header-group; }
+  table.ds th { background: #eee; font-weight: bold; white-space: nowrap; }
+  table.ds td.so { text-align: right; }
+  .struck { text-decoration: line-through; color: #777; }
+
+  .chan-trang { margin-top: 2mm; font-size: 9pt; font-style: italic; color: #333; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+  <div class="tieu-de">
+    <div class="giao-xu">GIÁO XỨ {{TenGiaoXu}}</div>
+    <h1>DANH SÁCH GIA ĐÌNH</h1>
+    <div class="phu-de">{{DieuKienLoc}}</div>
+  </div>
+
+  <table class="ds">
+    <thead>
+      <tr>
+        <th>Mã GĐ</th><th>Tên gia đình</th><th>Người nam</th><th>Người nữ</th><th>Số người</th>
+        <th>Điện thoại</th><th>ĐT chồng</th><th>ĐT vợ</th><th>Địa chỉ</th><th>Giáo họ</th>
+        <th>Diện gia đình</th><th>Ghi chú</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{HangDanhSach}}
+    </tbody>
+  </table>
+
+  <div class="chan-trang">
+    <span>Tổng số: {{SoLuong}} gia đình</span>
+    <span>In lúc {{NgayThangNamIn}}</span>
+  </div>
+</body>
+</html>

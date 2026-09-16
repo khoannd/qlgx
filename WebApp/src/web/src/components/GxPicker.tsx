@@ -1,0 +1,159 @@
+import { useEffect, useRef, useState } from 'react'
+import { api } from '../api/client'
+import type { GiaoDanTimKiem } from '../api/types'
+import { GxDropdownPortal } from './GxDropdownPortal'
+
+type Props = {
+  /** Tên hiển thị hiện tại (đã chọn hoặc gõ tay từ dữ liệu cũ) — chỉ đọc, ô picker luôn
+   * ReadOnly giống bản desktop (Designer.cs: `txtNguoiChong.ReadOnly = true`). */
+  value?: string | null
+  id?: string
+  /** Gọi khi người dùng CHỌN một giáo dân thật từ danh sách tìm kiếm — mang cả bản ghi để nơi
+   * gọi tự quyết định gán id thật (vd `chaId`) lẫn cập nhật tên hiển thị. */
+  onChon?: (gd: GiaoDanTimKiem) => void
+  onThemMoi?: () => void
+  onBoChon?: () => void
+  /** Mở hồ sơ giáo dân đang chọn trong một thẻ tài liệu mới (`useTabDocs`) — chỉ hiện khi có
+   * `value` (đã chọn ai đó) VÀ nơi gọi truyền hàm này (màn hình gia đình mới nối, xem
+   * can-review-sau.md). Dùng lại đúng cơ chế "Xem gia đình" của `GxGiaoDanList`, không phát
+   * minh cách mở tab khác. */
+  onXem?: () => void
+}
+
+/**
+ * Ô chọn giáo dân — tương đương UserControl `GxGiaoDan` của bản desktop: ô chỉ đọc hiển thị
+ * tên cùng ba nút tròn (chọn từ danh sách / thêm mới / bỏ chọn). Nút "Chọn" mở một hộp tìm
+ * kiếm thật (gõ để tìm theo tên hoặc mã cũ, gọi `GET /api/giao-dan/tim`, kết quả giới hạn —
+ * xem GiaoDanService.TimKiem) thay vì chỉ hiển thị tĩnh như trước (xem
+ * docs/superpowers/specs/man-hinh/can-review-sau.md mục 19). Nút "Thêm mới" (mở `frmGiaoDan`
+ * đầy đủ ở bản desktop) mở một thẻ tài liệu "Giáo dân mới" TÁCH BIỆT (tái dùng nguyên vẹn màn
+ * hình tạo giáo dân đầy đủ, `App.moChiTietGiaoDan`), tạo xong tự đóng thẻ đó và điền ngược kết
+ * quả vào đúng ô picker đang mở — xem `GiaDinhDetail.tsx` (Người nam/Người nữ/"Thêm thành
+ * viên", nơi gọi đầu tiên nối `onThemMoi`) và can-review-sau.md. Trước đây `onThemMoi` để
+ * trống nên bấm vào im lặng không phản hồi gì (kiểm thử khám phá 2026-09-07 mục 5) — người
+ * dùng không biết là hỏng hay chưa hỗ trợ; nơi gọi nào CHƯA nối `onThemMoi` (ví dụ Tên cha/mẹ ở
+ * `GiaoDanDetail.tsx`) thì nút vẫn vô hiệu hoá kèm tooltip rõ ràng như cũ, không im lặng.
+ */
+export function GxPicker({ value, id, onChon, onThemMoi, onBoChon, onXem }: Props) {
+  const [dangMo, setDangMo] = useState(false)
+  const [tuKhoa, setTuKhoa] = useState('')
+  const [ketQua, setKetQua] = useState<GiaoDanTimKiem[]>([])
+  const [dangTai, setDangTai] = useState(false)
+  // Lỗi mạng/máy chủ khi tìm — PHẢI hiện khác hẳn "không tìm thấy" (mảng rỗng hợp lệ). Nuốt lỗi
+  // thành "không tìm thấy giáo dân nào" từng khiến nhân viên tưởng người đó chưa có trong hệ
+  // thống lúc mạng chập chờn (Wi-Fi giáo xứ vùng xa) rồi tạo bản ghi trùng — xem review-frontend
+  // mục "Cao #1". `api.timKiem.giaoDan` đi qua `goi()` trong `api/client.ts`, nơi đã phân biệt
+  // lỗi mạng thật với lỗi HTTP và luôn ném `Error` có thông báo tiếng Việt sẵn dùng được thẳng.
+  const [loiTai, setLoiTai] = useState<string | null>(null)
+  // Tăng mỗi lần bấm "Thử lại" để buộc effect bên dưới chạy lại dù `tuKhoa` không đổi.
+  const [lanThu, setLanThu] = useState(0)
+  const hopRef = useRef<HTMLDivElement>(null)
+  // Neo vị trí cho GxDropdownPortal — chính span.picker (không phải hopRef, vì hopRef trỏ tới
+  // hộp thoại kết quả nằm TRONG portal, không còn ở tại chỗ trong DOM để đo toạ độ).
+  const ankerRef = useRef<HTMLSpanElement>(null)
+
+  useEffect(() => {
+    if (!dangMo) return
+    const timer = setTimeout(() => {
+      setDangTai(true)
+      setLoiTai(null)
+      api.timKiem
+        .giaoDan(tuKhoa, 20)
+        .then((ds) => { setKetQua(ds); setLoiTai(null) })
+        .catch((e: unknown) => {
+          setKetQua([])
+          setLoiTai(e instanceof Error ? e.message : 'Không tìm kiếm được. Hãy thử lại.')
+        })
+        .finally(() => setDangTai(false))
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [dangMo, tuKhoa, lanThu])
+
+  useEffect(() => {
+    if (!dangMo) return
+    function ngoaiHop(e: MouseEvent) {
+      if (hopRef.current && !hopRef.current.contains(e.target as Node)) setDangMo(false)
+    }
+    document.addEventListener('mousedown', ngoaiHop)
+    return () => document.removeEventListener('mousedown', ngoaiHop)
+  }, [dangMo])
+
+  function chon(gd: GiaoDanTimKiem) {
+    onChon?.(gd)
+    setDangMo(false)
+    setTuKhoa('')
+  }
+
+  return (
+    <span className="picker" id={id} ref={ankerRef} style={{ position: 'relative' }}>
+      <span className={'who' + (value ? '' : ' empty')}>{value || '—'}</span>
+      {onXem && (
+        <button type="button" className="mini" title="Mở hồ sơ trong thẻ mới"
+          disabled={!value} onClick={onXem}>
+          ⧉
+        </button>
+      )}
+      <button type="button" className="mini" title="Chọn từ danh sách giáo dân"
+        onClick={() => setDangMo((m) => !m)}>
+        &#9678;
+      </button>
+      <button type="button" className="mini"
+        title={onThemMoi ? 'Thêm giáo dân mới' : 'Thêm giáo dân mới — chưa hỗ trợ'}
+        disabled={!onThemMoi} onClick={onThemMoi}>
+        +
+      </button>
+      <button type="button" className="mini" title="Bỏ chọn" onClick={onBoChon}>
+        &times;
+      </button>
+
+      <GxDropdownPortal anchorRef={ankerRef} open={dangMo}>
+        <div ref={hopRef} className="picker-dropdown" role="listbox"
+          style={{
+            minWidth: 260,
+            background: 'var(--bg, #fff)', border: '1px solid #ccc', borderRadius: 6,
+            boxShadow: '0 4px 12px rgba(0,0,0,.15)', padding: 6,
+          }}>
+          <input
+            type="text"
+            autoFocus
+            placeholder="Gõ tên hoặc mã cũ để tìm…"
+            value={tuKhoa}
+            onChange={(e) => setTuKhoa(e.target.value)}
+            style={{ width: '100%', boxSizing: 'border-box', marginBottom: 4 }}
+          />
+          {dangTai && <div className="muted" style={{ fontSize: 12.5, padding: 4 }}>Đang tìm…</div>}
+          {!dangTai && loiTai && (
+            <div role="alert" style={{ fontSize: 12.5, padding: 4, color: '#b91c1c' }}>
+              {loiTai}{' '}
+              <button type="button" className="mini" style={{ marginLeft: 4 }}
+                onClick={() => setLanThu((n) => n + 1)}>
+                Thử lại
+              </button>
+            </div>
+          )}
+          {!dangTai && !loiTai && ketQua.length === 0 && (
+            <div className="muted" style={{ fontSize: 12.5, padding: 4 }}>Không tìm thấy giáo dân nào</div>
+          )}
+          {!dangTai && !loiTai && ketQua.length > 0 && (
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0, maxHeight: 220, overflowY: 'auto' }}>
+              {ketQua.map((gd) => (
+                <li key={gd.id}>
+                  <button type="button" onClick={() => chon(gd)}
+                    style={{
+                      width: '100%', textAlign: 'left', background: 'none', border: 'none',
+                      padding: '4px 6px', cursor: 'pointer', borderRadius: 4,
+                    }}>
+                    {(gd.tenThanh ? gd.tenThanh + ' ' : '') + gd.hoTen}
+                    <span className="muted" style={{ fontSize: 11.5, marginLeft: 6 }}>
+                      #{gd.maGiaoDanCu} · {gd.phai ?? '?'} {gd.ngaySinh ? '· ' + gd.ngaySinh.slice(0, 4) : ''}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </GxDropdownPortal>
+    </span>
+  )
+}

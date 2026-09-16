@@ -1,0 +1,12 @@
+# Rat quan trong: khong co file nay thi obj/ da build tren Windows (project.assets.json tro
+# toi duong dan NuGet fallback CHI CO tren may Windows) bi COPY vao build context Linux, lam
+# "dotnet publish --no-restore" dung sai cache va that bai kho hieu (da gap phai luc kiem thu
+# Dockerfile nay — xem can-review-sau.md).
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+.git/
+.env
+anh-chup-kiem-thu/
+prototype/

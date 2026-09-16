@@ -1,0 +1,146 @@
+import { useEffect, useState } from 'react'
+import { api } from '../../api/client'
+
+/** Một mục điều hướng. `id` chỉ có mặt khi mục đó đã nối được vào một thẻ tài
+ * liệu thật (xem `onNavigate` trong `App.tsx`) — các mục còn lại là chỗ giữ
+ * chỗ cho màn hình sẽ dựng ở task sau, bấm vào chưa làm gì. */
+type MucDieuHuong = {
+  id?: string
+  nhan: string
+}
+
+type NhomDieuHuong = {
+  nhan: string
+  muc: MucDieuHuong[]
+}
+
+const DANH_SACH_DIEU_HUONG: NhomDieuHuong[] = [
+  {
+    nhan: 'Giáo dân & gia đình',
+    muc: [
+      { id: 'giaoDanList', nhan: 'Danh sách giáo dân' },
+      { id: 'giaDinhList', nhan: 'Danh sách gia đình' },
+      { id: 'hoiDoanList', nhan: 'Danh sách hội đoàn' },
+    ],
+  },
+  {
+    nhan: 'Bí tích',
+    muc: [
+      { id: 'dotBiTichList', nhan: 'Danh sách sổ bí tích' },
+      { id: 'raoHonPhoiList', nhan: 'Danh sách rao hôn phối' },
+    ],
+  },
+  {
+    nhan: 'Thông tin giáo xứ',
+    muc: [
+      { id: 'giaoXu', nhan: 'Giáo xứ' },
+      { id: 'giaoHoList', nhan: 'Giáo họ' },
+      { id: 'khoiGiaoLyList', nhan: 'Quản lý giáo lý' },
+      // "Quản lý mẫu in" (năng lực MỚI, xem quan-ly-mau-in.md) — mọi tài khoản đã đăng nhập
+      // đều thấy (kể cả tài khoản nhập liệu thường), chỉ khác chỗ sửa được gì; KHÔNG đặt vào
+      // nhóm "Hệ thống" bên dưới vì mục đó CHỈ hiện cho laQuanTri/laQuanTriHeThong.
+      { id: 'mauInList', nhan: 'Quản lý mẫu in' },
+    ],
+  },
+  {
+    nhan: 'Thống kê',
+    muc: [
+      { id: 'thongKeChung', nhan: 'Thống kê chung' },
+      { id: 'bieuDo', nhan: 'Biểu đồ' },
+    ],
+  },
+  {
+    nhan: 'Công cụ dữ liệu',
+    muc: [
+      { id: 'kiemTraDuLieuGiaoDan', nhan: 'Kiểm tra dữ liệu — giáo dân' },
+      { id: 'kiemTraDuLieuGiaDinh', nhan: 'Kiểm tra dữ liệu — gia đình' },
+      { id: 'chuyenHo', nhan: 'Chuyển họ hàng loạt' },
+      { id: 'chuanHoaDuLieu', nhan: 'Chuẩn hoá dữ liệu' },
+      { id: 'taoDotBiTichTuDong', nhan: 'Tạo danh sách bí tích tự động' },
+      // "Tìm và thay thế" (frmReplace.cs) — ở desktop nằm trong menu "Tìm kiếm" cùng "Tìm giáo
+      // dân"/"Tìm gia đình", KHÔNG cùng nhóm "Chuẩn hoá dữ liệu"/"Chuyển họ" — bản web CỐ Ý đặt
+      // vào đây vì cùng bản chất "công cụ sửa dữ liệu hàng loạt", xem tim-thay-the.md.
+      { id: 'timThayThe', nhan: 'Tìm và thay thế' },
+    ],
+  },
+  {
+    nhan: 'Hồ sơ lưu trữ',
+    muc: [
+      { id: 'giaoDanLuuTruList', nhan: 'Hồ sơ lưu trữ giáo dân' },
+      { id: 'giaDinhLuuTruList', nhan: 'Hồ sơ lưu trữ gia đình' },
+    ],
+  },
+]
+
+type Props = {
+  dangChonId: string
+  onNavigate: (id: string) => void
+  /** Chỉ Quản trị viên thấy mục "Quản lý tài khoản" — xem policy "QuanTri" phía backend và
+   * quyết định ghi ở can-review-sau.md (bản desktop không chặn quyền này, bản web chặn). */
+  laQuanTri: boolean
+  /** Chỉ tài khoản "Quản trị hệ thống" (LoaiTaiKhoan=9) thấy mục "Quản lý giáo xứ" — màn hình
+   * duy nhất nhìn xuyên TOÀN BỘ máy chủ, policy "QuanTriHeThong" phía backend (xem
+   * docs/superpowers/specs/man-hinh/quan-ly-giao-xu.md mục 4). Mặc định false để không phá
+   * các nơi gọi <SideNav> cũ chưa truyền prop này. */
+  laQuanTriHeThong?: boolean
+}
+
+export function SideNav({ dangChonId, onNavigate, laQuanTri, laQuanTriHeThong }: Props) {
+  const mucHeThong = [
+    // "Cần xem lại"/"Bàn giao máy này" (kế hoạch 5, offline-first) — MỌI tài khoản thấy, không
+    // gắn cờ quyền nào: đây là việc của CHÍNH CÁI MÁY đang dùng (hàng chờ/hộp xem lại cục bộ),
+    // không phải một năng lực quản trị theo vai trò người dùng.
+    { id: 'canXemLai', nhan: 'Cần xem lại' },
+    { id: 'banGiaoMay', nhan: 'Bàn giao máy này' },
+    ...(laQuanTri ? [{ id: 'taiKhoanList', nhan: 'Quản lý tài khoản' }] : []),
+    ...(laQuanTriHeThong ? [{ id: 'quanLyGiaoXu', nhan: 'Quản lý giáo xứ' }] : []),
+    ...(laQuanTriHeThong ? [{ id: 'nhapDuLieu', nhan: 'Nhập dữ liệu Access' }] : []),
+    ...(laQuanTriHeThong ? [{ id: 'saoLuu', nhan: 'Sao lưu & Phục hồi' }] : []),
+  ]
+  const danhSachDieuHuong = mucHeThong.length > 0
+    ? [...DANH_SACH_DIEU_HUONG, { nhan: 'Hệ thống', muc: mucHeThong }]
+    : DANH_SACH_DIEU_HUONG
+
+  // Phiên bản THẬT của bản web (GET /api/suc-khoe, anonymous) — trước đây viết cứng
+  // "Bản 4.0.0 · dữ liệu cục bộ": "4.0.0" là số hiệu bản DESKTOP, và "dữ liệu cục bộ" mâu
+  // thuẫn thẳng với mô hình đã chốt (một máy chủ tập trung phục vụ nhiều giáo xứ, xem
+  // WebApp/TIEN-DO.md mục "Bốn thay đổi lớn") — xem can-review-sau.md mục 32. `null` khi
+  // chưa tải xong hoặc gọi lỗi — hiện chữ trung lập thay vì để trống đột ngột.
+  const [phienBan, setPhienBan] = useState<string | null>(null)
+  useEffect(() => {
+    let huy = false
+    api.he.sucKhoe()
+      .then((tt) => { if (!huy) setPhienBan(tt.phienBan) })
+      .catch(() => { if (!huy) setPhienBan(null) })
+    return () => { huy = true }
+  }, [])
+
+  return (
+    <nav className="sidenav glass">
+      <div className="nav-scroll">
+        {danhSachDieuHuong.map((nhom) => (
+          <div className="nav-group" key={nhom.nhan}>
+            <span className="eyebrow">{nhom.nhan}</span>
+            {nhom.muc.map((m) => (
+              <button
+                key={m.nhan}
+                type="button"
+                className={m.id !== undefined && m.id === dangChonId ? 'on' : undefined}
+                onClick={m.id ? () => onNavigate(m.id!) : undefined}
+              >
+                <span className="ico" />
+                {m.nhan}
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* "Sao lưu gần nhất: hôm nay 06:15" cũ là chữ tĩnh bịa ra — chưa có API trạng thái sao
+          lưu nào, thà không hiện gì còn hơn hiện một lời hứa sai (can-review-sau.md mục 32). */}
+      <div className="nav-foot">
+        <b>Bản web{phienBan ? ` ${phienBan}` : ''}</b>
+      </div>
+    </nav>
+  )
+}

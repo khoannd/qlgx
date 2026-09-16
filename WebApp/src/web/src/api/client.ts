@@ -1,0 +1,1010 @@
+import type {
+  GiaDinhDetail, GiaDinhListItem, GiaoDanDetail, GiaoDanListItem, GiaoDanTimKiem, GiaoHo,
+  HoiDoanCuaGiaoDan, HoiDoanDanhMuc, HoiDoanQuanLy, ThanhVienHoiDoan, HonPhoiCuaGiaoDan, TanHienCuaGiaoDan,
+  TaiKhoanItem, DangNhapKetQua, GiaoXuLuaChon, SucKhoe, LinhMuc,
+  GiaoPhan, GiaoHatQuanLy, GiaoXuQuanLy, GiaoXuHienTai, BaoCaoXemTruoc, TrangThaiNhapDuLieu,
+  DotBiTichListItem, DotBiTichDetail, LoaiBiTich, RaoHonPhoiListItem, RaoHonPhoiDetail,
+  KhoiGiaoLy, LopGiaoLy, HocVienLopGiaoLy, GiaoLyVienLop,
+  ChuyenLopXemTruoc, ChuyenLopKetQua, NhapHocVienXemTruoc, NhapHocVienKetQua,
+  DieuKienThongKe, TrangThaiHonPhoiThongKe, ThongKeChungKetQua, ThongKeOnGoiKetQua,
+  BieuDoNam, BieuDoBiTichNam, BieuDoDoTuoi, BieuDoGiaoHo,
+  KiemTraGiaoDanKetQua, KiemTraGiaoDanTuyChon, KiemTraGiaDinhKetQua, KiemTraGiaDinhTuyChon,
+  ChuyenHoGiaoDanXemTruoc, ChuyenHoGiaoDanKetQua, ChuyenHoGiaDinhXemTruoc, ChuyenHoGiaDinhKetQua,
+  ChuanHoaXemTruoc, ChuanHoaKetQua, TaoDotBiTichXemTruoc, TaoDotBiTichKetQua,
+  BangTimThayThe, TimThayTheXemTruoc, TimThayTheKetQua,
+  MauInDanhSachItem, MauInChiTiet, CachHienThiDungSaiItem,
+  TinhTrangSaoLuu, BanSaoLuu, CongViecSaoLuu, LoaiCongViecSaoLuu,
+  CanXemLai,
+} from './types'
+import { authStore } from './authStore'
+
+class LoiXungDot extends Error {}
+export { LoiXungDot }
+
+class ChuaDangNhap extends Error {}
+export { ChuaDangNhap }
+
+/** Ném khi tên đăng nhập trùng ở nhiều giáo xứ (xem AuthService.DangNhap mục M1) — client
+ * PHẢI cho người dùng chọn đúng giáo xứ trong `danhSachGiaoXu` rồi gọi lại `api.auth.dangNhap`
+ * kèm `giaoXuId`, không được tự đoán. */
+class CanChonGiaoXu extends Error {
+  danhSachGiaoXu: GiaoXuLuaChon[]
+  constructor(thongBao: string, danhSachGiaoXu: GiaoXuLuaChon[]) {
+    super(thongBao)
+    this.danhSachGiaoXu = danhSachGiaoXu
+  }
+}
+export { CanChonGiaoXu }
+
+/** Đọc `{ thongBao }` từ thân lỗi JSON nếu có — endpoint trả 400/409 kèm thông báo tiếng
+ * Việt sẵn (xem GiaDinhEndpoints/GiaoDanEndpoints); phần lớn lỗi khác (404, 500, lỗi mạng)
+ * không có thân JSON nên phải chấp nhận rơi về thông báo chung. */
+async function docThongBaoLoi(res: Response): Promise<string | null> {
+  try {
+    const than = await res.json()
+    return typeof than?.thongBao === 'string' ? than.thongBao : null
+  } catch {
+    return null
+  }
+}
+
+async function goi<T>(duong: string, tuyChon?: RequestInit): Promise<T> {
+  // GiaoXuId của phiên KHÔNG BAO GIỜ đi qua tham số ở đây — nó nằm trong claim của token,
+  // đọc phía máy chủ (xem BoiCanhGiaoXuTuNguoiDung.cs). Ở đây chỉ đính token, không có chỗ
+  // nào trong toàn bộ client này được phép thêm giaoXuId vào query/body.
+  const token = authStore.layToken()
+  let res: Response
+  try {
+    res = await fetch(duong, {
+      ...tuyChon,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...tuyChon?.headers,
+      },
+    })
+  } catch (loiMang) {
+    // Lỗi mạng (server chưa chạy, mất kết nối…) KHÔNG được nuốt thành mảng rỗng — người dùng
+    // cần biết đây là sự cố kết nối, không phải "giáo xứ chưa có dữ liệu". Phân biệt hai
+    // trường hợp bằng `navigator.onLine` (Task 16): mất mạng THẬT (giáo xứ vùng xa, đường
+    // truyền chập chờn) cần một câu trấn an — dữ liệu đang gõ không mất (xem `lib/banNhap.ts`)
+    // và thử lại được — khác với máy chủ chưa chạy lúc phát triển.
+    console.error(`Lỗi mạng khi gọi ${duong}`, loiMang)
+    const dangMatMang = typeof navigator !== 'undefined' && navigator.onLine === false
+    // Câu hiển thị cho người dùng KHÔNG được nhắc tới đường dẫn API hay "Qlgx.Api" — người
+    // trực văn phòng giáo xứ không biết đó là gì (xem UX-REVIEW-2026-09-08.md mục 2). Đường
+    // dẫn thật vẫn còn trong console.error phía trên để lập trình viên gỡ lỗi.
+    throw new Error(
+      dangMatMang
+        ? 'Mất kết nối mạng. Dữ liệu bạn đã nhập vẫn được giữ nguyên trên máy — hãy thử lại khi có mạng.'
+        : 'Không kết nối được máy chủ. Vui lòng thử lại sau ít phút hoặc báo cho người quản trị.',
+    )
+  }
+
+  if (res.status === 401) {
+    // Token thiếu/hết hạn/sai — báo cho AuthProvider tự đăng xuất và hiện lại màn hình đăng
+    // nhập. KHÔNG xoá bản nháp form đang gõ (việc đó do cơ chế nháp localStorage của từng
+    // form chi tiết đảm nhiệm, độc lập với đăng nhập).
+    authStore.baoHet401()
+    throw new ChuaDangNhap('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+  }
+  if (res.status === 409) {
+    const thongBao = await docThongBaoLoi(res)
+    throw new LoiXungDot(thongBao ?? 'Bản ghi vừa được người khác cập nhật.')
+  }
+  if (!res.ok) {
+    const thongBao = await docThongBaoLoi(res)
+    // Thông báo hiện lên MÀN HÌNH không được lộ đường dẫn API/mã trạng thái kỹ thuật — người
+    // dùng là quý cha, quý sơ, người trực văn phòng giáo xứ, không phải dân kỹ thuật (xem
+    // UX-REVIEW-2026-09-08.md mục 2). Chi tiết đầy đủ (đường dẫn, mã trạng thái) vẫn ghi vào
+    // console để hỗ trợ/gỡ lỗi, chỉ không đưa nguyên văn vào chuỗi lỗi hiển thị cho người dùng.
+    const thongBaoNguoiDung =
+      thongBao ??
+      (res.status >= 500
+        ? 'Máy chủ đang gặp sự cố, chưa xử lý được yêu cầu này. Vui lòng thử lại sau ít phút hoặc báo cho người quản trị.'
+        : 'Yêu cầu không thực hiện được. Vui lòng thử lại, hoặc báo cho người quản trị nếu vẫn còn lỗi.')
+    console.error(`Lỗi ${res.status} khi gọi ${duong}`, thongBao)
+    throw new Error(thongBaoNguoiDung)
+  }
+
+  // KHÔNG chỉ dựa vào status 204: `Results.Ok()` không kèm giá trị (PUT thành công của cả
+  // hai endpoint gia-dinh/giao-dan) trả về 200 nhưng thân rỗng — gọi thẳng `res.json()` trên
+  // thân rỗng ném "Unexpected end of JSON input" (bắt được khi kiểm thử thật trên trình
+  // duyệt, xem task-noi-frontend-report.md). Đọc text trước rồi mới parse là cách an toàn với
+  // MỌI cách máy chủ báo "không có nội dung", bất kể mã trạng thái.
+  const than = await res.text()
+  return than ? (JSON.parse(than) as T) : (undefined as T)
+}
+
+/** Tải một tệp nhị phân (PDF in ấn — xem `Qlgx.Api/Endpoints/GiaoDanEndpoints.cs`
+ * `/in/ly-lich-ca-nhan`) và kích trình duyệt lưu về máy, thay vì cố `res.json()` như `goi()`.
+ * Đọc tên tệp thật từ header `Content-Disposition` mà `Results.File(...)` phía máy chủ đã đặt
+ * sẵn (ví dụ `LyLichCaNhan_1234.pdf`), rơi về một tên chung nếu vì lý do gì đó thiếu header. */
+async function taiTepIn(duong: string, tenTepMacDinh: string): Promise<void> {
+  const token = authStore.layToken()
+  let res: Response
+  try {
+    res = await fetch(duong, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+  } catch (loiMang) {
+    console.error(`Lỗi mạng khi in ${duong}`, loiMang)
+    throw new Error('Không kết nối được máy chủ để in. Vui lòng thử lại sau ít phút hoặc báo cho người quản trị.')
+  }
+  if (res.status === 401) {
+    authStore.baoHet401()
+    throw new ChuaDangNhap('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+  }
+  if (res.status === 404) {
+    throw new Error('Không tìm thấy dữ liệu để in — có thể bản ghi đã bị xoá.')
+  }
+  if (!res.ok) {
+    const thongBao = await docThongBaoLoi(res)
+    throw new Error(thongBao ?? `Máy chủ trả lỗi ${res.status} khi in.`)
+  }
+  const blob = await res.blob()
+  const dispo = res.headers.get('Content-Disposition') ?? ''
+  const ten = /filename="?([^";]+)"?/.exec(dispo)?.[1] ?? tenTepMacDinh
+  const url = URL.createObjectURL(blob)
+  try {
+    const a = document.createElement('a')
+    a.href = url
+    a.download = ten
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+/**
+ * Tên tệp mặc định khi tải một bản sao lưu về máy — chỉ dùng khi thiếu `Content-Disposition`
+ * (proxy lược header, trình duyệt lạ).
+ *
+ * I6 của review-frontend.md: tên cũ là `BanSaoLuu_<mã công việc>.dump`, sai hai chỗ. Tệp thật
+ * trong spool là `*.dump.tar.gz` (xem `SaoLuuService`), nên người dùng nhận một tệp `.dump` thực
+ * chất là `tar.gz` — mở không ra và không hiểu vì sao. Và mã công việc là một GUID: nhìn
+ * `BanSaoLuu_7f3a…` thì không biết đó là bản sao ngày nào. Spec 8.4 yêu cầu tên CÓ DẤU THỜI GIAN.
+ *
+ * Dùng `-` và `_` thay cho `/` và `:` vì Windows/macOS không cho hai ký tự đó trong tên tệp.
+ */
+export function tenTepBanSaoLuu(thoiDiem?: string | null): string {
+  const d = thoiDiem ? new Date(thoiDiem) : null
+  if (!d || Number.isNaN(d.getTime())) return 'BanSaoLuu.dump.tar.gz'
+  const hai = (n: number) => String(n).padStart(2, '0')
+  return `BanSaoLuu_${hai(d.getDate())}-${hai(d.getMonth() + 1)}-${d.getFullYear()}`
+       + `_${hai(d.getHours())}${hai(d.getMinutes())}.dump.tar.gz`
+}
+
+/**
+ * Tải một tệp DỮ LIỆU (không phải bản in) về máy — hiện dùng cho bản sao lưu đã chuẩn bị xong.
+ *
+ * Vì sao KHÔNG dùng lại `taiTepIn` (I5 của review-frontend.md): mọi câu lỗi của `taiTepIn` đều
+ * viết cho luồng in ấn, và hai câu trong đó gây hiểu nhầm nghiêm trọng ở đây:
+ *
+ * - 404 → "Không tìm thấy dữ liệu để in — có thể bản ghi đã bị xoá." Người quản trị chuẩn bị tệp
+ *   hôm thứ Sáu, thứ Hai mới bấm tải, sẽ đọc câu đó và tưởng BẢN SAO LƯU ĐÃ MẤT. Đúng loại hiểu
+ *   nhầm gây hoảng loạn nhất trong phần mềm này.
+ * - Nhánh 404 của `taiTepIn` chạy TRƯỚC khi đọc thân lỗi, nên câu giải thích đúng mà máy chủ đã
+ *   soạn sẵn ("Tệp tải về đã bị dọn… Hãy tạo lại một lượt tải về mới.") không bao giờ tới được
+ *   người dùng.
+ * - `Máy chủ trả lỗi ${res.status} khi in.` lộ mã trạng thái HTTP ra màn hình — đúng thứ mà
+ *   `goi()` đã cẩn thận tránh.
+ *
+ * Ở đây: đọc `thongBao` của máy chủ cho MỌI mã lỗi, không nhắc chữ "in", không in mã HTTP.
+ */
+async function taiTepVe(duong: string, tenTepMacDinh: string): Promise<void> {
+  const token = authStore.layToken()
+  let res: Response
+  try {
+    res = await fetch(duong, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+  } catch (loiMang) {
+    console.error(`Lỗi mạng khi tải tệp ${duong}`, loiMang)
+    throw new Error('Không kết nối được máy chủ để tải tệp. Vui lòng thử lại sau ít phút hoặc '
+                  + 'báo cho người quản trị.')
+  }
+  if (res.status === 401) {
+    authStore.baoHet401()
+    throw new ChuaDangNhap('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+  }
+  if (!res.ok) {
+    const thongBao = await docThongBaoLoi(res)
+    console.error(`Lỗi ${res.status} khi tải tệp ${duong}`, thongBao)
+    throw new Error(thongBao ?? (res.status >= 500
+      ? 'Máy chủ đang gặp sự cố, chưa tải được tệp. Vui lòng thử lại sau ít phút hoặc báo cho '
+      + 'người quản trị.'
+      : 'Không tải được tệp. Tệp có thể đã được dọn đi — hãy tạo lại một lượt tải về mới.'))
+  }
+  const blob = await res.blob()
+  const dispo = res.headers.get('Content-Disposition') ?? ''
+  const ten = /filename="?([^";]+)"?/.exec(dispo)?.[1] ?? tenTepMacDinh
+  const url = URL.createObjectURL(blob)
+  try {
+    const a = document.createElement('a')
+    a.href = url
+    a.download = ten
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+/** "Xem thử" mẫu in (POST kèm thân JSON, trả về PDF) — mở NGAY trong một tab mới thay vì kích
+ * tải về máy như `taiTepIn`: người dùng cần THẤY kết quả tức thì để biết mẫu đang gõ có in
+ * được hay không (phần lớn không rành máy tính, xem quan-ly-mau-in.md), không phải lưu tệp.
+ * KHÔNG revoke object URL ngay — tab mới cần URL đó còn sống để hiển thị PDF; trình duyệt tự
+ * dọn khi tab đó đóng. */
+async function xemThuPdfMoTab(duong: string, than: unknown): Promise<void> {
+  const token = authStore.layToken()
+  let res: Response
+  try {
+    res = await fetch(duong, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(than),
+    })
+  } catch (loiMang) {
+    console.error(`Lỗi mạng khi xem thử ${duong}`, loiMang)
+    throw new Error('Không kết nối được máy chủ để xem thử. Vui lòng thử lại sau ít phút hoặc báo cho người quản trị.')
+  }
+  if (res.status === 401) {
+    authStore.baoHet401()
+    throw new ChuaDangNhap('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+  }
+  if (!res.ok) {
+    const thongBao = await docThongBaoLoi(res)
+    throw new Error(thongBao ?? `Máy chủ trả lỗi ${res.status} khi xem thử.`)
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank')
+}
+
+/** Tải ảnh đại diện (Task 1.2 VIEC-TIEP-THEO.md) về DẠNG BLOB rồi dựng object URL — KHÔNG
+ * gán thẳng `duong` vào `<img src>` vì endpoint đòi RequireAuthorization()
+ * (`Authorization: Bearer …`) mà thẻ `<img>` không tự đính header được, giống lý do
+ * `taiTepIn` phải tự fetch() thay vì để trình duyệt tải trực tiếp. Trả `null` khi CHƯA có ảnh
+ * (404 — không phải lỗi, đúng trạng thái "Chưa có hình") hoặc khi có lỗi mạng/xác thực; nơi gọi
+ * coi cả hai như nhau (không hiện khung lỗi cho một chỗ chỉ là chưa có ảnh). */
+async function layAnhBlobUrl(duong: string): Promise<string | null> {
+  const token = authStore.layToken()
+  let res: Response
+  try {
+    res = await fetch(duong, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+  } catch (loiMang) {
+    console.error(`Lỗi mạng khi tải ảnh ${duong}`, loiMang)
+    return null
+  }
+  if (!res.ok) return null
+  const blob = await res.blob()
+  return URL.createObjectURL(blob)
+}
+
+/** Tải một ảnh lên qua `multipart/form-data` (trường "tep", đúng tên tham số IFormFile phía
+ * `GiaoDanEndpoints.cs`/`GiaDinhEndpoints.cs`). KHÔNG dùng `goi()` — đó chỉ gửi JSON. Việc
+ * kiểm định dạng/kích thước THẬT nằm ở máy chủ (`XuLyAnh.cs`); ở đây chỉ đọc thông báo lỗi
+ * tiếng Việt máy chủ trả về (400) để hiện lại cho người dùng, không tự đoán trước lỗi gì. */
+async function taiAnhLen(duong: string, tep: File): Promise<void> {
+  const token = authStore.layToken()
+  const than = new FormData()
+  than.append('tep', tep)
+  let res: Response
+  try {
+    res = await fetch(duong, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: than,
+    })
+  } catch (loiMang) {
+    console.error(`Lỗi mạng khi tải ảnh lên ${duong}`, loiMang)
+    throw new Error('Không kết nối được máy chủ để tải ảnh lên. Vui lòng thử lại sau ít phút hoặc báo cho người quản trị.')
+  }
+  if (res.status === 401) {
+    authStore.baoHet401()
+    throw new ChuaDangNhap('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+  }
+  if (!res.ok) {
+    const thongBao = await docThongBaoLoi(res)
+    throw new Error(thongBao ?? `Máy chủ trả lỗi ${res.status} khi tải ảnh lên.`)
+  }
+}
+
+/** Tải một tệp lên qua `multipart/form-data` (trường "tep") rồi ĐỌC LẠI thân JSON trả về —
+ * khác `taiAnhLen` (chỉ cần biết thành công/thất bại): màn hình "Nhập dữ liệu Access" cần đọc
+ * báo cáo đối chiếu (BaoCaoXemTruoc/TrangThaiNhapDuLieu) ngay trong thân phản hồi 200. Việc
+ * kiểm định dạng tệp THẬT (chữ ký gzip, kích thước) nằm ở máy chủ (NhapDuLieuService) — ở đây
+ * chỉ chuyển tiếp thông báo lỗi tiếng Việt máy chủ trả về (400). */
+async function taiTepLenVaDoc<T>(duong: string, tep: File): Promise<T> {
+  const token = authStore.layToken()
+  const than = new FormData()
+  than.append('tep', tep)
+  let res: Response
+  try {
+    res = await fetch(duong, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: than,
+    })
+  } catch (loiMang) {
+    console.error(`Lỗi mạng khi tải tệp lên ${duong}`, loiMang)
+    throw new Error('Không kết nối được máy chủ để tải tệp lên. Vui lòng thử lại sau ít phút hoặc báo cho người quản trị.')
+  }
+  if (res.status === 401) {
+    authStore.baoHet401()
+    throw new ChuaDangNhap('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+  }
+  if (!res.ok) {
+    const thongBao = await docThongBaoLoi(res)
+    throw new Error(thongBao ?? `Máy chủ trả lỗi ${res.status} khi tải tệp lên.`)
+  }
+  return (await res.json()) as T
+}
+
+const thamSo = (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: boolean) => {
+  const p = new URLSearchParams()
+  if (giaoHoId) p.set('giaoHoId', giaoHoId)
+  if (chiKhongThongKe) p.set('chiKhongThongKe', 'true')
+  if (hienCaDaMat) p.set('hienCaDaMat', 'true')
+  const s = p.toString()
+  return s ? `?${s}` : ''
+}
+
+/** Kết quả tạo/sửa một giáo dân — đúng KetQuaLuuGiaoDanDto phía backend. `id === null` nghĩa
+ * là còn cảnh báo (`canhBao`) chưa được xác nhận, CHƯA LƯU — gọi lại với `boQuaCanhBao: true`
+ * trong thân yêu cầu để lưu bất chấp cảnh báo. */
+export type KetQuaLuuGiaoDan = { id: string | null; canhBao: string[] }
+
+/** Ánh xạ 1-1 với `KetQuaThemThanhVienDto` — dùng chung cho cả "Thêm thành viên"
+ * (`POST /api/gia-dinh/{id}/thanh-vien`) lẫn "Gán vợ chồng" (`PUT .../vo-chong/{vaiTro}`).
+ * `giaoDanId === null` nghĩa là CHƯA lưu — `canhBao` chứa hoặc (a) cảnh báo nghiệp vụ thật cần
+ * xác nhận (gửi lại `boQuaCanhBao: true`), hoặc (b) một câu cảnh báo CỐ ĐỊNH (sentinel) yêu cầu
+ * client quyết định thêm — xem `lib/canhBaoGiaDinh.ts` để phân biệt hai loại này. */
+export type KetQuaGhiGiaDinh = { giaoDanId: string | null; canhBao: string[] }
+
+/** Ba tham số "bên nhận" nhập tự do lúc in — dùng chung cho cả bốn mẫu "Giấy giới thiệu" (xem
+ * ghi chú ở đầu khối cùng tên trong InAnService.cs: bản desktop dùng một màn hình nhập tay
+ * (frmReport.cs) thay vì tra CSDL, vì giáo xứ/giáo phận nhận thường thuộc một giáo xứ KHÁC,
+ * không có trong CSDL của giáo xứ này). `giaoXu2` bắt buộc — máy chủ trả 400 nếu rỗng. */
+export type ThongTinBenNhanGioiThieu = { giaoPhan2: string; giaoXu2: string; tenLinhMuc: string }
+
+function thamSoBenNhan({ giaoPhan2, giaoXu2, tenLinhMuc }: ThongTinBenNhanGioiThieu): string {
+  const p = new URLSearchParams()
+  if (giaoPhan2) p.set('giaoPhan2', giaoPhan2)
+  if (giaoXu2) p.set('giaoXu2', giaoXu2)
+  if (tenLinhMuc) p.set('tenLinhMuc', tenLinhMuc)
+  return `?${p.toString()}`
+}
+
+export const api = {
+  giaDinh: {
+    danhSach: (giaoHoId?: string, chiKhongThongKe?: boolean) =>
+      goi<GiaDinhListItem[]>(`/api/gia-dinh${thamSo(giaoHoId, chiKhongThongKe)}`),
+    chiTiet: (id: string) => goi<GiaDinhDetail>(`/api/gia-dinh/${id}`),
+    capNhat: (id: string, than: unknown) =>
+      goi<void>(`/api/gia-dinh/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    thanhVien: (id: string) => goi<GiaoDanListItem[]>(`/api/gia-dinh/${id}/thanh-vien`),
+    /** Xoá gia đình — mềm (`vinhVien=false`, mặc định) hoặc vĩnh viễn, đúng 2 lựa chọn
+     * [No]/[Yes] của hộp thoại 3 nút gốc (xem `GiaDinhService.Xoa`, KHÔNG có điều kiện chặn
+     * nào khác giáo dân). */
+    xoa: (id: string, vinhVien: boolean) =>
+      goi<void>(`/api/gia-dinh/${id}?vinhVien=${vinhVien}`, { method: 'DELETE' }),
+    /** Tạo một gia đình mới trống (chỉ Tên gia đình + Giáo họ) — xem `GiaDinhService.Tao`. */
+    tao: (than: unknown) =>
+      goi<{ id: string; maGiaDinhCu: number }>('/api/gia-dinh', { method: 'POST', body: JSON.stringify(than) }),
+    /** Gán/đổi Người nam (vaiTro=0) hay Người nữ (vaiTro=1) — xem `GiaDinhService.GanVoChong`. */
+    ganVoChong: (id: string, vaiTro: 0 | 1, than: unknown) =>
+      goi<KetQuaGhiGiaDinh>(`/api/gia-dinh/${id}/vo-chong/${vaiTro}`, { method: 'PUT', body: JSON.stringify(than) }),
+    /** Thêm một người vào lưới "Thành viên khác" — xem `GiaDinhService.ThemThanhVien`. */
+    themThanhVien: (id: string, than: unknown) =>
+      goi<KetQuaGhiGiaDinh>(`/api/gia-dinh/${id}/thanh-vien`, { method: 'POST', body: JSON.stringify(than) }),
+    /** Xoá VĨNH VIỄN một thành viên (kể cả Người nam/nữ nếu vaiTro=0/1) — xem
+     * can-review-sau.md mục 5. */
+    xoaThanhVien: (id: string, giaoDanId: string, vaiTro: number) =>
+      goi<void>(`/api/gia-dinh/${id}/thanh-vien/${giaoDanId}/${vaiTro}`, { method: 'DELETE' }),
+    /** In "Phiếu gia đình" (xem docs/superpowers/specs/man-hinh/in-an.md) — tải PDF về máy.
+     * `khoGiay` mặc định "A4" (giữ nguyên hành vi cũ khi không truyền) — "A3" ứng với
+     * `PhieuGiaDinh-A3.doc` bản desktop (gia đình đông người, xem in-an.md mục 5c/8). */
+    inPhieuGiaDinh: (id: string, khoGiay?: 'A4' | 'A3') =>
+      taiTepIn(`/api/gia-dinh/${id}/in/phieu-gia-dinh${khoGiay === 'A3' ? '?khoGiay=A3' : ''}`,
+        khoGiay === 'A3' ? 'PhieuGiaDinh_A3.pdf' : 'PhieuGiaDinh.pdf'),
+    /** "In lý lịch cá nhân" bấm từ lưới/màn hình GIA ĐÌNH (`GxGiaDinhList.tsx`,
+     * `GiaDinhDetail.tsx`) — in CẢ gia đình (một trang PDF/thành viên, gộp một tệp), đúng hành
+     * vi `item4_Click`/`XuatLyLichCaNhan(Dictionary)` của bản desktop, KHÔNG phải một người
+     * (xem in-an.md mục 5f, can-review-sau.md). Khác `giaoDan.inLyLichCaNhan` bên dưới (một
+     * người, dùng ở màn hình chi tiết giáo dân/menu lưới giáo dân). */
+    inLyLichCaNhanGiaDinh: (id: string) =>
+      taiTepIn(`/api/gia-dinh/${id}/in/ly-lich-ca-nhan`, 'LyLichCaNhan_GiaDinh.pdf'),
+    /** "In danh sách" (thanh công cụ "Danh sách gia đình") — PDF khổ ngang của TOÀN BỘ danh
+     * sách đang lọc trên máy chủ, CÙNG hai tham số lọc với `danhSach()`/`xuatExcel()` ở trên
+     * (xem in-an.md mục 5f). */
+    inDanhSach: (giaoHoId?: string, chiKhongThongKe?: boolean) =>
+      taiTepIn(`/api/gia-dinh/in/danh-sach${thamSo(giaoHoId, chiKhongThongKe)}`, 'DanhSachGiaDinh.pdf'),
+    /** In "Chứng nhận hôn phối" — 404 khi gia đình chưa có hôn phối nào để chứng nhận. */
+    inChungNhanHonPhoi: (id: string) =>
+      taiTepIn(`/api/gia-dinh/${id}/in/chung-nhan-hon-phoi`, 'ChungNhanHonPhoi.pdf'),
+    /** "In giới thiệu chuyển xứ" — mẫu duy nhất theo GIA ĐÌNH trong bốn mẫu "Giấy giới thiệu"
+     * (ba mẫu còn lại theo giáo dân, xem `giaoDan` bên dưới). `benNhan` là thông tin bên nhận
+     * nhập tự do lúc in (xem `ThongTinBenNhanGioiThieu`). */
+    inGioiThieuChuyenXu: (id: string, benNhan: ThongTinBenNhanGioiThieu) =>
+      taiTepIn(`/api/gia-dinh/${id}/in/gioi-thieu-chuyen-xu${thamSoBenNhan(benNhan)}`, 'GioiThieuChuyenXu.pdf'),
+    /** "Xuất Excel" (thay CSV cũ) — tải tệp .xlsx thật về máy, tôn trọng đúng bộ lọc đang áp
+     * dụng trên màn hình "Danh sách gia đình" (giáo họ đã chọn/ô "chỉ xem không thống kê"),
+     * dùng lại `thamSo()` giống `danhSach()` ở trên — cùng tham số, không viết lại logic lọc. */
+    xuatExcel: (giaoHoId?: string, chiKhongThongKe?: boolean) =>
+      taiTepIn(`/api/gia-dinh/xuat-excel${thamSo(giaoHoId, chiKhongThongKe)}`, 'DanhSachGiaDinh.xlsx'),
+    /** "Hồ sơ lưu trữ gia đình" (frmGiaDinhLuuTruList.cs) — gia đình đã xoá mềm HOẶC đã chuyển
+     * xứ (OR, xem GiaDinhService.LayDanhSachLuuTru). */
+    danhSachLuuTru: (giaoHoId?: string, chiKhongThongKe?: boolean) =>
+      goi<GiaDinhListItem[]>(`/api/gia-dinh/luu-tru${thamSo(giaoHoId, chiKhongThongKe)}`),
+    xuatExcelLuuTru: (giaoHoId?: string, chiKhongThongKe?: boolean) =>
+      taiTepIn(`/api/gia-dinh/luu-tru/xuat-excel${thamSo(giaoHoId, chiKhongThongKe)}`, 'HoSoLuuTruGiaDinh.xlsx'),
+    /** Ảnh đại diện gia đình (Task 1.2) — cùng ba thao tác với giaoDan bên dưới. */
+    layAnh: (id: string) => layAnhBlobUrl(`/api/gia-dinh/${id}/anh-dai-dien`),
+    taiAnhLen: (id: string, tep: File) => taiAnhLen(`/api/gia-dinh/${id}/anh-dai-dien`, tep),
+    xoaAnh: (id: string) => goi<void>(`/api/gia-dinh/${id}/anh-dai-dien`, { method: 'DELETE' }),
+  },
+  giaoDan: {
+    danhSach: (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: boolean) =>
+      goi<GiaoDanListItem[]>(`/api/giao-dan${thamSo(giaoHoId, chiKhongThongKe, hienCaDaMat)}`),
+    /** "Xuất Excel" (thay CSV cũ) — cùng ba tham số lọc với `danhSach()` ở trên, tôn trọng đúng
+     * bộ lọc đang áp dụng trên màn hình "Danh sách giáo dân". */
+    xuatExcel: (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: boolean) =>
+      taiTepIn(`/api/giao-dan/xuat-excel${thamSo(giaoHoId, chiKhongThongKe, hienCaDaMat)}`, 'DanhSachGiaoDan.xlsx'),
+    /** "Hồ sơ lưu trữ giáo dân" (frmGiaoDanLuuTruList.cs) — giáo dân đã xoá mềm, HOẶC đã qua
+     * đời, HOẶC đã chuyển xứ (OR, xem GiaoDanService.LayDanhSachLuuTru). */
+    danhSachLuuTru: (giaoHoId?: string, chiKhongThongKe?: boolean) =>
+      goi<GiaoDanListItem[]>(`/api/giao-dan/luu-tru${thamSo(giaoHoId, chiKhongThongKe)}`),
+    xuatExcelLuuTru: (giaoHoId?: string, chiKhongThongKe?: boolean) =>
+      taiTepIn(`/api/giao-dan/luu-tru/xuat-excel${thamSo(giaoHoId, chiKhongThongKe)}`, 'HoSoLuuTruGiaoDan.xlsx'),
+    chiTiet: (id: string) => goi<GiaoDanDetail>(`/api/giao-dan/${id}`),
+    // 201 (đã lưu) hoặc 200 (còn cảnh báo chưa xác nhận) — cả hai đọc cùng KetQuaLuuGiaoDan.
+    taoMoi: (than: unknown) =>
+      goi<KetQuaLuuGiaoDan>('/api/giao-dan', { method: 'POST', body: JSON.stringify(than) }),
+    capNhat: (id: string, than: unknown) =>
+      goi<KetQuaLuuGiaoDan>(`/api/giao-dan/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    // vinhVien=false (mặc định) = xoá mềm (đưa vào lưu trữ); vinhVien=true = xoá vĩnh viễn,
+    // có thể bị máy chủ chặn (409) nếu giáo dân đang thuộc gia đình nào.
+    xoa: (id: string, vinhVien: boolean) =>
+      goi<void>(`/api/giao-dan/${id}?vinhVien=${vinhVien}`, { method: 'DELETE' }),
+    honPhoi: (id: string) => goi<HonPhoiCuaGiaoDan[]>(`/api/giao-dan/${id}/hon-phoi`),
+    capNhatHonPhoi: (honPhoiId: string, than: unknown) =>
+      goi<void>(`/api/giao-dan/hon-phoi/${honPhoiId}`, { method: 'PUT', body: JSON.stringify(than) }),
+    tanHien: (id: string) => goi<TanHienCuaGiaoDan[]>(`/api/giao-dan/${id}/tan-hien`),
+    themTanHien: (id: string, than: unknown) =>
+      goi<{ id: string }>(`/api/giao-dan/${id}/tan-hien`, { method: 'POST', body: JSON.stringify(than) }),
+    capNhatTanHien: (tanHienId: string, than: unknown) =>
+      goi<void>(`/api/giao-dan/tan-hien/${tanHienId}`, { method: 'PUT', body: JSON.stringify(than) }),
+    hoiDoan: (id: string) => goi<HoiDoanCuaGiaoDan[]>(`/api/giao-dan/${id}/hoi-doan`),
+    themHoiDoan: (id: string, than: unknown) =>
+      goi<{ id: string }>(`/api/giao-dan/${id}/hoi-doan`, { method: 'POST', body: JSON.stringify(than) }),
+    capNhatHoiDoan: (chiTietId: string, than: unknown) =>
+      goi<void>(`/api/giao-dan/hoi-doan/${chiTietId}`, { method: 'PUT', body: JSON.stringify(than) }),
+    /** In "Lý lịch cá nhân" (mẫu đầu tiên của hạ tầng in ấn — xem
+     * docs/superpowers/specs/man-hinh/in-an.md) — tải PDF về máy, không mở tab mới. */
+    inLyLichCaNhan: (id: string) =>
+      taiTepIn(`/api/giao-dan/${id}/in/ly-lich-ca-nhan`, 'LyLichCaNhan.pdf'),
+    /** "In danh sách" (thanh công cụ "Danh sách giáo dân") — PDF khổ ngang của TOÀN BỘ danh
+     * sách đang lọc trên máy chủ, CÙNG ba tham số lọc với `danhSach()`/`xuatExcel()` ở trên
+     * (xem docs/superpowers/specs/man-hinh/in-an.md mục 5f). */
+    inDanhSach: (giaoHoId?: string, chiKhongThongKe?: boolean, hienCaDaMat?: boolean) =>
+      taiTepIn(`/api/giao-dan/in/danh-sach${thamSo(giaoHoId, chiKhongThongKe, hienCaDaMat)}`, 'DanhSachGiaoDan.pdf'),
+    /** In "Chứng nhận bí tích" — `loai` rỗng/undefined = mục chung "In chứng nhận bí tích"
+     * (liệt kê cả ba); "RuaToi"/"RuocLe"/"ThemSuc" = mục riêng từng bí tích. */
+    inChungNhanBiTich: (id: string, loai?: 'RuaToi' | 'RuocLe' | 'ThemSuc') =>
+      taiTepIn(`/api/giao-dan/${id}/in/chung-nhan-bi-tich${loai ? `?loai=${loai}` : ''}`, 'ChungNhanBiTich.pdf'),
+    /** Ba mẫu "Giấy giới thiệu" theo giáo dân (mẫu thứ tư — chuyển xứ — theo gia đình, xem
+     * `giaDinh.inGioiThieuChuyenXu` ở trên). `benNhan` nhập tự do lúc in, xem
+     * `ThongTinBenNhanGioiThieu`. */
+    inGioiThieuRuaToi: (id: string, benNhan: ThongTinBenNhanGioiThieu) =>
+      taiTepIn(`/api/giao-dan/${id}/in/gioi-thieu-rua-toi${thamSoBenNhan(benNhan)}`, 'GioiThieuRuaToi.pdf'),
+    inGioiThieuThemSuc: (id: string, benNhan: ThongTinBenNhanGioiThieu) =>
+      taiTepIn(`/api/giao-dan/${id}/in/gioi-thieu-them-suc${thamSoBenNhan(benNhan)}`, 'GioiThieuThemSuc.pdf'),
+    inGioiThieuGiaoLyHonPhoi: (id: string, benNhan: ThongTinBenNhanGioiThieu) =>
+      taiTepIn(`/api/giao-dan/${id}/in/gioi-thieu-giao-ly-hon-phoi${thamSoBenNhan(benNhan)}`, 'GioiThieuGiaoLyHonPhoi.pdf'),
+    /** "In giới thiệu hôn phối" (menu chuột phải GxGiaoDanList.tsx) — tương đương
+     * Source/ExcelReport/ReportRaoHP.cs (giấy XIN ĐIỀU TRA VÀ RAO hôn phối, KHÔNG phải 3 mẫu
+     * "Giấy giới thiệu" ở trên — xem docs/superpowers/specs/man-hinh/in-an.md mục 8). In đôi
+     * rao MỚI NHẤT của giáo dân này (404 nếu chưa có đôi rao nào). */
+    inGioiThieuHonPhoi: (id: string) =>
+      taiTepIn(`/api/giao-dan/${id}/in/gioi-thieu-hon-phoi`, 'RaoHonPhoi.pdf'),
+    /** Ảnh đại diện (Task 1.2 VIEC-TIEP-THEO.md, xem can-review-sau.md mục 36) — `layAnh` trả
+     * object URL (hoặc `null` nếu chưa có ảnh/lỗi mạng, xem `layAnhBlobUrl`), `taiAnhLen` gửi
+     * multipart, `xoaAnh` xoá hẳn. */
+    layAnh: (id: string) => layAnhBlobUrl(`/api/giao-dan/${id}/anh-dai-dien`),
+    taiAnhLen: (id: string, tep: File) => taiAnhLen(`/api/giao-dan/${id}/anh-dai-dien`, tep),
+    xoaAnh: (id: string) => goi<void>(`/api/giao-dan/${id}/anh-dai-dien`, { method: 'DELETE' }),
+  },
+  hoiDoan: {
+    danhMuc: () => goi<HoiDoanDanhMuc[]>('/api/hoi-doan'),
+  },
+  /** Màn hình "Danh sách hội đoàn" (frmHoiDoanList.cs + frmHoiDoan.cs, cấp quản lý danh mục) —
+   * xem docs/superpowers/specs/man-hinh/hoi-doan-danh-sach.md. Khác `api.hoiDoan` ở trên (danh
+   * mục rút gọn cho combo) và `api.giaoDan.hoiDoan*` (lịch sử của MỘT giáo dân). */
+  hoiDoanQuanLy: {
+    danhSach: () => goi<HoiDoanQuanLy[]>('/api/hoi-doan/danh-sach'),
+    them: (than: unknown) => goi<{ id: string }>('/api/hoi-doan', { method: 'POST', body: JSON.stringify(than) }),
+    sua: (id: string, than: unknown) =>
+      goi<void>(`/api/hoi-doan/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoa: (id: string) => goi<void>(`/api/hoi-doan/${id}`, { method: 'DELETE' }),
+    thanhVien: (id: string, chiXemHienTai: boolean) =>
+      goi<ThanhVienHoiDoan[]>(`/api/hoi-doan/${id}/thanh-vien?chiXemHienTai=${chiXemHienTai}`),
+    themThanhVien: (id: string, than: unknown) =>
+      goi<void>(`/api/hoi-doan/${id}/thanh-vien`, { method: 'POST', body: JSON.stringify(than) }),
+    suaThanhVien: (chiTietId: string, than: unknown) =>
+      goi<void>(`/api/hoi-doan/thanh-vien/${chiTietId}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoaThanhVien: (chiTietId: string) =>
+      goi<void>(`/api/hoi-doan/thanh-vien/${chiTietId}`, { method: 'DELETE' }),
+  },
+  /** Phân hệ Giáo lý — Khối/Lớp/Học viên/Giáo lý viên (`frmKhoiGiaoLyList.cs` +
+   * `frmKhoiGiaoLy.cs` + `frmLopGiaoLy.cs`) — xem docs/superpowers/specs/man-hinh/giao-ly.md. */
+  giaoLy: {
+    khoi: () => goi<KhoiGiaoLy[]>('/api/giao-ly/khoi'),
+    themKhoi: (than: unknown) => goi<{ id: string }>('/api/giao-ly/khoi', { method: 'POST', body: JSON.stringify(than) }),
+    suaKhoi: (id: string, than: unknown) =>
+      goi<void>(`/api/giao-ly/khoi/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoaKhoi: (id: string) => goi<void>(`/api/giao-ly/khoi/${id}`, { method: 'DELETE' }),
+    lop: (khoiId: string, nam?: number | null) =>
+      goi<LopGiaoLy[]>(`/api/giao-ly/khoi/${khoiId}/lop${nam ? `?nam=${nam}` : ''}`),
+    themLop: (khoiId: string, than: unknown) =>
+      goi<{ id: string }>(`/api/giao-ly/khoi/${khoiId}/lop`, { method: 'POST', body: JSON.stringify(than) }),
+    suaLop: (id: string, than: unknown) =>
+      goi<void>(`/api/giao-ly/lop/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoaLop: (id: string) => goi<void>(`/api/giao-ly/lop/${id}`, { method: 'DELETE' }),
+    hocVien: (lopId: string) => goi<HocVienLopGiaoLy[]>(`/api/giao-ly/lop/${lopId}/hoc-vien`),
+    themHocVien: (lopId: string, giaoDanId: string) =>
+      goi<void>(`/api/giao-ly/lop/${lopId}/hoc-vien`, { method: 'POST', body: JSON.stringify({ giaoDanId }) }),
+    suaHocVien: (chiTietId: string, than: unknown) =>
+      goi<void>(`/api/giao-ly/hoc-vien/${chiTietId}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoaHocVien: (chiTietId: string) => goi<void>(`/api/giao-ly/hoc-vien/${chiTietId}`, { method: 'DELETE' }),
+    giaoLyVien: (lopId: string) => goi<GiaoLyVienLop[]>(`/api/giao-ly/lop/${lopId}/giao-ly-vien`),
+    themGiaoLyVien: (lopId: string, giaoDanId: string) =>
+      goi<void>(`/api/giao-ly/lop/${lopId}/giao-ly-vien`, { method: 'POST', body: JSON.stringify({ giaoDanId }) }),
+    xoaGiaoLyVien: (id: string) => goi<void>(`/api/giao-ly/giao-ly-vien/${id}`, { method: 'DELETE' }),
+    /** "Chuyển lớp" hàng loạt (frmChuyenLop.cs, hoãn từ commit d4c4b27) — `chiTietIds` là khoá
+     * của `ChiTietLopGiaoLy` (đúng những dòng đang chọn trên lưới học viên), KHÔNG phải
+     * GiaoDanId. Hai endpoint riêng: xem trước KHÔNG ghi gì, ghi thật MỘT transaction. */
+    xemTruocChuyenLop: (chiTietIds: string[], lopDichId: string) =>
+      goi<ChuyenLopXemTruoc>('/api/giao-ly/chuyen-lop/xem-truoc',
+        { method: 'POST', body: JSON.stringify({ chiTietIds, lopDichId }) }),
+    chuyenLop: (chiTietIds: string[], lopDichId: string) =>
+      goi<ChuyenLopKetQua>('/api/giao-ly/chuyen-lop',
+        { method: 'POST', body: JSON.stringify({ chiTietIds, lopDichId }) }),
+    /** "Nhập học viên hàng loạt" từ Excel (frmImportHocVien.cs, hoãn từ commit d4c4b27) — máy
+     * chủ đọc bằng ClosedXML, HOÀN TOÀN TRONG BỘ NHỚ (không ghi tệp lên đĩa). */
+    mauExcelNhapHocVien: () => taiTepIn('/api/giao-ly/nhap-hoc-vien/mau-excel', 'MauNhapHocVien.xlsx'),
+    xemTruocNhapHocVien: (lopId: string, tep: File) =>
+      taiTepLenVaDoc<NhapHocVienXemTruoc>(`/api/giao-ly/lop/${lopId}/nhap-hoc-vien/xem-truoc`, tep),
+    nhapHocVien: (lopId: string, tep: File) =>
+      taiTepLenVaDoc<NhapHocVienKetQua>(`/api/giao-ly/lop/${lopId}/nhap-hoc-vien`, tep),
+  },
+  /** "Danh sách sổ bí tích" (frmDotBiTichList.cs + frmBiTichChiTiet.cs) — xem
+   * docs/superpowers/specs/man-hinh/so-bi-tich.md. */
+  dotBiTich: {
+    danhSach: (loaiBiTich: LoaiBiTich, tuNam?: number, denNam?: number) => {
+      const p = new URLSearchParams({ loaiBiTich: String(loaiBiTich) })
+      if (tuNam) p.set('tuNam', String(tuNam))
+      if (denNam) p.set('denNam', String(denNam))
+      return goi<DotBiTichListItem[]>(`/api/dot-bi-tich?${p.toString()}`)
+    },
+    chiTiet: (id: string) => goi<DotBiTichDetail>(`/api/dot-bi-tich/${id}`),
+    tao: (than: unknown) => goi<DotBiTichDetail>('/api/dot-bi-tich', { method: 'POST', body: JSON.stringify(than) }),
+    capNhat: (id: string, than: unknown) =>
+      goi<void>(`/api/dot-bi-tich/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoa: (id: string) => goi<void>(`/api/dot-bi-tich/${id}`, { method: 'DELETE' }),
+    themNguoiNhan: (id: string, than: unknown) =>
+      goi<void>(`/api/dot-bi-tich/${id}/nguoi-nhan`, { method: 'POST', body: JSON.stringify(than) }),
+    suaNguoiNhan: (id: string, giaoDanId: string, than: unknown) =>
+      goi<void>(`/api/dot-bi-tich/${id}/nguoi-nhan/${giaoDanId}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoaNguoiNhan: (id: string, giaoDanId: string, xoaThongTinBiTich: boolean) =>
+      goi<void>(`/api/dot-bi-tich/${id}/nguoi-nhan/${giaoDanId}?xoaThongTinBiTich=${xoaThongTinBiTich}`,
+        { method: 'DELETE' }),
+    /** "Xuất Excel" (xem docs/superpowers/specs/man-hinh/in-an.md mục 8) — CÙNG ba tham số lọc
+     * với `danhSach()` ở trên, tôn trọng đúng bộ lọc đang áp dụng trên màn hình. */
+    xuatExcel: (loaiBiTich: LoaiBiTich, tuNam?: number, denNam?: number) => {
+      const p = new URLSearchParams({ loaiBiTich: String(loaiBiTich) })
+      if (tuNam) p.set('tuNam', String(tuNam))
+      if (denNam) p.set('denNam', String(denNam))
+      return taiTepIn(`/api/dot-bi-tich/xuat-excel?${p.toString()}`, 'DanhSachSoBiTich.xlsx')
+    },
+  },
+  /** "Danh sách rao hôn phối" (frmRaoHonPhoiList.cs + frmRaoHonPhoi.cs) — xem
+   * docs/superpowers/specs/man-hinh/rao-hon-phoi.md. */
+  raoHonPhoi: {
+    danhSach: (xemTatCa?: boolean) =>
+      goi<RaoHonPhoiListItem[]>(`/api/rao-hon-phoi${xemTatCa ? '?xemTatCa=true' : ''}`),
+    chiTiet: (id: string) => goi<RaoHonPhoiDetail>(`/api/rao-hon-phoi/${id}`),
+    tao: (than: unknown) => goi<RaoHonPhoiDetail>('/api/rao-hon-phoi', { method: 'POST', body: JSON.stringify(than) }),
+    capNhat: (id: string, than: unknown) =>
+      goi<void>(`/api/rao-hon-phoi/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoa: (id: string) => goi<void>(`/api/rao-hon-phoi/${id}`, { method: 'DELETE' }),
+    /** "Xuất Excel" (xem docs/superpowers/specs/man-hinh/in-an.md mục 8) — CÙNG tham số lọc
+     * `xemTatCa` với `danhSach()` ở trên. */
+    xuatExcel: (xemTatCa?: boolean) =>
+      taiTepIn(`/api/rao-hon-phoi/xuat-excel${xemTatCa ? '?xemTatCa=true' : ''}`, 'DanhSachRaoHonPhoi.xlsx'),
+    /** "In kết quả rao hôn phối" (RaoHonPhoiDetail.tsx) — tương đương
+     * ReportRaoHP.Export(ds, printRS: true)/KQRaoHonPhoi.doc, xem in-an.md mục 8. */
+    inKetQua: (id: string) => taiTepIn(`/api/rao-hon-phoi/${id}/in/ket-qua`, 'KQRaoHonPhoi.pdf'),
+    /** "In danh sách" (toolbar "Danh sách rao hôn phối") — tương đương
+     * ReportRaoHP.ExportList/DanhSachRaoHonPhoi.xls, CÙNG tham số lọc `xemTatCa` với `danhSach()`. */
+    inDanhSach: (xemTatCa?: boolean) =>
+      taiTepIn(`/api/rao-hon-phoi/in/danh-sach${xemTatCa ? '?xemTatCa=true' : ''}`, 'DanhSachRaoHonPhoi.pdf'),
+  },
+  danhMuc: {
+    // Danh sách "Tên thánh" tĩnh (bảng `du_lieu_chung`, 343 dòng đã chuyển từ Access) — một
+    // trong hai nguồn gợi ý nhập liệu, nguồn còn lại là lịch sử `localStorage` (xem
+    // `lib/goiYNhapLieu.ts` và docs/superpowers/specs/man-hinh/ho-tro-nhap-lieu.md mục C.1).
+    tenThanh: () => goi<string[]>('/api/danh-muc/ten-thanh'),
+  },
+  giaoHo: {
+    // Danh mục thật (Id + tên) — thay data/giaoHoTam.ts hard-code theo tên, xem
+    // docs/superpowers/specs/man-hinh/can-review-sau.md mục 19.
+    danhMuc: () => goi<GiaoHo[]>('/api/giao-ho'),
+    // Thêm/sửa — luôn trong phạm vi giáo xứ của người gọi (giaoXuId từ claim, không nhận từ
+    // đây), khác nhóm "quanTri" bên dưới vốn cố ý xuyên giáo xứ.
+    them: (than: { tenGiaoHo: string; giaoHoChaId?: string | null }) =>
+      goi<void>('/api/giao-ho', { method: 'POST', body: JSON.stringify(than) }),
+    sua: (id: string, than: { tenGiaoHo: string; giaoHoChaId?: string | null }) =>
+      goi<void>(`/api/giao-ho/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+  },
+  congCuDuLieu: {
+    // "Kiểm tra dữ liệu — giáo dân" (xem docs/superpowers/specs/man-hinh/cong-cu-du-lieu.md
+    // mục 2) — 6 cờ đúng tên tham số phía backend, mỗi cờ mặc định true nếu bỏ trống.
+    kiemTraGiaoDan: (giaoHoId: string | undefined, tuyChon: KiemTraGiaoDanTuyChon) => {
+      const p = new URLSearchParams()
+      if (giaoHoId) p.set('giaoHoId', giaoHoId)
+      p.set('khongCoNgayThang', String(tuyChon.khongCoNgayThang))
+      p.set('saiQuanHeNgayThang', String(tuyChon.saiQuanHeNgayThang))
+      p.set('ruocLeTruocTuoi', String(tuyChon.ruocLeTruocTuoi))
+      p.set('thuocNhieuGiaDinh', String(tuyChon.thuocNhieuGiaDinh))
+      p.set('khongThuocGiaDinhNao', String(tuyChon.khongThuocGiaDinhNao))
+      p.set('coNhieuHonPhoi', String(tuyChon.coNhieuHonPhoi))
+      return goi<KiemTraGiaoDanKetQua[]>(`/api/cong-cu-du-lieu/kiem-tra-giao-dan?${p.toString()}`)
+    },
+    // "Kiểm tra dữ liệu — gia đình" (spec mục 3) — 4 cờ đúng tên tham số phía backend, mỗi cờ
+    // mặc định true nếu bỏ trống.
+    kiemTraGiaDinh: (giaoHoId: string | undefined, tuyChon: KiemTraGiaDinhTuyChon) => {
+      const p = new URLSearchParams()
+      if (giaoHoId) p.set('giaoHoId', giaoHoId)
+      p.set('khongCoNgayHonPhoi', String(tuyChon.khongCoNgayHonPhoi))
+      p.set('honPhoiTruocTuoi', String(tuyChon.honPhoiTruocTuoi))
+      p.set('khoangCachTuoiConCai', String(tuyChon.khoangCachTuoiConCai))
+      p.set('cacVanDeKhac', String(tuyChon.cacVanDeKhac))
+      return goi<KiemTraGiaDinhKetQua[]>(`/api/cong-cu-du-lieu/kiem-tra-gia-dinh?${p.toString()}`)
+    },
+  },
+  // "Chuyển họ hàng loạt" (spec mục 4) — CÔNG CỤ SỬA DỮ LIỆU HÀNG LOẠT NGUY HIỂM: luôn gọi
+  // xemTruoc* trước, hiện đúng con số đó trong hộp thoại xác nhận, rồi mới gọi ghi thật.
+  chuyenHo: {
+    xemTruocGiaoDan: (giaoDanIds: string[], giaoHoDichId: string) =>
+      goi<ChuyenHoGiaoDanXemTruoc>('/api/cong-cu-du-lieu/chuyen-ho/giao-dan/xem-truoc', {
+        method: 'POST', body: JSON.stringify({ giaoDanIds, giaoHoDichId }),
+      }),
+    ghiGiaoDan: (giaoDanIds: string[], giaoHoDichId: string) =>
+      goi<ChuyenHoGiaoDanKetQua>('/api/cong-cu-du-lieu/chuyen-ho/giao-dan', {
+        method: 'POST', body: JSON.stringify({ giaoDanIds, giaoHoDichId }),
+      }),
+    xemTruocGiaDinh: (giaDinhIds: string[], giaoHoDichId: string) =>
+      goi<ChuyenHoGiaDinhXemTruoc>('/api/cong-cu-du-lieu/chuyen-ho/gia-dinh/xem-truoc', {
+        method: 'POST', body: JSON.stringify({ giaDinhIds, giaoHoDichId }),
+      }),
+    ghiGiaDinh: (giaDinhIds: string[], giaoHoDichId: string) =>
+      goi<ChuyenHoGiaDinhKetQua>('/api/cong-cu-du-lieu/chuyen-ho/gia-dinh', {
+        method: 'POST', body: JSON.stringify({ giaDinhIds, giaoHoDichId }),
+      }),
+  },
+  // "Chuẩn hoá dữ liệu" (spec mục 5.1) — CÔNG CỤ SỬA DỮ LIỆU HÀNG LOẠT: không nhận tham số nào
+  // (áp dụng cho TOÀN BỘ giáo dân/gia đình của giáo xứ, đúng phạm vi "không lọc gì" của
+  // desktop) — luôn gọi xemTruoc* trước để lấy con số thật rồi mới gọi ghi thật.
+  chuanHoaDuLieu: {
+    xemTruocGiaoDan: () =>
+      goi<ChuanHoaXemTruoc>('/api/cong-cu-du-lieu/chuan-hoa/giao-dan/xem-truoc', { method: 'POST' }),
+    ghiGiaoDan: () =>
+      goi<ChuanHoaKetQua>('/api/cong-cu-du-lieu/chuan-hoa/giao-dan', { method: 'POST' }),
+    xemTruocGiaDinh: () =>
+      goi<ChuanHoaXemTruoc>('/api/cong-cu-du-lieu/chuan-hoa/gia-dinh/xem-truoc', { method: 'POST' }),
+    ghiGiaDinh: () =>
+      goi<ChuanHoaKetQua>('/api/cong-cu-du-lieu/chuan-hoa/gia-dinh', { method: 'POST' }),
+  },
+  // "Tạo danh sách bí tích tự động" (spec mục 5.2) — CÔNG CỤ SINH DỮ LIỆU HÀNG LOẠT: chỉ THÊM
+  // mới đợt/chi tiết bí tích, không sửa/xoá bản ghi cũ, nhưng vẫn bắt buộc xem trước trước khi
+  // ghi thật (nguyên tắc an toàn chung của nhóm).
+  taoDotBiTich: {
+    xemTruoc: (than: {
+      loaiBiTich: LoaiBiTich; linhMuc: string | null; noiBiTich: string | null; tuNgay: string; denNgay: string
+    }) => goi<TaoDotBiTichXemTruoc>('/api/cong-cu-du-lieu/tao-dot-bi-tich/xem-truoc', {
+      method: 'POST', body: JSON.stringify(than),
+    }),
+    ghi: (than: {
+      loaiBiTich: LoaiBiTich; linhMuc: string | null; noiBiTich: string | null; tuNgay: string; denNgay: string
+    }) => goi<TaoDotBiTichKetQua>('/api/cong-cu-du-lieu/tao-dot-bi-tich', {
+      method: 'POST', body: JSON.stringify(than),
+    }),
+  },
+  // "Tìm và thay thế" (xem tim-thay-the.md) — CÔNG CỤ SỬA DỮ LIỆU HÀNG LOẠT thay thế CHÍNH XÁC
+  // (không phải LIKE một phần) giá trị một cột — luôn xem trước lấy số khớp thật trước khi ghi.
+  timThayThe: {
+    xemTruoc: (than: { bang: BangTimThayThe; truong: string; giaTriTim: string; giaTriThay: string }) =>
+      goi<TimThayTheXemTruoc>('/api/cong-cu-du-lieu/tim-thay-the/xem-truoc', {
+        method: 'POST', body: JSON.stringify(than),
+      }),
+    ghi: (than: { bang: BangTimThayThe; truong: string; giaTriTim: string; giaTriThay: string }) =>
+      goi<TimThayTheKetQua>('/api/cong-cu-du-lieu/tim-thay-the', {
+        method: 'POST', body: JSON.stringify(than),
+      }),
+  },
+  timKiem: {
+    // Dùng cho GxPicker thật (gõ để tìm Tên Cha/Mẹ, Người nam/nữ…) — giới hạn kết quả, KHÔNG
+    // tải hết danh sách giáo dân về trình duyệt.
+    giaoDan: (tuKhoa: string, limit = 20) =>
+      goi<GiaoDanTimKiem[]>(`/api/giao-dan/tim?tuKhoa=${encodeURIComponent(tuKhoa)}&limit=${limit}`),
+  },
+  auth: {
+    /** KHÔNG dùng `goi()` — endpoint này chủ ý ẩn danh và một mật khẩu sai cũng trả về 401
+     * (đúng ngữ nghĩa HTTP), nhưng đó KHÔNG phải "token hết hạn" nên không được kích hoạt
+     * luồng tự đăng xuất của `goi()`. Xử lý status ngay tại đây. */
+    dangNhap: async (tenTaiKhoan: string, matKhau: string, giaoXuId?: string): Promise<DangNhapKetQua> => {
+      const res = await fetch('/api/auth/dang-nhap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenTaiKhoan, matKhau, giaoXuId: giaoXuId ?? null }),
+      })
+      if (res.status === 400) {
+        // Có thể là "cần chọn giáo xứ" (canChonGiaoXu:true, kèm danh sách) hoặc lỗi đầu vào
+        // khác — phân biệt bằng cờ canChonGiaoXu, không suy đoán từ status code một mình.
+        const than = await res.json().catch(() => null) as
+          { thongBao?: string; canChonGiaoXu?: boolean; giaoXu?: GiaoXuLuaChon[] } | null
+        if (than?.canChonGiaoXu) {
+          throw new CanChonGiaoXu(than.thongBao ?? 'Vui lòng chọn giáo xứ', than.giaoXu ?? [])
+        }
+        throw new Error(than?.thongBao ?? 'Không đăng nhập được')
+      }
+      if (res.status === 401) {
+        throw new Error('Tên đăng nhập hoặc mật khẩu không chính xác')
+      }
+      if (!res.ok) {
+        throw new Error(`Máy chủ trả lỗi ${res.status} khi đăng nhập`)
+      }
+      return (await res.json()) as DangNhapKetQua
+    },
+    toi: () => goi<{
+      tenTaiKhoan: string; hoTen: string | null; loaiTaiKhoan: number | null
+      giaoXuId: string | null; tenGiaoXu: string | null
+    }>('/api/auth/toi'),
+    /** Tự đổi mật khẩu của chính mình (VIEC-TIEP-THEO.md mục 1.3) — máy chủ trả 400 kèm
+     * `thongBao` rõ ràng khi mật khẩu hiện tại sai hoặc mật khẩu mới quá ngắn, `goi()` đã tự
+     * ném Error với đúng thông báo đó. */
+    doiMatKhau: (matKhauHienTai: string, matKhauMoi: string) =>
+      goi<void>('/api/auth/mat-khau', { method: 'PUT', body: JSON.stringify({ matKhauHienTai, matKhauMoi }) }),
+  },
+  /** Anonymous — chỉ dùng để hiện phiên bản bản web thật ở chân SideNav (xem
+   * can-review-sau.md mục 32), không mang dữ liệu giáo xứ nào nên không cần token. */
+  he: {
+    sucKhoe: () => goi<SucKhoe>('/api/suc-khoe'),
+  },
+  taiKhoan: {
+    danhSach: () => goi<TaiKhoanItem[]>('/api/tai-khoan'),
+    tao: (than: unknown) => goi<{ id: string }>('/api/tai-khoan', { method: 'POST', body: JSON.stringify(than) }),
+    capNhat: (id: string, than: unknown) =>
+      goi<void>(`/api/tai-khoan/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoa: (id: string) => goi<void>(`/api/tai-khoan/${id}`, { method: 'DELETE' }),
+  },
+  /** Màn hình "Giáo xứ" — văn phòng giáo xứ tự sửa thông tin xứ mình (thay `frmGiaoXu.cs`,
+   * xem docs/superpowers/specs/man-hinh/giao-xu.md). KHÔNG nhận GiaoXuId — máy chủ luôn tự lấy
+   * từ claim đăng nhập, khác hẳn `quanTri.giaoXu` (xuyên toàn máy chủ, chỉ Quản trị hệ thống). */
+  giaoXu: {
+    layThongTin: () => goi<GiaoXuHienTai>('/api/giao-xu'),
+    capNhat: (than: {
+      tenGiaoXu: string; diaChi: string | null
+      dienThoai: string | null; email: string | null; website: string | null; ghiChu: string | null
+    }) => goi<void>('/api/giao-xu', { method: 'PUT', body: JSON.stringify(than) }),
+  },
+  /** "Danh sách các cha quản xứ" của màn hình "Giáo xứ" — LUÔN trong phạm vi giáo xứ của người
+   * gọi (RLS bảo vệ, khác nhóm `giaoXu` phía trên vốn không có RLS), xem giao-xu.md mục 3.2. */
+  linhMuc: {
+    danhSach: () => goi<LinhMuc[]>('/api/linh-muc'),
+    them: (than: {
+      tenThanh: string | null; hoTen: string; ngaySinh: string | null; chucVu: string | null
+      tuNgay: string | null; denNgay: string | null; ghiChu: string | null
+      dienThoai: string | null; email: string | null
+    }) => goi<void>('/api/linh-muc', { method: 'POST', body: JSON.stringify(than) }),
+    sua: (id: string, than: {
+      tenThanh: string | null; hoTen: string; ngaySinh: string | null; chucVu: string | null
+      tuNgay: string | null; denNgay: string | null; ghiChu: string | null
+      dienThoai: string | null; email: string | null
+    }) => goi<void>(`/api/linh-muc/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    xoa: (id: string) => goi<void>(`/api/linh-muc/${id}`, { method: 'DELETE' }),
+  },
+  /** Màn hình "Quản lý giáo phận/giáo hạt/giáo xứ" (policy "QuanTriHeThong", LoaiTaiKhoan=9 —
+   * xem docs/superpowers/specs/man-hinh/quan-ly-giao-xu.md). CỐ Ý xuyên giáo xứ: chỉ tài
+   * khoản "Quản trị hệ thống" gọi được, quản trị viên thường của một giáo xứ nhận 403. */
+  quanTri: {
+    giaoPhan: {
+      danhSach: () => goi<GiaoPhan[]>('/api/quan-tri/giao-phan'),
+      tao: (than: { tenGiaoPhan: string; ghiChu: string | null }) =>
+        goi<void>('/api/quan-tri/giao-phan', { method: 'POST', body: JSON.stringify(than) }),
+      sua: (id: string, than: { tenGiaoPhan: string; ghiChu: string | null }) =>
+        goi<void>(`/api/quan-tri/giao-phan/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    },
+    giaoHat: {
+      danhSach: () => goi<GiaoHatQuanLy[]>('/api/quan-tri/giao-hat'),
+      tao: (than: { giaoPhanId: string; tenGiaoHat: string; ghiChu: string | null }) =>
+        goi<void>('/api/quan-tri/giao-hat', { method: 'POST', body: JSON.stringify(than) }),
+      sua: (id: string, than: { giaoPhanId: string; tenGiaoHat: string; ghiChu: string | null }) =>
+        goi<void>(`/api/quan-tri/giao-hat/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+    },
+    giaoXu: {
+      danhSach: () => goi<GiaoXuQuanLy[]>('/api/quan-tri/giao-xu'),
+      tao: (than: {
+        giaoHatId: string; tenGiaoXu: string; diaChi: string | null
+        dienThoai: string | null; email: string | null; website: string | null; ghiChu: string | null
+      }) => goi<void>('/api/quan-tri/giao-xu', { method: 'POST', body: JSON.stringify(than) }),
+      sua: (id: string, than: {
+        giaoHatId: string; tenGiaoXu: string; diaChi: string | null
+        dienThoai: string | null; email: string | null; website: string | null; ghiChu: string | null
+      }) => goi<void>(`/api/quan-tri/giao-xu/${id}`, { method: 'PUT', body: JSON.stringify(than) }),
+      /** Tạo tài khoản quản trị ĐẦU TIÊN cho một giáo xứ khác — luôn LoaiTaiKhoan=0, giaoXuId
+       * lấy từ đường dẫn {id} (đường dẫn thứ tư được phép xuyên giáo xứ, xem spec mục 4). */
+      taoTaiKhoan: (giaoXuId: string, than: {
+        tenTaiKhoan: string; matKhau: string; hoTenNguoiDung: string
+        email: string | null; soDienThoai: string | null
+      }) => goi<{ id: string }>(`/api/quan-tri/giao-xu/${giaoXuId}/tai-khoan`,
+        { method: 'POST', body: JSON.stringify(than) }),
+    },
+    /** Màn hình "Nhập dữ liệu Access" (policy "QuanTriHeThong", VIEC-TIEP-THEO.md mục 2.4) —
+     * xem NhapDuLieuService.cs (Qlgx.Api) cho kiến trúc hai bước: quản trị viên chạy
+     * Qlgx.Migration tại máy Windows của mình để rút gói dữ liệu trung gian (.json.gz), rồi
+     * tải GÓI đó lên đây (KHÔNG tải file .mdb — máy chủ Linux không đọc được). */
+    nhapDuLieu: {
+      /** Chạy thử — KHÔNG ghi gì vào PostgreSQL, chỉ đối chiếu số dòng để xem trước. */
+      xemTruoc: (giaoXuDichId: string, tep: File) =>
+        taiTepLenVaDoc<BaoCaoXemTruoc>(`/api/quan-tri/nhap-du-lieu/${giaoXuDichId}/xem-truoc`, tep),
+      /** Khởi động một lượt NHẬP THẬT, chạy NỀN phía máy chủ — trả JobId ngay, không đợi nhập
+       * xong (có thể mất nhiều giây). Client tự gọi `trangThai` định kỳ để theo dõi. */
+      batDau: (giaoXuDichId: string, tep: File, xacNhanGhiDe: boolean) =>
+        taiTepLenVaDoc<{ jobId: string }>(
+          `/api/quan-tri/nhap-du-lieu/${giaoXuDichId}/bat-dau?xacNhanGhiDe=${xacNhanGhiDe}`, tep),
+      trangThai: (jobId: string) =>
+        goi<TrangThaiNhapDuLieu>(`/api/quan-tri/nhap-du-lieu/trang-thai/${jobId}`),
+    },
+  },
+  /** Màn hình "Sao lưu & Phục hồi" (policy "QuanTriHeThong", LoaiTaiKhoan=9). Mọi thao tác ở
+   * đây tác động tới TOÀN MÁY CHỦ, không riêng giáo xứ nào — xem
+   * docs/superpowers/specs/2026-09-13-qlgx-trien-khai-sao-luu-design.md mục 8.
+   *
+   * Toàn bộ đều BẤT ĐỒNG BỘ: `taoCongViec` trả về ngay một mã công việc, bộ chạy trên host mới
+   * là bên thực thi. Không có endpoint nào chờ pg_dump xong (có thể mất vài phút, vượt timeout
+   * của reverse proxy). */
+  saoLuu: {
+    tinhTrang: () => goi<TinhTrangSaoLuu>('/api/sao-luu/tinh-trang'),
+    danhSach: () => goi<BanSaoLuu[]>('/api/sao-luu/danh-sach'),
+    taoCongViec: (than: {
+      loai: LoaiCongViecSaoLuu; snapshotId?: string | null
+      xacNhan?: string | null; nhan?: string | null
+    }) => goi<{ id: string }>('/api/sao-luu/cong-viec', {
+      method: 'POST', body: JSON.stringify(than),
+    }),
+    congViec: (id: string) => goi<CongViecSaoLuu>(`/api/sao-luu/cong-viec/${id}`),
+    congViecGanDay: () => goi<CongViecSaoLuu[]>('/api/sao-luu/cong-viec'),
+    /** Đường dẫn thô của tệp — KHÔNG dùng để điều hướng trình duyệt trực tiếp (route đòi
+     * `Authorization: Bearer`, một thẻ `<a href>`/điều hướng thường không đính header đó nên sẽ
+     * luôn nhận 401). Chỉ còn giữ lại phòng khi có chỗ khác cần đúng chuỗi đường dẫn (ví dụ ghi
+     * log/hiển thị); muốn TẢI THẬT về máy hãy gọi `taiBanSaoVe` bên dưới. */
+    duongDanTaiVe: (maCongViec: string) => `/api/sao-luu/tai-ve/${maCongViec}`,
+    /** Tải một bản sao lưu đã chuẩn bị xong (job loại `tai_ve`) về máy — dùng đúng cơ chế
+     * `taiTepVe` (fetch kèm header Bearer → đọc `blob` → `<a download>` giả) như mọi tệp PDF/
+     * Excel khác trong ứng dụng này, THAY vì một `<a href>` trần điều hướng thẳng tới route: route
+     * đó đòi policy "QuanTriHeThong" (`Authorization: Bearer`), mà điều hướng trình duyệt thường
+     * không tự đính header đó nên sẽ luôn 401 (xem SaoLuuTaiVeTests.cs — chỉ test backend tự set
+     * header mới "qua" được, chưa từng có ai bấm thử trên trình duyệt thật). Chấp nhận cùng đánh
+     * đổi bộ nhớ với mọi export khác trong app (nạp cả tệp dump vào bộ nhớ trang trước khi lưu) —
+     * lựa chọn có chủ đích, giống cách ảnh đại diện chấp nhận lưu BYTEA thay vì đối tượng ngoài ở
+     * giai đoạn này; xem lại khi kích thước bản sao lưu thật sự thành vấn đề. */
+    taiBanSaoVe: (maCongViec: string, thoiDiemBanSao?: string | null) =>
+      taiTepVe(`/api/sao-luu/tai-ve/${maCongViec}`, tenTepBanSaoLuu(thoiDiemBanSao)),
+  },
+  /** Màn hình "Thống kê chung" + "Biểu đồ" — xem
+   * docs/superpowers/specs/man-hinh/thong-ke-bieu-do.md. */
+  thongKe: {
+    chung: (tham: {
+      dieuKien: DieuKienThongKe; giaoHoId?: string; tuNgay?: string; denNgay?: string
+      tuTuoi?: number; denTuoi?: number; luuTru?: boolean; khongCoNgay?: boolean
+      trangThaiHonPhoi?: TrangThaiHonPhoiThongKe
+    }) => {
+      const q = new URLSearchParams()
+      q.set('dieuKien', tham.dieuKien)
+      if (tham.giaoHoId) q.set('giaoHoId', tham.giaoHoId)
+      if (tham.tuNgay) q.set('tuNgay', tham.tuNgay)
+      if (tham.denNgay) q.set('denNgay', tham.denNgay)
+      if (tham.tuTuoi != null) q.set('tuTuoi', String(tham.tuTuoi))
+      if (tham.denTuoi != null) q.set('denTuoi', String(tham.denTuoi))
+      if (tham.luuTru) q.set('luuTru', 'true')
+      if (tham.khongCoNgay) q.set('khongCoNgay', 'true')
+      if (tham.trangThaiHonPhoi) q.set('trangThaiHonPhoi', tham.trangThaiHonPhoi)
+      return goi<ThongKeChungKetQua>(`/api/thong-ke/chung?${q.toString()}`)
+    },
+    onGoi: (tham: {
+      tuNgay: string; denNgay?: string; chucVu?: string; noiTu?: string; dongTu?: string
+      noiPhucVu?: string; luuTru?: boolean; khongCoNgay?: boolean
+    }) => {
+      const q = new URLSearchParams()
+      q.set('tuNgay', tham.tuNgay)
+      if (tham.denNgay) q.set('denNgay', tham.denNgay)
+      if (tham.chucVu) q.set('chucVu', tham.chucVu)
+      if (tham.noiTu) q.set('noiTu', tham.noiTu)
+      if (tham.dongTu) q.set('dongTu', tham.dongTu)
+      if (tham.noiPhucVu) q.set('noiPhucVu', tham.noiPhucVu)
+      if (tham.luuTru) q.set('luuTru', 'true')
+      if (tham.khongCoNgay) q.set('khongCoNgay', 'true')
+      return goi<ThongKeOnGoiKetQua>(`/api/thong-ke/on-goi?${q.toString()}`)
+    },
+    bieuDo: {
+      tongGiaoDan: (tuNam: number, denNam: number, luuTru: boolean) =>
+        goi<BieuDoNam[]>(`/api/thong-ke/bieu-do/tong-giao-dan?tuNam=${tuNam}&denNam=${denNam}&luuTru=${luuTru}`),
+      tongHonPhoi: (tuNam: number, denNam: number) =>
+        goi<BieuDoNam[]>(`/api/thong-ke/bieu-do/tong-hon-phoi?tuNam=${tuNam}&denNam=${denNam}`),
+      biTich: (tuNam: number, denNam: number) =>
+        goi<BieuDoBiTichNam[]>(`/api/thong-ke/bieu-do/bi-tich?tuNam=${tuNam}&denNam=${denNam}`),
+      doTuoi: () => goi<BieuDoDoTuoi>('/api/thong-ke/bieu-do/do-tuoi'),
+      giaoHo: () => goi<BieuDoGiaoHo[]>('/api/thong-ke/bieu-do/giao-ho'),
+    },
+  },
+  /** Màn hình "Quản lý mẫu in" — năng lực MỚI (xem quan-ly-mau-in.md), không có ở bản desktop.
+   * "rieng" (policy "QuanTri", giáo xứ tự sửa mẫu CỦA MÌNH) và "heThong" (policy
+   * "QuanTriHeThong") gọi cùng một nhóm route phía sau, khác nhau đúng đường dẫn — máy chủ tự
+   * lấy GiaoXuId từ claim cho "rieng", KHÔNG bao giờ nhận qua tham số ở đây. */
+  mauIn: {
+    danhSach: () => goi<MauInDanhSachItem[]>('/api/mau-in'),
+    xemThu: (tenMau: string, noiDungHtml: string) =>
+      xemThuPdfMoTab(`/api/mau-in/${tenMau}/xem-thu`, { noiDungHtml }),
+    rieng: {
+      layChiTiet: (tenMau: string) => goi<MauInChiTiet>(`/api/mau-in/${tenMau}/rieng`),
+      luu: (tenMau: string, noiDungHtml: string, rowVersion: number) =>
+        goi<void>(`/api/mau-in/${tenMau}/rieng`, { method: 'PUT', body: JSON.stringify({ noiDungHtml, rowVersion }) }),
+      khoiPhuc: (tenMau: string) => goi<void>(`/api/mau-in/${tenMau}/rieng`, { method: 'DELETE' }),
+    },
+    heThong: {
+      layChiTiet: (tenMau: string) => goi<MauInChiTiet>(`/api/mau-in/${tenMau}/he-thong`),
+      luu: (tenMau: string, noiDungHtml: string, rowVersion: number) =>
+        goi<void>(`/api/mau-in/${tenMau}/he-thong`, { method: 'PUT', body: JSON.stringify({ noiDungHtml, rowVersion }) }),
+      khoiPhuc: (tenMau: string) => goi<void>(`/api/mau-in/${tenMau}/he-thong`, { method: 'DELETE' }),
+    },
+  },
+  /** Khu vực "Cách hiển thị dữ liệu đúng/sai" của màn hình "Quản lý mẫu in" — một lượt GET trả
+   * đủ cả 5 biến kèm CẢ HAI cấp (xem CachHienThiDungSaiItemDto), nên không có route GET riêng
+   * theo cấp như `mauIn`. */
+  /** Task 10 (PWA offline) — hộp "cần xem lại" (spec 9.2). ĐỌC/GHI qua mạng bình thường (`goi()`),
+   * KHÔNG phải đường `ghiCucBo`/kho IndexedDB — hộp này vốn chỉ có ý nghĩa khi ONLINE (xử lý xung
+   * đột không phải việc offline-first, xem `task-10-brief.md`). Khuôn mẫu đúng ba endpoint thật
+   * của `DongBoEndpoints.cs`/`MapCanXemLai`. */
+  canXemLai: {
+    danhSach: () => goi<CanXemLai[]>('/api/can-xem-lai'),
+    /** `chon` chỉ nhận đúng "A" hoặc "B" (máy chủ từ chối giá trị khác — xem `ChonGiaTriYeuCau`).
+     * Dùng cho mục CÓ cặp giá trị A/B để chọn (khác `danhDauDaXuLy` bên dưới, dùng cho mục KHÔNG
+     * có cặp giá trị, ví dụ `Loai === "khong_luu_duoc"`). */
+    chon: (id: string, chon: 'A' | 'B') =>
+      goi<void>(`/api/can-xem-lai/${id}/chon`, { method: 'POST', body: JSON.stringify({ chon }) }),
+    danhDauDaXuLy: (id: string) =>
+      goi<void>(`/api/can-xem-lai/${id}/danh-dau-da-xu-ly`, { method: 'POST' }),
+  },
+  cachHienThi: {
+    danhSach: () => goi<CachHienThiDungSaiItem[]>('/api/cach-hien-thi'),
+    rieng: {
+      luu: (tenBien: string, khiDung: string, khiSai: string, rowVersion: number) =>
+        goi<void>(`/api/cach-hien-thi/${tenBien}/rieng`,
+          { method: 'PUT', body: JSON.stringify({ khiDung, khiSai, rowVersion }) }),
+      khoiPhuc: (tenBien: string) =>
+        goi<void>(`/api/cach-hien-thi/${tenBien}/rieng`, { method: 'DELETE' }),
+    },
+    heThong: {
+      luu: (tenBien: string, khiDung: string, khiSai: string, rowVersion: number) =>
+        goi<void>(`/api/cach-hien-thi/${tenBien}/he-thong`,
+          { method: 'PUT', body: JSON.stringify({ khiDung, khiSai, rowVersion }) }),
+      khoiPhuc: (tenBien: string) =>
+        goi<void>(`/api/cach-hien-thi/${tenBien}/he-thong`, { method: 'DELETE' }),
+    },
+  },
+}

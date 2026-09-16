@@ -1,0 +1,217 @@
+[
+  {
+    "_ghiChu": "SoSanh: vat ly moi hon thi thang (a > b)",
+    "ham": "SoSanh",
+    "vao": {
+      "a": { "vatLy": "2026-09-13T10:00:01.000000Z", "logic": 0, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000001" },
+      "b": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 0, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000002" }
+    },
+    "ra": { "dau": 1 }
+  },
+  {
+    "_ghiChu": "SoSanh: vat ly cu hon thi thua (a < b) - chieu nguoc lai cua ca truoc",
+    "ham": "SoSanh",
+    "vao": {
+      "a": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 0, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000001" },
+      "b": { "vatLy": "2026-09-13T10:00:01.000000Z", "logic": 0, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000002" }
+    },
+    "ra": { "dau": -1 }
+  },
+  {
+    "_ghiChu": "SoSanh: cung moc vat ly, dong ho logic pha hoa",
+    "ham": "SoSanh",
+    "vao": {
+      "a": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 7, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000001" },
+      "b": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 5, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000002" }
+    },
+    "ra": { "dau": 1 }
+  },
+  {
+    "_ghiChu": "SoSanh: thietBiId null (may chu) xep TRUOC thiet bi co danh tinh",
+    "ham": "SoSanh",
+    "vao": {
+      "a": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 0, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000001" },
+      "b": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 0, "thietBiId": "00000000-0000-0000-0000-000000000001", "maThaoTac": "00000000-0000-0000-0000-000000000002" }
+    },
+    "ra": { "dau": -1 }
+  },
+  {
+    "_ghiChu": "SoSanh: chieu nguoc lai cua ca truoc - co danh tinh xep SAU null",
+    "ham": "SoSanh",
+    "vao": {
+      "a": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 0, "thietBiId": "00000000-0000-0000-0000-000000000001", "maThaoTac": "00000000-0000-0000-0000-000000000001" },
+      "b": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 0, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000002" }
+    },
+    "ra": { "dau": 1 }
+  },
+  {
+    "_ghiChu": "SoSanh: cung thietBiId, hoa het thi maThaoTac pha hoa",
+    "ham": "SoSanh",
+    "vao": {
+      "a": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 0, "thietBiId": "00000000-0000-0000-0000-000000000001", "maThaoTac": "00000000-0000-0000-0000-00000000000a" },
+      "b": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 0, "thietBiId": "00000000-0000-0000-0000-000000000001", "maThaoTac": "00000000-0000-0000-0000-0000000000b0" }
+    },
+    "ra": { "dau": -1 }
+  },
+  {
+    "_ghiChu": "SoSanh: hai dau giong het nhau thi bang nhau",
+    "ham": "SoSanh",
+    "vao": {
+      "a": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 3, "thietBiId": "00000000-0000-0000-0000-000000000001", "maThaoTac": "00000000-0000-0000-0000-00000000000a" },
+      "b": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 3, "thietBiId": "00000000-0000-0000-0000-000000000001", "maThaoTac": "00000000-0000-0000-0000-00000000000a" }
+    },
+    "ra": { "dau": 0 }
+  },
+  {
+    "_ghiChu": "SoSanh: logic va thietBiId cung khac chieu - LOGIC phai duoc uu tien truoc thietBiId (bat mutation dao thu tu hai tang)",
+    "ham": "SoSanh",
+    "vao": {
+      "a": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 5, "thietBiId": "00000000-0000-0000-0000-000000000002", "maThaoTac": "00000000-0000-0000-0000-000000000001" },
+      "b": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 7, "thietBiId": "00000000-0000-0000-0000-000000000001", "maThaoTac": "00000000-0000-0000-0000-000000000002" }
+    },
+    "ra": { "dau": -1 }
+  },
+  {
+    "_ghiChu": "SoSanh: ca hai thietBiId deu null, pha hoa cuoi cung bang maThaoTac",
+    "ham": "SoSanh",
+    "vao": {
+      "a": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 0, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000001" },
+      "b": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 0, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000002" }
+    },
+    "ra": { "dau": -1 }
+  },
+  {
+    "_ghiChu": "SoSanhGuid: ca hai null thi bang nhau",
+    "ham": "SoSanhGuid",
+    "vao": { "a": null, "b": null },
+    "ra": { "dau": 0 }
+  },
+  {
+    "_ghiChu": "SoSanhGuid: null xep TRUOC co danh tinh",
+    "ham": "SoSanhGuid",
+    "vao": { "a": null, "b": "00000000-0000-0000-0000-000000000001" },
+    "ra": { "dau": -1 }
+  },
+  {
+    "_ghiChu": "SoSanhGuid: co danh tinh xep SAU null",
+    "ham": "SoSanhGuid",
+    "vao": { "a": "00000000-0000-0000-0000-000000000001", "b": null },
+    "ra": { "dau": 1 }
+  },
+  {
+    "_ghiChu": "SoSanhGuid: so ordinal dang chuoi 'D'",
+    "ham": "SoSanhGuid",
+    "vao": { "a": "00000000-0000-0000-0000-000000000001", "b": "00000000-0000-0000-0000-000000000002" },
+    "ra": { "dau": -1 }
+  },
+  {
+    "_ghiChu": "SoSanhGuid: chu hoa/thuong khac nhau nhung cung gia tri thi bang nhau",
+    "ham": "SoSanhGuid",
+    "vao": { "a": "00000000-0000-0000-0000-00000000000a", "b": "00000000-0000-0000-0000-00000000000A" },
+    "ra": { "dau": 0 }
+  },
+  {
+    "_ghiChu": "NangDau: khong nhan gi, gio hien tai bang dau cuoi cua ta -> van phai tien mot buoc logic",
+    "ham": "NangDau",
+    "vao": {
+      "dauCuoiCuaTa": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 3, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000000" },
+      "nhanDuoc": null,
+      "gioHienTai": "2026-09-13T10:00:00.000000Z"
+    },
+    "ra": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 4 }
+  },
+  {
+    "_ghiChu": "NangDau: dong ho may chu bi chinh LUI, khong duoc lui theo - vat ly bam theo dau cuoi cua ta",
+    "ham": "NangDau",
+    "vao": {
+      "dauCuoiCuaTa": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 3, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000000" },
+      "nhanDuoc": null,
+      "gioHienTai": "2026-09-13T09:59:30.000000Z"
+    },
+    "ra": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 4 }
+  },
+  {
+    "_ghiChu": "NangDau: gio hien tai da vuot qua ca dau cuoi cua ta lan nhan duoc -> logic ve khong",
+    "ham": "NangDau",
+    "vao": {
+      "dauCuoiCuaTa": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 9, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000000" },
+      "nhanDuoc": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 9, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000002" },
+      "gioHienTai": "2026-09-13T10:01:00.000000Z"
+    },
+    "ra": { "vatLy": "2026-09-13T10:01:00.000000Z", "logic": 0 }
+  },
+  {
+    "_ghiChu": "NangDau: nhan mot dau o tuong lai gan -> bam theo moc do, logic nang len tren logic da nhan",
+    "ham": "NangDau",
+    "vao": {
+      "dauCuoiCuaTa": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 0, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000000" },
+      "nhanDuoc": { "vatLy": "2026-09-13T10:00:05.000000Z", "logic": 4, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000001" },
+      "gioHienTai": "2026-09-13T10:00:00.000000Z"
+    },
+    "ra": { "vatLy": "2026-09-13T10:00:05.000000Z", "logic": 5 }
+  },
+  {
+    "_ghiChu": "NangDau: nhan duoc mot dau LAC HAU hon dau cuoi cua ta -> bi bo qua, khong keo lui",
+    "ham": "NangDau",
+    "vao": {
+      "dauCuoiCuaTa": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 6, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000000" },
+      "nhanDuoc": { "vatLy": "2026-09-13T09:59:30.000000Z", "logic": 99, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000001" },
+      "gioHienTai": "2026-09-13T10:00:00.000000Z"
+    },
+    "ra": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 7 }
+  },
+  {
+    "_ghiChu": "NangDau: ba moc hoa nhau (bay gio == cua ta == cua ho) -> logic la MAX cua hai ben roi +1",
+    "ham": "NangDau",
+    "vao": {
+      "dauCuoiCuaTa": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 2, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000000" },
+      "nhanDuoc": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 10, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000002" },
+      "gioHienTai": "2026-09-13T10:00:00.000000Z"
+    },
+    "ra": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 11 }
+  },
+  {
+    "_ghiChu": "NangDau: ba moc hoa nhau nhung LAN NAY logic cua CHINH TA lon hon logic vua nhan - van phai la MAX (bat mutation quen Math.max, chi lay logic vua nhan)",
+    "ham": "NangDau",
+    "vao": {
+      "dauCuoiCuaTa": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 10, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000000" },
+      "nhanDuoc": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 2, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000002" },
+      "gioHienTai": "2026-09-13T10:00:00.000000Z"
+    },
+    "ra": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 11 }
+  },
+  {
+    "_ghiChu": "SoSanh: hai moc CHI KHAC nhau o MICRO GIAY (ms giong het nhau) - PIN quyet dinh 'giu chuoi, khong ep number': neu ai do doi soSanh sang so Date.getTime() (mat do phan giai micro giay) thi ca nay se sai (bang nhau thay vi a<b). Day la ly do TON TAI cua ca file dauDongHo.ts.",
+    "ham": "SoSanh",
+    "vao": {
+      "a": { "vatLy": "2026-09-13T10:00:00.123456Z", "logic": 0, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000001" },
+      "b": { "vatLy": "2026-09-13T10:00:00.123457Z", "logic": 0, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000002" }
+    },
+    "ra": { "dau": -1 }
+  },
+  {
+    "_ghiChu": "NangDau: dau cuoi cua ta chi khac nhan duoc o MICRO GIAY - phai chon dung ben lon hon theo micro giay, khong duoc coi la bang nhau (cung PIN quyet dinh giu chuoi)",
+    "ham": "NangDau",
+    "vao": {
+      "dauCuoiCuaTa": { "vatLy": "2026-09-13T10:00:00.500001Z", "logic": 3, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000000" },
+      "nhanDuoc": { "vatLy": "2026-09-13T10:00:00.500002Z", "logic": 7, "thietBiId": null, "maThaoTac": "00000000-0000-0000-0000-000000000002" },
+      "gioHienTai": "2026-09-13T10:00:00.500000Z"
+    },
+    "ra": { "vatLy": "2026-09-13T10:00:00.500002Z", "logic": 8 }
+  },
+  {
+    "_ghiChu": "SoSanhGuid: PIN thu tu la SO CHUOI, khong phai Guid.CompareTo cua .NET (so _a nhu int little-endian) hay memcmp byte tho. Voi hai gia tri nay, so chuoi cho a>b nhung Guid.CompareTo cua .NET lai cho a<b (vi truong dau _a am khi bit cao nhat bat) - neu SoSanhGuid ben C# lo doi sang Guid.CompareTo, ca nay se bat duoc ngay ca khi van chay tren C#.",
+    "ham": "SoSanhGuid",
+    "vao": { "a": "ffffffff-0000-0000-0000-000000000000", "b": "00000001-0000-0000-0000-000000000000" },
+    "ra": { "dau": 1 }
+  },
+  {
+    "_ghiChu": "SoSanh: cung vatLy VA cung logic, hai thietBiId khac nhau deu KHONG null - phai phan biet duoc bang chinh tang thietBiId (khong di qua tang logic nhu ca 'logic va thietBiId cung khac chieu' o tren)",
+    "ham": "SoSanh",
+    "vao": {
+      "a": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 5, "thietBiId": "00000000-0000-0000-0000-000000000001", "maThaoTac": "00000000-0000-0000-0000-000000000001" },
+      "b": { "vatLy": "2026-09-13T10:00:00.000000Z", "logic": 5, "thietBiId": "00000000-0000-0000-0000-000000000002", "maThaoTac": "00000000-0000-0000-0000-000000000002" }
+    },
+    "ra": { "dau": -1 }
+  }
+]

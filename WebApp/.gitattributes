@@ -1,0 +1,6 @@
+# Script shell va SQL PHAI la LF thuan — chung chay tren may chu Linux qua SSH.
+# May phat trien la Windows, "core.autocrlf=true" co the vo tinh doi sang CRLF luc commit
+# neu khong co dong nay — kich ban do se hong ngay khi chay tren Linux (bad interpreter).
+*.sh text eol=lf
+*.bats text eol=lf
+*.sql text eol=lf

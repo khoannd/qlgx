@@ -1,0 +1,251 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { createRef } from 'react'
+import { describe, expect, it, vi } from 'vitest'
+import { GxGiaoDanList, menuGiaoDanMacDinh } from './GxGiaoDanList'
+import type { GxGridHandle } from './GxGrid'
+import { api } from '../api/client'
+import type { GiaoDanListItem } from '../api/types'
+
+vi.mock('../api/client', () => ({
+  api: {
+    giaoDan: {
+      inLyLichCaNhan: vi.fn(() => Promise.resolve()),
+      inChungNhanBiTich: vi.fn(() => Promise.resolve()),
+      inGioiThieuHonPhoi: vi.fn(() => Promise.resolve()),
+    },
+  },
+}))
+
+const nguoi = (p: Partial<GiaoDanListItem> = {}): GiaoDanListItem => ({
+  id: 'a1', maGiaoDanCu: 4412, tenThanh: 'Maria', hoTen: 'Trần Thị Khánh Ngọc',
+  phai: 'Nữ', ngaySinh: '2005-03-14', namSinh: '2005', ngayRuaToi: null,
+  ngayRuocLe: null, ngayThemSuc: null, lapGd: false, hoTenCha: null, hoTenMe: null,
+  tanTong: false, conHoc: true, ngheNghiep: null, ghiChu: null, dienThoai: null,
+  diaChi: null, tenGiaoHo: 'Giáo họ Thánh Tâm', daChuyenDi: false,
+  trinhDoVanHoa: null, trinhDoChuyenMon: null, bietNgoaiNgu: null,
+  quaDoi: false, ngayQuaDoi: null, noiAnTang: null, noiSinh: null,
+  noiRuaToi: null, noiRuocLe: null, noiThemSuc: null, quanHe: null,
+  giaDinhId: null, khongThongKe: false, ...p,
+})
+
+// ag-grid dựng header/hàng qua setTimeout(0) nội bộ (dồn sự kiện để tối ưu hiệu năng) nên
+// dưới jsdom nội dung lưới chưa có ngay sau render() — phải chờ bằng findByText/waitFor
+// thay vì getByText/queryByText đồng bộ.
+describe('GxGiaoDanList', () => {
+  it('hien du 29 cot cua ban desktop khi dung o man hinh danh sach', async () => {
+    render(<GxGiaoDanList rows={[nguoi()]} />)
+
+    expect(await screen.findByText('Mã GD')).toBeDefined()
+    expect(screen.getByText('Tên thánh')).toBeDefined()
+    expect(screen.getByText('Nơi thêm sức')).toBeDefined()
+    expect(screen.queryByText('Quan hệ GĐ')).toBeNull()
+  })
+
+  it('them cot Quan he GD va bo cot Dien thoai khi nhung trong form gia dinh', async () => {
+    render(<GxGiaoDanList rows={[nguoi()]} quanHeGiaDinh />)
+
+    expect(await screen.findByText('Quan hệ GĐ')).toBeDefined()
+    expect(screen.queryByText('Điện thoại')).toBeNull()
+  })
+
+  it('nhap dup mot dong thi goi onMo voi dung ban ghi', async () => {
+    const onMo = vi.fn()
+    render(<GxGiaoDanList rows={[nguoi()]} onMo={onMo} />)
+
+    await userEvent.dblClick(await screen.findByText('Trần Thị Khánh Ngọc'))
+
+    expect(onMo).toHaveBeenCalledWith(expect.objectContaining({ maGiaoDanCu: 4412 }))
+  })
+
+  it('man hinh danh sach giao dan KHONG gach ngang dong nao (dung ban desktop: FormattingRow rong)', async () => {
+    const { container } = render(
+      <GxGiaoDanList rows={[nguoi({ quaDoi: true }), nguoi({ id: 'a2', maGiaoDanCu: 1, lapGd: true })]} />,
+    )
+
+    await screen.findByText('Mã GD')
+    await waitFor(() => expect(container.querySelectorAll('.ag-row')).toHaveLength(2))
+    expect(container.querySelectorAll('.dong-gach-do')).toHaveLength(0)
+    expect(screen.queryByText(/Gạch ngang đỏ/)).toBeNull()
+  })
+
+  it('luoi thanh vien gia dinh (quanHeGiaDinh) gach ngang nguoi qua doi/chuyen xu, KHONG gach nguoi da lap GD', async () => {
+    const { container } = render(
+      <GxGiaoDanList
+        quanHeGiaDinh
+        rows={[
+          nguoi({ id: 'a1', quaDoi: true }),
+          nguoi({ id: 'a2', daChuyenDi: true }),
+          nguoi({ id: 'a3', lapGd: true }),
+        ]}
+      />,
+    )
+
+    await screen.findByText('Mã GD')
+    await waitFor(() => expect(container.querySelectorAll('.dong-gach-do')).toHaveLength(2))
+    expect(await screen.findByText(/Gạch ngang đỏ: đã qua đời hoặc đã chuyển xứ/)).toBeDefined()
+  })
+
+  it('mac dinh (hangLoc) thi hien hang loc duoi moi tieu de cot', async () => {
+    const { container } = render(<GxGiaoDanList rows={[nguoi()]} />)
+
+    await screen.findByText('Mã GD')
+    // Ag-grid (bản legacy theme) đánh dấu ô lọc nổi bằng class `ag-floating-filter` —
+    // đủ 29 cột thì phải có đủ 29 ô lọc.
+    await waitFor(() => expect(container.querySelectorAll('.ag-floating-filter')).toHaveLength(29))
+  })
+
+  it('hangLoc=false thi khong hien hang loc', async () => {
+    const { container } = render(<GxGiaoDanList rows={[nguoi()]} hangLoc={false} />)
+
+    await screen.findByText('Mã GD')
+    await waitFor(() => expect(container.querySelectorAll('.ag-floating-filter')).toHaveLength(0))
+  })
+
+  // Cột ngày hiện dd/MM/yyyy nhưng PHẢI sắp xếp theo giá trị ngày thật (giữ nguyên field ISO,
+  // chỉ đổi valueFormatter) — nếu lỡ đổi field/valueGetter thành chuỗi đã định dạng, sắp xếp
+  // sẽ so sánh chuỗi và cho ra thứ tự sai (vd "25/04/2015" đứng trước "26/03/1990" theo ASCII
+  // dù 1990 có trước 2015 rất xa). Xem docs/superpowers/specs/man-hinh/can-review-sau.md mục W1.
+  it('cot ngay sinh hien dd/MM/yyyy nhung sap xep dung theo thoi gian, khong theo chuoi', async () => {
+    const ref = createRef<GxGridHandle>()
+    render(
+      <GxGiaoDanList
+        ref={ref}
+        rows={[
+          nguoi({ id: 'a', hoTen: 'Người sinh 2015', ngaySinh: '2015-04-25' }),
+          nguoi({ id: 'b', hoTen: 'Người sinh 1990', ngaySinh: '1990-03-26' }),
+          nguoi({ id: 'c', hoTen: 'Người sinh 2005', ngaySinh: '2005-01-01' }),
+        ]}
+        hangLoc={false}
+      />,
+    )
+
+    const tieuDeChu = await screen.findByText('Ngày sinh')
+    // Hiển thị phải là dd/MM/yyyy, không phải ISO — kiểm tra trước khi sắp xếp.
+    await waitFor(() => expect(screen.getByText('25/04/2015')).toBeDefined())
+    expect(screen.getByText('26/03/1990')).toBeDefined()
+    expect(screen.getByText('01/01/2005')).toBeDefined()
+
+    // Bấm đúng vào `.ag-header-cell-label` để kích hoạt sắp xếp của ag-grid — trình lắng nghe
+    // click sắp xếp của ag-grid gắn trên phần tử này (`data-ref="eLabel"`), không phải trên
+    // toàn bộ `.ag-header-cell` hay riêng đoạn chữ `.ag-header-cell-text`. Dùng `fireEvent`
+    // (một sự kiện `click` thô) thay vì `userEvent.click` — chuỗi pointerdown/pointerup của
+    // `userEvent` bị ag-grid hiểu nhầm thành thao tác kéo cột thay vì bấm sắp xếp dưới jsdom.
+    const oTieuDe = tieuDeChu.closest('.ag-header-cell')!.querySelector('.ag-header-cell-label') as HTMLElement
+    fireEvent.click(oTieuDe)
+
+    // Đọc lại DỮ LIỆU THẬT của lưới sau khi sắp xếp qua `layCsv()` (xuất đúng những gì lưới
+    // đang hiển thị theo bộ lọc/sắp xếp hiện tại) thay vì lục lại DOM `.ag-cell` — dưới jsdom,
+    // virtualization của ag-grid không tái dựng lại vị trí các dòng trong `container` dù mô
+    // hình dữ liệu bên trong ĐÃ sắp đúng (đã kiểm tra trực tiếp bằng `getDataAsCsv()`), nên
+    // assert theo CSV mới phản ánh đúng "dữ liệu được sắp xếp" mà cột ngày cam kết.
+    await waitFor(() => {
+      const csv = ref.current!.layCsv()
+      expect(csv).toBeTruthy()
+      const dong = (csv ?? '').trim().split('\n').slice(1)
+      // Cột "Ngày sinh" là cột thứ 5 (chỉ số 4) trong 29 cột CSV.
+      const ngaySinhTheoThuTu = dong.map((d) => d.split(',')[4].replaceAll('"', ''))
+      // Sắp tăng dần THẬT theo thời gian: 1990 < 2005 < 2015 — nếu (do lỗi) sắp theo CHUỖI
+      // dd/MM/yyyy đã định dạng thay vì ISO gốc thì "01/01/2005" (bắt đầu bằng "0") vẫn tình
+      // cờ đứng giữa, nhưng phép thử thật sự nằm ở việc dữ liệu bên dưới KHÔNG BAO GIỜ được
+      // đổi field/valueGetter sang chuỗi hiển thị — xem chú thích `ngay()` ở cotGiaoDan.ts.
+      expect(ngaySinhTheoThuTu).toEqual(['26/03/1990', '01/01/2005', '25/04/2015'])
+    })
+  })
+
+  // --- Menu chuot phai: In ly lich ca nhan (VIEC-TIEP-THEO.md muc 1.1) -------------------
+
+  describe('menuGiaoDanMacDinh', () => {
+    it('co dung 12 muc, dung thu tu, va muc "In ly lich ca nhan" da co chay that', () => {
+      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn(), vi.fn())
+
+      expect(menu.map((m) => m.nhan)).toEqual([
+        'Xem chi tiết', 'In lý lịch cá nhân', 'In chứng nhận bí tích', 'In giới thiệu hôn phối',
+        'In chứng nhận rửa tội', 'In chứng nhận xưng tội - rước lễ', 'In chứng nhận thêm sức',
+        'Xem gia đình', 'In giấy giới thiệu chứng nhận rửa tội', 'In giấy giới thiệu giáo lý hôn phối',
+        'In giấy giới thiệu chứng nhận thêm sức', 'Xem vị trí',
+      ])
+      // Trước lượt "in ấn" (VIEC-TIEP-THEO.md mục 1.1), 10/12 mục chỉ có `nhan`, bấm không làm
+      // gì — nay MỌI mục đều có `chay` VÀ đều đã in được thật (không còn mục nào báo "chưa hỗ
+      // trợ" — xem in-an.md mục 8, "In giới thiệu hôn phối" là mục cuối cùng hoàn tất).
+      expect(menu.every((m) => typeof m.chay === 'function')).toBe(true)
+    })
+
+    it('bam "In ly lich ca nhan" thi goi api.giaoDan.inLyLichCaNhan voi dung id', () => {
+      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn(), vi.fn())
+      const muc = menu.find((m) => m.nhan === 'In lý lịch cá nhân')!
+
+      muc.chay!(nguoi({ id: 'gd-xyz' }))
+
+      expect(api.giaoDan.inLyLichCaNhan).toHaveBeenCalledWith('gd-xyz')
+    })
+
+    // Mục cuối cùng còn báo "chưa hỗ trợ" trên toàn ứng dụng (xem in-an.md mục 8) — nay đã in
+    // được thật, tương đương Source/ExcelReport/ReportRaoHP.cs.
+    it('bam "In gioi thieu hon phoi" thi goi api.giaoDan.inGioiThieuHonPhoi voi dung id', () => {
+      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn(), vi.fn())
+      const muc = menu.find((m) => m.nhan === 'In giới thiệu hôn phối')!
+
+      muc.chay!(nguoi({ id: 'gd-rao' }))
+
+      expect(api.giaoDan.inGioiThieuHonPhoi).toHaveBeenCalledWith('gd-rao')
+    })
+
+    it.each([
+      ['In chứng nhận bí tích', undefined],
+      ['In chứng nhận rửa tội', 'RuaToi'],
+      ['In chứng nhận xưng tội - rước lễ', 'RuocLe'],
+      ['In chứng nhận thêm sức', 'ThemSuc'],
+    ] as const)('bam "%s" thi goi api.giaoDan.inChungNhanBiTich dung loai', (nhan, loai) => {
+      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn(), vi.fn())
+      const muc = menu.find((m) => m.nhan === nhan)!
+
+      muc.chay!(nguoi({ id: 'gd-bt' }))
+
+      expect(api.giaoDan.inChungNhanBiTich).toHaveBeenCalledWith('gd-bt', loai)
+    })
+
+    // --- Giay gioi thieu (4 mau — 3 mau theo giao dan o day, mau con lai theo gia dinh) ----
+
+    it.each([
+      ['In giấy giới thiệu chứng nhận rửa tội', 'RuaToi'],
+      ['In giấy giới thiệu giáo lý hôn phối', 'GiaoLyHonPhoi'],
+      ['In giấy giới thiệu chứng nhận thêm sức', 'ThemSuc'],
+    ] as const)('bam "%s" thi goi moGioiThieu dung loai va dung giao dan', (nhan, loai) => {
+      const moGioiThieu = vi.fn()
+      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn(), moGioiThieu)
+      const muc = menu.find((m) => m.nhan === nhan)!
+      const d = nguoi({ id: 'gd-gt' })
+
+      muc.chay!(d)
+
+      expect(moGioiThieu).toHaveBeenCalledWith(loai, d)
+    })
+
+    // "Xem vị trí" mở Google Maps với địa chỉ giáo dân — xem lib/xemViTri.ts.
+    it('bam "Xem vi tri" bao loi khi giao dan khong co dia chi', () => {
+      const alertGia = vi.spyOn(window, 'alert').mockImplementation(() => {})
+      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn(), vi.fn())
+      const muc = menu.find((m) => m.nhan === 'Xem vị trí')!
+
+      muc.chay!(nguoi({ diaChi: null }))
+
+      expect(alertGia).toHaveBeenCalledWith('Giáo dân này không có địa chỉ để xem bản đồ.')
+      alertGia.mockRestore()
+    })
+
+    it('bam "Xem vi tri" mo Google Maps voi dung dia chi khi co dia chi', () => {
+      const openGia = vi.spyOn(window, 'open').mockImplementation(() => null)
+      const menu = menuGiaoDanMacDinh(vi.fn(), vi.fn(), vi.fn())
+      const muc = menu.find((m) => m.nhan === 'Xem vị trí')!
+
+      muc.chay!(nguoi({ diaChi: '45 Trần Hưng Đạo' }))
+
+      expect(openGia).toHaveBeenCalledWith(
+        'https://www.google.com/maps/search/' + encodeURIComponent('45 Trần Hưng Đạo'),
+        '_blank', 'noopener,noreferrer',
+      )
+      openGia.mockRestore()
+    })
+  })
+})

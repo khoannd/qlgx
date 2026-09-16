@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Times New Roman", "Liberation Serif", Georgia, serif;
+    font-size: 8pt;
+    color: #000;
+    margin: 0;
+    padding: 0;
+  }
+  .tieu-de { text-align: center; margin-bottom: 2mm; }
+  .tieu-de h1 { font-size: 14pt; margin: 0 0 1mm 0; letter-spacing: 0.5px; }
+  .tieu-de .giao-xu { font-size: 10pt; font-weight: bold; text-transform: uppercase; }
+  .tieu-de .phu-de { font-size: 9pt; }
+
+  table.ds { width: 100%; border-collapse: collapse; }
+  table.ds th, table.ds td { border: 1px solid #999; padding: 0.8mm 1.2mm; text-align: left; }
+  table.ds thead { display: table-header-group; }
+  table.ds th { background: #eee; font-weight: bold; white-space: nowrap; }
+  table.ds td.so { text-align: right; }
+
+  .chan-trang { margin-top: 2mm; font-size: 8pt; font-style: italic; color: #333; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+  <div class="tieu-de">
+    <div class="giao-xu">GIÁO XỨ {{TenGiaoXu}}</div>
+    <h1>DANH SÁCH GIÁO DÂN</h1>
+    <div class="phu-de">{{DieuKienLoc}}</div>
+  </div>
+
+  <table class="ds">
+    <thead>
+      <tr>
+        <th>Mã GD</th><th>Tên thánh</th><th>Họ tên</th><th>Phái</th><th>Ngày sinh</th>
+        <th>Ngày rửa tội</th><th>Ngày XTRL</th><th>Ngày Th.Sức</th><th>Lập GĐ</th>
+        <th>Cha</th><th>Mẹ</th><th>Tân tòng</th><th>Còn học</th><th>Nghề nghiệp</th>
+        <th>Ghi chú</th><th>Điện thoại</th><th>Địa chỉ</th><th>Giáo họ</th>
+        <th>Đã chuyển đi</th><th>Văn hóa</th><th>Chuyên môn</th><th>Ngoại ngữ</th>
+        <th>Qua đời</th><th>Ngày qua đời</th><th>Nơi an táng</th><th>Nơi sinh</th>
+        <th>Nơi rửa tội</th><th>Nơi XTRL</th><th>Nơi thêm sức</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{HangDanhSach}}
+    </tbody>
+  </table>
+
+  <div class="chan-trang">
+    <span>Tổng số: {{SoLuong}} giáo dân</span>
+    <span>In lúc {{NgayThangNamIn}}</span>
+  </div>
+</body>
+</html>

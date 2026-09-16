@@ -1,0 +1,28 @@
+[Unit]
+Description=QLGX -- chay cong viec sao luu/phuc hoi dang cho trong hang doi
+Documentation=https://github.com/khoannd/qlgx
+After=docker.service
+Requires=docker.service
+# Khong co script thi khong bao loi om som moi phut (vd dang go cai dat).
+ConditionPathExists=/opt/qlgx/WebApp/scripts/qlgx-runner.sh
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/qlgx/backup.env
+# Goi qua "/bin/bash <script>" chu khong chay thang script: kho git phat trien tren Windows
+# nen git ghi nhan cac tep .sh la 100644 (khong co bit thuc thi). install.sh co dat lai bit do
+# (dat_bit_thuc_thi), nhung cach goi nay lam unit chay duoc ke ca khi ai do chep unit vao may
+# bang tay ma bo qua buoc do.
+ExecStart=/bin/bash /opt/qlgx/WebApp/scripts/qlgx-runner.sh chay-job
+# KHONG boc them flock o day: qlgx-runner.sh da co khoa NOI BO cua chinh no (bien KHOA_RUNNER),
+# va khoa noi bo moi bao ve duoc CA cac duong goi khong qua systemd -- install.sh goi thang khi
+# quan tri vien bam "cap nhat", qlgx-restore.sh goi lai khi phuc hoi, admin go tay qua CLI qlgx.
+# Them mot lop flock o tang unit chi tao them mot duong that bai nua ma khong che duoc gi.
+#
+# 2 gio, KHOP voi nguong "job mo coi" trong qlgx-runner.sh (QLGX_GIO_JOB_QUA_HAN): mot luot treo
+# phai bi giet DUT DIEM de nha khoa, neu khong thi moi luot sau do deu bo qua vi thay khoa ban --
+# va khi do chinh buoc don job mo coi cung khong cuu duoc gi. Giet luc 2 gio, dong 'dang_chay'
+# con lai se duoc luot ke tiep danh dau 'loi' kem giai thich.
+TimeoutStartSec=7200
+# Cho cac trap don dep trong script kip xoa ban dump THO (chua ma hoa) truoc khi bi SIGKILL.
+TimeoutStopSec=60

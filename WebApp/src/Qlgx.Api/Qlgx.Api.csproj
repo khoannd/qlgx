@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Qlgx.Data\Qlgx.Data.csproj" />
+    <!-- IDuLieuNguon/ChuyenDoiDuLieu/GoiDuLieuNhap (Task "nhap du lieu Access") — cross-platform
+         (net10.0, KHÔNG net10.0-windows), KHÔNG tham chiếu Qlgx.Migration (chứa DocAccess/
+         OleDb, chỉ chạy Windows) — xem can-review-sau.md mục 38. -->
+    <ProjectReference Include="..\Qlgx.Migration.Core\Qlgx.Migration.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Xac thuc JWT (Task 14). PasswordHasher<T> (Microsoft.Extensions.Identity.Core) da co
+         san qua Microsoft.NET.Sdk.Web nen khong can khai bao rieng. -->
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
+    <!-- Khu trung HTML mau in tuy chinh o tang may chu (xem Printing/MauInHtmlSanitizer.cs va
+         quan-ly-mau-in.md muc bao mat) — TRUOC KHI luu, khong chi tin trinh soan thao phia
+         trinh duyet. HtmlSanitizer (mganss/HtmlSanitizer) — giay phep MIT (tu do), da kiem
+         truoc khi them (khong co CVE dang mo o ban 9.2.1039, xem canh bao NU1902 bien mat sau
+         khi nang tu 9.0.884). -->
+    <PackageReference Include="HtmlSanitizer" Version="9.2.1039" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Playwright" Version="1.55.0" />
+    <!-- Xử lý ảnh đại diện (Task 1.2 VIEC-TIEP-THEO.md): giải mã + kiểm chữ ký thật + thu nhỏ
+         ảnh tải lên trước khi lưu vào CSDL. SkiaSharp — giấy phép MIT (tự do), có gói native
+         cho Linux (image nền chạy Docker/Linux của Dockerfile là Debian glibc, không phải
+         Alpine). KHÔNG dùng System.Drawing.Common — gói đó không chạy trên Linux từ .NET 7. -->
+    <PackageReference Include="SkiaSharp" Version="3.119.0" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- Mẫu in HTML (xem Printing/BoDoMauIn.cs) nhúng thẳng vào assembly thay vì để dạng tệp rời
+       trên đĩa cạnh tệp thực thi — máy chủ chạy container (Dockerfile) không đảm bảo giữ đúng
+       cấu trúc thư mục nguồn, còn nhúng vào assembly thì chắc chắn đi cùng bản build. -->
+  <ItemGroup>
+    <EmbeddedResource Include="PrintTemplates\**\*.html" />
+  </ItemGroup>
+
+  <!-- Cho phép Qlgx.Api.Tests đọc TimThayTheService.CoLo (internal) để hạ kích thước lô khi
+       kiểm thử kịch bản nhiều lô — không có cách nào khác kiểm chứng ChangeTracker.Clear() giữa
+       các lô mà không phải tạo hàng trăm bản ghi thật trong test. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Qlgx.Api.Tests" />
+  </ItemGroup>
+
+</Project>

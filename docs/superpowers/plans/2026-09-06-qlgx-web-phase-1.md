@@ -4,9 +4,9 @@
 
 **Mục tiêu:** Hoàn thành bốn màn hình lõi trên nền web — danh sách gia đình, chi tiết gia đình, danh sách giáo dân, chi tiết giáo dân — cùng toàn bộ nền tảng cần thiết để một giáo xứ thí điểm chạy được với dữ liệu thật.
 
-**Kiến trúc:** ASP.NET Core (.NET 8) Web API + PostgreSQL qua EF Core, phục vụ luôn static file của SPA React/TypeScript trong cùng một tiến trình chạy như Windows Service tại văn phòng giáo xứ. Mọi bảng nghiệp vụ dùng khoá chính UUID và mang cột `giao_xu_id` ngay từ đầu để sau này gom nhiều giáo xứ vào một database mà không phải đánh số lại. Dữ liệu từ Access được đưa sang bằng một công cụ dòng lệnh chạy một lần, tách rời hoàn toàn khỏi backend.
+**Kiến trúc:** ASP.NET Core (.NET 10) Web API + PostgreSQL qua EF Core, phục vụ luôn static file của SPA React/TypeScript trong cùng một tiến trình chạy như Windows Service tại văn phòng giáo xứ. Mọi bảng nghiệp vụ dùng khoá chính UUID và mang cột `giao_xu_id` ngay từ đầu để sau này gom nhiều giáo xứ vào một database mà không phải đánh số lại. Dữ liệu từ Access được đưa sang bằng một công cụ dòng lệnh chạy một lần, tách rời hoàn toàn khỏi backend.
 
-**Tech Stack:** .NET 8, ASP.NET Core, EF Core 8 + Npgsql, PostgreSQL 16, xUnit + FluentAssertions, React 18 + TypeScript + Vite, AG Grid Community 32, Vitest + Testing Library, Playwright.
+**Tech Stack:** .NET 10, ASP.NET Core, EF Core 10 + Npgsql, PostgreSQL 16, xUnit + FluentAssertions, React 18 + TypeScript + Vite, AG Grid Community 32, Vitest + Testing Library, Playwright.
 
 **Spec:** `docs/superpowers/specs/2026-09-06-qlgx-web-migration-design.md`
 
@@ -14,7 +14,7 @@
 
 Mọi task đều ngầm chịu các ràng buộc sau.
 
-- Backend target **`net8.0`**. Không tham chiếu thư viện chỉ chạy Windows (`System.Drawing.Common`, Office Interop, `System.Data.OleDb`) trong bất kỳ project nào **trừ** `Qlgx.Migration`.
+- Backend target **`net10.0`**. Không tham chiếu thư viện chỉ chạy Windows (`System.Drawing.Common`, Office Interop, `System.Data.OleDb`) trong bất kỳ project nào **trừ** `Qlgx.Migration`.
 - PostgreSQL **16 trở lên**. Tên bảng và cột dùng **snake_case không dấu**: `gia_dinh`, `giao_dan`, `thanh_vien_gia_dinh`. Tên lớp C# giữ **PascalCase tiếng Việt**: `GiaDinh`, `GiaoDan`, `ThanhVienGiaDinh`.
 - Mọi bảng nghiệp vụ bắt buộc có: `id uuid PK`, `giao_xu_id uuid NOT NULL`, `created_at timestamptz`, `updated_at timestamptz`, `row_version uint (xmin)`, `source_system text`.
 - Mọi truy vấn nghiệp vụ lọc theo `giao_xu_id`, kể cả khi database hiện chỉ chứa một giáo xứ.
@@ -24,6 +24,149 @@ Mọi task đều ngầm chịu các ràng buộc sau.
 - `MaGiaoHo = 0` là giá trị quy ước nghĩa là **"Ngoài xứ"**, không phải khoá ngoại hợp lệ.
 - Xoá mềm bằng cột `da_xoa boolean` — chỉ có ở `giao_ho`, `gia_dinh`, `giao_dan`. Các bảng khác xoá cứng.
 - Mọi commit dùng tiếng Việt không dấu ở dòng tiêu đề.
+
+## Sửa đổi ngày 2026-09-06 — có hiệu lực cao hơn mọi mô tả task bên dưới
+
+Người dùng đổi bốn quyết định lớn sau khi Task 1, 2, 3, 10, 11, 12 đã xong. Những điều dưới
+đây **thay thế** mọi chỗ mâu thuẫn trong văn bản các task, và ràng buộc mọi task chưa chạy.
+
+**A. Mô hình triển khai đảo ngược: máy chủ tập trung, không phải on-prem.**
+Giáo xứ chỉ có máy cá nhân yếu, không đủ chạy máy chủ và không tự bảo đảm được sao lưu hay
+tính sẵn sàng. Một máy chủ phục vụ nhiều giáo xứ, phân tách bằng `giao_xu_id`. Hệ quả bắt buộc:
+
+- `giao_xu_id` của phiên **chỉ lấy từ claim của token đăng nhập**, không bao giờ từ tham số
+  do trình duyệt gửi. Task 5 đổi `BoiCanhGiaoXuTuCauHinh` (đọc file cấu hình) thành lấy từ
+  claim; bản đọc cấu hình chỉ còn dùng cho công cụ chuyển dữ liệu và test.
+- **Xác thực chuyển từ giai đoạn 2 lên giai đoạn 1** — thêm Task 14.
+- API **không giữ trạng thái trong tiến trình** và **không ghi file xuống đĩa cục bộ**: ảnh
+  đại diện, ảnh gia đình phải nằm trong CSDL hoặc kho đối tượng dùng chung. Đây là điều kiện
+  để chạy nhiều bản song song sau bộ cân bằng tải.
+- Task 13 đổi mục tiêu: **không còn** script cài đặt cho máy giáo xứ. Thay bằng đóng gói và
+  triển khai máy chủ (container, biến môi trường, chạy migration lúc khởi động, kiểm tra sức khoẻ).
+
+**B. Hôn phối chuyển lên giai đoạn 1.** Khối hôn phối nằm ngay trong form gia đình của bản
+desktop và văn phòng giáo xứ dùng hằng ngày; thiếu nó thì giáo xứ chưa bỏ được bản desktop.
+Ảnh hưởng: Task 4 thêm hai bảng `HonPhoi` và `GiaoDanHonPhoi`; Task 7 và 8 thêm dữ liệu hôn
+phối vào API chi tiết; Task 9 chuyển đổi hai bảng đó; thêm Task 15 dựng giao diện.
+
+**C. Ứng dụng cài đặt được (PWA) và bản nháp ngoại tuyến** — thêm Task 16. Giáo xứ nay làm
+việc qua internet nên mất mạng giữa lúc nhập liệu là chuyện sẽ xảy ra; không được để mất
+công sức gõ của người dùng.
+
+**D. Chuyển đổi đầy đủ nghiệp vụ của từng màn hình.** Không chỉ các trường dữ liệu mà cả liên
+động, quy tắc hiển thị, menu chuột phải và thao tác trên lưới. Tiêu chí nghiệm thu: giáo xứ
+dùng bản web mà không phải mở lại bản desktop để làm nốt việc gì. Khi nghi ngờ, đối chiếu
+thẳng mã nguồn WinForms trong `Source/` chứ không suy đoán. Hệ quả cụ thể đã biết: lưới thành
+viên trong form gia đình phải có lại thanh nút **Thêm mới / Chọn từ danh sách / Xem & sửa /
+Loại bỏ**, kèm API tương ứng ở Task 7.
+
+**E. Phải giữ `MaNhanDang` của mọi bảng có cột đó.** Bốn bảng `GiaoHo`, `GiaDinh`, `GiaoDan`,
+`HonPhoi` đều có cột `MaNhanDang` — trong bản desktop đây là **khoá nhận dạng dùng khi hợp
+nhất dữ liệu giữa các file `.mdb`**. Người dùng cho biết tương lai sẽ cần đồng bộ dữ liệu
+hai chiều giữa bản desktop và bản web, nên giá trị này phải được mang sang nguyên vẹn.
+
+Kiểm tra ngày 2026-09-06 phát hiện **thiếu sót thật**: bốn thực thể đều đã có thuộc tính
+`MaNhanDang`, nhưng đoạn mã công cụ chuyển dữ liệu ở Task 9 **không chép nó** — cả ba hàm
+`GhiGiaoHo`, `GhiGiaDinh`, `GhiGiaoDan` đều bỏ sót, và các bản ghi `DongGiaoHo`,
+`DongGiaDinh`, `DongGiaoDan` cũng không có trường này, nên câu `SELECT` trong `DocAccess`
+cũng không lấy về. Nếu để nguyên, toàn bộ khoá nhận dạng sẽ mất khi chuyển đổi và việc đồng
+bộ hai chiều sau này không làm được.
+
+Task 9 bắt buộc phải: thêm `MaNhanDang` vào cả bốn bản ghi nguồn, thêm cột đó vào câu
+`SELECT` đọc Access, và gán vào thực thể ở cả bốn hàm ghi. Task nào tạo bản ghi mới trên web
+thì để `MaNhanDang` là null — nó chỉ có nghĩa với dữ liệu đến từ Access. API cập nhật tuyệt
+đối **không được** cho phép sửa hay xoá trắng giá trị này.
+
+**F. Chuyển TOÀN BỘ cột của TOÀN BỘ bảng trong Access, trừ khi có lý do được ghi rõ.**
+
+Nguyên tắc: **chuyển dữ liệu tách rời khỏi dựng màn hình.** Bí tích, hội đoàn, giáo lý mãi
+giai đoạn 2–3 mới có màn hình, nhưng dữ liệu của chúng phải được chuyển sang **ngay từ lần
+chuyển đầu tiên**. Lý do: mỗi bảng chưa chuyển biến file `.mdb` cũ thành nguồn sự thật thứ
+hai tồn tại song song; đến lúc chuyển nốt thì dữ liệu hai bên đã phân kỳ và phải hợp nhất
+thủ công. Chuyển hết ngay rẻ hơn nhiều lần.
+
+Hiện trạng khi ra quyết định này: mới có thực thể cho 7 bảng, công cụ chuyển dữ liệu mới
+đụng 4 bảng. Còn thiếu khoảng 20 bảng.
+
+Yêu cầu: bổ sung thực thể, ánh xạ schema và bước chuyển đổi cho mọi bảng còn lại. Mỗi cột
+của Access phải có chỗ tương ứng bên PostgreSQL.
+
+**Các trường hợp được phép không chuyển, và chỉ những trường hợp này:**
+
+| Không chuyển | Lý do |
+|---|---|
+| `SELECT_GIADINH_LIST`, `SELECT_HONPHOI_LIST`, `SELECT_HONPHOI_LIST_1` | Là view (saved query) của Access, tức **dữ liệu dẫn xuất**, không phải dữ liệu nguồn. Bản web tính lại ở tầng dịch vụ. |
+| Cột `UpdateDate` của từng bảng | Đã được thể hiện bằng `ThucTheCoSo.UpdatedAt`. |
+| Mật khẩu trong bảng `TaiKhoan` | Bản desktop lưu mật khẩu theo cách không đạt chuẩn hiện nay. Chuyển **danh sách tài khoản** nhưng **không chuyển mật khẩu**; người dùng đặt lại mật khẩu ở lần đăng nhập đầu. Đây là quyết định bảo mật có chủ đích, không phải bỏ sót. |
+
+Mọi trường hợp không chuyển khác đều phải được ghi vào bảng trên kèm lý do, **trước khi**
+bỏ qua. Không được im lặng bỏ cột.
+
+**Kiểm chứng bắt buộc:** công cụ chuyển dữ liệu phải có bước đối chiếu tự động so **số dòng
+của từng bảng** giữa Access và PostgreSQL, và báo cáo bảng nào lệch. Không đạt bước này thì
+không được coi là chuyển đổi xong.
+
+**G. Kết quả đọc trực tiếp file `.mdb` — số liệu ràng buộc việc chuyển đổi.**
+
+File `BIN/giaoxu.mdb` có **26 bảng người dùng**. Đã có thực thể cho 7 bảng, còn **19 bảng**.
+
+*Tin tốt:* cột `MaNhanDang` **chỉ tồn tại ở 4 bảng** `GiaDinh`, `GiaoDan`, `GiaoHo`, `HonPhoi`
+— đều nằm trong 7 bảng đã làm. Sửa đổi E vì vậy chỉ cần bổ sung vào công cụ chuyển đổi cho
+đúng 4 bảng đó, không lan sang bảng khác.
+
+*Cột tự tăng thật:* **duy nhất `ChiTietHoiDoan.ID`**. Mọi cột `Ma…` khác là số thường do ứng
+dụng tự sinh — đúng như đã biết.
+
+*Xoá mềm ở các bảng còn lại:* chỉ `LinhMuc.DaXoa` và `TaiKhoan.DaXoa`.
+
+**G.1 — `ThanhVienGiaDinh.VaiTro` KHÔNG chỉ có ba giá trị.** Dữ liệu thật chứa
+`0`(30 dòng), `1`(31), `2`(63), **`3`(2), `8`(2), `18`(4), `100`(13)**. Mã desktop xử lý theo
+quy tắc **`VaiTro > 1` nghĩa là con cái**, nên các giá trị lạ vẫn chạy đúng ở bản cũ.
+
+Hệ quả bắt buộc, **sửa quyết định trước đó của kế hoạch**:
+
+- `ThanhVienGiaDinh.VaiTro` phải lưu **nguyên giá trị số** như trong Access, KHÔNG được
+  chuẩn hoá về 0/1/2. Lý do: khoá chính là bộ ba `(GiaDinhId, GiaoDanId, VaiTro)`, nên gộp
+  `3` và `8` về `2` sẽ làm hai dòng khác nhau đụng khoá và **mất dữ liệu**.
+- Kiểu của thuộc tính đổi từ `VaiTroGiaDinh` sang `int`. Giữ enum `VaiTroGiaDinh` cho ba giá
+  trị đã biết, nhưng mọi chỗ hỏi "có phải con không" phải viết **`vaiTro > 1`**, không được
+  viết `vaiTro == 2`.
+- Rà lại toàn bộ mã đã viết ở Task 6, 7 và phần front-end: chỗ nào so sánh với `Chong`(0) hay
+  `Vo`(1) thì vẫn đúng; chỗ nào so sánh với `Con`(2) thì **sai** và phải đổi.
+- Có một bảng tra `VaiTro(ID, Value)` 3 dòng (`0='TenChong'`, `1='TenVo'`, `2='ConCai'`).
+  Chuyển bảng này sang nhưng **không đặt khoá ngoại cứng** từ `ThanhVienGiaDinh.VaiTro` sang
+  nó, vì dữ liệu thật có giá trị ngoài danh mục.
+
+**G.2 — Hai chỗ mã nguồn không khớp cột thật**, phải theo file `.mdb`:
+- `LopGiaoLy` có cột tên **`Nam`**, không phải `NamHoc` như một bản `CREATE TABLE` trong mã.
+- `BiTichChiTiet` **không có** cột `LoaiBiTich`; loại bí tích nằm ở bảng cha `DotBiTich`.
+
+**G.3 — Khối lượng dữ liệu, để xếp thứ tự ưu tiên:**
+
+| Có dữ liệu | Số dòng | | Rỗng (chỉ cần tạo schema) |
+|---|---|---|---|
+| `BiTichChiTiet` | 6150 | | `ChiTietHoiDoan`, `ChiTietLopGiaoLy`, `ChuyenXu`, |
+| `GiaoDan` | 2050 | | `GiaoLyVien`, `HoiDoan`, `KhoiGiaoLy`, `LinhMuc`, |
+| `DotBiTich` | 1108 | | `LopGiaoLy`, `RaoHonPhoi`, `TaiKhoan`, `TanHien` |
+| `GiaoDanHonPhoi` | 1043 | | |
+| `HonPhoi` | 522 | | |
+| `DuLieuChung` | 343 | | |
+| `ThanhVienGiaDinh` | 145 | | |
+| `GiaDinh` | 40 | | |
+| `CauHinh` | 19 | | |
+| `TenLoaiTaiKhoan`, `VaiTro` | 3 mỗi bảng | | |
+| `GiaoXu`, `GiaoHo`, `GiaoHat`, `GiaoPhan` | 1 mỗi bảng | | |
+
+`TaiKhoan` rỗng nghĩa là **CSDL này chưa có tài khoản nào** — Task 14 phải tạo tài khoản
+quản trị đầu tiên chứ không trông chờ dữ liệu chuyển sang.
+
+**G.4 — Dữ liệu ngày tháng bẩn.** `DotBiTich.NgayBiTich` có giá trị chỉ ghi năm như `'1958'`
+và chuỗi rỗng. Bộ chuyển đổi ngày ở Task 2 sẽ trả chúng về `LoiGiuLai` và chúng được ghi vào
+cột `du_lieu_loi` — đúng thiết kế, không được ép kiểu `date` trực tiếp làm mất dữ liệu.
+
+**Ghi chú về các mục "cố ý hoãn sang Phase 2" đã ghi ở Task 12:** ba mục liên quan hôn phối
+và thanh nút thành viên **không còn được hoãn** theo sửa đổi B và D. Mục liên quan hội đoàn
+vẫn hoãn.
 
 ## Cấu trúc file
 
@@ -91,10 +234,10 @@ Nguyên tắc chia file: **định nghĩa cột tách khỏi màn hình** (`src/
 ```bash
 cd WebApp
 dotnet new sln -n Qlgx
-dotnet new classlib -o src/Qlgx.Domain -f net8.0
-dotnet new classlib -o src/Qlgx.Data -f net8.0
-dotnet new web -o src/Qlgx.Api -f net8.0
-dotnet new xunit -o tests/Qlgx.Api.Tests -f net8.0
+dotnet new classlib -o src/Qlgx.Domain -f net10.0
+dotnet new classlib -o src/Qlgx.Data -f net10.0
+dotnet new web -o src/Qlgx.Api -f net10.0
+dotnet new xunit -o tests/Qlgx.Api.Tests -f net10.0
 rm src/Qlgx.Domain/Class1.cs src/Qlgx.Data/Class1.cs
 dotnet sln add src/Qlgx.Domain src/Qlgx.Data src/Qlgx.Api tests/Qlgx.Api.Tests
 dotnet add src/Qlgx.Data reference src/Qlgx.Domain
@@ -198,7 +341,7 @@ Bản Access lưu **mọi** ngày dưới dạng chuỗi `dd/MM/yyyy` trong cộ
 
 ```bash
 cd WebApp
-dotnet new xunit -o tests/Qlgx.Data.Tests -f net8.0
+dotnet new xunit -o tests/Qlgx.Data.Tests -f net10.0
 dotnet sln add tests/Qlgx.Data.Tests
 dotnet add tests/Qlgx.Data.Tests reference src/Qlgx.Data
 dotnet add tests/Qlgx.Data.Tests package FluentAssertions
@@ -1973,7 +2116,9 @@ Tạo `WebApp/src/Qlgx.Api/Dtos/GiaoDanDtos.cs`:
 ```csharp
 namespace Qlgx.Api.Dtos;
 
-/// <summary>Một dòng trên lưới giáo dân — 29 cột theo đúng GxGiaoDanList.FormatGrid().</summary>
+/// <summary>Một dòng trên lưới giáo dân — 29 cột theo đúng GxGiaoDanList.FormatGrid(), cộng
+/// hai trường front-end cần để lọc/điều hướng đúng (xem Task 12: mục menu "Xem gia đình" và
+/// ô tick "không được thống kê" — cả hai từng bị lấy nhầm từ các trường khác).</summary>
 public record GiaoDanListItemDto(
     Guid Id, int MaGiaoDanCu, string? TenThanh, string HoTen, string? Phai,
     DateOnly? NgaySinh, string NamSinh,
@@ -1984,7 +2129,14 @@ public record GiaoDanListItemDto(
     string? BietNgoaiNgu, bool QuaDoi, DateOnly? NgayQuaDoi, string? NoiAnTang,
     string? NoiSinh, string? NoiRuaToi, string? NoiRuocLe, string? NoiThemSuc,
     /// <summary>Chỉ có giá trị khi lưới nhúng trong form gia đình.</summary>
-    string? QuanHe);
+    string? QuanHe,
+    /// <summary>Mã gia đình giáo dân này thuộc về (null nếu chưa gắn với gia đình nào) —
+    /// front-end dùng để mở đúng thẻ chi tiết gia đình từ mục menu "Xem gia đình", KHÔNG
+    /// được dùng Id của chính giáo dân để tra gia đình.</summary>
+    Guid? GiaDinhId,
+    /// <summary>Khác khái niệm "Ngoài xứ": một giáo dân ngoài xứ vẫn có thể được thống kê,
+    /// nên front-end không được suy trường này từ TenGiaoHo.</summary>
+    bool KhongThongKe);
 
 public record GiaoDanDetailDto(
     Guid Id, int MaGiaoDanCu, string HoTen, string? TenThanh, string? Phai,
@@ -2040,9 +2192,12 @@ public class GiaoDanService(QlgxDbContext db)
 {
     /// <summary>
     /// Một dòng nguồn trước khi dựng DTO. Có thêm QuanHe vì lưới thành viên trong form gia
-    /// đình cần cột đó, còn danh sách giáo dân thì không.
+    /// đình cần cột đó, còn danh sách giáo dân thì không. GiaDinhId lấy từ bản ghi thành viên
+    /// gia đình đầu tiên của giáo dân (một người có thể thuộc nhiều gia đình theo thời gian,
+    /// ví dụ vừa là con vừa lập gia đình riêng — lấy đầu tiên theo VaiTro là đủ cho mục đích
+    /// "Xem gia đình" trên menu chuột phải).
     /// </summary>
-    private record NguonDong(GiaoDan Gd, string? QuanHe);
+    private record NguonDong(GiaoDan Gd, string? QuanHe, Guid? GiaDinhId);
 
     public Task<List<GiaoDanListItemDto>> LayDanhSach(
         Guid? giaoHoId, bool chiKhongThongKe, CancellationToken ct)
@@ -2053,10 +2208,13 @@ public class GiaoDanService(QlgxDbContext db)
 
         return DungDanhSach(truyVan
             .OrderBy(g => g.MaGiaoDanCu)
-            .Select(g => new NguonDong(g, null))).ToListAsync(ct);
+            .Select(g => new NguonDong(g, null,
+                g.GiaDinhThamGia.OrderBy(tv => tv.VaiTro)
+                    .Select(tv => (Guid?)tv.GiaDinhId).FirstOrDefault()))).ToListAsync(ct);
     }
 
-    /// <summary>Thành viên của một gia đình — cùng bộ cột với danh sách giáo dân.</summary>
+    /// <summary>Thành viên của một gia đình — cùng bộ cột với danh sách giáo dân. GiaDinhId ở
+    /// đây biết chắc chắn (chính là tham số `giaDinhId`) nên không cần suy như LayDanhSach.</summary>
     public Task<List<GiaoDanListItemDto>> LayThanhVien(Guid giaDinhId, CancellationToken ct) =>
         DungDanhSach(db.ThanhVienGiaDinh
             .Where(tv => tv.GiaDinhId == giaDinhId)
@@ -2064,7 +2222,8 @@ public class GiaoDanService(QlgxDbContext db)
             .Select(tv => new NguonDong(
                 tv.GiaoDan!,
                 tv.VaiTro == VaiTroGiaDinh.Chong ? "Chồng"
-                    : tv.VaiTro == VaiTroGiaDinh.Vo ? "Vợ" : "Con"))).ToListAsync(ct);
+                    : tv.VaiTro == VaiTroGiaDinh.Vo ? "Vợ" : "Con",
+                giaDinhId))).ToListAsync(ct);
 
     private static IQueryable<GiaoDanListItemDto> DungDanhSach(IQueryable<NguonDong> nguon) =>
         nguon.Select(n => new GiaoDanListItemDto(
@@ -2080,7 +2239,7 @@ public class GiaoDanService(QlgxDbContext db)
             n.Gd.TrinhDoVanHoa, n.Gd.TrinhDoChuyenMon, n.Gd.BietNgoaiNgu,
             n.Gd.QuaDoi, n.Gd.NgayQuaDoi, n.Gd.NoiAnTang,
             n.Gd.NoiSinh, n.Gd.NoiRuaToi, n.Gd.NoiRuocLe, n.Gd.NoiThemSuc,
-            n.QuanHe));
+            n.QuanHe, n.GiaDinhId, n.Gd.KhongThongKe));
 
     public async Task<GiaoDanDetailDto?> LayChiTiet(Guid id, CancellationToken ct)
     {
@@ -2237,8 +2396,8 @@ Ba yêu cầu bắt buộc, xuất phát từ đặc điểm dữ liệu đã kh
 
 ```bash
 cd WebApp
-dotnet new console -o src/Qlgx.Migration -f net8.0
-dotnet new xunit -o tests/Qlgx.Migration.Tests -f net8.0
+dotnet new console -o src/Qlgx.Migration -f net10.0
+dotnet new xunit -o tests/Qlgx.Migration.Tests -f net10.0
 dotnet sln add src/Qlgx.Migration tests/Qlgx.Migration.Tests
 dotnet add src/Qlgx.Migration reference src/Qlgx.Data
 dotnet add src/Qlgx.Migration package System.Data.OleDb
@@ -2251,7 +2410,7 @@ Thêm vào `src/Qlgx.Migration/Qlgx.Migration.csproj` để nói rõ đây là p
 
 ```xml
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <Platforms>x86</Platforms>
     <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
@@ -2887,34 +3046,44 @@ export type TheTaiLieu = {
   dongDuoc?: boolean
 }
 
+type TrangThaiThe = { danhSach: TheTaiLieu[]; dangChon: string }
+
 /**
  * Tương đương FATabStrip cùng dictionary dicShows của frmMain: mỗi bản ghi mở ra một thẻ
  * riêng, mở lại bản ghi đang mở thì chuyển tiêu điểm thay vì tạo thẻ trùng.
+ *
+ * `danhSach` và `dangChon` gộp chung một state (không dùng hai `useState` riêng): hàm cập
+ * nhật của React bắt buộc phải thuần, không được gây tác dụng phụ, nên KHÔNG được gọi
+ * `setDangChon` từ bên trong hàm cập nhật của `setDanhSach` — dưới `<StrictMode>` React gọi
+ * hàm cập nhật hai lần để phát hiện đúng lỗi này.
  */
 export function useTabDocs() {
-  const [danhSach, setDanhSach] = useState<TheTaiLieu[]>([])
-  const [dangChon, setDangChon] = useState('')
+  const [trangThai, setTrangThai] = useState<TrangThaiThe>({ danhSach: [], dangChon: '' })
 
   const mo = useCallback((the: TheTaiLieu) => {
-    setDanhSach((truoc) =>
-      truoc.some((t) => t.id === the.id) ? truoc : [...truoc, the],
-    )
-    setDangChon(the.id)
+    setTrangThai((truoc) => ({
+      danhSach: truoc.danhSach.some((t) => t.id === the.id)
+        ? truoc.danhSach
+        : [...truoc.danhSach, the],
+      dangChon: the.id,
+    }))
   }, [])
 
-  const chon = useCallback((id: string) => setDangChon(id), [])
+  const chon = useCallback((id: string) => {
+    setTrangThai((truoc) => ({ ...truoc, dangChon: id }))
+  }, [])
 
   const dong = useCallback((id: string) => {
-    setDanhSach((truoc) => {
-      const conLai = truoc.filter((t) => t.id !== id)
-      setDangChon((hienTai) =>
-        hienTai === id ? (conLai.at(-1)?.id ?? '') : hienTai,
-      )
-      return conLai
+    setTrangThai((truoc) => {
+      const conLai = truoc.danhSach.filter((t) => t.id !== id)
+      return {
+        danhSach: conLai,
+        dangChon: truoc.dangChon === id ? (conLai.at(-1)?.id ?? '') : truoc.dangChon,
+      }
     })
   }, [])
 
-  return { danhSach, dangChon, mo, chon, dong }
+  return { danhSach: trangThai.danhSach, dangChon: trangThai.dangChon, mo, chon, dong }
 }
 ```
 
@@ -3010,7 +3179,7 @@ liệu**, đúng như bản desktop nhúng cùng một `GxGiaoDanList` ở hai n
 - Create: `WebApp/src/web/src/components/GxGrid.tsx`
 - Create: `WebApp/src/web/src/cot/cotGiaoDan.ts`, `cotGiaDinh.ts`
 - Create: `WebApp/src/web/src/components/GxGiaoDanList.tsx`, `GxGiaDinhList.tsx`
-- Test: `WebApp/src/web/src/components/GxGiaoDanList.test.tsx`
+- Test: `WebApp/src/web/src/components/GxGiaoDanList.test.tsx`, `GxGiaDinhList.test.tsx`
 
 **Interfaces:**
 - Consumes: DTO của Task 6 và 8 (`GiaDinhListItemDto`, `GiaoDanListItemDto`).
@@ -3082,6 +3251,13 @@ export type GiaoDanListItem = {
   noiThemSuc: string | null
   /** Chỉ có giá trị khi lấy qua endpoint thành viên gia đình. */
   quanHe: string | null
+  /** Mã gia đình giáo dân này thuộc về — null khi chưa gắn với gia đình nào. Dùng cho mục
+   * menu chuột phải "Xem gia đình" (KHÔNG được dùng `id` của chính giáo dân để tra gia đình
+   * — lỗi này từng xảy ra ở Task 12, xem báo cáo). */
+  giaDinhId: string | null
+  /** true khi giáo dân này KHÔNG được tính vào thống kê — khác khái niệm "Ngoài xứ": một
+   * giáo dân ngoài xứ vẫn có thể được thống kê, nên không được suy ra từ `tenGiaoHo`. */
+  khongThongKe: boolean
 }
 
 export type ThanhVien = {
@@ -3226,7 +3402,7 @@ export const api = {
 Tạo `WebApp/src/web/src/components/GxGiaoDanList.test.tsx`:
 
 ```tsx
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { GxGiaoDanList } from './GxGiaoDanList'
@@ -3243,20 +3419,23 @@ const nguoi = (p: Partial<GiaoDanListItem> = {}): GiaoDanListItem => ({
   noiRuaToi: null, noiRuocLe: null, noiThemSuc: null, quanHe: null, ...p,
 })
 
+// ag-grid dựng header/hàng qua setTimeout(0) nội bộ (dồn sự kiện để tối ưu hiệu năng) nên
+// dưới jsdom nội dung lưới chưa có ngay sau render() — phải chờ bằng findByText/waitFor
+// thay vì getByText/queryByText đồng bộ.
 describe('GxGiaoDanList', () => {
-  it('hien du 29 cot cua ban desktop khi dung o man hinh danh sach', () => {
+  it('hien du 29 cot cua ban desktop khi dung o man hinh danh sach', async () => {
     render(<GxGiaoDanList rows={[nguoi()]} />)
 
-    expect(screen.getByText('Mã GD')).toBeDefined()
+    expect(await screen.findByText('Mã GD')).toBeDefined()
     expect(screen.getByText('Tên thánh')).toBeDefined()
     expect(screen.getByText('Nơi thêm sức')).toBeDefined()
     expect(screen.queryByText('Quan hệ GĐ')).toBeNull()
   })
 
-  it('them cot Quan he GD va bo cot Dien thoai khi nhung trong form gia dinh', () => {
+  it('them cot Quan he GD va bo cot Dien thoai khi nhung trong form gia dinh', async () => {
     render(<GxGiaoDanList rows={[nguoi()]} quanHeGiaDinh />)
 
-    expect(screen.getByText('Quan hệ GĐ')).toBeDefined()
+    expect(await screen.findByText('Quan hệ GĐ')).toBeDefined()
     expect(screen.queryByText('Điện thoại')).toBeNull()
   })
 
@@ -3264,17 +3443,34 @@ describe('GxGiaoDanList', () => {
     const onMo = vi.fn()
     render(<GxGiaoDanList rows={[nguoi()]} onMo={onMo} />)
 
-    await userEvent.dblClick(screen.getByText('Trần Thị Khánh Ngọc'))
+    await userEvent.dblClick(await screen.findByText('Trần Thị Khánh Ngọc'))
 
     expect(onMo).toHaveBeenCalledWith(expect.objectContaining({ maGiaoDanCu: 4412 }))
   })
 
-  it('to do dong cua nguoi da qua doi, chuyen xu hoac lap gia dinh rieng', () => {
+  it('to do dong cua nguoi da qua doi, chuyen xu hoac lap gia dinh rieng', async () => {
     const { container } = render(
       <GxGiaoDanList rows={[nguoi({ quaDoi: true }), nguoi({ id: 'a2', maGiaoDanCu: 1, quaDoi: false })]} />,
     )
 
-    expect(container.querySelectorAll('.dong-gach-do')).toHaveLength(1)
+    await screen.findByText('Mã GD')
+    await waitFor(() => expect(container.querySelectorAll('.dong-gach-do')).toHaveLength(1))
+  })
+
+  it('mac dinh (hangLoc) thi hien hang loc duoi moi tieu de cot', async () => {
+    const { container } = render(<GxGiaoDanList rows={[nguoi()]} />)
+
+    await screen.findByText('Mã GD')
+    // Ag-grid (bản legacy theme) đánh dấu ô lọc nổi bằng class `ag-floating-filter` —
+    // đủ 29 cột thì phải có đủ 29 ô lọc.
+    await waitFor(() => expect(container.querySelectorAll('.ag-floating-filter')).toHaveLength(29))
+  })
+
+  it('hangLoc=false thi khong hien hang loc', async () => {
+    const { container } = render(<GxGiaoDanList rows={[nguoi()]} hangLoc={false} />)
+
+    await screen.findByText('Mã GD')
+    await waitFor(() => expect(container.querySelectorAll('.ag-floating-filter')).toHaveLength(0))
   })
 })
 ```
@@ -3290,10 +3486,18 @@ Tạo `WebApp/src/web/src/components/GxGrid.tsx`:
 
 ```tsx
 import { AgGridReact } from 'ag-grid-react'
+import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import type { ColDef, GetRowIdParams, RowClassParams } from 'ag-grid-community'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
 import { useCallback, useMemo, useRef, useState } from 'react'
+
+// ag-grid từ bản 33 trở đi nạp theo kiến trúc mô-đun và mặc định dùng "Theming API" mới
+// (đối tượng theme JS) thay vì theme dựa trên class CSS — thiếu registerModules() thì
+// getRowClass/rowSelection/localeText không hoạt động (lỗi #200), và thiếu theme="legacy"
+// bên dưới thì việc import CSS theo class (ag-theme-quartz.css) sẽ đụng độ với theme JS
+// mặc định khiến lưới không vẽ được cột/hàng nào.
+ModuleRegistry.registerModules([AllCommunityModule])
 
 export type MucMenu<T> = { nhan: string; chay?: (dong: T) => void }
 
@@ -3322,7 +3526,15 @@ export function GxGrid<T>({
   const boc = useRef<HTMLDivElement>(null)
 
   const defaultColDef = useMemo<ColDef<T>>(
-    () => ({ sortable: true, resizable: true, filter: hangLoc ? 'agTextColumnFilter' : false }),
+    () => ({
+      sortable: true,
+      resizable: true,
+      filter: hangLoc ? 'agTextColumnFilter' : false,
+      // `floatingFiltersHeight` bên dưới chỉ đặt chiều cao vùng hàng lọc; phải bật riêng
+      // `floatingFilter` trên từng cột thì ô lọc mới thực sự hiện ra dưới mỗi tiêu đề,
+      // đúng như FilterMode.Automatic của Janus GridEX ở bản desktop.
+      floatingFilter: hangLoc,
+    }),
     [hangLoc],
   )
 
@@ -3346,6 +3558,7 @@ export function GxGrid<T>({
         }}
       >
         <AgGridReact<T>
+          theme="legacy"
           columnDefs={columnDefs}
           rowData={rowData}
           defaultColDef={defaultColDef}
@@ -3531,10 +3744,25 @@ không tô cả dòng — chỉ ô Người nam hoặc Người nữ bị gạch
 `In chứng nhận hôn phối`, `In phiếu gia đình`, `In lý lịch cá nhân`, `In giới thiệu chuyển xứ`,
 `Xem vị trí`.
 
+Viết thêm `WebApp/src/web/src/components/GxGiaDinhList.test.tsx` theo cùng khuôn của
+`GxGiaoDanList.test.tsx`: hiện đủ 12 cột với đúng nhãn, `gach: 0` gạch ô Người nam mà không
+gạch ô Người nữ, `gach: 1` thì ngược lại, `gach: 2` gạch cả hai ô, `gach: -1` không gạch ô
+nào, và nhấp đúp một dòng gọi `onMo` với đúng bản ghi.
+
+**Lưu ý khi viết test cho cả hai file:** `ag-grid-react` dồn việc dựng header/hàng qua
+`window.setTimeout(fn, 0)` để tối ưu hiệu năng, nên ngay sau `render()` nội dung lưới chưa
+có trong DOM — mọi khẳng định "có xuất hiện" phải dùng `await screen.findByText(...)` (hoặc
+bọc trong `waitFor(...)`) thay vì `screen.getByText(...)` đồng bộ. Khẳng định "không xuất
+hiện" (`queryByText(...).toBeNull()`) vẫn dùng được đồng bộ, miễn là đặt sau một
+`findByText` đã xác nhận lưới dựng xong. jsdom cũng không có `ResizeObserver` và mọi phần
+tử đều báo kích thước bằng 0 — cần polyfill trong `test.setupFiles` (xem
+`WebApp/src/web/src/test-setup.ts`) thì ag-grid mới vẽ được gì đó.
+
 - [ ] **Bước 7: Chạy test để xác nhận pass**
 
 Chạy: `cd WebApp/src/web && npm test`
-Kỳ vọng: PASS, 7 test.
+Kỳ vọng: PASS, 17 test (5 test cũ của `useTabDocs.test.ts` từ Task 10 + 6 test của
+`GxGiaoDanList.test.tsx` + 6 test của `GxGiaDinhList.test.tsx`).
 
 - [ ] **Bước 8: Commit**
 
@@ -3644,13 +3872,18 @@ Dựng theo đúng bố cục đã chốt trong bản mẫu:
   "Chỉ xem gia đình không được thống kê"; `GxGiaDinhList` bên dưới.
 - `GiaDinhDetail` — bố cục neo: đầu trang một dòng, khối thông tin dùng `cols`, lưới thành
   viên `GxGiaoDanList` với `quanHeGiaDinh` chiếm phần dưới và tự cuộn, thanh nút dưới cùng
-  gồm `In lý lịch cá nhân`, `In phiếu gia đình`, `Quay về`, `Cập nhật`.
+  gồm `In lý lịch cá nhân`, `In phiếu gia đình`, `Quay về`, `Cập nhật`. **Màn hình này CỐ Ý
+  chưa có khối "Hôn phối" (bản mẫu có `theHonPhoi`), và lưới thành viên chưa có thanh nút
+  "Thêm mới"/"Chọn từ danh sách"** — dữ liệu hôn phối (bảng `HonPhoi`, `GiaoDanHonPhoi`) và
+  API thêm/bớt thành viên gia đình thuộc giai đoạn 2, xem "Việc để lại cho Phase 2".
 - `GiaoDanList` — như `GiaDinhList` nhưng ô tick là
   "Chỉ xem giáo dân không được thống kê" và lưới là `GxGiaoDanList`.
 - `GiaoDanDetail` — `GxFormTabs` năm tab, tab "Cá nhân" gồm các khối
   "Thông tin cá nhân", "Ảnh đại diện (ảnh 3x4)", "Thông tin chuyển xứ", "Rửa tội",
   "Rước lễ lần đầu", "Thêm sức", "Xức dầu", "Thông tin khác"; thanh nút dưới cùng gồm
-  `Xem gia đình`, `In lý lịch cá nhân`, `Quay về`, `Cập nhật`.
+  `Xem gia đình`, `In lý lịch cá nhân`, `Quay về`, `Cập nhật`. **Hai tab "Hôn phối" và "Hội
+  đoàn" chỉ dựng khung nhập cơ bản, CHƯA có lưới dữ liệu** (`GxHonPhoiList`/`GxHoiDoanList`
+  của bản mẫu) — bảng `GiaoDanHonPhoi` và `ChiTietHoiDoan` cũng thuộc giai đoạn 2.
 
 Ba liên động bắt buộc trong `GiaoDanDetail`, lấy đúng từ `frmGiaoDan.cs`:
 
@@ -3872,6 +4105,9 @@ Phase 1 xong khi tất cả các điều sau đúng:
 Những phần đã khảo sát nhưng **cố ý chưa làm** trong Phase 1, ghi ra đây để không bị quên:
 
 - Tab "Hôn phối", "Giáo lý", "Ơn gọi tận hiến", "Hội đoàn" của form giáo dân hiện chỉ có giao diện, chưa nối API — bốn bảng `HonPhoi`, `GiaoDanHonPhoi`, `ChiTietHoiDoan`, `TanHien` chưa đưa vào schema.
+- `GiaDinhDetail` (Task 12) chưa có khối "Hôn phối" của bản mẫu (`theHonPhoi`: số/nơi hôn phối, linh mục chứng, người chứng, tình trạng) — cùng lý do thiếu bảng `HonPhoi`/`GiaoDanHonPhoi` ở trên.
+- Lưới "Thành viên khác trong gia đình" trong `GiaDinhDetail` chưa có thanh nút "Thêm mới"/"Chọn từ danh sách" của bản mẫu — chưa có API thêm/bớt thành viên gia đình (`ThanhVienGiaDinh`) ở Task 6–8, chỉ mới có API đọc.
+- Hai tab "Hôn phối" và "Hội đoàn" của `GiaoDanDetail` (Task 12) chỉ dựng khung nhập cơ bản, chưa có lưới dữ liệu (`GxHonPhoiList`/`GxHoiDoanList` của bản mẫu) — cùng lý do thiếu bảng `GiaoDanHonPhoi`/`ChiTietHoiDoan` ở trên.
 - Bảng `ChuyenXu` chưa chuyển đổi; cột `DaChuyenDi` của lưới giáo dân hiện suy từ gia đình chứ chưa từ lịch sử chuyển xứ.
 - Xác thực và tài khoản người dùng (bảng `TaiKhoan`, mật khẩu băm đúng chuẩn).
 - Lưu bố cục cột theo người dùng (bảng `UserGridPreference`), thay cho `GridColumns.xml`.

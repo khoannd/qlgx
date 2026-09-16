@@ -1,0 +1,19 @@
+[Unit]
+Description=QLGX -- sao luu dinh ky len R2
+Documentation=https://github.com/khoannd/qlgx
+After=docker.service
+Requires=docker.service
+ConditionPathExists=/opt/qlgx/WebApp/scripts/qlgx-runner.sh
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/qlgx/backup.env
+# Khong boc flock: qlgx-runner.sh tu gianh khoa noi bo va TU THOAT VOI MA 0 khi thay luot khac
+# dang chay (day la hanh vi mong doi, khong phai loi -- xem gianh_khoa_hoac_bo_qua trong script).
+# Goi qua "/bin/bash <script>" chu khong chay thang script: kho git phat trien tren Windows
+# nen git ghi nhan cac tep .sh la 100644 (khong co bit thuc thi). install.sh co dat lai bit do
+# (dat_bit_thuc_thi), nhung cach goi nay lam unit chay duoc ke ca khi ai do chep unit vao may
+# bang tay ma bo qua buoc do.
+ExecStart=/bin/bash /opt/qlgx/WebApp/scripts/qlgx-runner.sh sao-luu
+TimeoutStartSec=7200
+TimeoutStopSec=60
