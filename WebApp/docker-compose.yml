@@ -59,7 +59,13 @@ services:
       # API biet khoa R2 — xem thiet ke muc 8.4.
       - ${QLGX_THU_MUC_SPOOL:-/var/lib/qlgx/spool}:/var/lib/qlgx/spool:ro
     ports:
-      - "${QLGX_API_PORT:-8080}:8080"
+      # BẮT BUỘC giữ tiền tố 127.0.0.1 (C-3, review-bao-mat.md). Không có nó, Docker bind
+      # 0.0.0.0:8080 và TỰ CHÈN luật iptables ĐI TRƯỚC firewalld/ufw — tường lửa của máy chủ
+      # không chặn được, nên kẻ ẩn danh gọi thẳng http://<ip-máy-chủ>:8080/api/auth/dang-nhap,
+      # đi vòng qua Caddy và mất sạch HTTPS, HSTS, X-Frame-Options, nosniff cùng giới hạn kích
+      # thước thân yêu cầu. Mật khẩu của quý cha/quý sơ và Bearer token khi đó đi qua mạng ở
+      # dạng đọc được. Caddy nằm cùng mạng compose nên vẫn gọi `api:8080` bình thường.
+      - "127.0.0.1:${QLGX_API_PORT:-8080}:8080"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/suc-khoe"]
       interval: 10s

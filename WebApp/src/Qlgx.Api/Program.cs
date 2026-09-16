@@ -1,5 +1,9 @@
+using System.Net;
 using System.Reflection;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Api;
 using Qlgx.Api.Endpoints;
@@ -67,6 +71,77 @@ builder.Services.AddAuthorization(opt =>
     // (khong lay so ke tiep 3) de tranh nham voi du lieu di tru tu Access sau nay.
     opt.AddPolicy("QuanTriHeThong", p => p.RequireClaim(ClaimsQlgx.LoaiTaiKhoan, "9"));
 });
+
+// --- C-1 (review-bao-mat.md): gioi han so yeu cau theo DIA CHI IP ---------------------------
+//
+// Truoc buoc nay, toan bo API khong co MOT gioi han nao. Khoa theo tai khoan (10 lan sai / 15
+// phut) la lop duy nhat, va no KHONG chan duoc kich ban tan cong thuc te nhat: do mat khau theo
+// chieu ngang (password spraying) — thu mot mat khau pho bien lan luot cho MOI ten dang nhap, moi
+// tai khoan chi an dung mot lan sai nen khong tai khoan nao bi khoa. Cung khong chan duoc DoS
+// bang chi phi bam: moi request dang nhap sai deu chay mot phep PBKDF2 (ke ca nhanh "khong tim
+// thay tai khoan", co tinh bam gia de can bang thoi gian), vai tram request/giay du an het CPU
+// cua mot VPS nho ma khong can tai khoan nao.
+//
+// Hai muc gioi han, theo dung de xuat cua bao cao: chat cho /api/auth/* (duong tan cong truc
+// tiep, va khong ai go mat khau chuc lan mot phut) va rong hon cho /api/* (van du thoai mai cho
+// mot van phong giao xu lam viec binh thuong, ke ca khi nhieu may cung mot nha xu di chung mot
+// dia chi IP ra internet).
+//
+// Cau hinh duoc de mo (Qlgx:GioiHanTruyCap:*) vi hai ly do: bo test tich hop ban than no ban
+// hang tram request tu cung mot "dia chi" nen phai tat duoc, va nguoi van hanh mot giao xu dong
+// nguoi can noi nguong ma khong phai build lai anh Docker. Mac dinh la BAT — quen cau hinh thi
+// he thong an toan hon, khong phai ho hon.
+var cauHinhGioiHan = builder.Configuration.GetSection("Qlgx:GioiHanTruyCap");
+var batGioiHan = cauHinhGioiHan.GetValue("Bat", true);
+var gioiHanAuthMoiPhut = cauHinhGioiHan.GetValue("AuthMoiPhut", 10);
+var gioiHanApiMoiPhut = cauHinhGioiHan.GetValue("ApiMoiPhut", 300);
+if (batGioiHan)
+{
+    builder.Services.AddRateLimiter(opt =>
+    {
+        opt.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        opt.OnRejected = async (nguCanh, ct) =>
+        {
+            // Cau tieng Viet, khong phai trang loi tho cua ha tang: nguoi doc thong bao nay la
+            // quy cha/quy so dang cho rang phan mem hong, khong phai lap trinh vien.
+            nguCanh.HttpContext.Response.ContentType = "application/json; charset=utf-8";
+            await nguCanh.HttpContext.Response.WriteAsJsonAsync(new
+            {
+                thongBao = "Máy chủ đang nhận quá nhiều yêu cầu từ đường mạng của bạn. " +
+                           "Hãy chờ một phút rồi thử lại."
+            }, ct);
+        };
+
+        opt.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(http =>
+        {
+            var duongDan = http.Request.Path;
+            if (!duongDan.StartsWithSegments("/api")) return RateLimitPartition.GetNoLimiter("mien");
+
+            // Suc khoe/san sang: install.sh va Docker healthcheck goi lien tuc lúc cap nhat —
+            // dinh tran o day la tu bien mot lan trien khai thanh mot lan "quay lui vi may chu
+            // khong len". Hai endpoint nay khong doc du lieu giao dan nao.
+            if (duongDan.StartsWithSegments("/api/suc-khoe")) return RateLimitPartition.GetNoLimiter("suc-khoe");
+
+            var diaChi = DiaChiGoi(http);
+            var laAuth = duongDan.StartsWithSegments("/api/auth");
+            return RateLimitPartition.GetFixedWindowLimiter(
+                (laAuth ? "auth:" : "api:") + diaChi,
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = laAuth ? gioiHanAuthMoiPhut : gioiHanApiMoiPhut,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                });
+        });
+    });
+}
+
+// Dia chi dung de phan vung gioi han. Sau khi UseForwardedHeaders chay, RemoteIpAddress DA la
+// dia chi that cua nguoi goi (Caddy ghi vao X-Forwarded-For) — xem ghi chu o cho goi
+// UseForwardedHeaders. Khong co dia chi (mot so ngu canh test/ket noi noi bo) thi gom chung mot
+// phan vung thay vi mien tru: mien tru la mot duong vong de mo san.
+static string DiaChiGoi(HttpContext http) =>
+    http.Connection.RemoteIpAddress?.ToString() ?? "khong-ro-dia-chi";
 
 // Claims-based: GiaoXuId cua phien LUON lay tu claim cua nguoi dang nhap, khong bao gio tu
 // tham so trinh duyet gui len — day la ranh gioi bao mat cot loi cua mo hinh nhieu giao xu
@@ -204,6 +279,37 @@ if (builder.Configuration.GetValue<bool>("Qlgx:ChayMigrationKhiKhoiDong"))
 // bat khi wwwroot/index.html thuc su ton tai (anh Docker build web roi COPY vao wwwroot — xem
 // Dockerfile) — moi truong dev/test khong co thu muc nay nen khong doi hanh vi gi (van 172/183
 // test nhu cu). MapFallbackToFile CHI dang ky khi co index.html vi ly do tuong tu.
+// C-1, ve thu hai — BAT BUOC di kem gioi han theo IP o tren, va phai chay TRUOC moi middleware
+// khac de mo phan con lai cua pipeline thay dung dia chi nguoi goi.
+//
+// Trien khai that dat Caddy truoc API (docker-compose.prod.yml), nen neu khong doc
+// X-Forwarded-For thi MOI request deu mang dia chi cua Caddy: toan bo internet roi vao CHUNG
+// mot phan vung gioi han, va gioi han tro thanh mot loi tu gay tu choi dich vu — mot ke tan cong
+// dung het han muc la ca giao xu khong dang nhap duoc. Dung huong nguoc lai cung sai: tin
+// X-Forwarded-For tu bat ky ai la de ke tan cong tu doi dia chi moi request, gioi han thanh vo
+// dung. Can bang o day: chi tin proxy khi no o mang rieng, va sau khi sua C-3 thi cong 8080 chi
+// con nghe tren 127.0.0.1 nen duong duy nhat toi API la di qua Caddy.
+var tuyChonHeaderProxy = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    // Mot chang proxy duy nhat (Caddy). De mac dinh (1) thay vi noi rong: moi chang duoc tin
+    // them la mot chang ke tan cong co the gia mao them mot dia chi.
+    ForwardLimit = 1,
+};
+// Caddy chay trong mang cua Docker Compose, dia chi cua no do Docker cap dong nen khong ghim
+// cung duoc. Thay vao do tin ca dai dia chi RIENG (RFC 1918 + loopback + link-local) — dung cac
+// dai ma mot may goi tu internet KHONG BAO GIO mang.
+tuyChonHeaderProxy.KnownIPNetworks.Clear();
+tuyChonHeaderProxy.KnownProxies.Clear();
+foreach (var (dia, soBit) in new[]
+         {
+             ("10.0.0.0", 8), ("172.16.0.0", 12), ("192.168.0.0", 16),
+             ("127.0.0.0", 8), ("169.254.0.0", 16),
+         })
+    tuyChonHeaderProxy.KnownIPNetworks.Add(new System.Net.IPNetwork(IPAddress.Parse(dia), soBit));
+tuyChonHeaderProxy.KnownIPNetworks.Add(new System.Net.IPNetwork(IPAddress.IPv6Loopback, 128));
+app.UseForwardedHeaders(tuyChonHeaderProxy);
+
 var duongDanIndexHtml = Path.Combine(app.Environment.WebRootPath ?? "wwwroot", "index.html");
 var coSpaTinh = File.Exists(duongDanIndexHtml);
 if (coSpaTinh)
@@ -227,6 +333,9 @@ if (coSpaTinh)
 // fallback. Da kiem chung that: khong co dong nay, MOI tep tinh (kha ca index.html chinh no khi
 // goi qua UseDefaultFiles) deu bi fallback nuot, co dong nay thi dung tep, dung MIME type.
 app.UseRouting();
+// Sau UseRouting (de biet duong dan da khop route nao) va TRUOC UseAuthentication: mot ke an
+// danh khong duoc phep tieu CPU cua may chu vao viec xac thuc chu ky token gia.
+if (batGioiHan) app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

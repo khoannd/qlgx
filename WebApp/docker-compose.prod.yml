@@ -7,6 +7,11 @@ services:
   api:
     # Khong con map cong ra host -- moi luu luong di qua Caddy. Cong 8080 chi con trong mang
     # noi bo cua compose.
+    #
+    # `!reset` chi hieu duoc tu Docker Compose v2.24 tro len. Tu khi sua C-3, docker-compose.yml
+    # da tu bind 127.0.0.1 nen mot may chu chay Compose cu -- khong hieu `!reset` va giu nguyen
+    # dong ports cua tep goc -- van KHONG mo cong 8080 ra internet. Dong nay la lop thu hai,
+    # khong phai lop duy nhat nua.
     ports: !reset []
     logging:
       driver: json-file
