@@ -75,6 +75,18 @@ describe('nhanTrangThaiCongViec', () => {
   })
 })
 
+/** Cho toi khi luoi ve xong dong dau tien roi mo menu chuot phai tren do. AG Grid ve hang bat
+ * dong bo sau khi du lieu ve, nen `querySelector('.ag-row')` ngay sau `findByText` doi khi con
+ * null — do la nguyen nhan mot test tung do that thuong tren may cham. */
+async function moMenuChuotPhaiDongDau(container: HTMLElement) {
+  const dong = await waitFor(() => {
+    const el = container.querySelector('.ag-row')
+    if (!el) throw new Error('luoi chua ve xong dong nao')
+    return el
+  })
+  fireEvent.contextMenu(dong, { clientX: 10, clientY: 10 })
+}
+
 describe('SaoLuuPage', () => {
   it('hien den xanh va so ban sao', async () => {
     render(<SaoLuuPage />)
@@ -166,6 +178,34 @@ describe('SaoLuuPage', () => {
     expect(screen.queryByText(/sao_luu/)).toBeNull()
   })
 
+  // N2 + thay doi backend N4 (commit 25852e4): GET /api/sao-luu/cong-viec KHONG con tra NhatKy
+  // cho cong viec da xong (xem SaoLuuService.ChieuDanhSach). Vi vay mock danh sach o day co
+  // nhatKy: null DUNG NHU may chu that, va giao dien phai lay nhat ky qua duong xem chi tiet khi
+  // nguoi dung bam — mot test xanh dua tren mock sai con te hon khong co test.
+  it('xem nhat ky mot cong viec thi goi duong CHI TIET, khong doc tu danh sach', async () => {
+    vi.mocked(api.saoLuu.congViecGanDay).mockResolvedValue([{
+      id: 'job-cu', loai: 'sao_luu', trangThai: 'xong', buocHienTai: null,
+      nhatKy: null, taoLuc: '2026-09-12T07:00:00Z',
+      batDauLuc: '2026-09-12T07:00:00Z', ketThucLuc: '2026-09-12T07:01:30Z',
+    }])
+    vi.mocked(api.saoLuu.congViec).mockResolvedValue({
+      id: 'job-cu', loai: 'sao_luu', trangThai: 'xong', buocHienTai: null,
+      nhatKy: 'pg_dump xong, restic backup xong', taoLuc: '2026-09-12T07:00:00Z',
+      batDauLuc: '2026-09-12T07:00:00Z', ketThucLuc: '2026-09-12T07:01:30Z',
+    })
+    render(<SaoLuuPage />)
+    await screen.findByTestId('den-xanh')
+
+    await userEvent.click(screen.getByText(/Nhật ký công việc gần đây/))
+    // N2: thoi luong phai hien ra tu batDauLuc/ketThucLuc.
+    expect(screen.getByText(/1 phút 30 giây/)).toBeDefined()
+
+    await userEvent.click(screen.getByText(/Xem nhật ký/))
+
+    expect(await screen.findByText(/pg_dump xong, restic backup xong/)).toBeDefined()
+    expect(api.saoLuu.congViec).toHaveBeenCalledWith('job-cu')
+  })
+
   it('dung polling va bao loi ro rang sau qua nhieu lan hoi lai that bai lien tiep', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     try {
@@ -206,9 +246,7 @@ describe('SaoLuuPage', () => {
     const { container } = render(<SaoLuuPage />)
     await screen.findByText(/Bình thường/)
 
-    const dong = container.querySelector('.ag-row')
-    expect(dong).not.toBeNull()
-    fireEvent.contextMenu(dong!, { clientX: 10, clientY: 10 })
+    await moMenuChuotPhaiDongDau(container)
 
     await userEvent.click(await screen.findByRole('button', { name: /Tải bản sao này về máy/ }))
 
@@ -222,7 +260,64 @@ describe('SaoLuuPage', () => {
     expect(nutTai.tagName).toBe('BUTTON')
     await userEvent.click(nutTai)
 
-    await waitFor(() => expect(api.saoLuu.taiBanSaoVe).toHaveBeenCalledWith('job-tv'))
+    // I6: truyen kem thoi diem ban sao de dat TEN TEP co dau thoi gian khi may chu khong gui
+    // Content-Disposition.
+    await waitFor(() => expect(api.saoLuu.taiBanSaoVe)
+      .toHaveBeenCalledWith('job-tv', motBanSao.thoiDiem))
+  })
+
+  // I7: "Tai ve" phai co nut THAY DUOC tren tung dong — tren may tinh bang khong co chuot phai.
+  it('moi dong co nut "Tai ve" thay duoc, khong chi nam trong menu chuot phai', async () => {
+    vi.mocked(api.saoLuu.taoCongViec).mockResolvedValue({ id: 'job-tv' })
+    vi.mocked(api.saoLuu.congViec).mockResolvedValue({
+      id: 'job-tv', loai: 'tai_ve', trangThai: 'dang_chay', buocHienTai: null,
+      nhatKy: null, taoLuc: '2026-09-13T07:00:00Z', batDauLuc: null, ketThucLuc: null,
+    })
+    render(<SaoLuuPage />)
+    await screen.findByTestId('den-xanh')
+
+    await userEvent.click(await screen.findByRole('button', { name: /^Tải về$/ }))
+
+    await waitFor(() => expect(api.saoLuu.taoCongViec)
+      .toHaveBeenCalledWith(expect.objectContaining({ loai: 'tai_ve', snapshotId: motBanSao.id })))
+  })
+
+  // I8: mo lai man hinh (hoac F5) trong luc mot cong viec dang chay — truoc day giao dien im
+  // lang, moi nut deu bat, khong ai biet he thong dang phuc hoi.
+  it('mo man hinh giua chung thi phat hien cong viec dang chay va CHAN trang khi dang phuc hoi', async () => {
+    vi.mocked(api.saoLuu.congViecGanDay).mockResolvedValue([{
+      id: 'job-ph', loai: 'phuc_hoi', trangThai: 'dang_chay', buocHienTai: 'Đang nạp dữ liệu…',
+      nhatKy: null, taoLuc: '2026-09-13T07:00:00Z', batDauLuc: null, ketThucLuc: null,
+    }])
+    render(<SaoLuuPage />)
+
+    expect(await screen.findByTestId('man-chan-phuc-hoi')).toBeDefined()
+    expect(screen.getAllByText(/Đang nạp dữ liệu…/).length).toBeGreaterThan(0)
+    // Va moi nut thao tac phai bi khoa (T4).
+    expect((screen.getByRole('button', { name: /Sao lưu ngay/ }) as HTMLButtonElement).disabled)
+      .toBe(true)
+  })
+
+  // N5: tep con song 24 gio trong spool — nut tai khong duoc bien mat chi vi co viec khac chay.
+  it('nut tai tep VAN CON sau khi bam mot viec khac', async () => {
+    vi.mocked(api.saoLuu.taoCongViec).mockResolvedValue({ id: 'job-tv' })
+    vi.mocked(api.saoLuu.congViec).mockResolvedValue({
+      id: 'job-tv', loai: 'tai_ve', trangThai: 'xong', buocHienTai: null,
+      nhatKy: null, taoLuc: '2026-09-13T07:00:00Z', batDauLuc: null, ketThucLuc: null,
+    })
+    render(<SaoLuuPage />)
+    await screen.findByTestId('den-xanh')
+    await userEvent.click(await screen.findByRole('button', { name: /^Tải về$/ }))
+    await screen.findByRole('button', { name: /Tải tệp đã chuẩn bị xong/ }, { timeout: 4000 })
+
+    vi.mocked(api.saoLuu.taoCongViec).mockResolvedValue({ id: 'job-sl' })
+    vi.mocked(api.saoLuu.congViec).mockResolvedValue({
+      id: 'job-sl', loai: 'sao_luu', trangThai: 'dang_chay', buocHienTai: null,
+      nhatKy: null, taoLuc: '2026-09-13T07:10:00Z', batDauLuc: null, ketThucLuc: null,
+    })
+    await userEvent.click(screen.getByRole('button', { name: /Sao lưu ngay/ }))
+
+    expect(screen.getByRole('button', { name: /Tải tệp đã chuẩn bị xong/ })).toBeDefined()
   })
 
   // C1 (Critical, review-frontend.md): cot "Hien tai" cua bang doi chieu TUNG lay
@@ -235,7 +330,7 @@ describe('SaoLuuPage', () => {
     const { container } = render(<SaoLuuPage />)
     await screen.findByText(/Bình thường/)
 
-    fireEvent.contextMenu(container.querySelector('.ag-row')!, { clientX: 10, clientY: 10 })
+    await moMenuChuotPhaiDongDau(container)
     await userEvent.click(await screen.findByRole('button', { name: /Phục hồi về bản sao này/ }))
 
     const hopThoai = await screen.findByRole('dialog')
@@ -258,7 +353,7 @@ describe('SaoLuuPage', () => {
     const { container } = render(<SaoLuuPage />)
     await screen.findByText(/Bình thường/)
 
-    fireEvent.contextMenu(container.querySelector('.ag-row')!, { clientX: 10, clientY: 10 })
+    await moMenuChuotPhaiDongDau(container)
     await userEvent.click(await screen.findByRole('button', { name: /Phục hồi về bản sao này/ }))
     await userEvent.type(screen.getByLabelText(/gõ/i), 'PHUC HOI TOAN BO')
     await userEvent.click(screen.getByRole('button', { name: /^Phục hồi về 13\/09\/2026/ }))
@@ -279,8 +374,7 @@ describe('SaoLuuPage', () => {
     const { container } = render(<SaoLuuPage />)
     await screen.findByText(/Bình thường/)
 
-    const dong = container.querySelector('.ag-row')
-    fireEvent.contextMenu(dong!, { clientX: 10, clientY: 10 })
+    await moMenuChuotPhaiDongDau(container)
     await userEvent.click(await screen.findByRole('button', { name: /Tải bản sao này về máy/ }))
     await waitFor(() => expect(api.saoLuu.taoCongViec).toHaveBeenCalled())
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { api } from './client'
+import { api, tenTepBanSaoLuu } from './client'
 import { authStore } from './authStore'
 
 describe('client.goi — lỗi mạng (Task 16, phân biệt mất mạng thật vs máy chủ chưa chạy)', () => {
@@ -76,5 +76,38 @@ describe('api.saoLuu', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 401 })))
 
     await expect(api.saoLuu.taiBanSaoVe('ma-1')).rejects.toThrow('Phiên đăng nhập đã hết hạn')
+  })
+
+  // I5: truoc day nhanh 404 dung lai cau cua chuc nang IN ("Khong tim thay du lieu de in — co
+  // the ban ghi da bi xoa") va chay TRUOC khi doc than loi, nen cau giai thich dung ma may chu
+  // da soan san khong bao gio toi duoc nguoi dung. Quan tri chuan bi tep hom thu Sau, thu Hai
+  // moi bam tai, se tuong BAN SAO LUU DA MAT.
+  it('taiBanSaoVe 404 hien dung cau cua may chu, khong noi ve "in" va khong lo ma HTTP', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ thongBao: 'Tệp tải về đã bị dọn (tệp trong spool chỉ giữ 24 giờ). Hãy tạo lại một lượt tải về mới.' }),
+      { status: 404, headers: { 'Content-Type': 'application/json' } })))
+
+    await expect(api.saoLuu.taiBanSaoVe('ma-1')).rejects.toThrow(/Hãy tạo lại một lượt tải về mới/)
+  })
+
+  it('taiBanSaoVe khi may chu khong soan cau nao thi VAN khong nhac chuyen in, khong lo ma HTTP', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 404 })))
+
+    await expect(api.saoLuu.taiBanSaoVe('ma-1')).rejects.toThrow(
+      /^(?!.*(in\b|404)).*tạo lại một lượt tải về mới/s)
+  })
+})
+
+// I6: ten tep cu la `BanSaoLuu_<GUID>.dump` — sai duoi (tep that la .dump.tar.gz) va khong co
+// dau thoi gian nen khong biet la ban sao ngay nao (spec 8.4 doi co dau thoi gian).
+describe('tenTepBanSaoLuu', () => {
+  it('co dau thoi gian dd-MM-yyyy_HHmm va dung duoi .dump.tar.gz', () => {
+    const ten = tenTepBanSaoLuu('2026-09-13T06:00:00Z')
+    expect(ten).toMatch(/^BanSaoLuu_13-09-2026_\d{4}\.dump\.tar\.gz$/)
+  })
+
+  it('thieu hoac hong thoi diem thi van tra ten dung duoi, khong vo', () => {
+    expect(tenTepBanSaoLuu(null)).toBe('BanSaoLuu.dump.tar.gz')
+    expect(tenTepBanSaoLuu('khong-phai-ngay')).toBe('BanSaoLuu.dump.tar.gz')
   })
 })

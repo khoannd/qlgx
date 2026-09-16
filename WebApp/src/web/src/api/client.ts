@@ -156,6 +156,80 @@ async function taiTepIn(duong: string, tenTepMacDinh: string): Promise<void> {
   }
 }
 
+/**
+ * Tên tệp mặc định khi tải một bản sao lưu về máy — chỉ dùng khi thiếu `Content-Disposition`
+ * (proxy lược header, trình duyệt lạ).
+ *
+ * I6 của review-frontend.md: tên cũ là `BanSaoLuu_<mã công việc>.dump`, sai hai chỗ. Tệp thật
+ * trong spool là `*.dump.tar.gz` (xem `SaoLuuService`), nên người dùng nhận một tệp `.dump` thực
+ * chất là `tar.gz` — mở không ra và không hiểu vì sao. Và mã công việc là một GUID: nhìn
+ * `BanSaoLuu_7f3a…` thì không biết đó là bản sao ngày nào. Spec 8.4 yêu cầu tên CÓ DẤU THỜI GIAN.
+ *
+ * Dùng `-` và `_` thay cho `/` và `:` vì Windows/macOS không cho hai ký tự đó trong tên tệp.
+ */
+export function tenTepBanSaoLuu(thoiDiem?: string | null): string {
+  const d = thoiDiem ? new Date(thoiDiem) : null
+  if (!d || Number.isNaN(d.getTime())) return 'BanSaoLuu.dump.tar.gz'
+  const hai = (n: number) => String(n).padStart(2, '0')
+  return `BanSaoLuu_${hai(d.getDate())}-${hai(d.getMonth() + 1)}-${d.getFullYear()}`
+       + `_${hai(d.getHours())}${hai(d.getMinutes())}.dump.tar.gz`
+}
+
+/**
+ * Tải một tệp DỮ LIỆU (không phải bản in) về máy — hiện dùng cho bản sao lưu đã chuẩn bị xong.
+ *
+ * Vì sao KHÔNG dùng lại `taiTepIn` (I5 của review-frontend.md): mọi câu lỗi của `taiTepIn` đều
+ * viết cho luồng in ấn, và hai câu trong đó gây hiểu nhầm nghiêm trọng ở đây:
+ *
+ * - 404 → "Không tìm thấy dữ liệu để in — có thể bản ghi đã bị xoá." Người quản trị chuẩn bị tệp
+ *   hôm thứ Sáu, thứ Hai mới bấm tải, sẽ đọc câu đó và tưởng BẢN SAO LƯU ĐÃ MẤT. Đúng loại hiểu
+ *   nhầm gây hoảng loạn nhất trong phần mềm này.
+ * - Nhánh 404 của `taiTepIn` chạy TRƯỚC khi đọc thân lỗi, nên câu giải thích đúng mà máy chủ đã
+ *   soạn sẵn ("Tệp tải về đã bị dọn… Hãy tạo lại một lượt tải về mới.") không bao giờ tới được
+ *   người dùng.
+ * - `Máy chủ trả lỗi ${res.status} khi in.` lộ mã trạng thái HTTP ra màn hình — đúng thứ mà
+ *   `goi()` đã cẩn thận tránh.
+ *
+ * Ở đây: đọc `thongBao` của máy chủ cho MỌI mã lỗi, không nhắc chữ "in", không in mã HTTP.
+ */
+async function taiTepVe(duong: string, tenTepMacDinh: string): Promise<void> {
+  const token = authStore.layToken()
+  let res: Response
+  try {
+    res = await fetch(duong, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+  } catch (loiMang) {
+    console.error(`Lỗi mạng khi tải tệp ${duong}`, loiMang)
+    throw new Error('Không kết nối được máy chủ để tải tệp. Vui lòng thử lại sau ít phút hoặc '
+                  + 'báo cho người quản trị.')
+  }
+  if (res.status === 401) {
+    authStore.baoHet401()
+    throw new ChuaDangNhap('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+  }
+  if (!res.ok) {
+    const thongBao = await docThongBaoLoi(res)
+    console.error(`Lỗi ${res.status} khi tải tệp ${duong}`, thongBao)
+    throw new Error(thongBao ?? (res.status >= 500
+      ? 'Máy chủ đang gặp sự cố, chưa tải được tệp. Vui lòng thử lại sau ít phút hoặc báo cho '
+      + 'người quản trị.'
+      : 'Không tải được tệp. Tệp có thể đã được dọn đi — hãy tạo lại một lượt tải về mới.'))
+  }
+  const blob = await res.blob()
+  const dispo = res.headers.get('Content-Disposition') ?? ''
+  const ten = /filename="?([^";]+)"?/.exec(dispo)?.[1] ?? tenTepMacDinh
+  const url = URL.createObjectURL(blob)
+  try {
+    const a = document.createElement('a')
+    a.href = url
+    a.download = ten
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
 /** "Xem thử" mẫu in (POST kèm thân JSON, trả về PDF) — mở NGAY trong một tab mới thay vì kích
  * tải về máy như `taiTepIn`: người dùng cần THẤY kết quả tức thì để biết mẫu đang gõ có in
  * được hay không (phần lớn không rành máy tính, xem quan-ly-mau-in.md), không phải lưu tệp.
@@ -820,8 +894,8 @@ export const api = {
      * luôn nhận 401). Chỉ còn giữ lại phòng khi có chỗ khác cần đúng chuỗi đường dẫn (ví dụ ghi
      * log/hiển thị); muốn TẢI THẬT về máy hãy gọi `taiBanSaoVe` bên dưới. */
     duongDanTaiVe: (maCongViec: string) => `/api/sao-luu/tai-ve/${maCongViec}`,
-    /** Tải một bản sao lưu đã chuẩn bị xong (job loại `tai_ve`) về máy — dùng LẠI đúng cơ chế
-     * `taiTepIn` (fetch kèm header Bearer → đọc `blob` → `<a download>` giả) như mọi tệp PDF/
+    /** Tải một bản sao lưu đã chuẩn bị xong (job loại `tai_ve`) về máy — dùng đúng cơ chế
+     * `taiTepVe` (fetch kèm header Bearer → đọc `blob` → `<a download>` giả) như mọi tệp PDF/
      * Excel khác trong ứng dụng này, THAY vì một `<a href>` trần điều hướng thẳng tới route: route
      * đó đòi policy "QuanTriHeThong" (`Authorization: Bearer`), mà điều hướng trình duyệt thường
      * không tự đính header đó nên sẽ luôn 401 (xem SaoLuuTaiVeTests.cs — chỉ test backend tự set
@@ -829,8 +903,8 @@ export const api = {
      * đổi bộ nhớ với mọi export khác trong app (nạp cả tệp dump vào bộ nhớ trang trước khi lưu) —
      * lựa chọn có chủ đích, giống cách ảnh đại diện chấp nhận lưu BYTEA thay vì đối tượng ngoài ở
      * giai đoạn này; xem lại khi kích thước bản sao lưu thật sự thành vấn đề. */
-    taiBanSaoVe: (maCongViec: string) =>
-      taiTepIn(`/api/sao-luu/tai-ve/${maCongViec}`, `BanSaoLuu_${maCongViec}.dump`),
+    taiBanSaoVe: (maCongViec: string, thoiDiemBanSao?: string | null) =>
+      taiTepVe(`/api/sao-luu/tai-ve/${maCongViec}`, tenTepBanSaoLuu(thoiDiemBanSao)),
   },
   /** Màn hình "Thống kê chung" + "Biểu đồ" — xem
    * docs/superpowers/specs/man-hinh/thong-ke-bieu-do.md. */
