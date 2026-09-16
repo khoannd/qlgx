@@ -150,10 +150,19 @@ export async function getUpdateZipUrl(): Promise<string> {
  * một chỗ để không bao giờ lệch nhau khi sửa sau này. */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Chi tiết lỗi (đường dẫn raw.githubusercontent, tên biến môi trường) chỉ vào
+ * log của Worker; người gọi ẩn danh chỉ nhận một câu chung — finding T-4.
+ *
+ * Mã trạng thái GIỮ NGUYÊN 502 và thân vẫn là văn bản thuần: phần mềm desktop
+ * cũ chỉ phân biệt "tải được / không tải được", không đọc nội dung thân lỗi.
+ */
 function errorResponse(err: unknown): Response {
-  const message = err instanceof Error ? err.message : "Lỗi không xác định";
-  console.error("Máy chủ cập nhật lỗi:", message);
-  return new Response(message, { status: 502 });
+  console.error("Máy chủ cập nhật lỗi:", err instanceof Error ? err.stack ?? err.message : err);
+  return new Response("May chu cap nhat tam thoi khong san sang.", {
+    status: 502,
+    headers: { "content-type": "text/plain; charset=utf-8" },
+  });
 }
 
 /**

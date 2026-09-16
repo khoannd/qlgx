@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "test:lien-ket": "node --experimental-strip-types scripts/kiem-tra-lien-ket.test.ts",
     "cf:build": "cross-env DEPLOY_TARGET=cloudflare opennextjs-cloudflare build",
     "cf:preview": "npm run cf:build && wrangler dev",
     "cf:deploy": "npm run cf:build && wrangler deploy",

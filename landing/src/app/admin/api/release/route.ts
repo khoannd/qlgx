@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireSession } from "@/lib/admin/auth";
+import { kiemTraDanhSachTaiVe, kiemTraNhomThayDoi } from "@/lib/admin/kiem-tra-lien-ket";
 import { saveRelease, type ReleaseInput } from "@/lib/content/d1-provider";
 import type { DownloadFile, ReleaseGroup } from "@/lib/content/types";
 
@@ -28,15 +29,27 @@ export async function POST(request: Request) {
     return fail(request, "Thiếu thông tin bắt buộc.");
   }
 
-  let groups: ReleaseGroup[];
-  let downloads: DownloadFile[];
+  let groupsThuTho: unknown;
+  let downloadsThuTho: unknown;
   try {
-    groups = JSON.parse(groupsRaw);
-    downloads = JSON.parse(downloadsRaw);
-    if (!Array.isArray(groups) || !Array.isArray(downloads)) throw new Error("not array");
+    groupsThuTho = JSON.parse(groupsRaw);
+    downloadsThuTho = JSON.parse(downloadsRaw);
   } catch {
     return fail(request, "Danh sách thay đổi hoặc danh sách tệp tải không phải JSON hợp lệ.");
   }
+
+  /* Kiểm lược đồ VÀ kiểm `href` của nút tải trước khi ghi vào D1.
+   * Nút "Tải phần mềm" trên trang chủ dùng thẳng `href` này, nên một địa chỉ
+   * lạ ở đây = phát bộ cài của kẻ khác cho mọi giáo xứ. Xem lý do đầy đủ ở
+   * src/lib/admin/kiem-tra-lien-ket.ts. */
+  const kqNhom = kiemTraNhomThayDoi(groupsThuTho);
+  if (!kqNhom.hopLe) return fail(request, kqNhom.lyDo);
+
+  const kqTaiVe = kiemTraDanhSachTaiVe(downloadsThuTho);
+  if (!kqTaiVe.hopLe) return fail(request, kqTaiVe.lyDo);
+
+  const groups = groupsThuTho as ReleaseGroup[];
+  const downloads = downloadsThuTho as DownloadFile[];
 
   const release: ReleaseInput = {
     version,

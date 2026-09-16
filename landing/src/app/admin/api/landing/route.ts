@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireSession } from "@/lib/admin/auth";
+import { kiemTraLienKetHoTro } from "@/lib/admin/kiem-tra-lien-ket";
 import { saveLandingContent } from "@/lib/content/d1-provider";
 import type {
   Feature,
@@ -108,6 +109,11 @@ export async function POST(request: Request) {
   );
   for (const l of helpLinks) {
     if (!ICON_VALUES.includes(l.icon)) return fail(request, `Icon không hợp lệ cho liên kết "${l.title}".`);
+    /* Chặn `javascript:`/`data:` và mọi tên miền lạ ngay ở đường GHI — `href`
+     * này được render thẳng vào <a> ở trang chủ và chân trang.
+     * Xem src/lib/admin/kiem-tra-lien-ket.ts. */
+    const kq = kiemTraLienKetHoTro(l.href);
+    if (!kq.hopLe) return fail(request, `Liên kết "${l.title}": ${kq.lyDo}`);
   }
 
   const usedFaqIds = new Set<string>();

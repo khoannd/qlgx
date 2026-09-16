@@ -1,5 +1,17 @@
 export const metadata = { title: "Đăng nhập quản trị", robots: { index: false, follow: false } };
 
+/**
+ * Danh sách ĐÓNG các thông báo lỗi. Trước đây trang này in nguyên văn nội dung
+ * tham số `?error=` — tức là in cả thông điệp lỗi nội bộ (tên biến bí mật chưa
+ * đặt, hướng dẫn cấu hình D1) cho người gọi ẩn danh, và cho phép người ngoài
+ * đặt chữ tuỳ ý lên trang đăng nhập bằng một đường link (finding T-4).
+ * Chi tiết lỗi thật nằm ở log của Worker.
+ */
+const THONG_BAO_LOI: Record<string, string> = {
+  "sai-mat-khau": "Sai mật khẩu.",
+  "loi-he-thong": "Hệ thống đang gặp sự cố. Xem nhật ký Worker để biết chi tiết.",
+};
+
 export default async function AdminLoginPage({
   searchParams,
 }: {
@@ -17,7 +29,7 @@ export default async function AdminLoginPage({
 
         {error ? (
           <p className="mt-4 rounded-lg border-l-4 border-l-amber bg-amber/8 px-4 py-3 text-[0.88rem] text-ink">
-            {error === "sai-mat-khau" ? "Sai mật khẩu." : decodeURIComponent(error)}
+            {THONG_BAO_LOI[error] ?? THONG_BAO_LOI["loi-he-thong"]}
           </p>
         ) : null}
 

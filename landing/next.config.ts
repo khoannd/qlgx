@@ -35,6 +35,35 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
         ],
       },
+      /**
+       * CSP hẹp, CHỈ cho các đường trang web (finding TB-5, làm một phần).
+       *
+       * CỐ Ý không liệt kê `script-src`/`style-src`/`img-src`: trang có một
+       * `<script>` nội tuyến ở layout và Next.js còn chèn script bootstrap của
+       * riêng nó, nên muốn siết `script-src` cho có ích thì phải phát nonce qua
+       * middleware — mà middleware ở đây sẽ chặn ngang CẢ các đường máy chủ cập
+       * nhật (`/version.txt`, `/VersionConfig.xml`, `/download.asp`, `/4.0/*`)
+       * mà máy giáo xứ bản cũ phụ thuộc. Việc đó cần bàn và kiểm riêng, không
+       * làm kèm ở đây.
+       *
+       * Bốn chỉ thị dưới đây thì áp được ngay, không thể làm hỏng trang: không
+       * chỗ nào trong `src/` dùng <iframe>/<object>/<embed>, không có <base>,
+       * và mọi <form> đều post về cùng gốc (đã kiểm bằng grep).
+       *
+       * `source` liệt kê TỪNG nhóm đường trang — TUYỆT ĐỐI không dùng
+       * "/:path*" ở đây: các endpoint máy chủ cập nhật không nên nhận header lạ.
+       */
+      ...["/", "/tin-tuc/:path*", "/huong-dan/:path*", "/phien-ban", "/admin/:path*"].map(
+        (source) => ({
+          source,
+          headers: [
+            {
+              key: "Content-Security-Policy",
+              value: "frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'",
+            },
+          ],
+        }),
+      ),
       {
         // Ảnh và font trong /public không bao giờ đổi nội dung mà không đổi tên,
         // nên cho trình duyệt giữ lại lâu.
