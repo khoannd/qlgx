@@ -325,12 +325,26 @@ button, input, select, textarea { font: inherit; color: inherit; }
   padding-top: 12px;
   border-top: 1px solid rgba(14, 32, 76, .09);
 }
+/* Tiêu đề nhóm DÍNH lại ở mép trên khi cuộn (UX-REVIEW-2026-09-08 mục 8): danh sách
+   ~30 mục trong 9 nhóm là một khối cuộn phẳng, cuộn xuống thì tiêu đề nhóm trôi mất và
+   người dùng không còn biết mình đang ở nhóm nào. Chọn tiêu đề dính thay vì menu gấp/mở
+   theo nhóm: người dùng phần lớn là quý cha, quý sơ không rành máy tính — nhóm gấp lại
+   sẽ GIẤU mất mục khỏi người không biết phải bấm để mở, còn tiêu đề dính thì giữ nguyên
+   mọi thứ đang nhìn thấy, chỉ thêm ngữ cảnh. Nền phải ĐỤC (không dùng nền kính bán trong
+   của thanh bên) vì chữ cuộn phía dưới sẽ lộ xuyên qua. */
 .nav-group > .eyebrow {
-  padding: 0 11px 7px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 3px 11px 7px;
+  margin-top: -3px;
+  background: var(--brand-mist);
   font-size: 9.8px;
   letter-spacing: .15em;
-  color: var(--brand-ink);
-  opacity: .62;
+  /* Độ nhạt giữ NGUYÊN như trước (brand-ink ở 62%) nhưng đặt bằng alpha của MÀU CHỮ chứ
+     không bằng `opacity` của cả phần tử — `opacity` sẽ làm trong suốt luôn cái nền đục vừa
+     thêm ở trên, khiến chữ cuộn bên dưới lộ xuyên qua đúng thứ ta vừa đi chặn. */
+  color: rgba(15, 47, 110, .62);
 }
 .nav-group button {
   appearance: none;
