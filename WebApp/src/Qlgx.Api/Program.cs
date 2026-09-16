@@ -134,6 +134,16 @@ var loiCauHinh = KiemTraCauHinh.LoiCauHinhSanXuat(
 if (loiCauHinh is not null)
     throw new InvalidOperationException("Cấu hình sản xuất không hợp lệ: " + loiCauHinh);
 
+// Kiểm tra tĩnh ở trên chỉ so TÊN hai vai trò. Bước này hỏi thẳng máy chủ CSDL xem hai vai trò
+// đó THẬT SỰ có thuộc tính gì — đó là cách duy nhất bắt được trường hợp ConnectionStrings__Qlgx
+// bị trỏ nhầm về một siêu người dùng (RLS vô hiệu cho mọi truy vấn, không dấu hiệu nào). Xem
+// KiemTraCauHinh.LoiThuocTinhVaiTro. Chỉ chạy ở Production: dev/test dùng một vai trò postgres
+// duy nhất và điều đó vô hại ở đó.
+var loiVaiTro = await KiemTraCauHinh.LoiThuocTinhVaiTro(
+    builder.Configuration, app.Environment.IsProduction());
+if (loiVaiTro is not null)
+    throw new InvalidOperationException("Vai trò CSDL không hợp lệ: " + loiVaiTro);
+
 // Chay migration CSDL luc khoi dong — CHI KHI bat rieng qua cau hinh "Qlgx:ChayMigrationKhiKhoiDong"
 // (bien moi truong Qlgx__ChayMigrationKhiKhoiDong=true), mac dinh TAT. Ly do tat mac dinh: rat
 // nhieu tinh huong khoi dong host (moi test dung WebApplicationFactory<Program> thuan, mot host
@@ -216,7 +226,8 @@ app.MapGet("/api/suc-khoe", () => Results.Ok(new
 // (WebApp/scripts/install.sh) dùng đúng endpoint này làm cổng quyết định "đã lên được chưa";
 // nếu tín hiệu đó nói dối thì cơ chế tự quay lui khi cập nhật hỏng cũng vô nghĩa. Cố ý KHÔNG
 // dùng cho Docker healthcheck (gọi mỗi 10 giây thì không nên mở kết nối CSDL mỗi lần).
-app.MapGet("/api/suc-khoe/san-sang", async (QlgxDbContext db, ILogger<Program> logger, CancellationToken ct) =>
+app.MapGet("/api/suc-khoe/san-sang", async (QlgxDbContext db, IConfiguration cauHinh,
+    ILogger<Program> logger, CancellationToken ct) =>
 {
     try
     {
@@ -228,6 +239,34 @@ app.MapGet("/api/suc-khoe/san-sang", async (QlgxDbContext db, ILogger<Program> l
                 soMigrationConThieu = conThieu,
                 lyDo = $"Còn {conThieu} migration chưa áp dụng."
             }, statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        // Kiểm luôn chuỗi kết nối QUẢN TRỊ, không chỉ chuỗi nghiệp vụ. Đăng nhập (AuthService)
+        // đi bằng vai trò quản trị: nếu mật khẩu qlgx_admin lệch sau một lần sửa .env, hoặc vai
+        // trò đó chưa tồn tại trên máy vừa phục hồi từ một snapshot thiếu globals, thì readiness
+        // chỉ chạm vai trò nghiệp vụ vẫn trả 200 — install.sh kết luận "đã lên được" và KHÔNG
+        // quay lui, trong khi MỌI lần đăng nhập đều lỗi. Hệ thống "khoẻ" theo tín hiệu và không
+        // dùng được theo thực tế: đúng kiểu hỏng mà cơ chế tự quay lui sinh ra để chặn.
+        var chuoiQuanTri = ChuoiKetNoiQuanTri.Doc(cauHinh);
+        if (!string.IsNullOrWhiteSpace(chuoiQuanTri))
+        {
+            try
+            {
+                await using var knQuanTri = new Npgsql.NpgsqlConnection(chuoiQuanTri);
+                await knQuanTri.OpenAsync(ct);
+                await using var lenh = new Npgsql.NpgsqlCommand("SELECT 1", knQuanTri);
+                await lenh.ExecuteScalarAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Lỗi kiểm tra readiness: không kết nối được bằng vai trò quản trị");
+                return Results.Json(new
+                {
+                    trangThai = "chua-san-sang",
+                    soMigrationConThieu = 0,
+                    lyDo = "Không kết nối được cơ sở dữ liệu bằng vai trò quản trị — sẽ không ai đăng nhập được."
+                }, statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
+        }
 
         return Results.Ok(new { trangThai = "san-sang", soMigrationConThieu = 0 });
     }

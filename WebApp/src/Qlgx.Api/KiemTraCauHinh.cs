@@ -40,6 +40,80 @@ public static class KiemTraCauHinh
         return null;
     }
 
+    /// <summary>
+    /// Kiểm THUỘC TÍNH THẬT của hai vai trò trên chính máy chủ CSDL, thay vì chỉ so tên như
+    /// <see cref="LoiCauHinhSanXuat"/>.
+    ///
+    /// Vì sao cần thêm: so tên chỉ bắt được trường hợp hai chuỗi trỏ cùng một vai trò. Nó KHÔNG
+    /// bắt được trường hợp dễ xảy ra hơn nhiều — <c>ConnectionStrings__Qlgx</c> bị trỏ nhầm về
+    /// <c>Username=postgres</c> (siêu người dùng, tự động bỏ qua MỌI chính sách RLS) trong khi
+    /// chuỗi quản trị vẫn trỏ <c>qlgx_admin</c>. Hai tên khác nhau → kiểm tra tĩnh ĐẠT, API khởi
+    /// động bình thường, và Row-Level Security vô hiệu cho mọi truy vấn nghiệp vụ mà không có
+    /// một dấu hiệu nào. Bảng tự kiểm chứng của install.sh có kiểm rolbypassrls nhưng chỉ chạy
+    /// lúc cài — không chạy khi ai đó sửa .env rồi "docker compose up -d".
+    ///
+    /// Đây là kiểm tra rẻ (một truy vấn mỗi vai trò, một lần lúc khởi động) và là kiểm tra duy
+    /// nhất nói được SỰ THẬT thay vì nói về cấu hình.
+    /// </summary>
+    public static async Task<string?> LoiThuocTinhVaiTro(
+        IConfiguration cauHinh, bool laSanXuat, CancellationToken ct = default)
+    {
+        if (!laSanXuat) return null;
+
+        var (nv, loiNghiepVu) = await DocThuocTinhAnToan(cauHinh.GetConnectionString("Qlgx"), ct);
+        if (loiNghiepVu is { } ln)
+            return "Không kiểm được vai trò CSDL nghiệp vụ (ConnectionStrings__Qlgx): " + ln;
+
+        var (qt, loiQuanTri) = await DocThuocTinhAnToan(ChuoiKetNoiQuanTri.Doc(cauHinh), ct);
+        if (loiQuanTri is { } lq)
+            return "Không kiểm được vai trò CSDL quản trị (ConnectionStrings__QlgxQuanTri): " + lq;
+
+        if (nv.sieuNguoiDung || nv.boQuaRls)
+            return $"Vai trò CSDL nghiệp vụ '{nv.ten}' đang là siêu người dùng hoặc có BYPASSRLS. " +
+                   "Như vậy Row-Level Security bị vô hiệu cho MỌI truy vấn nghiệp vụ — mất hẳn lớp " +
+                   "phòng thủ ngăn giáo xứ này đọc dữ liệu giáo xứ khác. Tạo lại vai trò nghiệp vụ " +
+                   "KHÔNG có SUPERUSER và KHÔNG có BYPASSRLS — xem WebApp/docs/CAI-DAT-MAY-CHU.md.";
+
+        if (!qt.sieuNguoiDung && !qt.boQuaRls)
+            return $"Vai trò CSDL quản trị '{qt.ten}' không có BYPASSRLS. Đăng nhập và các màn hình " +
+                   "quản trị cần đọc chéo giáo xứ sẽ không hoạt động — xem WebApp/docs/CAI-DAT-MAY-CHU.md.";
+
+        return null;
+    }
+
+    private static async Task<(VaiTroCsdl vaiTro, string? loi)> DocThuocTinhAnToan(
+        string? chuoiKetNoi, CancellationToken ct)
+    {
+        var rong = new VaiTroCsdl("", false, false);
+        if (string.IsNullOrWhiteSpace(chuoiKetNoi)) return (rong, "thiếu chuỗi kết nối.");
+        try
+        {
+            return (await DocThuocTinh(chuoiKetNoi, ct), null);
+        }
+        catch (Exception ex)
+        {
+            // Không nuốt lỗi: trả nguyên văn thông báo của Npgsql vào lỗi khởi động. Một máy chủ
+            // không kết nối được CSDL bằng vai trò nào đó thì thà DỪNG ngay với câu nói rõ lý do,
+            // còn hơn chạy tiếp rồi hỏng lúc người dùng đăng nhập.
+            return (rong, ex.Message);
+        }
+    }
+
+    /// <summary>Thuộc tính thật của một vai trò CSDL, đọc từ pg_roles.</summary>
+    public sealed record VaiTroCsdl(string ten, bool sieuNguoiDung, bool boQuaRls);
+
+    private static async Task<VaiTroCsdl> DocThuocTinh(string chuoiKetNoi, CancellationToken ct)
+    {
+        await using var kn = new NpgsqlConnection(chuoiKetNoi);
+        await kn.OpenAsync(ct);
+        await using var lenh = new NpgsqlCommand(
+            "SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user", kn);
+        await using var doc = await lenh.ExecuteReaderAsync(ct);
+        if (!await doc.ReadAsync(ct))
+            throw new InvalidOperationException("Không đọc được thông tin vai trò hiện tại (pg_roles).");
+        return new VaiTroCsdl(doc.GetString(0), doc.GetBoolean(1), doc.GetBoolean(2));
+    }
+
     /// <summary>So sánh theo tên vai trò đã phân tích, không so chuỗi thô: hai chuỗi kết nối
     /// khác thứ tự tham số hoặc khoảng trắng vẫn có thể là cùng một vai trò.</summary>
     private static string VaiTroCua(string chuoiKetNoi)
