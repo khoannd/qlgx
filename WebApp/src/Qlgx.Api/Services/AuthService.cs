@@ -60,8 +60,10 @@ public class AuthService(IConfiguration cauHinh, TokenService tokenService, Qlgx
 
     /// <summary>Đồng bộ với TaoTaiKhoanQuanTri.cs (`QLGX_ADMIN_MAT_KHAU phai co it nhat 8 ky
     /// tu`) — một ngưỡng tối thiểu duy nhất cho toàn hệ thống, không lệch giữa CLI và tự đổi
-    /// mật khẩu.</summary>
-    private const int DoDaiMatKhauToiThieu = 8;
+    /// mật khẩu. `public` từ khi sửa TB-7: ba đường ghi mật khẩu còn lại (TaiKhoanService.Tao/
+    /// CapNhat, QuanLyGiaoXuService.TaoTaiKhoanChoGiaoXu) trước đây không kiểm gì, nên quản trị
+    /// viên tạo được tài khoản mật khẩu "1" và người dùng đó không bao giờ bị buộc đổi.</summary>
+    public const int DoDaiMatKhauToiThieu = 8;
 
     /// <summary>Số lần sai liên tiếp tối đa trước khi khoá tạm một tài khoản — review-backend.md
     /// mục T1. Ngưỡng và thời gian khoá cố tình rộng rãi (không phải 3-5 lần) để không khoá oan
@@ -111,24 +113,56 @@ public class AuthService(IConfiguration cauHinh, TokenService tokenService, Qlgx
             // (GiaoXuId, TenTaiKhoan) la duy nhat nen ket qua chac chan con toi da 1 phan tu.
             ungVien = ungVien.Where(t => t.GiaoXuId == gxDaChon).ToList();
         }
-        else
+        else if (ungVien.Select(t => t.GiaoXuId).Distinct().Count() > 1)
         {
-            var giaoXuTrungTen = ungVien.Select(t => t.GiaoXuId).Distinct().ToList();
-            if (giaoXuTrungTen.Count > 1)
+            // THAT SU trung ten o tu hai giao xu tro len — truong hop DUY NHAT phai dung lai
+            // hoi, tranh doan bua roi khoa nham/khoa cheo tai khoan cua giao xu khac (loi M1).
+            //
+            // C-7 (review-bao-mat.md): ban dau nhanh nay tra thang ten VA Guid cua cac giao xu
+            // trung ten cho MOT NGUOI CHUA XAC THUC. Ke an danh chi can gui
+            // {"tenTaiKhoan":"vanphong","matKhau":"bat ky"} la biet ngay ten dang nhap do ton
+            // tai o nhung giao xu nao va ten that cua chung — dung san mot ban do "giao xu nao
+            // dang dung he thong, moi noi co tai khoan ten gi", tuc buoc trinh sat truc tiep
+            // cho C-1 (do mat khau) va C-2 (khoa vinh vien tai khoan van phong). Voi mot he
+            // thong cua cong dong ton giao ma moi lo duoc neu ro la "bi nham muc tieu", day la
+            // ro ri that.
+            //
+            // Cach sua giu nguyen chuc nang "cho chon giao xu" nhung KHONG con lam cong cu liet
+            // ke: THU MAT KHAU TRUOC roi moi tiet lo. Chi nhung ung vien co mat khau KHOP moi
+            // di tiep. Ke an danh go bua mot mat khau se rot vao nhanh "khong khop nao" ben
+            // duoi va nhan dung mot cau 401 giong het moi truong hop sai khac — khong mot ten
+            // giao xu, khong mot Guid nao ra ngoai.
+            //
+            // KHONG tang bo dem sai o day (giu nguyen y do M1): mot ten dang nhap trung o nhieu
+            // giao xu thi chua the biet ke go sai dang nham vao ai, tang bo dem cho ca hai la
+            // mo lai dung duong khoa cheo giao xu ma M1 da dong.
+            ungVien = ungVien
+                .Where(t => _hasher.VerifyHashedPassword(t, t.MatKhauBam!, matKhau)
+                    is PasswordVerificationResult.Success or PasswordVerificationResult.SuccessRehashNeeded)
+                .ToList();
+
+            if (ungVien.Count == 0)
+                return new DangNhapKetQua(KetQuaDangNhap.SaiTenHoacMatKhau, null, null);
+
+            if (ungVien.Count > 1)
             {
-                // THAT SU trung ten o tu hai giao xu tro len — day la truong hop DUY NHAT bat
-                // dung lai hoi, tranh doan bua roi khoa nham/khoa cheo tai khoan cua giao xu
-                // khac (loi M1). Chua kiem mat khau, chua tang bo dem cho ai ca.
+                // Trung CA ten dang nhap LAN mat khau o tu hai giao xu — nguoi goi da chung
+                // minh biet mat khau cua tung tai khoan trong danh sach nay, nen hien ten giao
+                // xu cho ho chon khong lo gi them. Day la luc duy nhat danh sach duoc tra ve.
+                var idTrungTen = ungVien.Select(t => t.GiaoXuId).ToList();
                 var danhSach = await db.GiaoXu
-                    .Where(g => giaoXuTrungTen.Contains(g.Id))
+                    .Where(g => idTrungTen.Contains(g.Id))
                     .Select(g => new GiaoXuLuaChonDto(g.Id, g.TenGiaoXu))
                     .ToListAsync(ct);
                 return new DangNhapKetQua(KetQuaDangNhap.CanChonGiaoXu, null, null, danhSach);
             }
-            // 0 hoac 1 giao xu trung ten — khong can hoi, xu ly y het truoc day (giu nguyen
-            // trai nghiem cho giao xu pilot hien chi co mot giao xu, va cho da so ten dang
-            // nhap khong trung ai du may chu co nhieu giao xu).
+            // Dung MOT ung vien khop mat khau — khong con gi mo ho de hoi, cho dang nhap thang
+            // qua vong xu ly chung ben duoi (van di qua kiem khoa tam va phat hanh token nhu
+            // moi luot dang nhap binh thuong khac).
         }
+        // 0 hoac 1 giao xu trung ten — khong can hoi, xu ly y het truoc day (giu nguyen trai
+        // nghiem cho giao xu pilot hien chi co mot giao xu, va cho da so ten dang nhap khong
+        // trung ai du may chu co nhieu giao xu).
 
         if (ungVien.Count == 0)
         {
@@ -172,14 +206,36 @@ public class AuthService(IConfiguration cauHinh, TokenService tokenService, Qlgx
         foreach (var taiKhoan in ungVien)
         {
             var thoiHanKhoaMoi = homNay + ThoiGianKhoa;
+            // C-2 (review-bao-mat.md) — HAI sua nho, moi cai dong mot nua cua vong khoa vinh vien:
+            //
+            // 1. Menh de WHERE loai han tai khoan DANG BI KHOA. Truoc day vong lap tren
+            //    `continue` bo qua viec THU mat khau cho tai khoan dang khoa, nhung roi thang
+            //    xuong day va van chay UPDATE cho chinh no — dung cai dieu ma ghi chu o tren
+            //    noi la phai tranh. Ke an danh go sai mot lan moi 10 phut la van phong giao xu
+            //    KHONG BAO GIO dang nhap lai duoc, va he thong khong co nut mo khoa nao.
+            //
+            // 2. Khoa DA HET HAN thi bat dau lai mot chu ky dem moi (bo dem ve 1, xoa moc khoa)
+            //    thay vi cong don tiep. Bo dem cu khong bao gio tu giam theo thoi gian — chi ve
+            //    0 khi dang nhap THANH CONG — nen neu chi them menh de WHERE o tren thoi, mot
+            //    tai khoan da tung bi khoa se vinh vien nam o muc >= 10: het 15 phut la moi lan
+            //    go sai tiep theo lai day khoa them 15 phut nua, tai lap dung vong khoa vinh
+            //    vien qua mot duong khac. Voi cach dat lai nay, bo dem KHONG BAO GIO vuot
+            //    nguong khi chua bi khoa, nen moc khoa chi duoc dat dung mot lan moi chu ky —
+            //    va tai khoan van khoa lai duoc neu ke tan cong do tiep sau khi het han.
             await db.Database.ExecuteSqlInterpolatedAsync($"""
                 UPDATE tai_khoan
-                SET so_lan_dang_nhap_sai_lien_tiep = so_lan_dang_nhap_sai_lien_tiep + 1,
+                SET so_lan_dang_nhap_sai_lien_tiep = CASE
+                        WHEN khoa_dang_nhap_den_luc IS NOT NULL THEN 1
+                        ELSE so_lan_dang_nhap_sai_lien_tiep + 1
+                    END,
                     khoa_dang_nhap_den_luc = CASE
-                        WHEN so_lan_dang_nhap_sai_lien_tiep + 1 >= {SoLanSaiToiDa} THEN {thoiHanKhoaMoi}
-                        ELSE khoa_dang_nhap_den_luc
+                        WHEN khoa_dang_nhap_den_luc IS NULL
+                             AND so_lan_dang_nhap_sai_lien_tiep + 1 >= {SoLanSaiToiDa}
+                        THEN {thoiHanKhoaMoi}
+                        ELSE NULL
                     END
                 WHERE id = {taiKhoan.Id}
+                  AND (khoa_dang_nhap_den_luc IS NULL OR khoa_dang_nhap_den_luc <= {homNay})
                 """, ct);
         }
 

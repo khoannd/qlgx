@@ -26,6 +26,8 @@ public static class TaiKhoanEndpoints
             {
                 KetQuaLuuTaiKhoan.TrungTenTaiKhoan => Results.Conflict(
                     new { thongBao = "Tên tài khoản đã tồn tại, thử một tên khác" }),
+                KetQuaLuuTaiKhoan.LoaiTaiKhoanKhongHopLe => LoiLoaiTaiKhoan(),
+                KetQuaLuuTaiKhoan.MatKhauQuaNgan => LoiMatKhauQuaNgan(),
                 _ => Results.Created($"/api/tai-khoan/{id}", new { id }),
             };
         });
@@ -35,6 +37,13 @@ public static class TaiKhoanEndpoints
             await dv.CapNhat(id, yc, ct) switch
             {
                 KetQuaLuuTaiKhoan.KhongTimThay => Results.NotFound(),
+                KetQuaLuuTaiKhoan.LoaiTaiKhoanKhongHopLe => LoiLoaiTaiKhoan(),
+                KetQuaLuuTaiKhoan.MatKhauQuaNgan => LoiMatKhauQuaNgan(),
+                KetQuaLuuTaiKhoan.KhongTuDoiLoaiCuaMinh => Results.Json(new
+                {
+                    thongBao = "Không thể tự đổi loại tài khoản của chính mình. " +
+                               "Hãy nhờ một quản trị viên khác thực hiện thay đổi này."
+                }, statusCode: StatusCodes.Status403Forbidden),
                 KetQuaLuuTaiKhoan.DungPhienBan => Results.Conflict(new
                 {
                     thongBao = "Tài khoản này vừa được người khác cập nhật. " +
@@ -46,4 +55,20 @@ public static class TaiKhoanEndpoints
         nhom.MapDelete("/{id:guid}", async (TaiKhoanService dv, Guid id, CancellationToken ct) =>
             await dv.Xoa(id, ct) ? Results.Ok() : Results.NotFound());
     }
+
+    /// <summary>NT-1: câu trả lời cho mọi giá trị LoaiTaiKhoan không được phép cấp qua HTTP —
+    /// đặc biệt là 9 ("Quản trị hệ thống"), chỉ cấp được bằng dòng lệnh trên máy chủ.</summary>
+    private static IResult LoiLoaiTaiKhoan() => Results.BadRequest(new
+    {
+        thongBao = "Loại tài khoản không hợp lệ. Chỉ nhận: 0 (Quản trị viên), 1 (Người nhập), " +
+                   "2 (Người xem). Tài khoản \"Quản trị hệ thống\" chỉ được tạo trực tiếp trên " +
+                   "máy chủ, không cấp qua màn hình này."
+    });
+
+    /// <summary>TB-7: ngưỡng độ dài mật khẩu dùng chung với AuthService.DoiMatKhauCuaToi và với
+    /// dòng lệnh tạo tài khoản quản trị — một ngưỡng duy nhất cho toàn hệ thống.</summary>
+    private static IResult LoiMatKhauQuaNgan() => Results.BadRequest(new
+    {
+        thongBao = $"Mật khẩu phải có ít nhất {Services.AuthService.DoDaiMatKhauToiThieu} ký tự"
+    });
 }

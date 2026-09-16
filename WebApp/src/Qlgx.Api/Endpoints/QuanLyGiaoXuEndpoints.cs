@@ -59,6 +59,10 @@ public static class QuanLyGiaoXuEndpoints
                 KetQuaQuanLyGiaoXu.KhongTimThay => Results.NotFound(),
                 KetQuaQuanLyGiaoXu.TrungTenTaiKhoan => Results.Conflict(
                     new { thongBao = "Tên tài khoản đã tồn tại ở giáo xứ này, thử một tên khác" }),
+                KetQuaQuanLyGiaoXu.MatKhauQuaNgan => Results.BadRequest(new
+                {
+                    thongBao = $"Mật khẩu phải có ít nhất {Services.AuthService.DoDaiMatKhauToiThieu} ký tự"
+                }),
                 _ => Results.Created($"/api/quan-tri/giao-xu/{id}/tai-khoan/{taiKhoanId}", new { id = taiKhoanId }),
             };
         });

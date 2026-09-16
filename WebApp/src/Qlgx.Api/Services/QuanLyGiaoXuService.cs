@@ -11,6 +11,10 @@ public enum KetQuaQuanLyGiaoXu
     ThanhCong,
     KhongTimThay,
     TrungTenTaiKhoan,
+    /// <summary>Mật khẩu ngắn hơn <see cref="AuthService.DoDaiMatKhauToiThieu"/> ký tự (TB-7 —
+    /// review-bao-mat.md). Trước khi kiểm, quản trị hệ thống tạo được cho một giáo xứ khác một
+    /// tài khoản quản trị mật khẩu "1", và người dùng đó không bao giờ bị buộc đổi.</summary>
+    MatKhauQuaNgan,
 }
 
 /// <summary>
@@ -163,6 +167,9 @@ public class QuanLyGiaoXuService(IConfiguration cauHinh)
     public async Task<(KetQuaQuanLyGiaoXu Ket, Guid? Id)> TaoTaiKhoanChoGiaoXu(
         Guid giaoXuId, TaoTaiKhoanChoGiaoXuRequest yc, AuthService auth, CancellationToken ct)
     {
+        if (string.IsNullOrEmpty(yc.MatKhau) || yc.MatKhau.Length < AuthService.DoDaiMatKhauToiThieu)
+            return (KetQuaQuanLyGiaoXu.MatKhauQuaNgan, null);
+
         await using var db = MoContextQuanTri();
         var giaoXuTonTai = await db.GiaoXu.AnyAsync(x => x.Id == giaoXuId, ct);
         if (!giaoXuTonTai) return (KetQuaQuanLyGiaoXu.KhongTimThay, null);

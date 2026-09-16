@@ -52,6 +52,12 @@ public class QlgxApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     {
         builder.UseSetting("ConnectionStrings:Qlgx", ChuoiKetNoi);
         builder.UseSetting("Qlgx:JwtKey", _jwtKey);
+        // C-1: gioi han theo IP (Program.cs) phan vung theo dia chi nguoi goi. Moi request cua
+        // bo test nay den tu CUNG mot "dia chi", va rieng mot bai test brute-force da ban 11
+        // luot dang nhap lien tiep — de bat thi hang tram bai test khong lien quan se do vi 429,
+        // dung kieu that bai gia lam nguoi doc mat long tin vao bo test. Tat o day va kiem dung
+        // co che do bang mot host RIENG co nguong that thap (GioiHanTruyCapTests).
+        builder.UseSetting("Qlgx:GioiHanTruyCap:Bat", "false");
     }
 
     /// <summary>Mở một DbContext trỏ thẳng vào database test, bỏ qua bộ lọc giáo xứ.</summary>
@@ -62,13 +68,17 @@ public class QlgxApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     /// cho phần lớn test chỉ cần "một người dùng đã đăng nhập của giáo xứ X", không kiểm tra
     /// luồng đăng nhập. Test luồng đăng nhập thật (AuthTests) gọi thẳng
     /// POST /api/auth/dang-nhap.</summary>
-    public string PhatHanhToken(Guid? giaoXuId = null, int loaiTaiKhoan = 0, string tenTaiKhoan = "nguoi_test")
+    /// <param name="taiKhoanId">Khi cần token mang claim "sub" ĐÚNG BẰNG Id của một tài khoản
+    /// có thật trong CSDL — bắt buộc cho các bài test về NT-1 (cấm tự đổi loại tài khoản của
+    /// chính mình), vì rào chắn đó so Id trên đường dẫn với claim "sub".</param>
+    public string PhatHanhToken(Guid? giaoXuId = null, int loaiTaiKhoan = 0,
+        string tenTaiKhoan = "nguoi_test", Guid? taiKhoanId = null)
     {
         using var scope = Services.CreateScope();
         var tokenService = scope.ServiceProvider.GetRequiredService<TokenService>();
         return tokenService.PhatHanh(new TaiKhoan
         {
-            Id = Guid.NewGuid(),
+            Id = taiKhoanId ?? Guid.NewGuid(),
             GiaoXuId = giaoXuId ?? GiaoXuId,
             LoaiTaiKhoan = loaiTaiKhoan,
             TenTaiKhoan = tenTaiKhoan,
@@ -79,11 +89,11 @@ public class QlgxApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     /// <summary>HttpClient đã đăng nhập — thay cho <c>CreateClient()</c> ở MỌI test nghiệp vụ,
     /// vì mọi endpoint nghiệp vụ giờ đòi hỏi xác thực (Task 14). Test cố ý gọi không xác thực
     /// hoặc xác thực giáo xứ khác thì dùng <c>CreateClient()</c>/tham số riêng.</summary>
-    public HttpClient CreateAuthClient(Guid? giaoXuId = null, int loaiTaiKhoan = 0)
+    public HttpClient CreateAuthClient(Guid? giaoXuId = null, int loaiTaiKhoan = 0, Guid? taiKhoanId = null)
     {
         var client = CreateClient();
-        client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", PhatHanhToken(giaoXuId, loaiTaiKhoan));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", PhatHanhToken(giaoXuId, loaiTaiKhoan, taiKhoanId: taiKhoanId));
         return client;
     }
 
