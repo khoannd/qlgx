@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Qlgx.Api;
@@ -6,9 +7,19 @@ namespace Qlgx.Api.Tests;
 
 public class KiemTraCauHinhTests
 {
-    private static IConfiguration CauHinh(string? nghiepVu, string? quanTri)
+    /// <summary>Khoá ký hợp lệ SINH NGẪU NHIÊN mỗi lần chạy — không ghi khoá cố định nào vào mã
+    /// nguồn, kể cả trong test (xem QlgxApiFactory).</summary>
+    private static string KhoaKyHopLe() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+
+    private static IConfiguration CauHinh(string? nghiepVu, string? quanTri, string? khoaKy = null)
     {
-        var cap = new Dictionary<string, string?> { ["ConnectionStrings:Qlgx"] = nghiepVu };
+        var cap = new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:Qlgx"] = nghiepVu,
+            // TB-8: cổng gác nay kiểm cả khoá ký JWT, nên mọi ca kiểm phần chuỗi kết nối phải
+            // mang sẵn một khoá hợp lệ, nếu không chúng sẽ báo đúng nhưng vì lý do sai.
+            ["Qlgx:JwtKey"] = khoaKy ?? KhoaKyHopLe(),
+        };
         if (quanTri is not null) cap["ConnectionStrings:QlgxQuanTri"] = quanTri;
         return new ConfigurationBuilder().AddInMemoryCollection(cap).Build();
     }
@@ -69,5 +80,53 @@ public class KiemTraCauHinhTests
         var goi = () => KiemTraCauHinh.LoiCauHinhSanXuat(CauHinh(diDang, diDang), laSanXuat: true);
         goi.Should().NotThrow()
             .Which.Should().Contain("cùng một vai trò");
+    }
+
+    // --- TB-8 (review-bao-mat.md): cổng gác sản xuất phải bắt buộc Qlgx:JwtKey ---------------
+    // Thiếu khoá thì máy chủ vẫn khởi động, readiness trả 200, install.sh kết luận "đã lên được,
+    // không quay lui" — nhưng MỌI lần đăng nhập đều 500. Đúng kiểu hỏng mà lớp kiểm tra này sinh
+    // ra để chặn.
+
+    [Fact]
+    public void San_xuat_thieu_khoa_ky_jwt_thi_bao_loi()
+    {
+        var cauHinh = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:Qlgx"] = KetNoiApp,
+            ["ConnectionStrings:QlgxQuanTri"] = KetNoiQuanTri,
+        }).Build();
+
+        KiemTraCauHinh.LoiCauHinhSanXuat(cauHinh, laSanXuat: true)
+            .Should().Contain("JwtKey");
+    }
+
+    [Fact]
+    public void San_xuat_khoa_ky_jwt_khong_phai_base64_thi_bao_loi()
+    {
+        KiemTraCauHinh.LoiCauHinhSanXuat(
+                CauHinh(KetNoiApp, KetNoiQuanTri, khoaKy: "khong-phai-base64!!!"), laSanXuat: true)
+            .Should().Contain("base64");
+    }
+
+    [Fact]
+    public void San_xuat_khoa_ky_jwt_ngan_hon_32_byte_thi_bao_loi()
+    {
+        // 16 byte vẫn là base64 hợp lệ và TokenService vẫn ký được — nên đây đúng là ca mà chỉ
+        // kiểm "có/không" hoặc "giải được base64 không" sẽ bỏ lọt.
+        var khoaNgan = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
+
+        KiemTraCauHinh.LoiCauHinhSanXuat(CauHinh(KetNoiApp, KetNoiQuanTri, khoaNgan), laSanXuat: true)
+            .Should().Contain("32 byte");
+    }
+
+    [Fact]
+    public void Ngoai_san_xuat_thi_khong_doi_hoi_khoa_ky_jwt()
+    {
+        // Nhiều bài test dựng WebApplicationFactory trần chỉ để gọi /api/suc-khoe và không cấu
+        // hình khoá ký nào — cổng gác chỉ được siết ở Production, đúng như hai lớp kiểm tra cũ.
+        var cauHinh = new ConfigurationBuilder().AddInMemoryCollection(
+            new Dictionary<string, string?> { ["ConnectionStrings:Qlgx"] = KetNoiApp }).Build();
+
+        KiemTraCauHinh.LoiCauHinhSanXuat(cauHinh, laSanXuat: false).Should().BeNull();
     }
 }

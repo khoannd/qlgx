@@ -37,6 +37,48 @@ public static class KiemTraCauHinh
                    "vai trò CSDL. Như vậy Row-Level Security bị vô hiệu hoàn toàn. Tạo hai vai trò " +
                    "riêng — xem WebApp/docs/CAI-DAT-MAY-CHU.md.";
 
+        return LoiKhoaKyJwt(cauHinh["Qlgx:JwtKey"]);
+    }
+
+    /// <summary>Số byte tối thiểu của khoá ký JWT. 32 byte = 256 bit, đúng bằng độ dài đầu ra
+    /// của HMAC-SHA256 (thuật toán TokenService dùng) — ngắn hơn là tự làm yếu chữ ký, và
+    /// install.sh vốn đã sinh đúng 32 byte.</summary>
+    private const int SoByteKhoaKyToiThieu = 32;
+
+    /// <summary>
+    /// TB-8 (review-bao-mat.md) — cổng gác sản xuất trước đây kiểm rất kỹ hai chuỗi kết nối
+    /// nhưng KHÔNG kiểm <c>Qlgx:JwtKey</c>. Thiếu khoá (hoặc khoá không phải base64 hợp lệ) thì
+    /// máy chủ vẫn khởi động bình thường, readiness trả 200, install.sh kết luận "đã lên được,
+    /// không quay lui" — nhưng MỌI lần đăng nhập đều 500 vì TokenService ném lỗi lúc phát hành
+    /// token. Đúng kiểu hỏng mà lớp kiểm tra này sinh ra để chặn: tín hiệu nói khoẻ, thực tế
+    /// không ai dùng được.
+    /// </summary>
+    private static string? LoiKhoaKyJwt(string? khoa)
+    {
+        const string huongDan =
+            " Sinh một khoá mới (PowerShell): " +
+            "[Convert]::ToBase64String((1..32 | %{ Get-Random -Max 256 })) — rồi đặt vào biến " +
+            "QLGX_JWT_KEY trong tệp .env cạnh docker-compose.yml.";
+
+        if (string.IsNullOrWhiteSpace(khoa))
+            return "Thiếu Qlgx__JwtKey (khoá ký token đăng nhập). Không có khoá này thì máy chủ " +
+                   "vẫn khởi động nhưng KHÔNG ai đăng nhập được." + huongDan;
+
+        byte[] byteKhoa;
+        try
+        {
+            byteKhoa = Convert.FromBase64String(khoa);
+        }
+        catch (FormatException)
+        {
+            return "Qlgx__JwtKey không phải chuỗi base64 hợp lệ, nên không ai đăng nhập được." + huongDan;
+        }
+
+        if (byteKhoa.Length < SoByteKhoaKyToiThieu)
+            return $"Qlgx__JwtKey chỉ dài {byteKhoa.Length} byte, tối thiểu phải " +
+                   $"{SoByteKhoaKyToiThieu} byte. Khoá ngắn làm chữ ký token yếu đi — kẻ tấn công " +
+                   "dò ra khoá là tự phát hành được token của bất kỳ ai, ở bất kỳ giáo xứ nào." + huongDan;
+
         return null;
     }
 
@@ -78,7 +120,63 @@ public static class KiemTraCauHinh
             return $"Vai trò CSDL quản trị '{qt.ten}' không có BYPASSRLS. Đăng nhập và các màn hình " +
                    "quản trị cần đọc chéo giáo xứ sẽ không hoạt động — xem WebApp/docs/CAI-DAT-MAY-CHU.md.";
 
-        return null;
+        return await LoiChuBangChuaForceRls(cauHinh.GetConnectionString("Qlgx"), ct);
+    }
+
+    /// <summary>
+    /// NT-2 (review-bao-mat.md) — lỗ hổng tệ nhất mà hai lớp kiểm tra phía trên KHÔNG bắt được.
+    ///
+    /// Migration EF Core chạy bằng chính <c>ConnectionStrings__Qlgx</c> (xem
+    /// docker-compose.yml: <c>Qlgx__ChayMigrationKhiKhoiDong=true</c>), nên vai trò NGHIỆP VỤ
+    /// <c>qlgx_app</c> là CHỦ của toàn bộ bảng. PostgreSQL KHÔNG áp policy RLS cho chủ bảng trừ
+    /// khi bảng bật <c>FORCE ROW LEVEL SECURITY</c> — nghĩa là trước migration
+    /// BatForceRlsChoBangTheoGiaoXu, mọi policy <c>loc_theo_giao_xu</c> đều bị bỏ qua cho đúng
+    /// cái vai trò phục vụ toàn bộ nghiệp vụ. Lớp phòng thủ thứ hai không tồn tại, trong khi
+    /// tài liệu lẫn mã nguồn đều tin rằng nó đang chạy.
+    ///
+    /// Kiểm ở đây (không chỉ dựa vào migration) vì migration chỉ chạy một lần: một bảng thêm
+    /// tay, một lần phục hồi từ bản sao lưu cũ, một migration tương lai quên FORCE — đều đưa hệ
+    /// thống về đúng trạng thái hỏng cũ mà không có dấu hiệu nào. Truy vấn chạy bằng CHÍNH vai
+    /// trò nghiệp vụ nên nó nói sự thật về vai trò đó, không nói về cấu hình.
+    /// </summary>
+    private static async Task<string?> LoiChuBangChuaForceRls(string? chuoiNghiepVu, CancellationToken ct)
+    {
+        List<string> bangHong;
+        try
+        {
+            await using var kn = new NpgsqlConnection(chuoiNghiepVu);
+            await kn.OpenAsync(ct);
+            await using var lenh = new NpgsqlCommand(
+                """
+                SELECT c.relname
+                FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE c.relkind = 'r'
+                  AND c.relrowsecurity
+                  AND NOT c.relforcerowsecurity
+                  AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+                  AND pg_get_userbyid(c.relowner) = current_user
+                ORDER BY c.relname
+                """, kn);
+            await using var doc = await lenh.ExecuteReaderAsync(ct);
+            bangHong = [];
+            while (await doc.ReadAsync(ct)) bangHong.Add(doc.GetString(0));
+        }
+        catch (Exception ex)
+        {
+            return "Không kiểm được quyền sở hữu bảng bằng vai trò CSDL nghiệp vụ: " + ex.Message;
+        }
+
+        if (bangHong.Count == 0) return null;
+
+        var vaiDongDau = string.Join(", ", bangHong.Take(5));
+        return $"Vai trò CSDL nghiệp vụ đang là CHỦ của {bangHong.Count} bảng có Row-Level " +
+               $"Security nhưng chưa bật FORCE ROW LEVEL SECURITY (ví dụ: {vaiDongDau}). " +
+               "PostgreSQL không áp chính sách RLS cho chủ bảng, nên lớp phòng thủ ngăn giáo xứ " +
+               "này đọc dữ liệu giáo xứ khác đang KHÔNG hoạt động dù mọi policy đều có mặt. " +
+               "Chạy migration BatForceRlsChoBangTheoGiaoXu (khởi động lại API với " +
+               "Qlgx__ChayMigrationKhiKhoiDong=true là đủ), hoặc chuyển chủ sở hữu các bảng này " +
+               "sang vai trò quản trị.";
     }
 
     private static async Task<(VaiTroCsdl vaiTro, string? loi)> DocThuocTinhAnToan(
