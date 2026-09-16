@@ -98,6 +98,9 @@ public class SaoLuuTaiVeTests(QlgxApiFactory factory) : IClassFixture<QlgxApiFac
     {
         await using var db = factory.TaoContextThuan();
         var svc = new SaoLuuService(db, new ConfigurationBuilder().Build());
+        await db.CongViecSaoLuu
+            .Where(x => x.TrangThai == TrangThaiCongViec.Cho || x.TrangThai == TrangThaiCongViec.DangChay)
+            .ExecuteDeleteAsync();
 
         var idSaiLoai = Guid.NewGuid();
         db.CongViecSaoLuu.Add(new CongViecSaoLuu
@@ -128,6 +131,13 @@ public class SaoLuuTaiVeTests(QlgxApiFactory factory) : IClassFixture<QlgxApiFac
         QlgxApiFactory f, string trangThai, bool taoTep)
     {
         await using var db = f.TaoContextThuan();
+        // Don cac dong DANG MO con sot lai tu bai khac trong lop: chi muc rieng phan
+        // ux_cong_viec_sao_luu_dang_mo (migration ChanHaiCongViecSaoLuuDangMo) chi cho phep MOT
+        // cong viec "cho"/"dang_chay" ton tai — moi bai tu bao dam tien de cua chinh no, khong
+        // dua vao thu tu chay giua cac [Fact] (xUnit khong bao dam thu tu do).
+        await db.CongViecSaoLuu
+            .Where(x => x.TrangThai == TrangThaiCongViec.Cho || x.TrangThai == TrangThaiCongViec.DangChay)
+            .ExecuteDeleteAsync();
         var cv = new CongViecSaoLuu { Loai = LoaiCongViecSaoLuu.TaiVe, TrangThai = trangThai };
         db.CongViecSaoLuu.Add(cv);
         await db.SaveChangesAsync();

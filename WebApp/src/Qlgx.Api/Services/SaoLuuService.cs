@@ -1,6 +1,7 @@
 using Qlgx.Data.NhatKy;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Microsoft.Extensions.Configuration;
 using Qlgx.Api.Dtos;
 using Qlgx.Data;
@@ -45,6 +46,36 @@ public class SaoLuuService(QlgxDbContext db, IConfiguration cauHinh)
     /// giờ nên 8 giờ cho phép trễ một chút mà chưa báo động giả.</summary>
     public const int GioCanhBao = 8;
 
+    /// <summary>
+    /// Quá bao nhiêu phút mà một công việc vẫn nằm ở trạng thái "cho" thì coi như bộ chạy trên
+    /// máy chủ KHÔNG hoạt động (không được cài, đã bị tắt, hoặc đã chết).
+    ///
+    /// Vì sao cần con số này: bộ dọn công việc mồ côi trên host chỉ quét trạng thái "dang_chay",
+    /// nên một dòng "cho" không ai nhặt sẽ nằm đó vĩnh viễn — và guard "không xếp hàng hai công
+    /// việc" bên dưới sẽ từ chối MỌI thao tác trên màn hình Sao lưu &amp; Phục hồi kể từ giây đó.
+    /// Không có route nào huỷ công việc, nên đường thoát duy nhất là SSH vào máy chủ chạy psql:
+    /// đúng thứ người dùng mục tiêu (quý cha, quý sơ) không làm được. 15 phút là rộng rãi so với
+    /// nhịp quét một phút của bộ chạy, đủ để không bao giờ huỷ nhầm một công việc thật.
+    /// </summary>
+    public const int PhutChoToiDa = 15;
+
+    /// <summary>Câu ghi vào nhật ký của một công việc bị bỏ quên — nói ĐÚNG nguyên nhân cho quản
+    /// trị viên. Câu "đang có công việc chạy dở" trước đây gây hiểu nhầm nghiêm trọng: người dùng
+    /// ngồi chờ một việc không bao giờ chạy.</summary>
+    public static readonly string LyDoBoChayKhongHoatDong =
+        $" [Hệ thống] Công việc này không được bộ chạy sao lưu trên máy chủ nhận sau " +
+        $"{PhutChoToiDa} phút nên đã bị đánh dấu lỗi. Nguyên nhân thường gặp: bộ chạy sao lưu " +
+        "trên máy chủ không hoạt động (chưa bật sao lưu tự động lúc cài đặt, hoặc dịch vụ đã " +
+        "dừng). Hãy liên hệ người quản trị máy chủ.";
+
+    /// <summary>Định dạng mã snapshot của restic: chuỗi hex, mã ngắn 8 ký tự hoặc mã đầy đủ 64.
+    /// Kiểm ngay ở API vì mã này đi tới một script bash chạy dưới quyền root trên host; bộ chạy
+    /// có lọc riêng nhưng nó nằm ở kho khác nhịp phát hành — không được để an toàn của cả đường
+    /// này nằm trên đúng một hàm bash. Kiểm ở đây còn cho người gõ nhầm biết ngay thay vì chờ
+    /// hết một vòng bộ chạy mới thấy một công việc "loi" khó hiểu.</summary>
+    private static readonly System.Text.RegularExpressions.Regex MaSnapshotHopLe =
+        new("^[0-9a-fA-F]{8,64}$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
     public async Task<TinhTrangSaoLuuDto> LayTinhTrang(CancellationToken ct)
     {
         var tt = await db.TrangThaiSaoLuu.AsNoTracking().FirstOrDefaultAsync(ct)
@@ -82,18 +113,58 @@ public class SaoLuuService(QlgxDbContext db, IConfiguration cauHinh)
         if (!LoaiCongViecSaoLuu.HopLe.Contains(yc.Loai))
             return (null, $"Loại công việc không hợp lệ: '{yc.Loai}'.");
 
-        if (yc.Loai is LoaiCongViecSaoLuu.PhucHoi or LoaiCongViecSaoLuu.TaiVe
-            && string.IsNullOrWhiteSpace(yc.SnapshotId))
-            return (null, "Chưa chọn bản sao lưu.");
+        if (yc.Loai is LoaiCongViecSaoLuu.PhucHoi or LoaiCongViecSaoLuu.TaiVe)
+        {
+            if (string.IsNullOrWhiteSpace(yc.SnapshotId))
+                return (null, "Chưa chọn bản sao lưu.");
+
+            if (!MaSnapshotHopLe.IsMatch(yc.SnapshotId))
+                return (null, "Mã bản sao lưu không hợp lệ. Hãy chọn một dòng trong danh sách " +
+                              "bản sao lưu thay vì tự gõ mã.");
+        }
 
         // Kiem lai chuoi xac nhan O MAY CHU — khong tin rang giao dien da hoi. Ai cung co the
-        // goi thang API bang curl.
-        if (yc.Loai == LoaiCongViecSaoLuu.PhucHoi && yc.XacNhan != ChuoiXacNhanPhucHoi)
-            return (null, $"Phải gõ đúng chuỗi xác nhận \"{ChuoiXacNhanPhucHoi}\" để phục hồi dữ liệu.");
+        // goi thang API bang curl. Trim() truoc khi so: nguoi dung chep chuoi tu tai lieu thuong
+        // keo theo khoang trang hoac ky tu xuong dong o cuoi — ho nhin thay chu dung het nhau ma
+        // may van tu choi, khong hieu vi sao. Van giu nguyen phan biet HOA/thuong (dung `!=` tren
+        // string trong C# la so sanh ordinal) — do moi la phan co y nghia.
+        if (yc.Loai == LoaiCongViecSaoLuu.PhucHoi)
+        {
+            if ((yc.XacNhan ?? "").Trim() != ChuoiXacNhanPhucHoi)
+                return (null, $"Phải gõ đúng chuỗi xác nhận \"{ChuoiXacNhanPhucHoi}\" để phục hồi dữ liệu.");
+
+            // Ban sao phai CO THAT trong danh sach. Phuc hoi ve mot ma khong ton tai chac chan la
+            // go nham chu khong phai y dinh — chan ngay voi cau tieng Viet, thay vi de bo chay
+            // that bai sau vai phut voi mot thong bao cua restic.
+            if (!await db.BanSaoLuu.AnyAsync(x => x.Id == yc.SnapshotId, ct))
+                return (null, "Bản sao lưu này không còn trong danh sách trên máy chủ. Bấm " +
+                              "\"Tải lại\" để cập nhật danh sách rồi chọn lại.");
+        }
 
         // Khong xep hang hai cong viec ghi cung luc — hai lan phuc hoi chong nhau la tham hoa.
+        //
+        // NHUNG: mot dong "cho" qua han nghia la bo chay tren host khong hoat dong, va bo don
+        // cong viec mo coi cua host chi quet "dang_chay" nen khong bao gio don no. De nguyen thi
+        // dong do khoa VINH VIEN ca man hinh. O day danh dau no "loi" kem ly do dung — vua go
+        // khoa, vua noi that cho quan tri vien thay vi cau "dang chay do" gay hieu nham.
+        //
+        // Danh dau bang ExecuteUpdate (mot cau lenh, khong qua ChangeTracker) va LUU TRUOC khi
+        // chen dong moi: chi muc ux_cong_viec_sao_luu_dang_mo chi cho phep MOT dong dang mo, nen
+        // hai thao tac nay khong duoc phep nam chung mot lan SaveChanges (thu tu lenh khong xac
+        // dinh — chen truoc cap nhat la vi pham chi muc).
+        var hanCho = DateTimeOffset.UtcNow.AddMinutes(-PhutChoToiDa);
+        await db.CongViecSaoLuu
+            .Where(x => x.TrangThai == TrangThaiCongViec.Cho && x.TaoLuc < hanCho)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.TrangThai, TrangThaiCongViec.Loi)
+                .SetProperty(x => x.KetThucLuc, DateTimeOffset.UtcNow)
+                .SetProperty(x => x.NhatKy, x => (x.NhatKy ?? "") + LyDoBoChayKhongHoatDong), ct);
+
+        // "dang_chay" chan bat ke tuoi: chi bo chay tren host moi biet tien trinh con song hay
+        // khong (no giu PID), API khong duoc doan thay va ban mot cong viec dang thuc su chay.
         var dangCo = await db.CongViecSaoLuu.AnyAsync(
-            x => x.TrangThai == TrangThaiCongViec.Cho || x.TrangThai == TrangThaiCongViec.DangChay, ct);
+            x => x.TrangThai == TrangThaiCongViec.DangChay
+                 || (x.TrangThai == TrangThaiCongViec.Cho && x.TaoLuc >= hanCho), ct);
         if (dangCo)
             return (null, "Đang có một công việc sao lưu/phục hồi chạy dở. Chờ xong rồi thử lại.");
 
@@ -104,19 +175,51 @@ public class SaoLuuService(QlgxDbContext db, IConfiguration cauHinh)
             ThamSoJson = JsonSerializer.Serialize(new { snapshotId = yc.SnapshotId, nhan = yc.Nhan }),
         };
         db.CongViecSaoLuu.Add(cv);
-        await db.LuuCoNhatKy(ct);
+        try
+        {
+            await db.LuuCoNhatKy(ct);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg
+                                           && pg.SqlState == PostgresErrorCodes.UniqueViolation
+                                           && pg.ConstraintName == TenChiMucDangMo)
+        {
+            // Mot yeu cau khac vua chen truoc trong khoang giua AnyAsync va SaveChanges (double
+            // click tren mang cham). CSDL la nguon su that duy nhat khong phu thuoc thoi diem —
+            // tra ve dung thong bao nhu nhanh guard o tren, nguoi dung khong can biet khac biet.
+            db.Entry(cv).State = EntityState.Detached;
+            return (null, "Đang có một công việc sao lưu/phục hồi chạy dở. Chờ xong rồi thử lại.");
+        }
         return (cv.Id, null);
     }
+
+    /// <summary>Tên chỉ mục riêng phần chặn hai công việc đang mở — xem migration
+    /// ChanHaiCongViecSaoLuuDangMo. Viết cứng ở đây để bắt ĐÚNG vi phạm đó, không nuốt nhầm một
+    /// vi phạm khoá duy nhất nào khác.</summary>
+    private const string TenChiMucDangMo = "ux_cong_viec_sao_luu_dang_mo";
 
     public async Task<CongViecDto?> LayCongViec(Guid id, CancellationToken ct) =>
         await db.CongViecSaoLuu.AsNoTracking().Where(x => x.Id == id).Select(Chieu).FirstOrDefaultAsync(ct);
 
     public async Task<IReadOnlyList<CongViecDto>> LayCongViecGanDay(int soLuong, CancellationToken ct) =>
         await db.CongViecSaoLuu.AsNoTracking()
-            .OrderByDescending(x => x.TaoLuc).Take(soLuong).Select(Chieu).ToListAsync(ct);
+            .OrderByDescending(x => x.TaoLuc).Take(soLuong).Select(ChieuDanhSach).ToListAsync(ct);
 
     private static readonly System.Linq.Expressions.Expression<Func<CongViecSaoLuu, CongViecDto>> Chieu =
         x => new CongViecDto(x.Id, x.Loai, x.TrangThai, x.BuocHienTai, x.NhatKy,
+                             x.TaoLuc, x.BatDauLuc, x.KetThucLuc);
+
+    /// <summary>
+    /// Phép chiếu cho DANH SÁCH: chỉ kèm nhật ký của công việc CHƯA xong.
+    ///
+    /// Giao diện hỏi lại danh sách này mỗi 2 giây. Mỗi công việc giữ tới 8 000 byte nhật ký, 20
+    /// công việc là ~160 KB mỗi 2 giây cho một màn hình gần như luôn tĩnh — lãng phí thật trên
+    /// đường truyền của nhiều giáo xứ nông thôn. Nhật ký chỉ có ích khi công việc đang chạy (để
+    /// thấy tiến trình); với công việc đã xong/đã lỗi, xem đầy đủ ở GET /cong-viec/{id}.
+    /// </summary>
+    private static readonly System.Linq.Expressions.Expression<Func<CongViecSaoLuu, CongViecDto>> ChieuDanhSach =
+        x => new CongViecDto(x.Id, x.Loai, x.TrangThai, x.BuocHienTai,
+                             x.TrangThai == TrangThaiCongViec.Cho || x.TrangThai == TrangThaiCongViec.DangChay
+                                 ? x.NhatKy : null,
                              x.TaoLuc, x.BatDauLuc, x.KetThucLuc);
 
     /// <summary>Thư mục spool — bộ chạy trên host GHI vào đây, container API mount READ-ONLY.

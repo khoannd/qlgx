@@ -90,6 +90,20 @@ public class SaoLuuApiTests(QlgxApiFactory factory) : IClassFixture<QlgxApiFacto
     public async Task Phuc_hoi_du_dieu_kien_thi_tao_duoc_cong_viec()
     {
         await XoaSachHangDoiCongViec();
+        // Ban sao phai CO THAT trong bang ban_sao_luu: API nay gio tu choi phuc hoi ve mot ma
+        // khong ton tai (review I6) — go nham ma snapshot phai duoc bat ngay o day.
+        await using (var dbSeed = factory.TaoContextThuan())
+        {
+            if (!await dbSeed.BanSaoLuu.AnyAsync(x => x.Id == "ab12cd34"))
+            {
+                dbSeed.BanSaoLuu.Add(new BanSaoLuu
+                {
+                    Id = "ab12cd34", ThoiDiem = DateTimeOffset.UtcNow, KichThuocByte = 1,
+                    SoGiaoDan = 1, SoGiaDinh = 1, Nguon = NguonBanSao.TuDong,
+                });
+                await dbSeed.SaveChangesAsync();
+            }
+        }
 
         var res = await ClientHeThong().PostAsJsonAsync("/api/sao-luu/cong-viec",
             new { loai = "phuc_hoi", snapshotId = "ab12cd34", xacNhan = "PHUC HOI TOAN BO" });
