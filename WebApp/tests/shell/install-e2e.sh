@@ -143,6 +143,10 @@ echo "==> Buoc 5: khoi_tao_giao_xu_va_admin (lan 1)"
 khoi_tao_giao_xu_va_admin
 
 echo "==> Buoc 6: cau_hinh_https KHONG co ten mien (phai canh bao HTTP thuan, Caddyfile cu phap dung)"
+# C-4: khong co ten mien gio bi CHAN mac dinh. E2E nay chay tren may test cuc bo, khong co du
+# lieu that, nen go tuong minh co thoat hiem -- dung co cho nay lam le: tren may giao xu that
+# KHONG duoc dung co nay.
+CHO_PHEP_HTTP=1
 cau_hinh_https
 if ! grep -q '^:80 {' "$GOC_UNG_DUNG/Caddyfile"; then
   echo "THAT BAI: Caddyfile khong co khoi :80 khi khong co ten mien (xem $GOC_UNG_DUNG/Caddyfile)" >&2

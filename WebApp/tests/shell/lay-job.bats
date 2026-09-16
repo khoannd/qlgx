@@ -42,6 +42,32 @@ setup() {
   [ "$status" -ne 0 ]
 }
 
+# T-2 (review bao mat): ma cong viec la bien DUY NHAT duoc noi thang vao cau SQL o ket_thuc_job
+# ma khong escape. Mau cu "[0-9a-fA-F]*-*-*-*-*" nhan ca chuoi co dau nhay don, tuc la lop chan
+# nay chi con la hinh thuc. Hien gia tri luon den tu cot uuid cua CSDL nen chua khai thac duoc --
+# cac ca duoi day de no khong bao gio tro thanh khai thac duoc.
+@test "T-2: la_uuid tu choi chuoi gia dang uuid (co dau nhay don, sai do dai, ky tu la)" {
+  run la_uuid "a'--x-y-z-w"
+  [ "$status" -ne 0 ]
+  run la_uuid "80dd7ae2-feb9-41b4-8b01-7a8fca593247'; DROP TABLE cong_viec_sao_luu; --"
+  [ "$status" -ne 0 ]
+  run la_uuid "80dd7ae2-feb9-41b4-8b01-7a8fca59324"      # thieu 1 ky tu
+  [ "$status" -ne 0 ]
+  run la_uuid "80dd7ae2-feb9-41b4-8b01-7a8fca5932477"    # thua 1 ky tu
+  [ "$status" -ne 0 ]
+  run la_uuid "80dd7ag2-feb9-41b4-8b01-7a8fca593247"     # 'g' khong phai hex
+  [ "$status" -ne 0 ]
+  run la_uuid "-------"
+  [ "$status" -ne 0 ]
+}
+
+@test "T-2: la_uuid van nhan uuid that o ca hai kieu chu hoa/thuong" {
+  run la_uuid "80DD7AE2-FEB9-41B4-8B01-7A8FCA593247"
+  [ "$status" -eq 0 ]
+  run la_uuid "00000000-0000-0000-0000-000000000000"
+  [ "$status" -eq 0 ]
+}
+
 @test "doc_snapshot_tu_tham_so lay dung id" {
   [ "$(doc_snapshot_tu_tham_so '{"snapshotId":"ab12cd34","nhan":null}')" = "ab12cd34" ]
 }

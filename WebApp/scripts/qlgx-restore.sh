@@ -688,7 +688,8 @@ ghi_ket_qua_cong_viec() {
   local db="$1" trang_thai="$2" nhat_ky="$3" ket_qua
   [ -n "$MA_JOB" ] || return 0
   case "$MA_JOB" in
-    [0-9a-fA-F]*-*-*-*-*) : ;;
+    # T-2: khop DUNG dang uuid 8-4-4-4-12 (mau cu nhan ca chuoi co dau nhay don).
+    [0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]) : ;;
     *) ghi_log canh-bao "--ma-job '$MA_JOB' khong phai uuid -- bo qua buoc ghi bang cong viec."; return 0 ;;
   esac
   ket_qua=$(pg1 -d "$db" -c "

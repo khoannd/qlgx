@@ -24,6 +24,9 @@ CHAY_THU=0
 CHI_TRANG_THAI=0
 BO_QUA_SAO_LUU=0
 TEN_MIEN="${QLGX_TEN_MIEN:-}"
+# Co thoat hiem DUY NHAT cho phep cai xong ma khong co ten mien (HTTP thuan). Phai go tuong
+# minh -- mac dinh la CHAN. Xem chan_neu_thieu_ten_mien().
+CHO_PHEP_HTTP="${QLGX_CHO_PHEP_HTTP_KHONG_AN_TOAN:-0}"
 
 # Nap thu vien dung chung. Khi chay qua `curl | bash` thi hai tep nay chua co tren dia -- tai
 # rieng chung ve thu muc tam truoc. Khi chay tu ban checkout thi nap thang.
@@ -113,6 +116,7 @@ phan_tich_tham_so() {
       --status)          CHI_TRANG_THAI=1 ;;
       --skip-backup)     BO_QUA_SAO_LUU=1 ;;
       --domain=*)        TEN_MIEN="${t#*=}" ;;
+      --cho-phep-http-khong-an-toan) CHO_PHEP_HTTP=1 ;;
       --branch=*)        NHANH="${t#*=}" ;;
       *) bao_loi_va_thoat "Tham so khong hieu: $t" ;;
     esac
@@ -458,21 +462,65 @@ khoi_tao_giao_xu_va_admin() {
   fi
 }
 
-cau_hinh_https() {
-  if [ -z "$TEN_MIEN" ] && [ "$KHONG_TUONG_TAC" -eq 0 ]; then
-    TEN_MIEN=$(hoi_hoac_bien QLGX_TEN_MIEN "Ten mien (de trong neu chua co)")
+# Ten mien co dung dang khong. Chan som cac gia tri se sinh ra mot Caddyfile hong am tham:
+# "https://gx.example" (co scheme), "gx.example/" (co dau /), chuoi co dau cach, hay ten khong
+# co dau cham (khong xin duoc chung chi Let's Encrypt).
+ten_mien_hop_le() {
+  local tm="$1"
+  [[ "$tm" =~ ^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$ ]]
+}
+
+# C-4 -- CHAN cai dat khi khong co ten mien.
+#
+# Truoc day script chi CANH BAO roi van cai xong: giao xu "cai thu cho nhanh", bo qua buoc ten
+# mien, roi nhap so sach that vao. Tu do toan bo ho ten, ngay sinh, so can cuoc cua hang nghin
+# giao dan VA moi mat khau dang nhap di qua internet o dang doc duoc -- vinh vien, vi nguoi van
+# hanh khong ranh may tinh se khong bao gio "cau hinh lai HTTPS thu cong". Mot canh bao ma khong
+# ai doc thi khong phai mot lop bao ve.
+#
+# Duong thoat cho nguoi cai thu cuc bo: --cho-phep-http-khong-an-toan (hoac bien moi truong
+# QLGX_CHO_PHEP_HTTP_KHONG_AN_TOAN=1). Phai go tuong minh, khong con la mac dinh.
+chan_neu_thieu_ten_mien() {
+  if [ -z "$TEN_MIEN" ] && [ "$KHONG_TUONG_TAC" -eq 0 ] && [ "$CHO_PHEP_HTTP" -eq 0 ]; then
+    ghi_log thong-tin "Ten mien la BAT BUOC de bat HTTPS (chung chi Let's Encrypt tu dong)." \
+                      "Vi du: giaoxu-abc.net. Ten mien do PHAI dang tro ve dia chi IP cua may nay."
+    TEN_MIEN=$(hoi_hoac_bien QLGX_TEN_MIEN "Ten mien" ro tuy_chon)
   fi
+
+  if [ -n "$TEN_MIEN" ]; then
+    ten_mien_hop_le "$TEN_MIEN" || bao_loi_va_thoat \
+      "Ten mien '$TEN_MIEN' khong hop le. Chi go ten mien tran, vi du: giaoxu-abc.net" \
+      "(khong co 'https://', khong co dau '/' o cuoi, khong co dau cach)."
+    return 0
+  fi
+
+  if [ "$CHO_PHEP_HTTP" -eq 1 ]; then
+    ghi_log canh-bao "CHAY HTTP THUAN THEO YEU CAU (--cho-phep-http-khong-an-toan)." \
+                     "Duong truyen KHONG duoc ma hoa: ho ten, ngay sinh, so can cuoc cua giao dan" \
+                     "va mat khau dang nhap di qua mang o dang doc duoc. CHI dung de cai thu tren" \
+                     "may cuc bo. TUYET DOI KHONG nhap so sach that vao may chay o che do nay."
+    return 0
+  fi
+
+  bao_loi_va_thoat \
+    "DUNG CAI DAT: chua co ten mien nen he thong se phai chay qua HTTP THUAN (khong ma hoa)." \
+    "" \
+    "Vi sao chan: khong co HTTPS thi ho ten, ngay sinh, so can cuoc cua giao dan va ca mat khau" \
+    "dang nhap di qua internet o dang ai cung doc duoc. Day la so sach giao xu, mat la mat that." \
+    "" \
+    "Cach xu ly:" \
+    "  1. Tro mot ten mien (vd giaoxu-abc.net) ve dia chi IP cua may chu nay, roi chay lai:" \
+    "       sudo bash install.sh --domain=giaoxu-abc.net" \
+    "     Chay lai voi --domain=... tren may DA cai cung co tac dung: Caddyfile se duoc sinh lai" \
+    "     va bat HTTPS." \
+    "  2. Chi khi cai thu tren may cuc bo (khong co du lieu that), them:" \
+    "       --cho-phep-http-khong-an-toan"
+}
+
+# Sinh Caddyfile theo trang thai TEN_MIEN hien tai. Tach rieng de nhanh cai moi va nhanh cap nhat
+# (--domain= tren may da cai) dung CHUNG mot ban sinh, khong bao gio lech nhau.
+ghi_caddyfile() {
   if [ -z "$TEN_MIEN" ]; then
-    # KHONG hua "chay lai script voi --domain=..." -- luc do .env da co san nen la_cai_moi tra
-    # false, main() di vao nhanh cap_nhat (hien la stub chua lam gi, xem Task 12), Caddyfile
-    # KHONG BAO GIO duoc sinh lai va giao xu se chay HTTP mai mai ma khong ai biet. Thong diep
-    # phai trung thuc voi nhung gi lam duoc HOM NAY.
-    ghi_log canh-bao "CHUA CO TEN MIEN -- he thong se chay qua HTTP THUAN, khong ma hoa duong " \
-                     "truyen. Du lieu giao dan (ho ten, ngay sinh, so can cuoc) di qua mang o " \
-                     "dang doc duoc. Khi co ten mien, can cau hinh lai HTTPS THU CONG (xem tai " \
-                     "lieu van hanh) -- chay lai install.sh --domain=<ten mien> luc nay CHUA co " \
-                     "tac dung (di vao duong cap nhat, hien chua xu ly lai HTTPS); tinh nang tu " \
-                     "dong cau hinh lai qua --domain se co o ban cap nhat sau."
     cat > "$GOC_UNG_DUNG/Caddyfile" <<'EOF'
 :80 {
 	reverse_proxy api:8080
@@ -500,8 +548,35 @@ $TEN_MIEN {
 }
 EOF
   fi
+}
+
+cau_hinh_https() {
+  chan_neu_thieu_ten_mien
+  ghi_caddyfile
   dc up -d caddy
   ghi_log thong-tin "Caddy da chay${TEN_MIEN:+ cho $TEN_MIEN (HTTPS tu dong)}."
+}
+
+# C-4, phan hai: lam cho `--domain=` CO TAC DUNG THAT tren may DA cai (nhanh cap nhat).
+# Truoc day nhanh nay khong bao gio sinh lai Caddyfile, nen mot may lo cai o che do HTTP thuan
+# thi khong con duong nao quay lai HTTPS ngoai sua tay -- tuc la khong bao gio.
+cap_nhat_https_neu_co_ten_mien() {
+  [ -n "$TEN_MIEN" ] || return 0
+  ten_mien_hop_le "$TEN_MIEN" || bao_loi_va_thoat \
+    "Ten mien '$TEN_MIEN' khong hop le. Chi go ten mien tran, vi du: giaoxu-abc.net."
+
+  if grep -qx "$TEN_MIEN {" "$GOC_UNG_DUNG/Caddyfile" 2>/dev/null; then
+    ghi_log thong-tin "Caddyfile da dung cho $TEN_MIEN -- khong sinh lai."
+    return 0
+  fi
+
+  ghi_log thong-tin "Cau hinh lai HTTPS cho $TEN_MIEN (--domain)."
+  ghi_caddyfile
+  # Doi noi dung Caddyfile khong tu co hieu luc: phai tao lai container caddy.
+  dc up -d --force-recreate caddy \
+    || ghi_log loi "Khong khoi dong lai duoc caddy sau khi doi ten mien -- kiem tra: docker compose logs caddy"
+  ghi_log thong-tin "Da bat HTTPS cho $TEN_MIEN. Ten mien nay PHAI dang tro ve IP may nay thi" \
+                    "Let's Encrypt moi cap duoc chung chi."
 }
 
 in_the_phuc_hoi() {
@@ -860,6 +935,10 @@ cap_nhat() {
   # hinh dang co. `|| true`: may khong co Caddy van cap nhat binh thuong.
   dc up -d caddy >/dev/null 2>&1 || ghi_log canh-bao "Khong lam moi duoc container caddy."
 
+  # C-4: `install.sh --domain=<ten mien>` tren may DA cai gio sinh lai Caddyfile va bat HTTPS
+  # that su. Khong truyen --domain thi khong dung gi toi cau hinh dang chay.
+  cap_nhat_https_neu_co_ten_mien
+
   # I2: goi lai o moi lan cap nhat de cac may DA cai tu truoc cung duoc siet quyen, va de mot
   # migration moi vua tao them bang khong nam lai duoi quyen vai tro ung dung.
   dat_quyen_bang_sao_luu
@@ -979,6 +1058,11 @@ main() {
 
   if la_cai_moi; then ghi_log thong-tin "=== CAI MOI ==="
   else ghi_log thong-tin "=== CAP NHAT ==="; cap_nhat; exit $?; fi
+
+  # C-4: hoi/kiem ten mien NGAY DAU luong cai moi, truoc khi dung toi CSDL, tai khoan quan tri
+  # hay kho R2. Neu phai dung thi dung khi may con sach, khong bo lai mot may cai do dang.
+  # cau_hinh_https ben duoi van goi lai ham nay (khong hai: luc do TEN_MIEN da co).
+  chan_neu_thieu_ten_mien
 
   sinh_env "$GOC_UNG_DUNG/.env"
   ghi_backup_env "$THU_MUC_CAU_HINH/backup.env"

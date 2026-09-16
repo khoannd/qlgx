@@ -643,7 +643,11 @@ SELECT id::text FROM don;
 SQL
 }
 
-la_uuid() { case "$1" in [0-9a-fA-F]*-*-*-*-*) return 0 ;; *) return 1 ;; esac; }
+# T-2 -- khop DUNG dang uuid 8-4-4-4-12 chu hex. Mau cu ([0-9a-fA-F]*-*-*-*-*) nhan ca
+# nhung chuoi nhu "a'--x-y-z-w": gia tri nay duoc noi thang vao cau SQL o ket_thuc_job
+# (bien DUY NHAT khong escape), nen day la lop chan cuoi cung. Hien khong khai thac duoc
+# (gia tri luon den tu cot uuid cua CSDL) -- siet de no khong tro thanh khai thac duoc.
+la_uuid() { case "$1" in [0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]) return 0 ;; *) return 1 ;; esac; }
 
 don_job_mo_coi() {
   local ket_qua ma so=0
