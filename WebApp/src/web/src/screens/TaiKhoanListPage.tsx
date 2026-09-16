@@ -139,8 +139,8 @@ export function TaiKhoanListPage() {
                 <td>{tk.soDienThoai}</td>
                 <td>{tk.tenLoai ?? TEN_LOAI.find((l) => l.gia === tk.loaiTaiKhoan)?.nhan}</td>
                 <td>
-                  <button type="button" onClick={() => moSua(tk)}>Sửa</button>{' '}
-                  <button type="button" onClick={() => onXoa(tk)}>Xoá</button>
+                  <button type="button" className="btn btn-quiet btn-sm" onClick={() => moSua(tk)}>Sửa</button>{' '}
+                  <button type="button" className="btn btn-danger btn-sm" onClick={() => onXoa(tk)}>Xoá</button>
                 </td>
               </tr>
             ))}

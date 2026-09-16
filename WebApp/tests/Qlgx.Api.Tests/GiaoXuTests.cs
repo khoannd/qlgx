@@ -100,6 +100,50 @@ public class GiaoXuTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    /// <summary>
+    /// Tên Giáo phận/Giáo hạt hiện CHỈ ĐỌC (xem GiaoXuHienTaiResponse) — đọc đúng qua điều
+    /// hướng GiaoHat!.GiaoPhan!.TenGiaoPhan, không có ô sửa tương ứng ở
+    /// <see cref="CapNhatGiaoXuHienTaiRequest"/> nên không cần test riêng cho việc "không sửa
+    /// được": kiểu C# đã không cho gửi hai trường đó lên khi PUT.
+    /// </summary>
+    /// <summary>
+    /// Dựng một giáo xứ RIÊNG (không đụng app.GiaoXuId dùng chung cho cả lớp test) rồi đăng
+    /// nhập đúng giáo xứ đó — tránh mọi phụ thuộc vào THỨ TỰ chạy test so với
+    /// <see cref="Chua_gan_giao_hat_thi_ten_giao_phan_va_giao_hat_la_null"/> vốn kiểm tra
+    /// app.GiaoXuId còn nguyên chưa gán giáo hạt.
+    /// </summary>
+    [Fact]
+    public async Task Doc_duoc_ten_giao_phan_va_giao_hat_qua_dieu_huong_giao_hat()
+    {
+        var giaoXuRieng = Guid.NewGuid();
+        var giaoPhanId = Guid.NewGuid();
+        var giaoHatId = Guid.NewGuid();
+        await using (var db = app.TaoContextThuan())
+        {
+            db.GiaoPhan.Add(new GiaoPhan { Id = giaoPhanId, TenGiaoPhan = "Giáo phận Thử Nghiệm", MaGiaoPhanCu = 1 });
+            db.GiaoHat.Add(new GiaoHat { Id = giaoHatId, GiaoPhanId = giaoPhanId, TenGiaoHat = "Giáo hạt Thử Nghiệm", MaGiaoHatCu = 1 });
+            db.GiaoXu.Add(new GiaoXu
+            {
+                Id = giaoXuRieng, TenGiaoXu = "Giao xu co giao hat", MaGiaoXuCu = 88922, GiaoHatId = giaoHatId,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var tt = await app.CreateAuthClient(giaoXuRieng).GetFromJsonAsync<GiaoXuHienTaiResponse>("/api/giao-xu");
+
+        tt!.TenGiaoPhan.Should().Be("Giáo phận Thử Nghiệm");
+        tt.TenGiaoHat.Should().Be("Giáo hạt Thử Nghiệm");
+    }
+
+    [Fact]
+    public async Task Chua_gan_giao_hat_thi_ten_giao_phan_va_giao_hat_la_null()
+    {
+        var tt = await app.CreateAuthClient().GetFromJsonAsync<GiaoXuHienTaiResponse>("/api/giao-xu");
+
+        tt!.TenGiaoPhan.Should().BeNull();
+        tt.TenGiaoHat.Should().BeNull();
+    }
+
     [Fact]
     public async Task Dia_chi_rong_bi_tu_choi()
     {

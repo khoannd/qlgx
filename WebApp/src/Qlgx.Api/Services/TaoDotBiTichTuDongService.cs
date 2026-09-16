@@ -266,24 +266,30 @@ public class TaoDotBiTichTuDongService(QlgxDbContext db, SinhMaService sinhMa, I
         {
             LoaiBiTich.RuaToi => await db.GiaoDan
                 .Where(g => g.NgayRuaToi != null && g.NgayRuaToi >= tu && g.NgayRuaToi <= den)
-                .Select(g => new { g.Id, Ngay = g.NgayRuaToi!.Value, LinhMuc = g.ChaRuaToi, Noi = g.NoiRuaToi })
+                .Select(g => new { g.Id, g.MaGiaoDanCu, Ngay = g.NgayRuaToi!.Value, LinhMuc = g.ChaRuaToi, Noi = g.NoiRuaToi })
                 .ToListAsync(ct),
             LoaiBiTich.RuocLe => await db.GiaoDan
                 .Where(g => g.NgayRuocLe != null && g.NgayRuocLe >= tu && g.NgayRuocLe <= den)
-                .Select(g => new { g.Id, Ngay = g.NgayRuocLe!.Value, LinhMuc = g.ChaRuocLe, Noi = g.NoiRuocLe })
+                .Select(g => new { g.Id, g.MaGiaoDanCu, Ngay = g.NgayRuocLe!.Value, LinhMuc = g.ChaRuocLe, Noi = g.NoiRuocLe })
                 .ToListAsync(ct),
             LoaiBiTich.ThemSuc => await db.GiaoDan
                 .Where(g => g.NgayThemSuc != null && g.NgayThemSuc >= tu && g.NgayThemSuc <= den)
-                .Select(g => new { g.Id, Ngay = g.NgayThemSuc!.Value, LinhMuc = g.ChaThemSuc, Noi = g.NoiThemSuc })
+                .Select(g => new { g.Id, g.MaGiaoDanCu, Ngay = g.NgayThemSuc!.Value, LinhMuc = g.ChaThemSuc, Noi = g.NoiThemSuc })
                 .ToListAsync(ct),
             _ => throw new ArgumentOutOfRangeException(nameof(yc), "Chi ho tro Rua toi/Ruoc le/Them suc"),
         };
-        IEnumerable<(Guid Id, DateOnly Ngay, string? LinhMuc, string? Noi)> ds =
-            raw.Select(x => (x.Id, x.Ngay, x.LinhMuc, x.Noi));
+        IEnumerable<(Guid Id, int MaGiaoDanCu, DateOnly Ngay, string? LinhMuc, string? Noi)> ds =
+            raw.Select(x => (x.Id, x.MaGiaoDanCu, x.Ngay, x.LinhMuc, x.Noi));
         if (!string.IsNullOrWhiteSpace(yc.NoiBiTich))
             ds = ds.Where(x => string.Equals((x.Noi ?? "").Trim(), yc.NoiBiTich.Trim(), StringComparison.OrdinalIgnoreCase));
         if (!string.IsNullOrWhiteSpace(yc.LinhMuc))
             ds = ds.Where(x => string.Equals((x.LinhMuc ?? "").Trim(), yc.LinhMuc.Trim(), StringComparison.OrdinalIgnoreCase));
-        return ds.OrderBy(x => x.Ngay).Select(x => new GiaoDanKhop(x.Id, x.Ngay, x.LinhMuc, x.Noi)).ToList();
+        // ThenBy(MaGiaoDanCu): hai giáo dân CÙNG NGÀY thì thứ tự trước đây do CSDL trả về thế nào
+        // hay thế ấy (không ORDER BY), mà thứ tự đó quyết định đợt mới mang Nơi bí tích của AI
+        // (xem mục 3 ở tài liệu lớp). Cùng một dữ liệu mà hai lần chạy cho ra hai Nơi khác nhau
+        // là điều không giải thích được với người dùng — và làm test kiểu này đỏ thất thường.
+        // Chốt bằng mã cũ (thứ tự vào sổ Access) để "người vào sổ trước thắng", tất định.
+        return ds.OrderBy(x => x.Ngay).ThenBy(x => x.MaGiaoDanCu)
+            .Select(x => new GiaoDanKhop(x.Id, x.Ngay, x.LinhMuc, x.Noi)).ToList();
     }
 }

@@ -552,7 +552,9 @@ export function GiaDinhDetail({
         {/* Cả hai nút in cho CẢ gia đình đang mở, không mơ hồ (khác GxGiaoDanList.inLyLichCaNhan
             — MỘT giáo dân, dùng ở menu chuột phải lưới giáo dân) — disable khi gia đình còn là
             bản nháp chưa lưu (chưa có id để in). Xem in-an.md mục 5f. */}
-        <button type="button" className="btn" onClick={inLyLichCaNhan} disabled={moi}>In lý lịch cá nhân</button>
+        {/* `.btn-quiet` như "Quay về" — cùng là hành động phụ, không nên nổi ngang "Cập nhật"
+            (UX review 2026-09-08 mục 5, sửa tương tự ở GiaoDanDetail.tsx). */}
+        <button type="button" className="btn btn-quiet" onClick={inLyLichCaNhan} disabled={moi}>In lý lịch cá nhân</button>
         <label className="hint" htmlFor="gd-kho-giay-phieu" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           Khổ giấy
           <select id="gd-kho-giay-phieu" value={khoGiayPhieu} disabled={moi}
@@ -562,7 +564,7 @@ export function GiaDinhDetail({
             <option value="A3">A3 (gia đình đông người)</option>
           </select>
         </label>
-        <button type="button" className="btn" onClick={inPhieuGiaDinh} disabled={moi}>In phiếu gia đình</button>
+        <button type="button" className="btn btn-quiet" onClick={inPhieuGiaDinh} disabled={moi}>In phiếu gia đình</button>
         <button type="button" className="btn btn-quiet" onClick={() => moDanhSachGiaDinh?.()}>Quay về</button>
         <button type="submit" className="btn btn-primary" disabled={moi ? (!onTaoMoi || dangLuu) : (!onLuu || dangLuu)}>
           {dangLuu ? 'Đang lưu…' : moi ? 'Tạo gia đình' : 'Cập nhật'}
