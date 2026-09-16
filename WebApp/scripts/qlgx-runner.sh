@@ -48,6 +48,13 @@ nap_cau_hinh() {
   GIU_LAI="$(doc_env_kv "$TEP_BACKUP_ENV" QLGX_GIU_LAI)"
   GIU_LAI="${GIU_LAI:-$GIU_LAI_MAC_DINH}"
   mkdir -p "$THU_MUC_SPOOL" "$THU_MUC_LOG"
+  # I2: loc_snapshot_json can python3. Thieu no thi buoc dong bo bang dem danh sach ban sao that
+  # bai -- man hinh "Sao luu & Phuc hoi" se khong liet ke duoc ban sao nao du kho R2 day ap. Bao
+  # SOM va RO o day thay vi de nguoi van hanh doan tu mot thong bao loi giua chung.
+  command -v python3 >/dev/null 2>&1 \
+    || ghi_log canh-bao "May nay KHONG co lenh 'python3' -- buoc cap nhat danh sach ban sao cho" \
+                        "man hinh quan tri se that bai. Cai: apt-get install python3 (hoac dnf" \
+                        "install python3)."
 }
 
 # Dinh nghia lai CUC BO o day (khong nap tu install.sh) de runner chay doc lap voi bo cai --
@@ -135,7 +142,42 @@ don_dep_sao_luu() {
     >/dev/null 2>&1 || true
 }
 
-lenh_sao_luu() {
+# Dem mot so lieu de gan vao tag snapshot. Tra ve '?' khi KHONG do duoc, KHONG tra ve 0 gia.
+# (N2) Ban truoc viet `$(psql_quan_tri -c '...' | tr -d ' ' || echo 0)`: `||` gan vao CA DUONG ONG
+# ma `tr` thi luon thanh cong, nen `echo 0` khong bao gio chay va psql loi cho ra chuoi RONG chu
+# khong phai 0. Du the nao thi mot con so gia o day cung di thang vao tag snapshot, roi hien len
+# bang doi chieu truoc-sau cua man hinh phuc hoi ("quay ve day nghia la con 0 giao dan") va lam
+# nguoi van hanh tuong ban sao rong. kiem_chung_csdl_moi (qlgx-restore.sh) DA biet bo qua '?'.
+dem_hoac_dau_hoi() {
+  local ra
+  ra=$(psql_quan_tri -c "$1" 2>/dev/null | tr -d ' \r') || ra=''
+  case "$ra" in
+    ''|*[!0-9]*) printf '?' ;;
+    *)           printf '%s' "$ra" ;;
+  esac
+}
+
+# C2/I11 -- VI SAO THAN HAM NAM TRONG MOT SUBSHELL, DOC KY TRUOC KHI BO DI:
+#
+# (1) Bash TAT `errexit` cho TOAN BO than mot ham khi ham do duoc goi lam ve trai cua mot danh
+#     sach `||`. Duong goi tu hang doi web (lenh_chay_job: `lenh_sao_luu ... || ma_thoat=$?`) --
+#     tuc la duong DUY NHAT mot quy cha thuc su dung khi bam nut "Sao luu ngay" -- chinh la mot
+#     danh sach `||`. Hau qua da tu kiem chung tren bash that: `restic backup` loi thi ham VAN
+#     CHAY TIEP, `restic check` loi cung VAN CHAY TIEP, va `restic forget --prune` -- lenh XOA
+#     BLOB THAT trong kho -- chay tren mot kho vua bao hong. Do la vi pham truc dien rang buoc
+#     cung cua thiet ke muc 5.2 ("chi don ban cu sau khi ban moi da duoc xac nhan doc duoc") va
+#     rui ro mat TOAN BO lich su sao luu so sach giao xu.
+#     Da thu va DEU KHONG CUU DUOC: `( set -e; f )`, `( f )`, `if ! ( f )`, `set +e; set -e` --
+#     co "dang bo qua errexit" duoc ke thua qua ca subshell. Vi vay ta KHONG dua vao errexit nua:
+#     MOI lenh rui ro trong thuc_hien_sao_luu deu duoc kiem ma thoat TUONG MINH bang `|| ...`.
+# (2) Subshell con giai quyet I11: `that_bai_sao_luu` goi `exit`, va khi lenh_sao_luu chay CUNG
+#     TIEN TRINH voi lenh_chay_job thi `exit` do giet luon ca runner -- doan xu ly mac thoat
+#     (`ket_thuc_job "$ma" loi ...`) khong bao gio chay va dong cong viec ket o 'dang_chay' suot
+#     2 gio, chan moi nut bam tren man hinh Sao luu & Phuc hoi. Trong subshell, `exit` chi ket
+#     thuc subshell va ma thoat ve dung cho phia goi.
+lenh_sao_luu() { ( thuc_hien_sao_luu "$@" ); }
+
+thuc_hien_sao_luu() {
   # Bat truoc ca viec doc tham so: MOI duong loi trong ham nay (ke ca tham so sai) phai lam
   # trang_thai_sao_luu.loi_gan_nhat sang do -- day la o duy nhat man hinh quan tri doc de bao
   # sao luu hong (Task 6). `trap ... ERR` bat duoc LENH BEN NGOAI THAT BAI (pg_dump, restic,
@@ -187,40 +229,66 @@ lenh_sao_luu() {
   # mot ban day du moi. Anh dai dien nam trong bytea va gan nhu khong bao gio doi, nen day la
   # khac biet lon: de restic tu nen va khu trung lap theo khoi. -j4 dump song song 4 bang mot
   # luc. Xem thiet ke muc 13.3.
+  # MOI lenh rui ro tu day tro xuong deu kiem ma thoat TUONG MINH (`|| that_bai_sao_luu ...`) --
+  # KHONG dua vao `set -e`, vi errexit bi tat khi ham nay duoc goi tu duong hang doi web (xem
+  # ghi chu dai o lenh_sao_luu).
   dc exec -T postgres pg_dump -Fd -Z0 -j4 -U "$(env_ung_dung POSTGRES_USER)" \
-      -d "$(env_ung_dung POSTGRES_DB)" -f "/tmp/$TEN_DUMP_CONTAINER"
-  dc exec -T postgres tar -cf - -C /tmp "$TEN_DUMP_CONTAINER" | tar -xf - -C "$TAM_DUMP_SAO_LUU"
+      -d "$(env_ung_dung POSTGRES_DB)" -f "/tmp/$TEN_DUMP_CONTAINER" \
+    || that_bai_sao_luu "pg_dump that bai -- DUNG, khong sao luu va KHONG don ban cu."
+  dc exec -T postgres tar -cf - -C /tmp "$TEN_DUMP_CONTAINER" | tar -xf - -C "$TAM_DUMP_SAO_LUU" \
+    || that_bai_sao_luu "Khong chep duoc ban dump tu container ra host -- DUNG."
   # Doi ten lai thanh "qlgx-dump" co dinh TREN HOST (chi ten trong container la ngau nhien) de
   # phan con lai cua ham nay va lenh_tai_ve (glob `*/qlgx-dump`) khong doi.
-  mv "$TAM_DUMP_SAO_LUU/$TEN_DUMP_CONTAINER" "$TAM_DUMP_SAO_LUU/qlgx-dump"
-  dc exec -T postgres rm -rf "/tmp/$TEN_DUMP_CONTAINER"
+  mv "$TAM_DUMP_SAO_LUU/$TEN_DUMP_CONTAINER" "$TAM_DUMP_SAO_LUU/qlgx-dump" \
+    || that_bai_sao_luu "Khong doi duoc ten thu muc dump tren host -- DUNG."
+  dc exec -T postgres rm -rf "/tmp/$TEN_DUMP_CONTAINER" || true
   [ -s "$TAM_DUMP_SAO_LUU/qlgx-dump/toc.dat" ] \
     || that_bai_sao_luu "pg_dump khong tao ra muc luc (toc.dat) -- DUNG, khong sao luu."
 
   ghi_log thong-tin "Dump vai tro va quyen toan cuc"
   dc exec -T postgres pg_dumpall --globals-only -U "$(env_ung_dung POSTGRES_USER)" \
-      > "$TAM_DUMP_SAO_LUU/globals.sql"
+      > "$TAM_DUMP_SAO_LUU/globals.sql" \
+    || that_bai_sao_luu "pg_dumpall --globals-only that bai -- DUNG."
   [ -s "$TAM_DUMP_SAO_LUU/globals.sql" ] \
     || that_bai_sao_luu "pg_dumpall --globals-only tao ra tep rong -- DUNG."
 
   ghi_log thong-tin "Gom tep cau hinh"
-  mkdir -p "$TAM_DUMP_SAO_LUU/cau-hinh"
+  mkdir -p "$TAM_DUMP_SAO_LUU/cau-hinh" \
+    || that_bai_sao_luu "Khong tao duoc thu muc cau-hinh trong ban sao -- DUNG."
   for f in .env docker-compose.yml docker-compose.prod.yml Caddyfile; do
-    [ -f "$GOC_UNG_DUNG/$f" ] && cp "$GOC_UNG_DUNG/$f" "$TAM_DUMP_SAO_LUU/cau-hinh/"
+    if [ -f "$GOC_UNG_DUNG/$f" ]; then
+      cp "$GOC_UNG_DUNG/$f" "$TAM_DUMP_SAO_LUU/cau-hinh/" \
+        || that_bai_sao_luu "Khong chep duoc '$f' vao ban sao -- DUNG."
+    fi
   done
+  # I1 -- CANH GAC CHO THANH PHAN "cau hinh". Thiet ke muc 5.2: mot snapshot chi hop le khi ca BA
+  # thanh phan (db, globals, cau hinh) cung vao; "tha khong co snapshot con hon co snapshot
+  # thieu". `db` da co canh gac (toc.dat) va `globals` cung co ([ -s ]), rieng vong lap chep cau
+  # hinh o tren thi khong: neu QLGX_GOC_UNG_DUNG trong backup.env tro sai duong dan (vd sau khi
+  # doi thu muc cai dat), moi `[ -f ]` deu sai, vong lap chep DUNG KHONG TEP NAO, va snapshot van
+  # duoc day len binh thuong voi thu muc cau-hinh RONG. Hong chi lo ra 6 thang sau, giua mot cuoc
+  # cuu ho: `--lay-cau-hinh` bao "Snapshot khong chua thu muc cau-hinh", va mat .env nghia la mat
+  # mat khau ba vai tro CSDL -- ban dump vua phuc hoi khong khop quyen voi he thong moi cai.
+  [ -s "$TAM_DUMP_SAO_LUU/cau-hinh/.env" ] \
+    || that_bai_sao_luu "Khong gom duoc .env cua ung dung vao ban sao (tim tai '$GOC_UNG_DUNG')" \
+                        "-- DUNG, khong day len mot snapshot THIEU cau hinh. Kiem tra" \
+                        "QLGX_GOC_UNG_DUNG trong $TEP_BACKUP_ENV."
   # /etc/qlgx/backup.env CO Y khong nam trong ban sao luu: khong tu ma hoa mot tep bang chinh
   # khoa chua trong tep do. Do la ly do phai co The phuc hoi cat NGOAI may chu.
 
   # Dem so lieu de gan vao tag -- man hinh phuc hoi hien "quay ve day nghia la con 2050 giao dan".
   local so_gd so_gdinh
-  so_gd=$(psql_quan_tri -c 'SELECT count(*) FROM giao_dan' | tr -d ' ' || echo 0)
-  so_gdinh=$(psql_quan_tri -c 'SELECT count(*) FROM gia_dinh' | tr -d ' ' || echo 0)
+  so_gd=$(dem_hoac_dau_hoi 'SELECT count(*) FROM giao_dan')
+  so_gdinh=$(dem_hoac_dau_hoi 'SELECT count(*) FROM gia_dinh')
 
   ghi_log thong-tin "Day len kho restic"
   restic backup "$TAM_DUMP_SAO_LUU" \
     --tag "nhan=${nhan:-tu-dong}" --tag "nguon=$nguon" \
     --tag "giao_dan=$so_gd" --tag "gia_dinh=$so_gdinh" \
-    --host qlgx
+    --host qlgx \
+    || that_bai_sao_luu "restic backup THAT BAI (mat mang, R2 tu choi khoa, kho khong mo duoc?)" \
+                        "-- DUNG. TUYET DOI khong chay 'restic forget --prune' sau mot lan backup" \
+                        "that bai: ban cu la thu duy nhat con lai."
 
   # Da day len kho restic xong -- xoa NGAY anh dump tho tren dia thay vi cho toi khi ham ket
   # thuc hay tien trinh thoat. Giam toi thieu thoi gian du lieu CHUA MA HOA ton tai tren dia.
@@ -229,10 +297,14 @@ lenh_sao_luu() {
   trap - EXIT INT TERM HUP
 
   ghi_log thong-tin "Kiem tra toan ven truoc khi don ban cu"
-  restic check --read-data-subset=5%
+  restic check --read-data-subset=5% \
+    || that_bai_sao_luu "restic check THAT BAI -- kho co the dang hong. DUNG, KHONG chay" \
+                        "'forget --prune'. Chay 'restic check --read-data' tay de xem xet truoc" \
+                        "khi xoa bat cu thu gi."
 
   # THU TU CUNG: backup -> check -> forget. Khong bao gio xoa ban cu truoc khi ban moi duoc
-  # xac nhan doc duoc.
+  # xac nhan doc duoc. Rang buoc that su o day KHONG phai thu tu dong ma, ma la NHAN QUA: hai
+  # lenh tren PHAI thanh cong thi dong duoi moi duoc chay -- xem hai `|| that_bai_sao_luu` tren.
   ghi_log thong-tin "Don ban cu theo chinh sach giu"
   # --group-by host (KHONG con "host,paths" mac dinh cua restic): moi lan chay dung mot thu muc
   # tam MOI (mktemp sinh hau to ngau nhien khac nhau) nen truong `paths` trong snapshot KHAC NHAU
@@ -242,11 +314,16 @@ lenh_sao_luu() {
   # snapshot QLGX deu cung MOT "host" logic (host cung dinh "qlgx" o lenh backup phia tren) du
   # duong dan tam khac nhau, nen nhom theo host la dung.
   # shellcheck disable=SC2086
-  restic forget $GIU_LAI --group-by host --prune
+  restic forget $GIU_LAI --group-by host --prune \
+    || that_bai_sao_luu "restic forget --prune that bai -- ban sao MOI da len kho an toan, chi la" \
+                        "buoc don ban cu chua xong. Kho co the con khoa sot lai."
 
-  lenh_dong_bo_danh_sach
+  lenh_dong_bo_danh_sach \
+    || that_bai_sao_luu "Khong dong bo duoc bang dem danh sach ban sao -- ban sao VAN da len kho" \
+                        "an toan, nhung man hinh quan tri se hien thieu."
   psql_quan_tri -c "UPDATE trang_thai_sao_luu
-                    SET sao_luu_gan_nhat = now(), loi_gan_nhat = NULL WHERE id = 1;" >/dev/null
+                    SET sao_luu_gan_nhat = now(), loi_gan_nhat = NULL WHERE id = 1;" >/dev/null \
+    || that_bai_sao_luu "Khong ghi duoc trang thai 'sao luu xong' vao CSDL."
   ghi_log thong-tin "Sao luu xong ($so_gd giao dan, $so_gdinh gia dinh)."
   trap - ERR
 }
@@ -292,6 +369,16 @@ lenh_dem_snapshot_nhan() {
   printf '%s\n' "${so:-0}"
 }
 
+# I2 -- VI SAO SINH SQL RA TEP TRUOC ROI MOI GUI CHO psql:
+# Ban truoc gui thang mot nhom `{ echo BEGIN; echo DELETE; loc_snapshot_json | while ...; echo
+# COMMIT; } | psql -f -`. Ma thoat cua mot NHOM la ma thoat cua lenh CUOI CUNG (`echo "COMMIT;"`,
+# luon bang 0), va `pipefail` khong cuu duoc vi loi nam BEN TRONG nhom chu khong o ve cuoi cua
+# duong ong ngoai. Neu loc_snapshot_json chet (thieu python3 tren mot ban phan phoi toi gian,
+# restic doi dinh dang JSON o ban moi, restic in canh bao lan vao dau ra) thi cau lenh gui toi
+# psql con dung ba dong: BEGIN; DELETE FROM ban_sao_luu; COMMIT; -- MOI lan sao luu THANH CONG lai
+# XOA SACH bang dem danh sach ban sao. Man hinh "Sao luu & Phuc hoi" hien "khong co ban sao nao"
+# trong khi kho R2 day ap, va dung luc khan cap thi khong chon duoc snapshot nao de phuc hoi.
+# Hai test bats tung do vi thieu python3 chinh la bang chung loi nay xay ra that.
 lenh_dong_bo_danh_sach() {
   local tam; tam=$(mktemp)
   # Tu huy trap NGAY khi no chay: `trap ... RETURN` cua bash KHONG tu dong het hieu luc sau
@@ -301,14 +388,20 @@ lenh_dong_bo_danh_sach() {
   # ve va dung nham bien $tam CUA lenh_sao_luu (thu muc dump, khong phai tep json nay), gay
   # loi that "rm: cannot remove ...: Is a directory" -- da tu kiem chung loi nay that su xay ra
   # (bang mot ham bash toi gian rieng) truoc khi sua bang cach tu go trap ngay trong than trap.
-  trap 'rm -f "$tam"; trap - RETURN' RETURN
-  restic snapshots --json > "$tam"
+  local tsv sql; tsv=$(mktemp); sql=$(mktemp)
+  trap 'rm -f "$tam" "$tsv" "$sql"; trap - RETURN' RETURN
+  restic snapshots --json > "$tam" \
+    || { ghi_log loi "Khong doc duoc danh sach snapshot tu kho restic -- KHONG dung toi bang dem."; return 1; }
+  # Loc TRUOC va kiem ma thoat TUONG MINH: chi khi buoc nay thanh cong thi moi duoc phep DELETE.
+  loc_snapshot_json "$tam" > "$tsv" \
+    || { ghi_log loi "Khong phan tich duoc danh sach snapshot (thieu python3, hoac restic doi" \
+                     "dinh dang JSON?) -- KHONG dung toi bang dem danh sach ban sao."; return 1; }
   # Nap lai TOAN BO bang dem trong mot giao dich -- don gian va luon dung, so snapshot chi vai
   # chuc dong nen khong can dong bo tang phan.
   {
     echo "BEGIN;"
     echo "DELETE FROM ban_sao_luu;"
-    loc_snapshot_json "$tam" | while IFS=$'\t' read -r id thoi_diem nhan byte gd gdinh; do
+    while IFS=$'\t' read -r id thoi_diem nhan byte gd gdinh; do
       # Nhan doi dau nhay don TRONG NOI DUNG truoc khi bao vao nhay don SQL -- giong het cach
       # ghi_trang_thai_loi da lam o tren, ap dung LAI o day cho NHAT QUAN. `nhan` la noi dung tag
       # restic ma quan tri vien co the dat tuy y qua `--nhan` (ke ca goi tu giao dien qua Task
@@ -318,12 +411,21 @@ lenh_dong_bo_danh_sach() {
       # suy tu enum co dinh (tinh_nguon_tu_nhan) nen von an toan nhung van escape cho nhat quan.
       local id_e="${id//\'/\'\'}" thoi_diem_e="${thoi_diem//\'/\'\'}" nhan_e="${nhan//\'/\'\'}"
       local nguon_e; nguon_e="$(tinh_nguon_tu_nhan "$nhan")"; nguon_e="${nguon_e//\'/\'\'}"
+      # Ba cot so di THANG vao cau lenh (khong bao nhay don) nen phai la SO THAT. Tag snapshot co
+      # the mang '?' khi luc sao luu khong dem duoc (xem dem_hoac_dau_hoi) -- de nguyen thi cau
+      # lenh SQL hong va ca lan dong bo that bai. Ve 0 o BANG DEM (tag trong kho van giu '?', noi
+      # kiem_chung_csdl_moi biet cach bo qua dung cach).
+      case "${byte:-0}"  in ''|*[!0-9]*) byte=0 ;;  esac
+      case "${gd:-0}"    in ''|*[!0-9]*) gd=0 ;;    esac
+      case "${gdinh:-0}" in ''|*[!0-9]*) gdinh=0 ;; esac
       printf "INSERT INTO ban_sao_luu (id,thoi_diem,nhan,kich_thuoc_byte,so_giao_dan,so_gia_dinh,nguon) VALUES ('%s','%s',%s,%s,%s,%s,'%s');\n" \
         "$id_e" "$thoi_diem_e" "$([ -n "$nhan_e" ] && printf "'%s'" "$nhan_e" || echo NULL)" \
-        "${byte:-0}" "${gd:-0}" "${gdinh:-0}" "$nguon_e"
-    done
+        "$byte" "$gd" "$gdinh" "$nguon_e"
+    done < "$tsv"
     echo "COMMIT;"
-  } | psql_quan_tri -f - >/dev/null
+  } > "$sql"
+  psql_quan_tri -f "$sql" >/dev/null \
+    || { ghi_log loi "Khong ghi duoc bang dem danh sach ban sao vao CSDL."; return 1; }
   ghi_log thong-tin "Da dong bo bang dem danh sach ban sao."
 }
 
