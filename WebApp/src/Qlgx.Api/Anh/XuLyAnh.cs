@@ -31,8 +31,15 @@ public static class XuLyAnh
     /// JPEG chất lượng cao) nhưng vẫn chặn được tệp cố tình rất lớn trước khi giải mã.</summary>
     public const int GioiHanDungLuongGoc = 8 * 1024 * 1024;
 
-    /// <summary>Khung tối đa sau khi thu nhỏ (giữ tỉ lệ) — 480×640px thừa đủ nét cho ảnh 3x4 in
-    /// ở 300dpi (kích thước in thật chỉ khoảng 354×472px) và cho khung xem trên màn hình.</summary>
+    /// <summary>Số điểm ảnh tối đa CHO PHÉP GIẢI MÃ — 50 triệu (50 MP), thừa rộng so với máy ảnh
+    /// điện thoại cao cấp nhất hiện nay. Chặn "bom giải nén": xem giải thích đầy đủ tại chỗ dùng
+    /// trong <see cref="XuLy"/>.</summary>
+    public const long SoDiemAnhToiDa = 50_000_000;
+
+    /// <summary>Giới hạn cho CẠNH DÀI sau khi thu nhỏ, GIỮ NGUYÊN TỈ LỆ ảnh gốc — ảnh ngang
+    /// thành 640×480, ảnh dọc thành 480×640; KHÔNG ép về một khung cố định, không cắt xén.
+    /// 640px thừa đủ nét cho ảnh 3x4 in ở 300dpi (kích thước in thật chỉ khoảng 354×472px) và
+    /// cho khung xem trên màn hình.</summary>
     private const int ChieuDaiToiDa = 640;
 
     private const int ChatLuongWebp = 80;
@@ -43,7 +50,12 @@ public static class XuLyAnh
 
     /// <summary>Ngân sách dung lượng cho MỘT ảnh sau xử lý. Có test giữ ngưỡng này
     /// (XuLyAnhNganSachTests) — ảnh chiếm khoảng 95% khối lượng sao lưu ở quy mô lớn, nên một
-    /// thay đổi vô tình ở tham số nén sẽ nhân đôi kích thước CSDL mà không ai thấy.</summary>
+    /// thay đổi vô tình ở tham số nén sẽ nhân đôi kích thước CSDL mà không ai thấy.
+    ///
+    /// Đây là NGÂN SÁCH, không phải hàng rào lúc chạy: một ảnh vượt ngưỡng này VẪN ĐƯỢC LƯU
+    /// bình thường. Cố ý như vậy — từ chối ảnh chỉ vì nó nén ra to hơn dự kiến sẽ làm quý cha,
+    /// quý sơ bế tắc giữa chừng mà không biết phải làm gì khác; ngưỡng ở đây để bộ test báo
+    /// động cho người phát triển, không phải để chặn người dùng.</summary>
     public const int NganSachByteMoiAnh = 60 * 1024;
 
     public sealed record LoiXuLyAnh(string ThongBao);
@@ -71,6 +83,22 @@ public static class XuLyAnh
             return (null, new LoiXuLyAnh(
                 "Tệp này không phải ảnh hợp lệ (đã kiểm tra nội dung thật, không chỉ tên tệp). " +
                 "Chỉ nhận ảnh JPEG, PNG hoặc WebP."));
+
+        // LỚP PHÒNG THỦ 1b — chặn theo SỐ ĐIỂM ẢNH, không chỉ theo byte tệp gốc. Giới hạn 8 MB
+        // ở trên chỉ nói về dữ liệu ĐÃ NÉN: một tệp PNG hợp lệ 2-3 MB có thể khai báo
+        // 25 000 × 25 000 điểm ảnh, và SKBitmap.Decode cấp phát ~4 byte mỗi điểm ảnh → ~2,5 GB
+        // trong một lần gọi (chưa kể bản thu nhỏ và bản Bgra8888 sau đó). Đó là "bom giải nén":
+        // rẻ với người tải lên, đắt với máy chủ.
+        //
+        // SKCodec.Create cho biết kích thước TRƯỚC KHI giải mã, nên chặn được ở đây mà không cấp
+        // phát gì. Phải chặn: đường tải ảnh đại diện mở cho tài khoản THƯỜNG của bất kỳ giáo xứ
+        // nào, mà một container duy nhất phục vụ API lẫn web tĩnh cho MỌI giáo xứ — một người
+        // tải vài tệp như vậy làm sập cả hệ thống chứ không riêng phiên của họ.
+        var soDiemAnh = (long)codec.Info.Width * codec.Info.Height;
+        if (soDiemAnh > SoDiemAnhToiDa)
+            return (null, new LoiXuLyAnh(
+                $"Ảnh có kích thước {codec.Info.Width}×{codec.Info.Height} điểm ảnh, vượt giới " +
+                $"hạn {SoDiemAnhToiDa / 1_000_000} triệu điểm ảnh. Hãy thu nhỏ ảnh rồi tải lại."));
 
         var dinhDangChoPhep = codec.EncodedFormat is SKEncodedImageFormat.Jpeg
             or SKEncodedImageFormat.Png or SKEncodedImageFormat.Webp;
