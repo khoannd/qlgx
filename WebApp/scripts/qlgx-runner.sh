@@ -491,7 +491,17 @@ lenh_dong_bo_danh_sach() {
 lenh_tai_ve() {
   local snapshot="$1" ma_job="$2"
   local dich="$THU_MUC_SPOOL/$ma_job"
-  mkdir -p "$dich"; chmod 755 "$dich"
+  # I8 -- tep trong thu muc nay la ban dump THO, CHUA MA HOA: ho ten, ngay sinh, so can cuoc cua
+  # hang nghin giao dan, dung thu thiet ke muc 1.2 diem 3 dat lam muc tieu bao mat. Quyen 755/644
+  # (ban truoc) cho MOI nguoi dung tren may doc duoc trong suot 24 gio. Quyen 755 duoc dat de
+  # container API doc duoc qua mount chi-doc; cach dung la cap quyen theo NHOM chu khong phai cho
+  # "other". Neu khong kiem soat duoc GID cua container thi 751 (duyet duoc nhung KHONG liet ke
+  # duoc) + ten tep kho doan van kin hon han 755.
+  mkdir -p "$dich"
+  chmod 751 "$dich"
+  if [ -n "${QLGX_GID_API:-}" ]; then
+    chgrp "$QLGX_GID_API" "$dich" 2>/dev/null && chmod 750 "$dich" 2>/dev/null || true
+  fi
   restic restore "$snapshot" --target "$dich" --include '*/qlgx-dump'
   local thu_muc; thu_muc=$(find "$dich" -type d -name qlgx-dump | head -1)
   [ -n "$thu_muc" ] || bao_loi_va_thoat "Khong tim thay thu muc qlgx-dump trong snapshot $snapshot."
@@ -542,6 +552,9 @@ gianh_khoa_hoac_bo_qua() {
 # Bao lau khong co tien trien thi coi mot cong viec 'dang_chay' la MO COI. 2 gio: du dai de mot
 # luot sao luu/phuc hoi that hoan tat tren may chu cham nhat, du ngan de khong de lo vo thoi han.
 GIO_JOB_QUA_HAN="${QLGX_GIO_JOB_QUA_HAN:-2}"
+# Bao lau mot cong viec nam o 'cho' MA KHONG AI NHAN thi coi la bo chay khong hoat dong.
+# PHAI trung voi SaoLuuService.PhutChoToiDa (C#) -- xem giai thich o sql_don_job_mo_coi.
+PHUT_JOB_CHO_QUA_HAN="${QLGX_PHUT_JOB_CHO_QUA_HAN:-15}"
 
 # CHU Y COT: ten cot THAT trong CSDL la snake_case chu thuong (id, loai, trang_thai,
 # tham_so_json, tao_luc, bat_dau_luc, ket_thuc_luc, nhat_ky) -- da doi chieu truc tiep voi
@@ -593,17 +606,38 @@ sql_don_job_mo_coi() {
   # So gio di THANG vao cau lenh SQL -- chi chap nhan so nguyen, moi thu khac ve mac dinh 2.
   case "$gio" in ''|*[!0-9]*) gio=2 ;; esac
   [ "$gio" -gt 0 ] 2>/dev/null || gio=2
+  local phut_cho="${2:-$PHUT_JOB_CHO_QUA_HAN}"
+  case "$phut_cho" in ''|*[!0-9]*) phut_cho=15 ;; esac
+  [ "$phut_cho" -gt 0 ] 2>/dev/null || phut_cho=15
   # Boc CTE vi dung ly do da giai thich o sql_gianh_job: UPDATE tran lam psql in them dong
   # "UPDATE 0" va bien "khong co job mo coi nao" thanh "co mot job mo coi ten 'UPDATE 0'" --
   # cu the hon, no lam ghi_trang_thai_loi chay MOI PHUT va man hinh quan tri do vinh vien.
+  # HAI loai job mo coi, HAI nguyen nhan KHAC HAN nhau -- nen hai nguong va hai cau nhat ky rieng:
+  #
+  # (a) 'dang_chay' qua $gio gio: bo chay DA nhan viec roi chet giua chung (mat dien, kill -9,
+  #     OOM). 2 gio du dai cho mot luot sao luu/phuc hoi that tren may chu cham nhat.
+  #
+  # (b) 'cho' qua $phut_cho phut: KHONG AI NHAN viec ca -- tuc la bo chay tren host khong hoat
+  #     dong (nguoi cai tra loi "khong" o cau hoi bat sao luu tu dong, hoac dich vu da dung).
+  #     Ban truoc CHI quet 'dang_chay', nen mot dong 'cho' khong ai nhat nam do VINH VIEN, va
+  #     guard "khong xep hang hai cong viec chong nhau" cua SaoLuuService (C#) tu do TU CHOI MOI
+  #     thao tac tren man hinh Sao luu & Phuc hoi. Khong co route nao huy cong viec, nen duong
+  #     thoat duy nhat la SSH vao may chu chay psql -- dung thu quy cha, quy so khong lam duoc.
+  #     15 phut lay DUNG tu SaoLuuService.PhutChoToiDa (C#) -- hai phia phai cung mot con so, neu
+  #     khong se co khoang thoi gian mot ben coi la mo coi con ben kia van chan.
   cat <<SQL
 WITH don AS (
   UPDATE cong_viec_sao_luu
   SET trang_thai = 'loi', ket_thuc_luc = now(),
       nhat_ky = coalesce(nhat_ky || E'\n', '')
-                || 'cong viec bi bo do, tu dong danh dau loi sau $gio gio khong co tien trien'
-  WHERE trang_thai = 'dang_chay'
-    AND coalesce(bat_dau_luc, tao_luc) < now() - make_interval(hours => $gio)
+                || CASE WHEN trang_thai = 'dang_chay'
+                        THEN 'cong viec bi bo do, tu dong danh dau loi sau $gio gio khong co tien trien'
+                        ELSE 'khong duoc bo chay sao luu tren may chu nhan sau $phut_cho phut nen da bi danh dau loi. Nguyen nhan thuong gap: bo chay sao luu tren may chu khong hoat dong (chua bat sao luu tu dong luc cai dat, hoac dich vu da dung).'
+                   END
+  WHERE (trang_thai = 'dang_chay'
+         AND coalesce(bat_dau_luc, tao_luc) < now() - make_interval(hours => $gio))
+     OR (trang_thai = 'cho'
+         AND tao_luc < now() - make_interval(mins => $phut_cho))
   RETURNING id)
 SELECT id::text FROM don;
 SQL
@@ -620,8 +654,9 @@ don_job_mo_coi() {
     # duoc phep lam man hinh quan tri do len -- xem ghi chu ve "UPDATE 0" o sql_gianh_job.
     la_uuid "$ma" || continue
     so=$((so + 1))
-    ghi_log canh-bao "Cong viec $ma ket o 'dang_chay' qua $GIO_JOB_QUA_HAN gio -- tu dong danh" \
-                     "dau 'loi' de hang doi khong bi chan vinh vien."
+    ghi_log canh-bao "Cong viec $ma bi bo do (ket o 'dang_chay' qua $GIO_JOB_QUA_HAN gio, hoac o" \
+                     "'cho' qua $PHUT_JOB_CHO_QUA_HAN phut ma khong ai nhan) -- tu dong danh dau" \
+                     "'loi' de hang doi khong bi chan vinh vien."
   done <<< "$ket_qua"
   [ "$so" -gt 0 ] || return 0
   ghi_trang_thai_loi "Co cong viec sao luu bi bo do giua chung (bo chay bi ngat?), da tu dong danh dau loi."

@@ -29,8 +29,10 @@ DIEN_TAP=0
 TEP_THE=""
 MA_JOB=""
 LAY_CAU_HINH=""
+CHI_DON_CSDL_CU=0
 GOC_UNG_DUNG_THAM_SO=""
 TAM_PH=""
+PID_TEE=""
 GIU_CSDL_CU_NGAY="${QLGX_GIU_CSDL_CU_NGAY:-7}"
 # HAI khai niem "cho API len" KHAC NHAU, co y tach rieng:
 #   - CHO_SAN_SANG_GIAY: cho luc khoi dong BINH THUONG (khong co ai dang doi), rong rai duoc.
@@ -76,13 +78,17 @@ nap_thu_vien_ph() {
     echo "[X] Khong tai duoc chung.sh tu $goc_raw -- kiem tra mang hoac dat QLGX_NHANH." >&2
     exit 1
   fi
+  # N4: giu lai duong dan de don_dep_ph xoa -- `mktemp -d` nay truoc day khong bao gio duoc xoa
+  # (duong `curl | bash` tren may trang). Rac nho, nhung don_dep_ph da co san de gan vao.
+  TAM_THU_VIEN_PH="$tam"
   # shellcheck source=/dev/null
   source "$tam/chung.sh"
 }
+TAM_THU_VIEN_PH=""
 nap_thu_vien_ph
 
 phan_tich_tham_so_phuc_hoi() {
-  AP_DUNG=0; DIEN_TAP=0; LAY_CAU_HINH=""
+  AP_DUNG=0; DIEN_TAP=0; LAY_CAU_HINH=""; CHI_DON_CSDL_CU=0
   while [ $# -gt 0 ]; do
     case "$1" in
       --snapshot)     [ $# -ge 2 ] || bao_loi_va_thoat "--snapshot can mot gia tri."
@@ -97,6 +103,9 @@ phan_tich_tham_so_phuc_hoi() {
                       LAY_CAU_HINH="$2"; shift 2 ;;
       --apply)        AP_DUNG=1; shift ;;
       --dien-tap)     DIEN_TAP=1; shift ;;
+      # I6: chi don cac CSDL '_truoc_phuc_hoi_' qua han roi thoat, KHONG phuc hoi gi. Duoc
+      # qlgx-verify.service goi hang tuan -- dung nhip voi han giu 7 ngay.
+      --chi-don-csdl-cu) CHI_DON_CSDL_CU=1; shift ;;
       *) bao_loi_va_thoat "Tham so khong hieu: $1" ;;
     esac
   done
@@ -305,10 +314,70 @@ co_du_lieu_can_bao_ve() {
     ghi_log canh-bao "Khong dem duoc giao dan/gia dinh cua '$db' -- COI NHU CO du lieu, van sao luu."
     return 0
   fi
-  if [ "$gd" -eq 0 ] && [ "$gdinh" -eq 0 ]; then
-    ghi_log thong-tin "CSDL '$db' khong co giao dan/gia dinh nao (ban cai moi chua co so sach)."
+  # I10: "0 giao dan + 0 gia dinh" KHONG dong nghia voi "khong co gi de mat". CSDL co the da co
+  # toan bo tai khoan nguoi dung, danh sach giao xu, cau hinh, va cac ban ghi bi tich. Kich ban
+  # that: mot lan nhap lieu tu Access hong lam rong hai bang giao_dan/gia_dinh nhung van nguyen
+  # tai_khoan/giao_xu/bi_tich_*. Bo qua sao luu luc do la mat luon kha nang quay ve trang thai
+  # trung gian (vd de trich lai cac tai khoan vua tao). Do them hai bang nua; chi bo qua khi MOI
+  # phep dem deu bang 0, va bat ky phep dem nao khong doc duoc thi nga ve phia AN TOAN (van sao
+  # luu) -- dung tinh than ba trang thai o tren.
+  local tk btich
+  tk=$(pg1 -d "$db" -c 'SELECT count(*) FROM tai_khoan' 2>/dev/null || echo 'loi')
+  btich=$(pg1 -d "$db" -c 'SELECT count(*) FROM bi_tich_chi_tiet' 2>/dev/null || echo 'loi')
+  case "$tk"    in ''|*[!0-9]*) tk='loi' ;;    esac
+  case "$btich" in ''|*[!0-9]*) btich='loi' ;; esac
+  if [ "$tk" = 'loi' ] || [ "$btich" = 'loi' ]; then
+    ghi_log canh-bao "Khong dem duoc tai khoan/bi tich cua '$db' -- COI NHU CO du lieu, van sao luu."
+    return 0
+  fi
+  if [ "$gd" -eq 0 ] && [ "$gdinh" -eq 0 ] && [ "$tk" -eq 0 ] && [ "$btich" -eq 0 ]; then
+    ghi_log thong-tin "CSDL '$db' khong co giao dan, gia dinh, tai khoan hay bi tich nao" \
+                      "(ban cai moi chua co so sach)."
     return 1
   fi
+  if [ "$gd" -eq 0 ] && [ "$gdinh" -eq 0 ]; then
+    ghi_log canh-bao "CSDL '$db' khong co giao dan/gia dinh nhung CO $tk tai khoan va $btich ban" \
+                     "ghi bi tich -- VAN sao luu truoc khi ghi de."
+  fi
+  return 0
+}
+
+# I5 -- DO DIA TRONG TRUOC KHI NAP. Bang rui ro cua thiet ke muc 11 ghi ro: "Dia day do CSDL tam
+# khi phuc hoi/dien tap -> Kiem dung luong trong truoc buoc 2".
+#
+# Phuc hoi tao MOT BAN SAO THU HAI cua toan bo CSDL (gom anh dai dien trong bytea) canh CSDL dang
+# chay, cong ban dump giai nen trong /tmp cua host VA trong /tmp cua container postgres -- dinh
+# diem can khoang 3 lan kich thuoc CSDL.
+#
+# Kich ban hong: VPS 40 GB, CSDL 12 GB. Dien tap Chu nhat 03:00 (qlgx-verify.timer chay TU DONG
+# hang tuan, khong ai ngoi xem) lam day dia giua pg_restore. Hau qua khong chi la dien tap truot:
+# chinh PostgreSQL DANG PHUC VU cung het cho ghi WAL -> CSDL that chuyen sang chi-doc hoac dung
+# han -> sang Chua nhat giao xu khong dung duoc phan mem, dung ngay ban nhat.
+#
+# Do khong duoc thi CANH BAO roi di tiep (khong chan): mot phep do that bai khong phai bang chung
+# la dia day, va chan phuc hoi vi mot phep do phu la lam hong duong cuu ho vi mot ly do phu.
+kiem_dia_truoc_khi_nap() {
+  local db="$1" cd_byte dia_kb can_kb
+  cd_byte=$(pg1 -d postgres -c "SELECT pg_database_size('${db//\'/\'\'}')" 2>/dev/null || echo '')
+  case "$cd_byte" in ''|*[!0-9]*)
+    ghi_log canh-bao "Khong do duoc kich thuoc CSDL '$db' -- bo qua buoc kiem dia trong."
+    return 0 ;;
+  esac
+  # Do tren chinh volume du lieu CUA container postgres (PGDATA), khong phai tren dia cua host:
+  # Docker co the dat volume o mot phan vung khac han.
+  dia_kb=$(dc exec -T postgres sh -c 'df -Pk "$PGDATA" | tail -1 | awk "{print \$4}"' 2>/dev/null | tr -d ' \r' || echo '')
+  case "$dia_kb" in ''|*[!0-9]*)
+    ghi_log canh-bao "Khong do duoc dia trong cua container postgres -- bo qua buoc kiem dia trong."
+    return 0 ;;
+  esac
+  can_kb=$(( cd_byte / 1024 * 3 ))
+  if [ "$dia_kb" -lt "$can_kb" ]; then
+    ghi_log loi "Dia trong khong du de phuc hoi an toan: con $(( dia_kb / 1048576 )) GB, can it" \
+                "nhat $(( can_kb / 1048576 )) GB (khoang 3 lan kich thuoc CSDL" \
+                "$(( cd_byte / 1073741824 )) GB: ban nap tam + ban dump giai nen + cho trong cho WAL)."
+    return 1
+  fi
+  ghi_log thong-tin "Dia trong du: $(( dia_kb / 1048576 )) GB (can $(( can_kb / 1048576 )) GB)."
   return 0
 }
 
@@ -508,21 +577,44 @@ xoa_db() {
 # ALTER ROLE ... PASSWORD ve mat khau CU trong ban sao, lam container api dang chay mat ket noi
 # ngay lap tuc -- dung thu nen lam "cho chac".
 nap_globals_neu_thieu_vai_tro() {
-  local tep_globals="$1" vai_tro thieu=0
+  local tep_globals="$1" vai_tro so_co=0 so_xet=0
   [ -s "$tep_globals" ] || { ghi_log canh-bao "Ban sao khong co globals.sql -- bo qua buoc vai tro."; return 0; }
   for vai_tro in "$(env_ung_dung QLGX_APP_DB_USER)" "$(env_ung_dung QLGX_ADMIN_DB_USER)"; do
     [ -n "$vai_tro" ] || continue
+    so_xet=$((so_xet + 1))
     local co; co=$(pg1 -d postgres -c "SELECT count(*) FROM pg_roles WHERE rolname = '${vai_tro//\'/\'\'}'" 2>/dev/null || echo 0)
-    [ "${co:-0}" -ge 1 ] || { thieu=1; ghi_log canh-bao "Cum CSDL chua co vai tro '$vai_tro'."; }
+    if [ "${co:-0}" -ge 1 ]; then so_co=$((so_co + 1))
+    else ghi_log canh-bao "Cum CSDL chua co vai tro '$vai_tro'."; fi
   done
-  if [ "$thieu" -eq 0 ]; then
+  if [ "$so_xet" -eq 0 ] || [ "$so_co" -eq "$so_xet" ]; then
     ghi_log thong-tin "Moi vai tro CSDL da co san -- KHONG nap globals.sql (tranh doi mat khau cua he thong dang chay)."
     return 0
   fi
-  ghi_log thong-tin "Nap globals.sql de tao lai vai tro va quyen toan cum."
+  # I3 -- CHI nap globals.sql khi CA HAI vai tro deu vang, tuc la cum THAT SU trang.
+  #
+  # globals.sql (pg_dumpall --globals-only) chua `ALTER ROLE ... PASSWORD` cho TAT CA vai tro cua
+  # cum -- gom postgres, qlgx_app, qlgx_admin -- ve dung mat khau TAI THOI DIEM CHUP. Dieu kien
+  # cu ("bat ky vai tro nao vang thi nap") de lot mot kich ban hong nang: mot lan nghich/go loi
+  # lam mat qlgx_admin, phuc hoi se nap globals va GHI DE mat khau cua postgres va qlgx_app bang
+  # gia tri CU. .env tren dia van giu mat khau HIEN HANH, nen container API mat ket noi CSDL ngay
+  # lap tuc, va -- nghiem trong hon -- pg()/psql_quan_tri (deu dung POSTGRES_USER tu .env) cung
+  # hong, tuc la chinh buoc hoan doi ten [6/7] va duong dao nguoc [7/7] khong con chay duoc nua.
+  # Hong dung giua tay mot cuoc phuc hoi. Ghi chu o tren da canh bao dung nguy co nay, chi la
+  # dieu kien canh gac chua du chat.
+  if [ "$so_co" -gt 0 ]; then
+    ghi_log canh-bao "Thieu MOT PHAN vai tro CSDL ($so_co/$so_xet da co) -- CO Y KHONG nap" \
+                     "globals.sql: nap no se ghi de mat khau cua CA cac vai tro dang chay bang" \
+                     "gia tri CU trong ban sao, lam API va ca buoc hoan doi ten mat ket noi ngay" \
+                     "giua lan phuc hoi nay. Tao lai vai tro con thieu bang:" \
+                     "bash $GOC_UNG_DUNG/scripts/install.sh --status  (hoac chay lai install.sh)."
+    return 0
+  fi
+  ghi_log thong-tin "Cum CSDL chua co vai tro nghiep vu nao (may trang) -- nap globals.sql."
   # KHONG ON_ERROR_STOP: globals.sql luon chua ca cac vai tro da ton tai (vd postgres), loi
-  # "role already exists" o day la binh thuong va vo hai.
-  dc exec -T postgres psql -X -U "$(env_ung_dung POSTGRES_USER)" -d postgres < "$tep_globals" >/dev/null 2>&1 || true
+  # "role already exists" o day la binh thuong va vo hai. Nhung KHONG nuot stderr nua (`2>&1`
+  # truoc day lam moi loi nap tro nen vo hinh): ghi ra nhat ky de con nhin thay duoc.
+  dc exec -T postgres psql -X -U "$(env_ung_dung POSTGRES_USER)" -d postgres < "$tep_globals" >/dev/null \
+    || ghi_log canh-bao "Nap globals.sql bao loi (xem ngay tren) -- tiep tuc, se kiem chung o buoc sau."
 }
 
 # Lay lai cac tep cau hinh (.env, docker-compose*, Caddyfile) tu ban sao. Dung cho kich ban may
@@ -642,7 +734,15 @@ nha_khoa_phuc_hoi() { exec 9>&- 2>/dev/null || true; }
 # mat va `set -u` se lam trap chet ma khong don duoc gi.
 don_dep_ph() {
   rm -rf "${TAM_PH:-}" 2>/dev/null || true
+  rm -rf "${TAM_THU_VIEN_PH:-}" 2>/dev/null || true
   rm -f "${TEP_LOI_RESTIC:-}" 2>/dev/null || true
+  # N11: dong hai dau ra roi cho `tee` ghi not phan con lai xuong nhat ky. Khong dong truoc thi
+  # tee khong bao gio thay EOF va `wait` se treo.
+  if [ -n "${PID_TEE:-}" ]; then
+    exec 1>&- 2>&- || true
+    wait "$PID_TEE" 2>/dev/null || true
+    PID_TEE=""
+  fi
 }
 
 phuc_hoi_that() {
@@ -652,7 +752,12 @@ phuc_hoi_that() {
   local nhat_ky; nhat_ky="$THU_MUC_LOG/phuc-hoi-$(date '+%Y%m%d-%H%M%S').log"
   # Ghi song song ra tep TREN HOST: chinh CSDL chua bang cong viec se bi thay the o buoc 5, nen
   # nhat ky ghi trong CSDL se bien mat cung CSDL cu neu khong ghi ra ngoai.
+  # N11: `tee` la mot TIEN TRINH NEN. Khi tien trinh chinh thoat, nhung dong ghi cuoi cung co
+  # the chua kip duoc tee ghi xuong dia. Voi nhat ky phuc hoi -- bang chung DUY NHAT con lai khi
+  # CSDL cu da bi doi ten -- thi mat dong cuoi la mat dung cho can doc nhat. Giu PID cua tee va
+  # `wait` no trong trap thoat.
   exec > >(tee -a "$nhat_ky") 2>&1
+  PID_TEE=$!
   ghi_log thong-tin "Nhat ky phuc hoi: $nhat_ky"
 
   if [ "$DIEN_TAP" -eq 1 ]; then
@@ -677,6 +782,13 @@ phuc_hoi_that() {
   trap don_dep_ph EXIT INT TERM HUP
   restic restore "$SNAPSHOT" --target "$TAM_PH" --include '*/qlgx-dump' --include '*/globals.sql' \
     || bao_loi_va_thoat "Khong lay duoc snapshot '$SNAPSHOT' -- he thong hien tai KHONG bi dong toi."
+
+  # I5: do dia TRUOC khi tao CSDL tam. Dung o day (sau khi da lay snapshot ve, truoc khi tao ban
+  # sao thu hai cua CSDL) vi day la diem cuoi cung ma viec dung lai con HOAN TOAN vo hai.
+  kiem_dia_truoc_khi_nap "$db_hien" \
+    || bao_loi_va_thoat "DUNG truoc khi nap: khong du dia. He thong hien tai KHONG bi dong toi." \
+                        "Don bot dia (xoa cac CSDL '${HAU_TO_LUU}' cu, don anh Docker khong dung)" \
+                        "roi chay lai."
 
   ghi_log thong-tin "[3/$buoc_tong] Nap vao CSDL MOI $db_moi (CSDL dang phuc vu khong bi dong toi)"
   nap_snapshot_vao_csdl_moi "$db_moi" "$TAM_PH" \
@@ -780,6 +892,14 @@ main_phuc_hoi() {
   fi
 
   kiem_ung_dung_da_co
+  # I6: thiet ke muc 7.1 buoc 7 hua "giu qlgx_truoc_phuc_hoi_<ts> them 7 ngay roi TU XOA". Truoc
+  # day don_csdl_cu chi chay o CUOI mot lan phuc hoi thanh cong ke tiep -- khong timer nao, khong
+  # lenh CLI nao goi no. Mot giao xu phuc hoi hai lan roi thoi se giu lai VINH VIEN hai ban sao
+  # day du cua CSDL, an dan het dia cho toi khi xay ra dung hau qua o I5.
+  if [ "$CHI_DON_CSDL_CU" -eq 1 ]; then
+    don_csdl_cu
+    return 0
+  fi
   local db_hien db_moi
   db_hien=$(env_ung_dung POSTGRES_DB)
   [ -n "$db_hien" ] || bao_loi_va_thoat "Khong doc duoc POSTGRES_DB tu $GOC_UNG_DUNG/.env."

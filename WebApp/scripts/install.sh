@@ -355,6 +355,31 @@ tao_vai_tro_rls() {
     < "$GOC_UNG_DUNG/scripts/sql/00-vai-tro-rls.sql"
 }
 
+# I2 (review backend) -- siet quyen ba bang sao luu. PHAI goi SAU khi migration da tao bang (tuc
+# sau bat_api), va goi lai o moi lan cap nhat de cac may da cai tu truoc cung duoc siet.
+# Bang do EF Core migration tao ra, ma migration chay bang qlgx_app -> ba bang mac nhien thuoc
+# vai tro it tin cay nhat, trong khi cong_viec_sao_luu la HANG DOI MA LENH ma qlgx-runner.sh thi
+# hanh duoi quyen ROOT. Xem giai thich day du trong sql/01-bang-sao-luu-quyen.sql.
+dat_quyen_bang_sao_luu() {
+  local db user tep_sql="$GOC_UNG_DUNG/scripts/sql/01-bang-sao-luu-quyen.sql"
+  [ -f "$tep_sql" ] || { ghi_log canh-bao "Khong tim thay $tep_sql -- bo qua buoc siet quyen."; return 0; }
+  db=$(doc_env_kv "$GOC_UNG_DUNG/.env" POSTGRES_DB)
+  user=$(doc_env_kv "$GOC_UNG_DUNG/.env" POSTGRES_USER)
+  ghi_log thong-tin "Siet quyen ba bang sao luu (chu so huu = vai tro quan tri)"
+  # Truyen ten vai tro qua set_config: mot khoi DO$$ khong doc duoc bien psql (-v), va noi suy
+  # thang vao khoi $$ la mo duong chen SQL -- cung cach 00-vai-tro-rls.sql da dung.
+  local vt_app vt_admin
+  vt_app=$(doc_env_kv "$GOC_UNG_DUNG/.env" QLGX_APP_DB_USER | sed "s/'/''/g")
+  vt_admin=$(doc_env_kv "$GOC_UNG_DUNG/.env" QLGX_ADMIN_DB_USER | sed "s/'/''/g")
+  {
+    printf "SELECT set_config('qlgx.app_user', '%s', false);\n" "$vt_app"
+    printf "SELECT set_config('qlgx.admin_user', '%s', false);\n" "$vt_admin"
+    cat "$tep_sql"
+  } | dc exec -T postgres psql -v ON_ERROR_STOP=1 -U "$user" -d "$db" \
+    || ghi_log canh-bao "Khong siet duoc quyen ba bang sao luu (xem loi ngay tren). He thong van" \
+                        "chay duoc, nhung vai tro ung dung dang ghi duoc vao hang doi cong viec."
+}
+
 # Gioi han la SO GIAY THAT (han chot theo dong ho), KHONG phai so vong lap -- xem cho_api_san_sang
 # trong qlgx-restore.sh (Task 14) de biet ly do: dem theo vong lap thi moi lan `dc exec` vao mot
 # container dang crash-restart mat nhieu giay ngoai du kien, "180" hoa ra dai hon that nhieu.
@@ -835,6 +860,10 @@ cap_nhat() {
   # hinh dang co. `|| true`: may khong co Caddy van cap nhat binh thuong.
   dc up -d caddy >/dev/null 2>&1 || ghi_log canh-bao "Khong lam moi duoc container caddy."
 
+  # I2: goi lai o moi lan cap nhat de cac may DA cai tu truoc cung duoc siet quyen, va de mot
+  # migration moi vua tao them bang khong nam lai duoi quyen vai tro ung dung.
+  dat_quyen_bang_sao_luu
+
   # C4: CHI nhom COT LOI duoc quyet dinh quay lui. Cac muc bo sung (The phuc hoi chua cat ra
   # ngoai, kho R2 tam thoi khong mo duoc, Chromium loi vat) van duoc in day du o duoi nhung
   # TUYET DOI khong duoc lam mot ban moi ĐANG CHAY TOT bi quay lui va dan nhan HONG vinh vien.
@@ -956,6 +985,8 @@ main() {
   bat_postgres
   tao_vai_tro_rls
   bat_api
+  # SAU bat_api: migration da chay va da tao ba bang sao luu, gio moi doi duoc chu so huu.
+  dat_quyen_bang_sao_luu
   khoi_tao_giao_xu_va_admin
   cau_hinh_https
   cai_dat_systemd
