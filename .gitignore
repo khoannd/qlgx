@@ -36,3 +36,7 @@ desktop.ini
 
 # Thu muc nhap tam (anh chup man hinh, file dung mot lan...), khong dua vao repo.
 /WebApp/temp/
+
+# Thu muc build tam o goc repo do cac task/subagent tu tao de kiem chung mot ban build rieng
+# (vd `dotnet build -o _task5_build`), khong dinh dua vao repo -- tung tep co the vai tram MB.
+/_task*_build*/

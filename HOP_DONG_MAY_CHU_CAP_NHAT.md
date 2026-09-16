@@ -7,38 +7,50 @@ sẽ gọi, và những gì máy chủ phải trả về.
 Phần mềm là ứng dụng Windows đã phát hành, **không sửa được nữa** trên các máy đang
 chạy. Vì vậy đây là hợp đồng một chiều: backend phải chiều theo phần mềm, không ngược lại.
 
-> ## ĐANG TẠM DỪNG (từ 2026-09-09)
+> ## ĐANG TẠM DỪNG cho riêng nhóm "goc" (từ 2026-09-13)
 >
-> `version.txt` (cả `/capnhat/`, gốc, `/4.0/`) đang cố ý trả **chuỗi rỗng** —
-> mọi máy tạm coi như không có bản mới. Bật/tắt bằng hằng số
-> `TAM_DUNG_THONG_BAO_CAP_NHAT` trong `landing/src/lib/update-server.ts`.
+> `version.txt` ở nhóm **"goc"** (`/version.txt`, máy 3.3.7 trở về trước) đang cố
+> ý trả **chuỗi rỗng** — mọi máy nhóm này tạm coi như không có bản mới. Nhóm
+> `"4.0"` và `"capnhat"` KHÔNG bị ảnh hưởng, vẫn báo đúng phiên bản thật. Bật/tắt
+> bằng bảng `TAM_DUNG_CAP_NHAT_CHO_NHOM` trong `landing/src/lib/update-server.ts`.
 >
-> **Lý do (phát hiện thật từ báo cáo người dùng):** máy chạy bản 3.3.7 trở về
-> trước và 4.0.0–4.0.1 dùng .NET Framework cũ trên Windows XP–7, không nói
-> được TLS 1.2. Các máy này vẫn nhận đúng `version.txt` mới hơn qua `http://`
-> thuần (không lỗi gì — đúng như hợp đồng mục 3.1 yêu cầu), nên báo "có bản
-> mới" đúng. Nhưng `VersionConfig.xml` hiện trả **nguyên văn cùng một**
-> `<downloadpath>` cho MỌI nhóm đường dẫn: `https://quanlygiaoxu.net/capnhat/`.
-> Máy đời cũ không kết nối `https` được, nên bấm "Cập nhật" luôn thất bại dù
-> vừa được báo đúng là có bản mới — đúng kiểu lỗi mục 3.1 đã cảnh báo trước,
-> chỉ là ở lớp `<downloadpath>` chứ không phải ở lớp kết nối tới chính
-> `version.txt`/`VersionConfig.xml`.
+> **Lý do**: bản 4.0.2 chạy .NET Framework 4.8. Máy cài từ 3.3.7 trở về trước có
+> thể vẫn là Windows 7 **chưa từng có sẵn .NET 4.8** (chỉ đủ để chạy bản cũ .NET
+> 2.0/4.0) — nếu để nhóm này tự cập nhật, máy có thể cài xong nhưng KHÔNG CHẠY
+> ĐƯỢC, biến phần mềm đang dùng tốt thành hỏng hẳn. Đây là hợp đồng một chiều
+> (không sửa được trên máy người dùng) nên phải hoãn lại cho tới khi có giải
+> pháp tương thích (ví dụ: gói cài kèm sẵn bộ cài .NET 4.8, hoặc kiểm tra phiên
+> bản .NET trước khi cho phép cập nhật) — nhóm `"4.0"`/`"capnhat"` không tạm dừng
+> vì các máy đó đã tự chạy .NET 4.8 rồi, không có rủi ro tương thích mới.
 >
-> **Hướng sửa thật (chưa làm):** `<downloadpath>` phải khác nhau theo NHÓM
-> đường dẫn đang được gọi, không phải một giá trị chung:
-> - `/capnhat/VersionConfig.xml` (máy từ 4.0.2, TLS 1.2 tốt) → giữ nguyên
->   `https://quanlygiaoxu.net/capnhat/`.
-> - `VersionConfig.xml` phục vụ ở nhóm gốc (`/`) và `/4.0/` (máy đời cũ) →
->   phải trả một địa chỉ **`http://`** — hợp lý nhất là trỏ về lại đúng nhóm
->   đường dẫn mà máy đó đang gọi (`http://quanlygiaoxu.net/` hoặc
->   `http://quanlygiaoxu.net/4.0/`), để máy cũ tự cập nhật vòng qua HTTP chứ
->   không nhảy sang `https` giữa chừng. Cần sửa `versionConfigXmlResponse()`
->   nhận thêm tham số nhóm gọi (giống `downloadUpdateResponse(request, kenh)`
->   đã làm) rồi dựng `<downloadpath>` khác nhau tương ứng, thay vì chỉ chép
->   nguyên xi một bản duy nhất.
-> - Sau khi sửa xong, nhớ nghĩ lại mục 3 (Các địa chỉ cũ) và bảng "địa chỉ gốc
->   nằm trên máy" — có thể cần thêm một hàng mới nếu quyết định tạo nhóm
->   đường dẫn HTTP lâu dài riêng cho việc này thay vì tái dùng nhóm cũ.
+> **Lịch sử xử lý** (đã xong, không còn là việc cần làm):
+> 1. **Lỗi `<downloadpath>` chung một địa chỉ https cho mọi nhóm** (phát hiện
+>    2026-09-09, sửa xong 2026-09-10): máy đời cũ nhận đúng `version.txt` mới
+>    hơn qua `http://` thuần, báo "có bản mới" đúng, nhưng `VersionConfig.xml`
+>    lúc đó trả nguyên văn cùng một `<downloadpath>https://quanlygiaoxu.net/capnhat/</downloadpath>`
+>    cho MỌI nhóm — máy đời cũ không kết nối `https` được nên bấm "Cập nhật"
+>    luôn thất bại. Xác nhận bằng cách đọc code máy khách thật (tag
+>    `release-3.3.7-net20`/`release-3.7.7-net20`, `Source/DBAccess/CMemory.cs`,
+>    `Source/AutoUpdate/AutoUpdate.cs`): nội dung BÊN TRONG thẻ `<downloadpath>`
+>    (không phải thuộc tính `value`) được gán thẳng vào `Memory.ServerUrl`/
+>    `information.ServerUrl`, dùng lại cho MỌI lần gọi sau — `version.txt` lần
+>    tới, chính `VersionConfig.xml`, và ghép với `value="download-update"`
+>    (thuộc tính này không đổi qua các phiên bản) để tải `.zip`. Đã sửa
+>    `versionConfigXmlResponse()` nhận tham số nhóm (`"goc" | "4.0" | "capnhat"`)
+>    và trả riêng `<downloadpath>` theo `DOWNLOAD_BASE_URL_FOR`: `capnhat` giữ
+>    `https://quanlygiaoxu.net/capnhat/`; `goc` → `http://quanlygiaoxu.net/`;
+>    `4.0` → `http://quanlygiaoxu.net/4.0/`.
+> 2. **Thiếu hẳn route `/download-update` ở gốc** (phát hiện 2026-09-13, từ báo
+>    cáo người dùng: "bấm kiểm tra cập nhật, báo có bản mới, bắt đầu tải nhưng
+>    không bao giờ xong"): sau khi sửa xong (1), máy đời cũ phát hiện đúng bản
+>    mới rồi cố tải `.zip` tại `http://quanlygiaoxu.net/download-update` (ghép
+>    từ `<downloadpath>` + `value="download-update"`) — nhưng route này CHƯA
+>    TỪNG tồn tại ở gốc (chỉ có ở `/4.0/download-update` và
+>    `/capnhat/download-update`), nên luôn 404, cập nhật treo mãi. Đã thêm
+>    `landing/src/app/download-update/route.ts` (gọi `downloadUpdateResponse(request, "goc")`),
+>    giống hệt mẫu `/4.0/` và `/capnhat/`.
+> 3. Sau khi sửa xong (1) và (2), phát hiện rủi ro .NET 4.8/Windows 7 nói trên
+>    → tạm dừng lại `version.txt` cho riêng nhóm `"goc"` như mô tả ở đầu mục này.
 
 ---
 

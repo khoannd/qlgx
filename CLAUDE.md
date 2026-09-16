@@ -6,6 +6,33 @@ không lấy lại được. Mọi quyết định kỹ thuật đều phải ư
 
 Trả lời người dùng bằng **tiếng Việt**.
 
+**Máy này (`D:\Working\QLGX`) là máy dev.** Dữ liệu giáo xứ đang có trong phần mềm quản
+lý giáo xứ trên máy này (file `.mdb`, bản cài thử...) là dữ liệu giáo xứ gửi về để test
+hoặc dữ liệu tự tạo để test — không có người thật đang làm việc trên phần mềm ở máy này.
+Được phép cài đặt/gỡ/chạy thử bộ cài, kể cả bộ cài bản cũ, ngay trên máy này để kiểm thử
+(khác hẳn với "máy người dùng thật" nói ở mục dưới — mục đó nói tới máy của giáo xứ khác,
+không phải máy này).
+
+**Không `git push` (kể cả tạo/đẩy thẻ) khi chưa được người dùng đồng ý rõ ràng cho lần
+đó.** Được phép `git commit` cục bộ tuỳ ý, kể cả nhiều commit liên tiếp; cứ chuẩn bị sẵn
+commit rồi hỏi trước khi đẩy lên GitHub. Áp dụng cho cả hai kho (`qlgx` và `qlgx_bin`),
+mọi nhánh.
+
+**Không tạo `git worktree` mới khi chưa được người dùng đồng ý rõ ràng cho lần đó** — kể
+cả khi mục đích là để commit sang nhánh khác (xem mục "phiên Claude khác" bên dưới). Hỏi
+trước, nói rõ sẽ tạo worktree ở đâu và để làm gì.
+
+**Không được làm bất cứ điều gì ảnh hưởng tới người dùng đang chạy phần mềm, cho tới
+khi được duyệt để phát hành rộng rãi.** Cụ thể:
+- Được phép chạy `release.ps1` để build và tự kiểm thử cục bộ (xem
+  `QUY_TRINH_PHAT_HANH.md`) — build ra file nằm trên máy này, chưa ai tải được.
+- **Không `git push`** file build đó lên `qlgx`/`qlgx_bin` (đây là kho mà máy chủ cập
+  nhật đọc thẳng — push tức là phát hành cho toàn bộ người dùng đang có phần mềm).
+- Không sửa `VersionConfig.xml`/`version.txt` trên máy chủ thật (`landing/`) hay bất cứ
+  gì khiến máy người dùng tưởng có bản mới.
+- Không cài thử bộ cài lên máy người dùng thật khi chưa được cho phép (đã có ở dưới).
+- Hỏi rõ ràng và chờ được đồng ý trước khi làm bất cứ bước nào trong các bước trên.
+
 ## Bố cục
 
 | Thư mục | Nội dung |
@@ -35,7 +62,7 @@ commit và đẩy cả hai kho (`qlgx` và `qlgx_bin`). Máy chủ cập nhật 
 Riêng nội dung marketing trên trang chủ (`landing/`) vẫn phải sửa tay và deploy riêng —
 xem `QUY_TRINH_PHAT_HANH.md` mục 5.2.
 
-Năm điều tuyệt đối không được quên:
+Sáu điều tuyệt đối không được quên:
 
 1. **Số phiên bản phải tăng mỗi lần phát hành.** Windows Installer chỉ chép đè file khi
    file mới có số phiên bản lớn hơn. Không tăng thì máy người dùng cài xong vẫn chạy bản
@@ -51,6 +78,12 @@ Năm điều tuyệt đối không được quên:
    được ép sang `https`. Máy chạy bản 3.3.7 trở về trước (phần lớn người dùng) và bản
    4.0.0–4.0.1 nằm cứng các địa chỉ này — hỏng chỗ nào là máy đó vĩnh viễn không tự cập
    nhật được nữa. Xem `HOP_DONG_MAY_CHU_CAP_NHAT.md`.
+6. **Bộ cài phải chặn (không tự động đóng) khi thấy `GiaoXu.exe` đang chạy trên máy
+   người dùng.** Cài đè lên khi chương trình đang mở làm Windows Installer hoãn thay
+   các file bị khoá tới lần khởi động lại máy — bộ cài vẫn báo "thành công" nhưng
+   chương trình sau đó không mở lên được (đã xảy ra thật, xem
+   `QUY_TRINH_PHAT_HANH.md` bẫy #11). Không tự kill tiến trình để tránh làm hỏng
+   `giaoxu.mdb` đang mở.
 
 ## Vài điều hay vấp khi sửa mã
 
@@ -60,49 +93,17 @@ Năm điều tuyệt đối không được quên:
 - Thao tác với file `.mdb` (Jet/ACE) phải chạy bằng PowerShell **32-bit**
   (`C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe`).
 - Trong mảng PowerShell, nối chuỗi phải bọc ngoặc đơn: `,@('a','b', ($X + 'y'))`.
+- Custom Action của MSI có script nằm ngay trong Target: **Type 37 = JScript, Type 38 =
+  VBScript** — rất dễ nhầm. Và `On Error Resume Next` nuốt cả `Err.Raise` của chính
+  mình, nên muốn huỷ cài đặt phải `On Error Goto 0` trước khi gọi `Err.Raise`.
 - Có thể có **phiên Claude khác làm việc song song** trên cùng thư mục này ở nhánh khác.
-  Kiểm tra `git branch --show-current` trước khi làm; không `git checkout`, dùng
-  `git worktree` khi cần commit sang nhánh khác.
-
-## Cách làm việc: commit, review, và "thế nào là xong"
-
-**Commit theo từng nhóm thay đổi** — mỗi task, mỗi phase trong kế hoạch là một commit riêng,
-đừng dồn cả chục việc vào một commit khổng lồ. Kho dễ theo dõi và **review code mới khả thi**.
-Đang có phiên khác làm cùng thư mục thì `git add` từng file cụ thể của mình, tuyệt đối không
-`git add -A`/`git add .` (sẽ kéo theo việc dở dang của người khác).
-
-**Review code sau mỗi task/phase**, không để dồn tới cuối.
-
-**Một kế hoạch chỉ coi là XONG khi đủ hai điều kiện:**
-
-1. **Đã kiểm thử qua trình duyệt thật** những chức năng kiểm được trên trình duyệt — không chỉ
-   chạy test tự động, không chỉ gọi API bằng `curl`. Nhiều lỗi chỉ lộ ra khi bấm bằng tay
-   (xem lỗi "in cả gia đình ra giấy trắng" và "luôn báo Chưa có thay đổi" — cả hai đều xanh
-   hết mọi bài test tự động mà vẫn hỏng với người dùng thật).
-2. **Đã review code toàn bộ nhánh** ở bước cuối cùng.
-
-## Bản web (WebApp/) — những thứ hay mất thời gian dò lại
-
-- **CSDL phát triển tên là `qlgx_thu`** (không phải `qlgx`). Chuỗi kết nối thường dùng:
-  `Host=localhost;Database=qlgx_thu;Username=postgres;Password=<mật khẩu cục bộ>`.
-  Các database `qlgx_api_*`, `qlgx_test_*`, `qlgx_data_*` là của test tự sinh, đừng đụng vào.
-- **Máy chủ API dev chạy ở cổng 5096**, giao diện Vite ở **5173** (Vite proxy `/api` sang 5096).
-- Khi chạy API bằng tay cần ba biến môi trường: `ConnectionStrings__Qlgx`,
-  `Qlgx__JwtKey` (**phải là chuỗi Base-64 hợp lệ**, không phải văn bản thường — sai thì mọi lượt
-  đăng nhập trả 500 với lỗi `FormatException`), và `ASPNETCORE_URLS`. Muốn API tự áp migration
-  lúc khởi động thì thêm `Qlgx__ChayMigrationKhiKhoiDong=true` — **không bật cờ này thì bảng mới
-  không bao giờ được tạo** dù migration đã có trong mã.
-- **Đổi `Qlgx__JwtKey` làm mọi phiên đăng nhập hiện có hết hiệu lực** (kể cả của phiên Claude
-  khác đang thử nghiệm) — cân nhắc trước khi khởi động lại API bằng khoá mới.
-- **Khi máy chủ dev đang chạy, nó khoá `bin/Debug`**, nên `dotnet build`/`dotnet test`/`dotnet ef`
-  sẽ đỏ vì không chép đè được DLL. Cách đi vòng (KHÔNG cần dừng máy chủ của phiên khác): build và
-  test ra thư mục riêng — `dotnet build <csproj> -o <thư mục tạm>` và `dotnet test -o <thư mục tạm khác>`.
-  `dotnet ef migrations add` không đi vòng được như vậy: khi bị khoá thì viết tay file migration
-  cùng file `.Designer.cs` (chép từ migration gần nhất, đổi tên lớp và thuộc tính `[Migration]`).
-- Đọc nội dung PDF để kiểm chứng bản in: dùng PyMuPDF (`import fitz`), và nhớ đặt
-  `PYTHONIOENCODING=utf-8` khi in ra màn hình, nếu không console Windows (cp1252) sẽ ném
-  `UnicodeEncodeError` với chữ tiếng Việt.
-- Hai bảng `mau_in_tuy_chinh` và `cach_hien_thi_dung_sai` có `giao_xu_id` **cho phép NULL** với
-  nghĩa "dòng cấp hệ thống, dùng chung cho mọi giáo xứ". Chúng **không** nằm trong bộ lọc toàn
-  cục của EF (phải lọc tay, tường minh ở service) và dùng **policy RLS riêng nhận biết NULL** —
-  policy chung `giao_xu_id::text = current_setting(...)` sẽ giấu mất dòng dùng chung.
+  Kiểm tra `git branch --show-current` trước khi làm; không `git checkout`. Khi cần commit
+  sang nhánh khác, dùng `git worktree` NHƯNG phải xin phép trước (xem mục ở đầu file) —
+  worktree tạo ra vẫn dùng chung `.git` với phiên kia, tạo/xoá worktree không đúng lúc có
+  thể ảnh hưởng tới việc họ đang làm.
+- Vì có nhiều phiên chạy song song, **các thay đổi kiểu migration** (schema D1/SQL, đổi
+  cấu trúc file cấu hình dùng chung, đổi hợp đồng API giữa `landing/` và phần mềm desktop,
+  ...) cần kiểm tra kỹ xem phiên khác có đang đụng vào cùng chỗ không, để tránh xung đột
+  hoặc migrate chồng lên nhau. Nếu cần hỏi thêm thông tin hoặc phối hợp với phiên khác
+  (ví dụ phiên đang làm `WebApp/` trên nhánh `webapp-phase-1`), có thể chủ động liên lạc
+  qua các công cụ giao tiếp phiên (`ListAgents`/gửi tin nhắn) thay vì đoán hoặc làm liều.
