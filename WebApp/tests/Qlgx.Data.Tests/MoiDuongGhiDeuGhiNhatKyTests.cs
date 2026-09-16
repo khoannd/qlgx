@@ -127,6 +127,15 @@ public class MoiDuongGhiDeuGhiNhatKyTests
             "GiaDinhService.cs",
             "GiaoDanService.cs",
             "DotBiTichService.cs",
+            // SaoLuuService.cs dung ExecuteUpdateAsync de danh dau cac dong hang doi cong viec sao
+            // luu/phuc hoi qua han "cho" thanh "loi". Hop le, khong phai lo can sua: (1) bang
+            // cong_viec_sao_luu la hang doi cong viec ha tang, khong phai du lieu nghiep vu giao
+            // xu (giao dan/gia dinh/bi tich) ma cuon nhat ky thay doi sinh ra de bao ve — no khong
+            // thuoc pham vi nhat ky; (2) chu thich ngay tai cho giai thich thao tac nay BAT BUOC
+            // phai nam NGOAI lan SaveChanges chen dong moi, vi chi muc
+            // ux_cong_viec_sao_luu_dang_mo chi cho phep mot dong dang mo va thu tu lenh trong mot
+            // lan SaveChanges la khong xac dinh.
+            "SaoLuuService.cs",
         };
         var goc = TimThuMucGoc();
         var viPham = MoiFileNguon(goc)

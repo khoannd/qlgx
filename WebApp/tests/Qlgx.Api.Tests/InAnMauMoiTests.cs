@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Qlgx.Domain;
@@ -319,13 +320,19 @@ public class InAnMauMoiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
 
     /// <summary>"In danh sách" gọi thẳng <c>LayDanhSach</c> — bộ lọc chung của
     /// <c>QlgxDbContext</c> áp dụng bình thường nên giáo dân/gia đình của giáo xứ KHÁC không
-    /// bao giờ lọt vào PDF của giáo xứ hiện tại. Kiểm bằng cách đếm số dòng gián tiếp qua kích
-    /// thước PDF: thêm một bản ghi ở giáo xứ khác không được làm PDF nặng thêm.</summary>
+    /// bao giờ lọt vào PDF của giáo xứ hiện tại. Trước đây kiểm gián tiếp qua chênh lệch KÍCH
+    /// THƯỚC byte giữa hai lần in — cách đó yếu cả hai chiều: PDF nén (FlateDecode) và có dấu
+    /// thời gian in bên trong nên chênh vài chục byte dù không rò rỉ gì (báo động giả khi chạy
+    /// chung cả bộ test), mà một dòng rò rỉ tình cờ nén xuống dưới ngưỡng thì lại lọt qua (bỏ
+    /// lọt thật). Giờ trích THẲNG văn bản PDF bằng PdfPig và kiểm đúng bất biến cần bảo vệ: tên
+    /// giáo dân giáo xứ khác không được xuất hiện, còn tên giáo dân giáo xứ hiện tại phải có mặt
+    /// (để một PDF rỗng/lỗi vẫn bị bắt thay vì "đạt" oan). So khớp sau khi bỏ hết khoảng trắng vì
+    /// PdfPig trích chữ theo toạ độ từng ô bảng — ranh giới khoảng trắng giữa các ô/cột không ổn
+    /// định (ví dụ "Nguoi Xu Minh DS" có thể ra "NguoiXu MinhDS"), nhưng thứ tự ký tự thì đúng.</summary>
     [Fact]
     public async Task In_danh_sach_giao_dan_khong_lan_sang_giao_xu_khac()
     {
-        var resTruoc = await app.CreateAuthClient().GetAsync("/api/giao-dan/in/danh-sach");
-        var bytesTruoc = await resTruoc.Content.ReadAsByteArrayAsync();
+        await TaoGiaoDan(8800, "Nguoi Xu Minh DS");
 
         var giaoXuKhac = Guid.NewGuid();
         await using (var db = app.TaoContextThuan())
@@ -335,12 +342,20 @@ public class InAnMauMoiTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
             await db.SaveChangesAsync();
         }
 
-        var resSau = await app.CreateAuthClient().GetAsync("/api/giao-dan/in/danh-sach");
-        var bytesSau = await resSau.Content.ReadAsByteArrayAsync();
+        var res = await app.CreateAuthClient().GetAsync("/api/giao-dan/in/danh-sach");
+        var bytes = await res.Content.ReadAsByteArrayAsync();
+        var vanBan = Regex.Replace(DocVanBanPdf(bytes), @"\s+", "");
 
-        // Không so bằng tuyệt đối (NgayThangNamIn có giờ:phút, PDF có thể lệch vài byte metadata
-        // giữa hai lần gọi) — chỉ cần xác nhận KHÔNG có thêm một dòng đầy đủ (chênh > 50 byte,
-        // đủ để phát hiện một dòng <tr> mới nếu vô tình lọt qua bộ lọc).
-        Math.Abs(bytesSau.Length - bytesTruoc.Length).Should().BeLessThan(50);
+        vanBan.Should().NotContain("NguoiXuKhacDS");
+        vanBan.Should().Contain("NguoiXuMinhDS");
+    }
+
+    private static string DocVanBanPdf(byte[] bytes)
+    {
+        using var pdf = UglyToad.PdfPig.PdfDocument.Open(bytes);
+        var sb = new StringBuilder();
+        foreach (var trang in pdf.GetPages())
+            sb.AppendLine(trang.Text);
+        return sb.ToString();
     }
 }
