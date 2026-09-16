@@ -133,9 +133,17 @@ kênh thông báo phiên bản mới của phần mềm để biết khi nào n�
 |---|---|---|
 | Cài đặt báo lỗi cổng 80/443 đang bận | Máy chủ đã có sẵn một web server khác (Apache, Nginx…) chiếm cổng 80/443 | Gỡ hoặc dừng web server đó trước khi cài QLGX. QLGX cần độc chiếm hai cổng này để phục vụ HTTPS |
 | Có tên miền nhưng vẫn chạy HTTP, không lên được HTTPS | DNS của tên miền chưa trỏ đúng về địa chỉ IP máy chủ, nên hệ thống cấp chứng chỉ tự động (Let's Encrypt) không xin được chứng chỉ | Kiểm tra bản ghi A của tên miền trỏ đúng IP máy chủ (chờ vài phút tới vài giờ để DNS cập nhật), sau đó liên hệ người kỹ thuật để cấu hình lại HTTPS |
-| `qlgx status` báo "het dia"/hết dung lượng, hoặc hệ thống chạy chậm bất thường | Ổ đĩa máy chủ gần đầy — dữ liệu giáo dân, ảnh đại diện, hoặc log tích luỹ lâu ngày | Liên hệ người kỹ thuật để dọn dẹp hoặc nâng cấp ổ đĩa. Không tự ý xoá file trong `/opt/qlgx` hay `/var/lib/qlgx` |
-| `qlgx status` báo kho sao lưu (R2) từ chối khoá / không mở được | Access Key/Secret Key trên Cloudflare bị thu hồi, hết hạn, hoặc gõ sai lúc cài | Kiểm tra lại token trên Cloudflare (mục 2), tạo token mới nếu cần, rồi cập nhật `/etc/qlgx/backup.env` (cần người kỹ thuật hỗ trợ) |
+| Hệ thống chạy chậm bất thường, hoặc sao lưu bắt đầu thất bại | Ổ đĩa máy chủ gần đầy — dữ liệu giáo dân, ảnh đại diện, hoặc log tích luỹ lâu ngày | Chạy `df -h /` để xem ổ đĩa còn trống bao nhiêu (lưu ý: `qlgx status` **không** kiểm tra dung lượng đĩa — chỉ lúc cài/cập nhật mới kiểm). Liên hệ người kỹ thuật để dọn dẹp hoặc nâng cấp ổ đĩa. Không tự ý xoá file trong `/opt/qlgx` hay `/var/lib/qlgx` |
+| `qlgx status` in dòng `KHONG DAT    Kho restic mo duoc` | Access Key/Secret Key trên Cloudflare bị thu hồi, hết hạn, hoặc gõ sai lúc cài; hoặc kho sao lưu chưa được khởi tạo | Kiểm tra lại token trên Cloudflare (mục 2), tạo token mới nếu cần, rồi cập nhật `/etc/qlgx/backup.env` (cần người kỹ thuật hỗ trợ) |
+| `qlgx status` in dòng `KHONG DAT    The phuc hoi da duoc cat ngoai may chu` | Tệp `/etc/qlgx/the-phuc-hoi.txt` vẫn còn nằm trên chính máy chủ sau 7 ngày — mất máy chủ là mất luôn cả thẻ lẫn dữ liệu | Cất Thẻ phục hồi ra ngoài máy chủ (xem `THE-PHUC-HOI.md`), rồi xoá tệp đó: `rm /etc/qlgx/the-phuc-hoi.txt` |
+| `qlgx status` in dòng `KHONG DAT    Container api dang chay` (hoặc `Container postgres dang chay`) | Container chưa lên được, thường do lỗi cấu hình hoặc lỗi CSDL | `qlgx logs api` — đọc vài dòng cuối và gửi cho người kỹ thuật hỗ trợ |
 | Trang web không mở được, hoặc mở lên báo lỗi | Container API chưa lên được (thường do lỗi cấu hình hoặc lỗi CSDL) | Xem log để biết chi tiết: <br>`qlgx logs api` <br>Đọc vài dòng cuối, thường có mô tả lỗi rõ ràng. Không tự sửa nếu không chắc — gửi log này cho người kỹ thuật hỗ trợ |
 
 Với mọi trục trặc không có trong bảng trên, chạy `qlgx status` và gửi kết quả cho người kỹ
 thuật hỗ trợ — bảng đó cho biết chính xác phần nào của hệ thống đang có vấn đề.
+
+**Cách đọc `qlgx status`:** mỗi dòng bắt đầu bằng `DAT` (đạt) hoặc `KHONG DAT` (không đạt), rồi
+tới tên mục được kiểm. Chỉ cần tìm các dòng `KHONG DAT` và đối chiếu tên mục với bảng trên. Các
+mục được kiểm gồm: hai container đang chạy, API trả về sẵn sàng, các vai trò và quyền trên cơ sở
+dữ liệu, quyền tệp `.env`/`backup.env`, container API không giữ khoá R2, in được PDF, Thẻ phục
+hồi đã cất ra ngoài máy chủ, và kho restic mở được. **Không** có mục nào kiểm dung lượng đĩa.

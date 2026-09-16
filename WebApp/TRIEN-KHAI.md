@@ -300,10 +300,32 @@ tập phục hồi trước khi có giáo xứ thật đầu tiên.
 
 ## 14. Việc CHƯA kiểm chứng được trên máy chuẩn bị tài liệu này
 
-Ghi rõ ở đây theo đúng yêu cầu — đừng coi các mục này là "đã xong". (Reverse proxy/HTTPS tự
-động, sao lưu, và phục hồi — từng liệt kê ở đây trước Task 20 — nay đã được cài đặt, chạy thử
-đầu-cuối thật, và có tài liệu vận hành riêng, xem mục 7/12 và `docs/CAI-DAT-MAY-CHU.md`/
-`docs/SAO-LUU-PHUC-HOI.md`.)
+Ghi rõ ở đây theo đúng yêu cầu — đừng coi các mục này là "đã xong".
+
+**Về reverse proxy/HTTPS tự động, sao lưu và phục hồi** (trước Task 20 nằm trong danh sách này):
+mã và tài liệu vận hành đã có (mục 7/12, `docs/CAI-DAT-MAY-CHU.md`, `docs/SAO-LUU-PHUC-HOI.md`,
+`docs/THE-PHUC-HOI.md`). Nhưng phải nói đúng mức độ đã kiểm chứng, vì một câu "đã chạy thử
+đầu-cuối thật" không kèm bằng chứng sẽ được lần phát hành sau tin theo:
+
+- **Đã kiểm chứng thật:** các kịch bản `WebApp/scripts/` chạy được trong container Ubuntu dùng
+  một lần; bộ test tự động của giao diện và của API (`npx vitest run`, `dotnet test`) xanh toàn
+  bộ; bảng tự kiểm chứng `qlgx status` chạy được và **biết báo `KHONG DAT`** khi mục kiểm hỏng.
+- **CHƯA kiểm chứng:** chưa từng chạy đầu-cuối trên một **VPS thật với kho Cloudflare R2 thật**.
+  Cụ thể chưa có lần chạy thật nào cho: lần sao lưu đầu tiên lên R2 (kể cả việc kho restic có
+  được khởi tạo hay không — xem C4 của `.superpowers/review-sao-luu/review-backend.md`), diễn tập
+  phục hồi tự động hằng tuần, và **kịch bản "phục hồi từ máy trắng"** trong bảng kiểm thử của
+  spec mục 10. Ba việc này phải chạy thật một lần **trước khi giao cho giáo xứ đầu tiên**, và ghi
+  lại ngày/môi trường/log tóm tắt vào đây, giống cách mục 5 đã làm.
+
+**Màn hình chặn toàn trang khi đang phục hồi — khoản nợ đã biết** (spec 7.2 đoạn cuối): spec đòi
+trong lúc phục hồi thì **mọi** người dùng ở **mọi** màn hình thấy màn chặn, và sau khi xong thì
+tất cả bị buộc đăng nhập lại. Hiện mới chặn được **tab của chính người bấm phục hồi**
+(`SaoLuuPage.tsx`, thành phần `ManChan`), và modal xác nhận có nhắc người bấm tự đi báo các giáo
+xứ. Lý do chưa làm trọn: cả nhóm `/api/sao-luu` đòi policy `QuanTriHeThong`, nên tài khoản thường
+không có đường nào biết đang có công việc phục hồi chạy — phải bổ sung một đường báo trạng thái
+mở cho mọi tài khoản đã đăng nhập, cộng với việc vô hiệu hoá token sau khi hoán đổi CSDL. Hậu quả
+nếu bỏ qua: văn phòng giáo xứ khác vẫn nhập liệu bình thường trong lúc phục hồi, phần họ nhập
+biến mất ở bước hoán đổi mà không có thông báo nào.
 
 - **Không có Postgres quản lý riêng (managed) nào được thử** — hướng dẫn mục 2 giả định
   PostgreSQL tự vận hành (trong `docker-compose.yml` hoặc một instance tự cài); nếu dùng dịch

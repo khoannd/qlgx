@@ -28,11 +28,24 @@ PHUC HOI TU MAY TRANG:
   2. Cai lai bo ung dung (tu cai Docker luon, chua co du lieu giao xu nao):
        curl -fsSL https://raw.githubusercontent.com/khoannd/qlgx/webapp-phase-1/WebApp/scripts/install.sh | sudo bash
      Khi duoc hoi kho R2, nhap dung KHO SAO LUU / R2 KEY ID / R2 SECRET o tren.
-  3. curl -fsSL https://github.com/khoannd/qlgx.git/raw/webapp-phase-1/WebApp/scripts/qlgx-restore.sh -o qlgx-restore.sh
-  4. sudo bash qlgx-restore.sh --card the-phuc-hoi.txt          (in ra ke hoach)
-  5. sudo bash qlgx-restore.sh --card the-phuc-hoi.txt --apply  (thuc hien)
+  3. curl -fsSL https://raw.githubusercontent.com/khoannd/qlgx/webapp-phase-1/WebApp/scripts/qlgx-restore.sh -o qlgx-restore.sh
+  4. Go lai noi dung the nay vao tep /root/the-phuc-hoi.txt (xem SAO-LUU-PHUC-HOI.md muc 6)
+  5. sudo bash qlgx-restore.sh --card the-phuc-hoi.txt          (in ra ke hoach)
+  6. sudo bash qlgx-restore.sh --card the-phuc-hoi.txt --apply  (thuc hien)
 =======================================================
 ```
+
+> **Kiểm tra ngay khi cầm tờ thẻ trên tay:** hai lệnh `curl` ở bước 2 và bước 3 phải bắt đầu
+> bằng `https://raw.githubusercontent.com/`. Nếu tờ thẻ của bạn in dạng
+> `https://github.com/khoannd/qlgx.git/raw/...` (có đuôi `.git`) thì **địa chỉ đó sai** — GitHub
+> trả về "404 không tìm thấy" và lệnh `curl` sẽ im lặng thất bại đúng lúc bạn cần nó nhất. Hãy
+> gạch đi và ghi tay lại theo dạng `raw.githubusercontent.com` như trên. (Bộ cài từ bản sau đã in
+> đúng dạng này.)
+>
+> Tương tự, nếu tờ thẻ của bạn **không có** bước "Gõ lại nội dung thẻ này vào tệp
+> `/root/the-phuc-hoi.txt`" mà nhảy thẳng từ `curl` sang `qlgx-restore.sh --card`, thì vẫn **phải
+> làm bước đó** — kịch bản đọc các khoá từ một tệp, và trên máy mới chưa hề có tệp nào. Khuôn mẫu
+> gõ được nằm ở `SAO-LUU-PHUC-HOI.md` mục 6 bước 5.
 
 Đây là tờ giấy **duy nhất** đủ để dựng lại toàn bộ hệ thống — với đúng dữ liệu giáo xứ — trên
 một máy chủ hoàn toàn mới, kể cả khi máy chủ hiện tại bị cháy, mất, hay bị phá huỷ hoàn toàn.
@@ -46,7 +59,7 @@ một máy chủ hoàn toàn mới, kể cả khi máy chủ hiện tại bị c
 | **KHO SAO LƯU** | Địa chỉ bucket Cloudflare R2 nơi bản sao lưu được gửi tới |
 | **R2 KEY ID / R2 SECRET** | Khoá dùng để hệ thống mới kết nối lại vào đúng kho sao lưu đó |
 | **MẬT KHẨU CSDL** | Ba bộ tên đăng nhập/mật khẩu của cơ sở dữ liệu — chỉ dùng khi người kỹ thuật cần xử lý sự cố sâu, người vận hành thường không cần đụng tới |
-| **PHỤC HỒI TỪ MÁY TRẮNG** | Năm bước làm khi mất hẳn máy chủ cũ — xem hướng dẫn chi tiết và giải thích từng bước ở `SAO-LUU-PHUC-HOI.md` mục "Cứu hộ khi mất máy chủ" |
+| **PHỤC HỒI TỪ MÁY TRẮNG** | Các bước làm khi mất hẳn máy chủ cũ — xem hướng dẫn chi tiết và giải thích từng bước ở `SAO-LUU-PHUC-HOI.md` mục "Cứu hộ khi mất máy chủ". **Lưu ý:** kịch bản phục hồi đọc các khoá từ một TỆP, nên phải gõ lại tờ giấy này thành tệp `/root/the-phuc-hoi.txt` trước — khuôn mẫu chép được nằm ở mục 6 của tài liệu đó |
 
 ## CẢNH BÁO — đọc kỹ trước khi cất tờ này
 
