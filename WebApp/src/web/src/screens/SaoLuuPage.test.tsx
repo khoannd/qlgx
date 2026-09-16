@@ -25,6 +25,10 @@ const motBanSao = {
 }
 
 beforeEach(() => {
+  // Neo dong ho: den trang thai nay PHU THUOC thoi gian (xem lib/denSaoLuu.ts — sao luu tre 8
+  // gio thi vang, dien tap cu 14 ngay thi vang). Khong neo thi bo test se tu chuyen vang roi do
+  // theo ngay thang that, va mot hom nao do do het ma khong ai doi dong nao.
+  vi.setSystemTime(new Date('2026-09-13T08:00:00Z'))
   vi.mocked(api.saoLuu.tinhTrang).mockResolvedValue(tinhTrangXanh)
   vi.mocked(api.saoLuu.danhSach).mockResolvedValue([motBanSao])
   vi.mocked(api.saoLuu.congViecGanDay).mockResolvedValue([])
@@ -85,11 +89,33 @@ describe('SaoLuuPage', () => {
     expect(screen.getAllByText(/13\/09\/2026 \d{2}:\d{2}/).length).toBeGreaterThan(0)
   })
 
-  it('den do hien canh bao noi bat', async () => {
+  // I4: cau hien ra phai la tieng Viet CO DAU, khong con ten cong cu ky thuat; chuoi tho van
+  // giu lai nhung gap vao trong muc "Thong tin cho nguoi ky thuat".
+  it('den do hien canh bao tieng Viet, giu chuoi ky thuat trong muc rieng', async () => {
     vi.mocked(api.saoLuu.tinhTrang).mockResolvedValue(
       { ...tinhTrangXanh, den: 'do', loiGanNhat: 'restic check that bai' })
     render(<SaoLuuPage />)
-    expect(await screen.findByText(/restic check that bai/)).toBeDefined()
+    expect(await screen.findByText(/Kho sao lưu bị lỗi khi kiểm tra tính toàn vẹn/)).toBeDefined()
+    expect(screen.getByText(/Thông tin cho người kỹ thuật/)).toBeDefined()
+    expect(screen.getByTestId('den-do')).toBeDefined()
+  })
+
+  // I3: may chu tra ve 'xanh' vi DienTapDat=true va khong xet lan dien tap do cu tu bao gio.
+  // Giao dien phai tu leo thang, neu khong nguoi dung doc chu "Dat" chu khong doc ngay.
+  it('den KHONG con xanh khi dien tap phuc hoi da cu hang thang, du may chu bao xanh', async () => {
+    vi.mocked(api.saoLuu.tinhTrang).mockResolvedValue(
+      { ...tinhTrangXanh, den: 'xanh', dienTapGanNhat: '2026-06-01T03:00:00Z' })
+    render(<SaoLuuPage />)
+    expect(await screen.findByTestId('den-do')).toBeDefined()
+    expect(screen.queryByText(/^🟢/)).toBeNull()
+  })
+
+  // N1: thoi gian tuong doi theo mockup spec 8.2 — de nhan ra ngay "da ba ngay chua sao luu"
+  // ma khong phai tu tinh.
+  it('hien thoi gian tuong doi ben canh ngay gio day du', async () => {
+    render(<SaoLuuPage />)
+    await screen.findByTestId('den-xanh')
+    expect(screen.getByText(/2 giờ trước/)).toBeDefined()
   })
 
   it('bam "Sao luu ngay" thi tao cong viec loai sao_luu', async () => {

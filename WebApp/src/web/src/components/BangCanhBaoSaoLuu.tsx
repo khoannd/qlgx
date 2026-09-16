@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import type { TinhTrangSaoLuu } from '../api/types'
+import { nhanLoiSaoLuu, tinhDenHieuLuc } from '../lib/denSaoLuu'
 
 /**
  * Băng cảnh báo hiện trên đầu MỌI màn hình cho tài khoản Quản trị hệ thống khi sao lưu đang có
@@ -30,14 +31,32 @@ export function BangCanhBaoSaoLuu(
     return () => { huy = true; clearInterval(dinhKy) }
   }, [laQuanTriHeThong])
 
-  if (!tinhTrang || tinhTrang.den !== 'do') return null
+  if (!tinhTrang) return null
+  // I2: đèn VÀNG cũng phải có băng cảnh báo. `qlgx-runner.timer` bị tắt, host hết đĩa, hay mạng
+  // R2 chết đều dẫn tới vàng — mà băng cũ chỉ hiện với đỏ, nên cách hỏng phổ biến nhất lại là
+  // cách duy nhất không báo cho ai. Xem thêm `tinhDenHieuLuc`: quá 24 giờ không có bản sao mới
+  // thì vàng tự leo thang thành đỏ.
+  const den = tinhDenHieuLuc(tinhTrang)
+  if (den === 'xanh') return null
+
+  const laDo = den === 'do'
+  const cauLoi = nhanLoiSaoLuu(tinhTrang.loiGanNhat)
+  const cau = laDo
+    ? (cauLoi ?? 'Chưa có bản sao lưu nào thành công — nếu mất máy chủ lúc này thì không phục '
+              + 'hồi được.')
+    : (cauLoi ?? 'Đã quá lâu chưa có bản sao lưu mới hoặc chưa diễn tập phục hồi lại.')
 
   return (
-    <div role="alert" style={{ background: 'var(--rose-bg, #fde8ec)', color: 'var(--rose-ink)',
-                               padding: '8px 14px', fontSize: 12.5, display: 'flex',
-                               gap: 10, alignItems: 'center' }}>
-      <strong>⚠ Sao lưu đang có vấn đề.</strong>
-      <span>{tinhTrang.loiGanNhat ?? 'Chưa có bản sao lưu nào thành công.'}</span>
+    <div role="alert"
+      style={{ background: laDo ? 'var(--rose-bg, #fde8ec)' : 'var(--amber-bg, #fdf1d8)',
+               color: laDo ? 'var(--rose-ink)' : 'var(--amber-ink, #8a5a00)',
+               padding: '8px 14px', fontSize: 12.5, display: 'flex',
+               gap: 10, alignItems: 'center' }}>
+      <strong>
+        <span aria-hidden="true">{laDo ? '🔴' : '🟡'}</span>{' '}
+        {laDo ? 'Sao lưu đang có vấn đề.' : 'Sao lưu đang chậm trễ.'}
+      </strong>
+      <span>{cau}</span>
       <button type="button" className="btn" onClick={onMoManHinh}>Xem chi tiết</button>
     </div>
   )

@@ -8,6 +8,7 @@ import { GxGrid } from '../components/GxGrid'
 import { SaoLuuPhucHoiModal } from './SaoLuuPhucHoiModal'
 import { TrangThaiTai } from '../components/TrangThaiTai'
 import { dinhDangNgayGio } from '../lib/ngay'
+import { nhanDen, nhanLoiSaoLuu, thoiGianTuongDoi, tinhDenHieuLuc } from '../lib/denSaoLuu'
 
 const MS_HOI_LAI = 2000
 
@@ -260,25 +261,46 @@ export function SaoLuuPage() {
 
 function KhoiTinhTrang({ tinhTrang }: { tinhTrang: TinhTrangSaoLuu | null }) {
   if (!tinhTrang) return null
-  const { den } = tinhTrang
-  const nhan = den === 'xanh' ? 'Bình thường'
-             : den === 'vang' ? 'Chưa có bản sao mới'
-             : 'Có vấn đề với sao lưu'
-  const mau = den === 'do' ? 'var(--rose-ink)' : undefined
+  // I2/I3: đèn hiển thị có thể NẶNG HƠN đèn máy chủ trả về — xem lib/denSaoLuu.ts.
+  const den = tinhDenHieuLuc(tinhTrang)
+  const { chu, mau, cham } = nhanDen(den)
+  const cauLoi = nhanLoiSaoLuu(tinhTrang.loiGanNhat)
+  const tuongDoiSaoLuu = thoiGianTuongDoi(tinhTrang.saoLuuGanNhat)
+  const tuongDoiDienTap = thoiGianTuongDoi(tinhTrang.dienTapGanNhat)
   return (
-    <section className="glass" role="status"
+    <section className="glass" role="status" data-testid={`den-${den}`}
       style={{ padding: 16, borderRadius: 'var(--r-card)', display: 'flex',
                flexDirection: 'column', gap: 6 }}>
-      <strong style={{ color: mau }}>{nhan}</strong>
+      <strong style={{ color: mau }}><span aria-hidden="true">{cham}</span> {chu}</strong>
       <div style={{ fontSize: 12.5 }}>
         Sao lưu gần nhất: <strong>{dinhDangNgayGio(tinhTrang.saoLuuGanNhat) || 'chưa có'}</strong>
+        {tuongDoiSaoLuu && ` (${tuongDoiSaoLuu})`}
         {' · '}{tinhTrang.soBanSao} bản sao
         {' · '}Diễn tập phục hồi gần nhất:{' '}
         <strong>{dinhDangNgayGio(tinhTrang.dienTapGanNhat) || 'chưa có'}</strong>
+        {tuongDoiDienTap && ` (${tuongDoiDienTap})`}
         {tinhTrang.dienTapGanNhat && (tinhTrang.dienTapDat ? ' — Đạt' : ' — KHÔNG ĐẠT')}
       </div>
+      {den === 'vang' && !cauLoi && (
+        <div style={{ color: 'var(--amber-ink, #8a5a00)', fontSize: 12.5 }}>
+          Đã quá lâu chưa có bản sao lưu mới hoặc chưa diễn tập phục hồi lại. Hãy kiểm tra máy chủ
+          còn bật và còn kết nối mạng; nếu vẫn vậy, hãy báo người kỹ thuật hỗ trợ.
+        </div>
+      )}
+      {cauLoi && (
+        <div style={{ color: 'var(--rose-ink)', fontSize: 12.5 }}>{cauLoi}</div>
+      )}
+      {/* I4: chuỗi kỹ thuật thô (tiếng Việt không dấu, tên công cụ) vẫn giữ lại — nhưng gấp vào
+          trong, có nhãn nói rõ nó dành cho ai, thay vì đập vào mắt người vận hành. */}
       {tinhTrang.loiGanNhat && (
-        <div style={{ color: 'var(--rose-ink)', fontSize: 12.5 }}>{tinhTrang.loiGanNhat}</div>
+        <details>
+          <summary style={{ fontSize: 12, cursor: 'pointer' }}>
+            Thông tin cho người kỹ thuật
+          </summary>
+          <pre style={{ fontSize: 11, whiteSpace: 'pre-wrap', margin: '6px 0 0' }}>
+            {tinhTrang.loiGanNhat}
+          </pre>
+        </details>
       )}
     </section>
   )
