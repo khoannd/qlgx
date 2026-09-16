@@ -45,6 +45,18 @@ export function useTabDocs() {
     })
   }, [])
 
+  /** Đóng hết các thẻ đóng được (giữ lại "Tổng quan" — `dongDuoc === false`), dùng cho nút
+   * "Đóng tất cả" khi thanh tab tràn quá nhiều thẻ sau một buổi làm việc dài. */
+  const dongTatCa = useCallback(() => {
+    setTrangThai((truoc) => {
+      const conLai = truoc.danhSach.filter((t) => t.dongDuoc === false)
+      return {
+        danhSach: conLai,
+        dangChon: conLai.some((t) => t.id === truoc.dangChon) ? truoc.dangChon : (conLai.at(-1)?.id ?? ''),
+      }
+    })
+  }, [])
+
   /** Đổi tiêu đề một thẻ ĐANG MỞ — dùng khi mở thẻ chưa biết tên bản ghi (tải bất đồng bộ từ
    * API), rồi cập nhật lại đúng tên thật khi tải xong (ví dụ "Gia đình" tĩnh → "Paul Trần Văn
    * Thái") để mở nhiều thẻ cùng loại vẫn phân biệt được — xem can-review-sau.md. Không đổi gì
@@ -56,5 +68,13 @@ export function useTabDocs() {
     }))
   }, [])
 
-  return { danhSach: trangThai.danhSach, dangChon: trangThai.dangChon, mo, chon, dong, suaTieuDe }
+  return {
+    danhSach: trangThai.danhSach,
+    dangChon: trangThai.dangChon,
+    mo,
+    chon,
+    dong,
+    dongTatCa,
+    suaTieuDe,
+  }
 }

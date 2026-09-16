@@ -7,6 +7,12 @@ const co = (field: keyof GiaoDanListItem, headerName: string, width = 110): ColD
   headerName,
   width,
   valueFormatter: (p) => (p.value === true ? '✓' : p.value === false ? '—' : (p.value ?? '—')),
+  // ag-grid tự nhận diện cột giá trị boolean và vẽ ô "checkbox chỉ đọc" (đè lên valueFormatter
+  // ở trên khi hiển thị, valueFormatter chỉ còn tác dụng lúc xuất Excel/lọc), NHƯNG ô lọc dạng
+  // chữ (`agTextColumnFilter`) không gõ được với kiểu boolean — ag-grid tự vô hiệu hoá ô lọc
+  // mà không báo gì, để lại một ô trắng trống trông như lọc được mà thật ra không (UX review
+  // 2026-09-08 mục 7). Tắt hẳn filter cho các cột này thay vì để một ô lọc giả không hoạt động.
+  filter: false,
 })
 
 /** Cột ngày: GIỮ NGUYÊN giá trị gốc ISO `yyyy-MM-dd` ở `field` (so sánh/sắp xếp/lọc vẫn dựa
