@@ -24,11 +24,19 @@ public static class MauInEndpoints
         nhom.MapGet("", async (MauInService dv, CancellationToken ct) =>
             Results.Ok(await dv.LayDanhSach(ct)));
 
+        // C-8 (review-bao-mat.md): route nay nhan HTML TUY Y roi ve PDF bang Chromium, nhung
+        // truoc day chi doi RequireAuthorization() tron trong khi hai route LUU mau ngay ben duoi
+        // doi "QuanTri"/"QuanTriHeThong" — bat doi xung gan nhu chac chan la so suat. Hau qua
+        // that: mot tai khoan NHAP LIEU THUONG cua bat ky giao xu nao gui vai chuc request song
+        // song, moi request vai tram KB HTML gay no layout, la Chromium (mot tien trinh
+        // Singleton dung chung cho CA may chu) het bo nho hoac treo — MOI giao xu mat chuc nang
+        // in giay chung nhan rua toi, hon phoi, so bi tich. Khong can quyen quan tri, khong can
+        // lo hong nao khac. Sua bang dung quyen ma hai route lan can da dung.
         nhom.MapPost("/{tenMau}/xem-thu", async (MauInService dv, string tenMau,
             XemThuMauInRequest yc, CancellationToken ct) =>
             await dv.XemThu(tenMau, yc.NoiDungHtml, ct) is { } pdf
                 ? Results.File(pdf, "application/pdf", $"XemThu_{tenMau}.pdf")
-                : Results.NotFound());
+                : Results.NotFound()).RequireAuthorization("QuanTri");
 
         var rieng = nhom.MapGroup("/{tenMau}/rieng").RequireAuthorization("QuanTri");
         rieng.MapGet("", async (MauInService dv, string tenMau, CancellationToken ct) =>

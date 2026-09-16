@@ -206,4 +206,23 @@ public class MauInTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
         await using var db = app.TaoContextThuan();
         db.MauInTuyChinh.Any(m => m.GiaoXuId == app.GiaoXuId && m.TenMau == TenMauThu).Should().BeFalse();
     }
+
+    [Fact]
+    public async Task Tai_khoan_nhap_lieu_thuong_KHONG_goi_duoc_xem_thu()
+    {
+        // C-8 (.superpowers/review-sao-luu/review-bao-mat.md): /xem-thu nhận HTML TUỲ Ý rồi vẽ
+        // PDF bằng Chromium, nhưng trước đây chỉ đòi RequireAuthorization() trơn — trong khi hai
+        // route LƯU mẫu ngay bên dưới đòi "QuanTri"/"QuanTriHeThong". Bất đối xứng đó cho một
+        // tài khoản nhập liệu thường (LoaiTaiKhoan=1) của BẤT KỲ giáo xứ nào bắn vài chục request
+        // song song, mỗi request vài trăm KB HTML gây nổ layout, làm Chromium — một tiến trình
+        // Singleton dùng chung cho CẢ máy chủ — hết bộ nhớ hoặc treo. Hậu quả: MỌI giáo xứ trên
+        // máy chủ mất chức năng in giấy chứng nhận rửa tội, hôn phối, sổ bí tích.
+        var client = app.CreateAuthClient(loaiTaiKhoan: 1);
+
+        var res = await client.PostAsJsonAsync($"/api/mau-in/{TenMauThu}/xem-thu",
+            new XemThuMauInRequest("<html><body>bat ky</body></html>"));
+
+        res.StatusCode.Should().Be(HttpStatusCode.Forbidden,
+            "xem thu phai doi dung quyen nhu hai route luu mau ngay ben canh");
+    }
 }

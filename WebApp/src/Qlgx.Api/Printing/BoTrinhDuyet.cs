@@ -31,6 +31,29 @@ public class BoTrinhDuyet : IAsyncDisposable
     private IPlaywright? _playwright;
     private IBrowser? _trinhDuyet;
 
+    /// <summary>
+    /// C-8 (review-bao-mat.md) — tran so luot VE PDF chay dong thoi tren trinh duyet dung chung.
+    ///
+    /// <see cref="_khoa"/> chi bao ve luc KHOI DONG trinh duyet, khong gioi han so tab dang ve.
+    /// Vi BoTrinhDuyet la Singleton dung chung cho CA may chu (moi giao xu), mot nguoi gui vai
+    /// chuc request in song song la du lam Chromium het bo nho — va khi Chromium chet thi MOI
+    /// giao xu mat chuc nang in. Bon luot song song la du cho nhip in cua mot van phong giao xu
+    /// (in la thao tac mot nguoi bam mot lan), va la con so nho den muc mot ke co tinh cung
+    /// khong lam sap duoc tien trinh: cac luot vuot tran chi phai XEP HANG, khong bi tu choi.
+    /// </summary>
+    private readonly SemaphoreSlim _tranDongThoi = new(4, 4);
+
+    /// <summary>Tran thoi gian cho MOT luot ve PDF. Playwright mac dinh cho 30 giay cho tung
+    /// thao tac; o day dat tuong minh va cho ca luot (nap noi dung + ve) vi mot mau in gay no
+    /// layout — vi du `page-break-after` sinh hang van trang — co the giu mot tab song rat lau ma
+    /// khong thao tac le nao qua han. Qua han thi huy dung luot do, khong keo theo ai.</summary>
+    private static readonly TimeSpan TranThoiGianVe = TimeSpan.FromSeconds(30);
+
+    /// <summary>Tran thoi gian cho luot XEP HANG truoc khi duoc ve. Dai hon TranThoiGianVe vi
+    /// hang doi binh thuong van chay; muc dich chi la khong de mot nguoi dung that treo mai
+    /// khong co cau tra loi nao.</summary>
+    private static readonly TimeSpan TranThoiGianXepHang = TimeSpan.FromSeconds(60);
+
     private async Task<IBrowser> LayTrinhDuyet(CancellationToken ct)
     {
         if (_trinhDuyet is { IsConnected: true }) return _trinhDuyet;
@@ -70,6 +93,22 @@ public class BoTrinhDuyet : IAsyncDisposable
     /// tra vì Playwright ném lỗi rõ ràng nếu nhận chuỗi khổ giấy không hợp lệ.</summary>
     public virtual async Task<byte[]> XuatPdfAsync(string html, CancellationToken ct, bool landscape = false, string khoGiay = "A4")
     {
+        // Xep hang truoc khi cham toi trinh duyet — xem _tranDongThoi (C-8).
+        using var huyXepHang = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        huyXepHang.CancelAfter(TranThoiGianXepHang);
+        await _tranDongThoi.WaitAsync(huyXepHang.Token);
+        try
+        {
+            return await VePdf(html, ct, landscape, khoGiay);
+        }
+        finally
+        {
+            _tranDongThoi.Release();
+        }
+    }
+
+    private async Task<byte[]> VePdf(string html, CancellationToken ct, bool landscape, string khoGiay)
+    {
         var trinhDuyet = await LayTrinhDuyet(ct);
         // Tắt JavaScript VÀ chặn mọi yêu cầu mạng — bắt buộc kể từ khi mẫu in có thể do
         // giáo xứ/quản trị hệ thống tự nhập (xem quan-ly-mau-in.md mục "Lỗ hổng bảo mật"): một
@@ -89,9 +128,17 @@ public class BoTrinhDuyet : IAsyncDisposable
                 return route.ContinueAsync();
             return route.AbortAsync();
         });
+        // Tran thoi gian cho MOI thao tac cua trang nay (C-8) — truoc day ca SetContentAsync lan
+        // PdfAsync deu goi khong co timeout nao, nen mot noi dung gay no layout giu tab song vo
+        // han va an dan tai nguyen cua trinh duyet dung chung.
+        trang.SetDefaultTimeout((float)TranThoiGianVe.TotalMilliseconds);
         try
         {
-            await trang.SetContentAsync(html, new PageSetContentOptions { WaitUntil = WaitUntilState.NetworkIdle });
+            await trang.SetContentAsync(html, new PageSetContentOptions
+            {
+                WaitUntil = WaitUntilState.NetworkIdle,
+                Timeout = (float)TranThoiGianVe.TotalMilliseconds,
+            });
             return await trang.PdfAsync(new PagePdfOptions
             {
                 Format = khoGiay,
@@ -116,5 +163,6 @@ public class BoTrinhDuyet : IAsyncDisposable
         if (_trinhDuyet is not null) await _trinhDuyet.CloseAsync();
         _playwright?.Dispose();
         _khoa.Dispose();
+        _tranDongThoi.Dispose();
     }
 }
