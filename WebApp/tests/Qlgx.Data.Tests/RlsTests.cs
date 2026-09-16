@@ -658,4 +658,143 @@ public class RlsTests : IAsyncLifetime
         Assert.Empty(thieuRls);
         Assert.Empty(thieuPolicy);
     }
+
+    /// <summary>
+    /// NT-2 (.superpowers/review-sao-luu/review-bao-mat.md) — LƯỚI AN TOÀN cho chính lỗ hổng mà
+    /// cả bộ RlsTests cũ không bắt được, vì mọi bài test phía trên đều kiểm bằng một vai trò tạm
+    /// KHÔNG PHẢI chủ bảng.
+    ///
+    /// Ở sản xuất thì ngược lại: migration chạy lúc container API khởi động bằng chính
+    /// ConnectionStrings__Qlgx, nên vai trò NGHIỆP VỤ `qlgx_app` là CHỦ của toàn bộ bảng — và
+    /// PostgreSQL KHÔNG áp policy RLS cho chủ bảng nếu chưa bật FORCE ROW LEVEL SECURITY. Test
+    /// cũ luôn xanh trong khi lớp phòng thủ thứ hai hoàn toàn không tồn tại ở nơi nó cần tồn tại.
+    ///
+    /// Bài test này dựng đúng tình huống đó: một vai trò LÀM CHỦ bảng, rồi kiểm hành vi thật.
+    /// Không dùng vai trò `postgres` của fixture vì đó là superuser — superuser bỏ qua RLS bất
+    /// kể FORCE, nên sẽ cho một kết quả xanh/đỏ vì lý do sai.
+    /// </summary>
+    [Fact]
+    public async Task Vai_tro_CHU_BANG_cung_khong_doc_duoc_du_lieu_giao_xu_khac()
+    {
+        var giaoXuA = _fixture.GiaoXuId;
+        var giaoXuB = Guid.NewGuid();
+
+        await using (var ctx = _fixture.TaoContext())
+        {
+            ctx.GiaoXu.Add(new GiaoXu { Id = giaoXuB, TenGiaoXu = "Giao xu B (chu bang)", MaGiaoXuCu = 6 });
+            ctx.GiaoHo.Add(new GiaoHo { GiaoXuId = giaoXuA, TenGiaoHo = "Giao ho cua xu A" });
+            ctx.GiaoHo.Add(new GiaoHo { GiaoXuId = giaoXuB, TenGiaoHo = "Giao ho cua xu B" });
+            await ctx.SaveChangesAsync();
+        }
+
+        string? chuCu = null;
+        await using (var superuser = new NpgsqlConnection(_fixture.ChuoiKetNoi))
+        {
+            await superuser.OpenAsync();
+            await using (var docChu = new NpgsqlCommand(
+                "SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid = 'giao_ho'::regclass", superuser))
+                chuCu = (string)(await docChu.ExecuteScalarAsync())!;
+
+            await using var taoVaiTro = new NpgsqlCommand(
+                $"""
+                CREATE ROLE "{_tenVaiTro}" LOGIN PASSWORD '{MatKhauVaiTro}' NOSUPERUSER NOBYPASSRLS;
+                ALTER TABLE giao_ho OWNER TO "{_tenVaiTro}";
+                """, superuser);
+            await taoVaiTro.ExecuteNonQueryAsync();
+        }
+
+        try
+        {
+            var chuoiChuBang = new NpgsqlConnectionStringBuilder(_fixture.ChuoiKetNoi)
+            {
+                Username = _tenVaiTro,
+                Password = MatKhauVaiTro,
+            }.ConnectionString;
+
+            async Task<List<string>> DocTen(Guid? datThamSoPhien)
+            {
+                await using var ketNoi = new NpgsqlConnection(chuoiChuBang);
+                await ketNoi.OpenAsync();
+
+                // Chan test xanh gia: neu vai tro nay khong con la chu bang thi bai test khong
+                // con kiem dieu no noi la dang kiem.
+                await using (var kiemChu = new NpgsqlCommand(
+                    "SELECT pg_get_userbyid(relowner) = current_user FROM pg_class WHERE oid = 'giao_ho'::regclass",
+                    ketNoi))
+                    Assert.True((bool)(await kiemChu.ExecuteScalarAsync())!,
+                        "vai tro kiem thu phai LA CHU bang giao_ho, neu khong bai test nay vo nghia");
+
+                if (datThamSoPhien is { } id)
+                {
+                    await using var datPhien = new NpgsqlCommand(
+                        "SELECT set_config('app.giao_xu_id', @v, false)", ketNoi);
+                    datPhien.Parameters.AddWithValue("v", id.ToString("D"));
+                    await datPhien.ExecuteNonQueryAsync();
+                }
+
+                var ketQua = new List<string>();
+                await using var truyVan = new NpgsqlCommand("SELECT ten_giao_ho FROM giao_ho", ketNoi);
+                await using var reader = await truyVan.ExecuteReaderAsync();
+                while (await reader.ReadAsync()) ketQua.Add(reader.GetString(0));
+                return ketQua;
+            }
+
+            var choA = await DocTen(giaoXuA);
+            Assert.Contains("Giao ho cua xu A", choA);
+            Assert.DoesNotContain("Giao ho cua xu B", choA);
+
+            var choB = await DocTen(giaoXuB);
+            Assert.Contains("Giao ho cua xu B", choB);
+            Assert.DoesNotContain("Giao ho cua xu A", choB);
+
+            // Ket noi tho "quen" dat tham so phien — day chinh la cai ma tuyen bo "fail-closed"
+            // cua migration BatRlsChoBangTheoGiaoXu hua, va la cai truoc day khong dung voi vai
+            // tro chu bang: no doc duoc SACH SE toan bo so sach cua moi giao xu.
+            Assert.Empty(await DocTen(datThamSoPhien: null));
+        }
+        finally
+        {
+            // Tra lai quyen so huu TRUOC khi DisposeAsync goi DROP OWNED BY — neu khong, lenh do
+            // se co xoa chinh bang giao_ho va vap vao rang buoc khoa ngoai cua cac bang khac.
+            await using var superuser = new NpgsqlConnection(_fixture.ChuoiKetNoi);
+            await superuser.OpenAsync();
+            await using var traChu = new NpgsqlCommand(
+                $"ALTER TABLE giao_ho OWNER TO \"{chuCu}\"", superuser);
+            await traChu.ExecuteNonQueryAsync();
+        }
+    }
+
+    /// <summary>
+    /// LƯỚI AN TOÀN theo catalog cho FORCE, cùng lối với
+    /// <see cref="Moi_bang_co_giao_xu_id_deu_duoc_bat_rls_va_co_policy_loc_theo_giao_xu"/>: một
+    /// bảng thêm sau này bật RLS nhưng quên FORCE sẽ rò dữ liệu chéo giáo xứ cho vai trò nghiệp
+    /// vụ y như trước khi sửa NT-2, và không ai biết. Quét toàn bộ mô hình thay vì trông vào
+    /// việc có người nhớ thêm một fact thủ công.
+    /// </summary>
+    [Fact]
+    public async Task Moi_bang_co_giao_xu_id_deu_duoc_bat_force_row_level_security()
+    {
+        using var ctx = _fixture.TaoContext();
+        var tenBang = ctx.Model.GetEntityTypes()
+            .Where(t => t.FindProperty("GiaoXuId") is not null)
+            .Select(t => t.GetTableName()!)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+        Assert.NotEmpty(tenBang);
+
+        await using var superuser = new NpgsqlConnection(_fixture.ChuoiKetNoi);
+        await superuser.OpenAsync();
+
+        var thieuForce = new List<string>();
+        foreach (var bang in tenBang)
+        {
+            await using var doc = new NpgsqlCommand(
+                "SELECT relforcerowsecurity FROM pg_class WHERE oid = @bang::regclass", superuser);
+            doc.Parameters.AddWithValue("bang", bang);
+            if (!(bool)(await doc.ExecuteScalarAsync())!) thieuForce.Add(bang);
+        }
+
+        Assert.Empty(thieuForce);
+    }
 }
