@@ -40,7 +40,7 @@ public static class TaoTaiKhoanQuanTri
         var hoTen = DocBienBatBuoc("QLGX_ADMIN_HO_TEN");
         if (matKhau.Length < 8)
             throw new InvalidOperationException("QLGX_ADMIN_MAT_KHAU phai co it nhat 8 ky tu.");
-        var loaiTaiKhoan = int.Parse(Environment.GetEnvironmentVariable("QLGX_ADMIN_LOAI_TAI_KHOAN") ?? "0");
+        var loaiTaiKhoan = DocLoaiTaiKhoan(Environment.GetEnvironmentVariable("QLGX_ADMIN_LOAI_TAI_KHOAN"));
 
         var giaoXuIdChuoi = Environment.GetEnvironmentVariable("QLGX_ADMIN_GIAO_XU_ID");
         var giaoXuTen = Environment.GetEnvironmentVariable("QLGX_ADMIN_GIAO_XU_TEN");
@@ -79,6 +79,37 @@ public static class TaoTaiKhoanQuanTri
         Console.WriteLine($"Da tao tai khoan (LoaiTaiKhoan={loaiTaiKhoan}) '{tenTaiKhoan}' cho giao xu {giaoXuId}.");
     }
 
+    /// <summary>Các giá trị HỢP LỆ của QLGX_ADMIN_LOAI_TAI_KHOAN — 0 (Quản trị viên giáo xứ),
+    /// 1/2 (các loại tài khoản nghiệp vụ), 9 (Quản trị hệ thống). Kiểm ở đây thay vì
+    /// <c>int.Parse</c> trần: gõ 99 thì trước đây tạo được một tài khoản thuộc loại KHÔNG TỒN
+    /// TẠI — đăng nhập được nhưng không vào được màn hình nào, và người cài không hiểu vì sao.
+    /// Một tài khoản hỏng như vậy khó phát hiện hơn nhiều so với một lỗi ngay lúc cài.</summary>
+    private static readonly int[] LoaiTaiKhoanHopLe = [0, 1, 2, 9];
+
+    private static int DocLoaiTaiKhoan(string? gia)
+    {
+        if (string.IsNullOrWhiteSpace(gia)) return 0;
+        if (!int.TryParse(gia, out var loai) || !LoaiTaiKhoanHopLe.Contains(loai))
+            throw new InvalidOperationException(
+                $"QLGX_ADMIN_LOAI_TAI_KHOAN='{gia}' khong hop le. Chi nhan mot trong: " +
+                $"{string.Join(", ", LoaiTaiKhoanHopLe)} (0 = Quan tri vien giao xu, " +
+                "9 = Quan tri he thong). De trong thi mac dinh la 0.");
+        return loai;
+    }
+
+    /// <summary>Đọc GUID giáo xứ với thông báo tiếng Việt thay cho câu thô của .NET
+    /// ("Guid should contain 32 digits with 4 dashes..."), vì người đọc thông báo này là người
+    /// đang cài đặt máy chủ cho một giáo xứ, không phải lập trình viên.</summary>
+    private static Guid DocGuidGiaoXu(string gia)
+    {
+        if (!Guid.TryParse(gia, out var id))
+            throw new InvalidOperationException(
+                $"QLGX_ADMIN_GIAO_XU_ID='{gia}' khong phai mot GUID hop le. GUID co dang " +
+                "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx. Neu khong biet GUID, dung " +
+                "QLGX_ADMIN_GIAO_XU_TEN de tra theo ten giao xu.");
+        return id;
+    }
+
     /// <summary>
     /// Tra Id giao xu, va TAO MOI neu chua co (chi khi taoNeuChuaCo = true).
     ///
@@ -100,7 +131,7 @@ public static class TaoTaiKhoanQuanTri
     {
         if (giaoXuIdChuoi is not null)
         {
-            var id = Guid.Parse(giaoXuIdChuoi);
+            var id = DocGuidGiaoXu(giaoXuIdChuoi);
             if (!await db.GiaoXu.AnyAsync(g => g.Id == id))
                 throw new InvalidOperationException($"Khong tim thay giao xu co Id={id}.");
             return id;

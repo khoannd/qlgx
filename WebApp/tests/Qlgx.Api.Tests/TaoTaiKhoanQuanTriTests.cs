@@ -7,6 +7,23 @@ namespace Qlgx.Api.Tests;
 
 public class TaoTaiKhoanQuanTriTests(QlgxApiFactory factory) : IClassFixture<QlgxApiFactory>
 {
+    /// <summary>N5 — GUID gõ sai phải cho thông báo tiếng Việt nói rõ phải làm gì, không phải
+    /// câu thô của .NET ("Guid should contain 32 digits with 4 dashes..."). Người đọc thông báo
+    /// này là người đang cài máy chủ cho một giáo xứ, không phải lập trình viên.</summary>
+    [Fact]
+    public async Task Guid_giao_xu_go_sai_thi_bao_loi_bang_tieng_Viet()
+    {
+        await using var db = factory.TaoContextThuan();
+
+        var hanhDong = async () => await TaoTaiKhoanQuanTri.LayHoacTaoGiaoXu(
+            db, "khong-phai-guid", null, taoNeuChuaCo: false);
+
+        (await hanhDong.Should().ThrowAsync<InvalidOperationException>())
+            .Which.Message.Should().Contain("QLGX_ADMIN_GIAO_XU_ID")
+            .And.Contain("QLGX_ADMIN_GIAO_XU_TEN",
+                "thong bao phai chi duong thoat, khong chi bao la sai");
+    }
+
     [Fact]
     public async Task Khong_bat_co_tao_va_khong_tim_thay_thi_bao_loi()
     {

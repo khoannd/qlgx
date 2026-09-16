@@ -35,8 +35,32 @@ public enum LoiTaiVe
 /// và đọc lại trạng thái mà bộ chạy trên host ghi về (xem CongViecSaoLuu.cs để biết vì sao ranh
 /// giới này là bắt buộc chứ không phải lựa chọn phong cách).
 /// </summary>
-public class SaoLuuService(QlgxDbContext db, IConfiguration cauHinh)
+public class SaoLuuService(QlgxDbContext db, IConfiguration cauHinh, bool tuSoHuuDb = false)
+    : IAsyncDisposable
 {
+    /// <summary>
+    /// Dựng dịch vụ với MỘT DbContext riêng mở bằng chuỗi kết nối QUẢN TRỊ (xem
+    /// <see cref="ChuoiKetNoiQuanTri"/>), thay vì dùng chung DbContext nghiệp vụ của yêu cầu.
+    /// Lý do ở Program.cs, chỗ đăng ký dịch vụ này.
+    ///
+    /// DbContext tạo ở đây do CHÍNH dịch vụ sở hữu nên phải tự đóng — <see cref="DisposeAsync"/>
+    /// bên dưới lo việc đó, và bộ chứa DI gọi nó khi kết thúc phạm vi yêu cầu. Constructor
+    /// thường (nhận sẵn một DbContext từ bên ngoài) KHÔNG đóng nó: ai tạo thì người đó đóng.
+    /// </summary>
+    public static SaoLuuService TaoBangKetNoiQuanTri(IConfiguration cauHinh)
+    {
+        var tuyChon = new DbContextOptionsBuilder<QlgxDbContext>()
+            .UseNpgsql(ChuoiKetNoiQuanTri.Doc(cauHinh))
+            .Options;
+        return new SaoLuuService(new QlgxDbContext(tuyChon), cauHinh, tuSoHuuDb: true);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (tuSoHuuDb) await db.DisposeAsync();
+        GC.SuppressFinalize(this);
+    }
+
     /// <summary>Chuỗi quản trị viên phải GÕ TAY để xác nhận phục hồi. Cố ý viết hoa không dấu và
     /// nói rõ "toàn bộ": phạm vi phục hồi là TOÀN MÁY CHỦ, không riêng giáo xứ nào. Không dùng
     /// hộp thoại "bạn có chắc không?" — người dùng bấm OK theo phản xạ.</summary>

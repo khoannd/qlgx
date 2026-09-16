@@ -38,7 +38,21 @@ builder.Services.AddScoped<QuanLyGiaoXuService>();
 builder.Services.AddScoped<NhapDuLieuService>();
 builder.Services.AddScoped<GiaoHoService>();
 // Man hinh "Sao luu & Phuc hoi" — chi ghi/doc hang doi cong viec, khong tu chay lenh he thong.
-builder.Services.AddScoped<SaoLuuService>();
+//
+// Dung chuoi ket noi QUAN TRI (khong phai DbContext nghiep vu dung chung), theo dung tien le cua
+// KhoiPhucDongBoService/TaoTaiKhoanQuanTri va theo spec muc 7.4 ("ba bang nay chi truy cap duoc
+// qua vai tro qlgx_admin"). Ly do khong phai la RLS — ba bang sao luu khong co giao_xu_id va cung
+// khong bat RLS. Ly do la RANH GIOI DAC QUYEN: bat ky lo hong nao cho phep ghi tuy y qua vai tro
+// qlgx_app (mot SQL injection tuong lai, mot endpoint moi quen policy) deu chen duoc mot dong
+// 'phuc_hoi' vao hang doi, va bo chay tren host thi hanh dong do DUOI QUYEN ROOT. Khong duoc de
+// ranh gioi host/container — thu duoc giu rat ky o moi cho khac — phu thuoc vao mot bang ma vai
+// tro it tin cay nhat ghi duoc tu do.
+//
+// CHUA DU: buoc con lai la chuyen chu ba bang sang qlgx_admin va REVOKE quyen cua qlgx_app o tang
+// CSDL (WebApp/scripts/sql/). Truoc khi lam xong buoc do, thay doi o day mot minh chua dong lai
+// duong ghi truc tiep — xem .superpowers/review-sao-luu/fix-backend-report.md muc I2.
+builder.Services.AddScoped(sp => SaoLuuService.TaoBangKetNoiQuanTri(
+    sp.GetRequiredService<IConfiguration>()));
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opt =>

@@ -22,16 +22,46 @@ public class SaoLuuApiTests(QlgxApiFactory factory) : IClassFixture<QlgxApiFacto
         await db.CongViecSaoLuu.ExecuteDeleteAsync();
     }
 
+    /// <summary>Danh sách ĐẦY ĐỦ các route GET của nhóm /api/sao-luu. Liệt kê đủ chứ không chỉ
+    /// vài cái: hiện cả nhóm dùng chung một policy nên route nào cũng an toàn, nhưng nếu mai này
+    /// ai đó tách một route ra khỏi nhóm (ví dụ để cho phép ẩn danh đọc tình trạng) thì bài test
+    /// này phải bắt được ngay. Hai route quan trọng nhất cũng là hai route dễ bị bỏ sót nhất:
+    /// "/cong-viec/{id}" trả NHẬT KÝ máy chủ, "/tai-ve/{id}" trả bản dump CHƯA MÃ HOÁ của MỌI
+    /// giáo xứ.</summary>
+    private static readonly string[] MoiRouteGet =
+    [
+        "/api/sao-luu/tinh-trang",
+        "/api/sao-luu/danh-sach",
+        "/api/sao-luu/cong-viec",
+        "/api/sao-luu/cong-viec/00000000-0000-0000-0000-000000000001",
+        "/api/sao-luu/tai-ve/00000000-0000-0000-0000-000000000001",
+    ];
+
     [Fact]
     public async Task Tai_khoan_thuong_bi_tu_choi_moi_route_sao_luu()
     {
         var client = factory.CreateAuthClient(loaiTaiKhoan: 0);
 
-        foreach (var duongDan in new[] { "/api/sao-luu/tinh-trang", "/api/sao-luu/danh-sach", "/api/sao-luu/cong-viec" })
+        foreach (var duongDan in MoiRouteGet)
             (await client.GetAsync(duongDan)).StatusCode.Should().Be(HttpStatusCode.Forbidden, duongDan);
 
         var res = await client.PostAsJsonAsync("/api/sao-luu/cong-viec", new { loai = "sao_luu" });
         res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    /// <summary>Khách ẩn danh (không token) phải nhận 401, không phải 404 hay 200. Phân biệt rõ
+    /// với bài 403 ở trên: 403 là "đã biết anh là ai, không đủ quyền", 401 là "chưa biết anh là
+    /// ai" — hai lớp khác nhau, hỏng lớp nào cũng mở đường vào.</summary>
+    [Fact]
+    public async Task Khach_an_danh_bi_tu_choi_moi_route_sao_luu()
+    {
+        var client = factory.CreateClient();
+
+        foreach (var duongDan in MoiRouteGet)
+            (await client.GetAsync(duongDan)).StatusCode.Should().Be(HttpStatusCode.Unauthorized, duongDan);
+
+        var res = await client.PostAsJsonAsync("/api/sao-luu/cong-viec", new { loai = "sao_luu" });
+        res.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
