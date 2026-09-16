@@ -202,8 +202,12 @@ này thì **không thể** làm tiếp bất kỳ bước nào dưới đây.
 
 > **Ghi chú về địa chỉ tải:** hai lệnh `curl` ở trên dùng dạng
 > `https://raw.githubusercontent.com/...`. Dạng `https://github.com/khoannd/qlgx.git/raw/...`
-> (có đuôi `.git`) là **sai** và trả về lỗi 404 — nếu tờ thẻ đã in ra của bạn ghi dạng đó, hãy
-> dùng dạng ở đây thay thế.
+> (có đuôi `.git`) là **sai** và trả về lỗi 404 — những tờ Thẻ phục hồi in ra bởi bản cài trước
+> 16/09/2026 ghi dạng sai đó; hãy dùng dạng ở đây thay thế.
+>
+> **Tờ Thẻ phục hồi in ra không nhắc bước 5** (gõ lại thẻ thành tệp): thẻ nhảy thẳng từ lệnh
+> `curl` sang `qlgx-restore.sh --card`. Đây là khác biệt đã biết giữa thẻ và tài liệu này — làm
+> theo tài liệu này, và ghi tay dòng nhắc đó lên tờ thẻ ngay khi in ra.
 >
 > **Ghi chú về nhánh `webapp-phase-1` trong đường dẫn:** đây là tên nhánh mã nguồn tại thời điểm
 > viết tài liệu. Nhánh này sẽ biến mất sau khi phần mềm được phát hành chính thức, và khi đó

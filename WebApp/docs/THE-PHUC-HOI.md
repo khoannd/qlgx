@@ -27,25 +27,28 @@ PHUC HOI TU MAY TRANG:
   1. Dung mot may chu Linux moi (Ubuntu 24.04)
   2. Cai lai bo ung dung (tu cai Docker luon, chua co du lieu giao xu nao):
        curl -fsSL https://raw.githubusercontent.com/khoannd/qlgx/webapp-phase-1/WebApp/scripts/install.sh | sudo bash
-     Khi duoc hoi kho R2, nhap dung KHO SAO LUU / R2 KEY ID / R2 SECRET o tren.
+     Khi duoc hoi kho R2, nhap dung KHO SAO LUU / R2 KEY ID / R2 SECRET o tren,
+     VA nhap dung MAT KHAU RESTIC o tren khi duoc hoi (rat quan trong: nhap sai
+     thi may moi se khong doc duoc kho sao luu cu).
   3. curl -fsSL https://raw.githubusercontent.com/khoannd/qlgx/webapp-phase-1/WebApp/scripts/qlgx-restore.sh -o qlgx-restore.sh
-  4. Go lai noi dung the nay vao tep /root/the-phuc-hoi.txt (xem SAO-LUU-PHUC-HOI.md muc 6)
-  5. sudo bash qlgx-restore.sh --card the-phuc-hoi.txt          (in ra ke hoach)
-  6. sudo bash qlgx-restore.sh --card the-phuc-hoi.txt --apply  (thuc hien)
+  4. sudo bash qlgx-restore.sh --card the-phuc-hoi.txt          (in ra ke hoach)
+  5. sudo bash qlgx-restore.sh --card the-phuc-hoi.txt --apply  (thuc hien)
 =======================================================
 ```
 
-> **Kiểm tra ngay khi cầm tờ thẻ trên tay:** hai lệnh `curl` ở bước 2 và bước 3 phải bắt đầu
-> bằng `https://raw.githubusercontent.com/`. Nếu tờ thẻ của bạn in dạng
-> `https://github.com/khoannd/qlgx.git/raw/...` (có đuôi `.git`) thì **địa chỉ đó sai** — GitHub
-> trả về "404 không tìm thấy" và lệnh `curl` sẽ im lặng thất bại đúng lúc bạn cần nó nhất. Hãy
-> gạch đi và ghi tay lại theo dạng `raw.githubusercontent.com` như trên. (Bộ cài từ bản sau đã in
-> đúng dạng này.)
+> **HAI ĐIỀU TỜ THẺ KHÔNG NÓI — đọc trước khi cần dùng tới nó:**
 >
-> Tương tự, nếu tờ thẻ của bạn **không có** bước "Gõ lại nội dung thẻ này vào tệp
-> `/root/the-phuc-hoi.txt`" mà nhảy thẳng từ `curl` sang `qlgx-restore.sh --card`, thì vẫn **phải
-> làm bước đó** — kịch bản đọc các khoá từ một tệp, và trên máy mới chưa hề có tệp nào. Khuôn mẫu
-> gõ được nằm ở `SAO-LUU-PHUC-HOI.md` mục 6 bước 5.
+> **1. Phải gõ lại tờ thẻ thành một TỆP trước bước 4.** Tấm thẻ được cất ở dạng giấy (đúng), còn
+> `qlgx-restore.sh --card the-phuc-hoi.txt` thì đọc các khoá từ một **tệp** — trên máy mới chưa hề
+> có tệp nào tên như vậy, và tự chế một tệp sẽ nhận lỗi `The phuc hoi thieu MAT KHAU RESTIC`.
+> Khuôn mẫu gõ được, kèm cách tự kiểm, nằm ở `SAO-LUU-PHUC-HOI.md` mục 6 bước 5. Hãy **ghi tay
+> dòng nhắc này vào tờ thẻ** ngay khi in ra.
+>
+> **2. Kiểm hai lệnh `curl` ở bước 2 và bước 3** — phải bắt đầu bằng
+> `https://raw.githubusercontent.com/`. Những tờ thẻ in ra bởi các bản cài **trước 16/09/2026** có
+> dạng `https://github.com/khoannd/qlgx.git/raw/...` (có đuôi `.git`): **địa chỉ đó sai**, GitHub
+> trả về "404 không tìm thấy" và lệnh `curl` sẽ im lặng thất bại đúng lúc bạn cần nó nhất. Gạch đi
+> và ghi tay lại theo dạng ở trên.
 
 Đây là tờ giấy **duy nhất** đủ để dựng lại toàn bộ hệ thống — với đúng dữ liệu giáo xứ — trên
 một máy chủ hoàn toàn mới, kể cả khi máy chủ hiện tại bị cháy, mất, hay bị phá huỷ hoàn toàn.
