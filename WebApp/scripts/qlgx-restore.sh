@@ -348,6 +348,42 @@ sao_luu_bat_buoc() {
                     "(so ban truoc-phuc-hoi: $so_truoc -> $so_sau, ban moi nhat: ${id_moi:-?})."
 }
 
+# CHOT "latest" THANH MOT ID CU THE -- PHAI goi TRUOC bat cu buoc nao co the tao them snapshot.
+#
+# `latest` KHONG phai ten mot snapshot: restic phan giai no thanh ban moi nhat TAI THOI DIEM GOI.
+# Buoc [1/7] "sao luu bat buoc" tao ra dung mot snapshot MOI ngay TRUOC buoc [2/7] `restic
+# restore`. Neu de nguyen chu "latest" di toi buoc [2/7], ta nap lai CHINH BAN VUA CHUP -- tuc la
+# chinh trang thai dang hong ma nguoi van hanh muon thoat ra. Te hon nua: buoc [4/7] doi chieu so
+# giao dan voi tag cua DUNG snapshot do nen luon KHOP, va he thong in "PHUC HOI XONG" trong khi
+# khong phuc hoi gi ca. Do la dung dong lenh so 5 in tren The phuc hoi
+# (`--card the-phuc-hoi.txt --snapshot latest --apply`), tuc la duong phuc hoi CHINH.
+#
+# Chot o day (trong main_phuc_hoi, truoc phuc_hoi_that) lam ca ba che do -- in ke hoach, dien tap,
+# --apply -- cung noi ve DUNG MOT snapshot, nen cai nguoi van hanh thay trong ke hoach dung bang
+# cai thuc su duoc nap khi ho them --apply.
+chot_snapshot_latest() {
+  [ "$SNAPSHOT" = "latest" ] || return 0
+  local id
+  id=$(json_toan_bo_snapshot | id_snapshot_cuoi_cung)
+  if [ -z "$id" ]; then
+    in_loi_restic_gan_nhat
+    bao_loi_va_thoat "Kho sao luu khong co snapshot nao de phuc hoi (hoac khong doc duoc danh" \
+                     "sach snapshot). DUNG, khong dong toi CSDL nao."
+  fi
+  SNAPSHOT="$id"
+  ghi_log thong-tin "Da chot 'latest' = $SNAPSHOT TRUOC buoc sao luu bat buoc (neu khong," \
+                    "'latest' se tro vao chinh ban sao ma buoc [1/7] sap tao ra)."
+  # Rao thu hai: ban moi nhat trong kho lai la ban chup TRUOC mot lan phuc hoi khac. Truong hop
+  # nay hop le (nguoi van hanh muon huy bo lan phuc hoi truoc) nhung cung co the la dau hieu cua
+  # dung cai bay o tren o mot duong goi khac -- noi ro ra thay vi lam lang le.
+  local nguon; nguon=$(doc_tag_snapshot nguon)
+  if [ "$nguon" = "truoc_phuc_hoi" ]; then
+    ghi_log canh-bao "Ban moi nhat ($SNAPSHOT) la ban chup TRUOC MOT LAN PHUC HOI truoc do" \
+                     "(nguon=truoc_phuc_hoi). Neu y ban la quay ve so sach CU hon nua, hay chay" \
+                     "lai voi --snapshot <id> cu the thay vi 'latest'."
+  fi
+}
+
 # Doc mot tag cua snapshot (vd giao_dan=2050) -- dung de doi chieu "hien tai" voi "trong ban sao"
 # trong ke hoach, va de kiem chung sau khi nap. In '?' khi khong doc duoc.
 doc_tag_snapshot() {
@@ -735,6 +771,8 @@ main_phuc_hoi() {
   trap don_dep_ph EXIT INT TERM HUP
   nap_cau_hinh_ph
   [ -n "$SNAPSHOT" ] || SNAPSHOT="latest"
+  # PHAI o day -- truoc moi thu, dac biet truoc phuc_hoi_that (noi buoc [1/7] tao them snapshot).
+  chot_snapshot_latest
 
   if [ -n "$LAY_CAU_HINH" ]; then
     lenh_lay_cau_hinh "$LAY_CAU_HINH"
