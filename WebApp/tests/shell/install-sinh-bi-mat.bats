@@ -45,6 +45,10 @@ setup() {
   export QLGX_R2_BUCKET="qlgx-sao-luu"
   export QLGX_R2_ACCESS_KEY_ID="k"
   export QLGX_R2_SECRET_ACCESS_KEY="s"
+  # F3: ghi_backup_env gio con hoi "may nay dang phuc hoi tu mot kho da co?" de lay lai MAT KHAU
+  # RESTIC tu The phuc hoi. Cau hoi do doc /dev/tty, khong co trong moi truong bats -- dat che do
+  # khong tuong tac (cau hoi la TUY CHON nen tra ve rong va van sinh mat khau moi nhu cu).
+  KHONG_TUONG_TAC=1
   BE="$BATS_TEST_TMPDIR/backup.env"
   ghi_backup_env "$BE"
   [ "$(stat -c '%a' "$BE")" = "600" ]
@@ -58,6 +62,10 @@ setup() {
   export QLGX_R2_BUCKET="qlgx-sao-luu"
   export QLGX_R2_ACCESS_KEY_ID="k"
   export QLGX_R2_SECRET_ACCESS_KEY="s"
+  # F3: ghi_backup_env gio con hoi "may nay dang phuc hoi tu mot kho da co?" de lay lai MAT KHAU
+  # RESTIC tu The phuc hoi. Cau hoi do doc /dev/tty, khong co trong moi truong bats -- dat che do
+  # khong tuong tac (cau hoi la TUY CHON nen tra ve rong va van sinh mat khau moi nhu cu).
+  KHONG_TUONG_TAC=1
   BE="$BATS_TEST_TMPDIR/backup.env"
   ghi_backup_env "$BE"
   cu=$(doc_env_kv "$BE" RESTIC_PASSWORD)
@@ -77,12 +85,24 @@ setup() {
   [[ "$output" == *"rm -rf"* ]]
 }
 
-@test "la_cai_moi dung theo su ton tai cua .env" {
+# C3: hop dong nay DA DOI CO CHU DICH. Truoc day .env la co duy nhat phan biet "cai moi" voi
+# "cap nhat", nhung .env duoc ghi o BUOC DAU TIEN cua luong cai moi -- nen mot lan cai bi dut
+# giua chung se bi lan chay sau hieu nham la "da cai roi", di vao nhanh cap nhat, in "khong lam
+# gi" va THOAT VOI MA 0, de lai mot may chu nua cai ma The phuc hoi khong bao gio duoc in.
+# Gio co phan biet la TEP_HOAN_TAT, chi duoc ghi SAU in_the_phuc_hoi. Xem install-cai-do-dang.bats.
+@test "la_cai_moi dung theo CO HOAN TAT, khong phai theo .env" {
   GOC_UNG_DUNG="$BATS_TEST_TMPDIR/ung-dung"
+  TEP_HOAN_TAT="$GOC_UNG_DUNG/.cai-dat-hoan-tat"
+  THU_MUC_CAU_HINH="$BATS_TEST_TMPDIR/etc-chua-co"
   mkdir -p "$GOC_UNG_DUNG"
   run la_cai_moi
   [ "$status" -eq 0 ]
+  # Chi co .env (cai dang do dang) VAN phai la "cai moi" -- day chinh la loi C3.
   touch "$GOC_UNG_DUNG/.env"
+  run la_cai_moi
+  [ "$status" -eq 0 ]
+  # Co hoan tat moi chuyen sang duong cap nhat.
+  danh_dau_cai_xong
   run la_cai_moi
   [ "$status" -ne 0 ]
 }

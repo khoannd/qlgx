@@ -379,6 +379,65 @@ lenh_dem_snapshot_nhan() {
 # XOA SACH bang dem danh sach ban sao. Man hinh "Sao luu & Phuc hoi" hien "khong co ban sao nao"
 # trong khi kho R2 day ap, va dung luc khan cap thi khong chon duoc snapshot nao de phuc hoi.
 # Hai test bats tung do vi thieu python3 chinh la bang chung loi nay xay ra that.
+# "dem-snapshot" -- in ra TONG so snapshot trong kho, khong loc nhan.
+# Thiet ke muc 4.5 doi bang tu kiem chung khang dinh "kho restic mo duoc VA co >= 1 snapshot".
+# Chi kiem "mo duoc" thi mot may chu da chay ba thang ma chua he co ban sao nao (timer bi tat, R2
+# tu choi ghi) van cho `qlgx status` toan DAT -- he thong bao thanh cong ve dung thu no khong lam.
+lenh_dem_snapshot() {
+  local json
+  json=$(restic snapshots --json --no-lock) \
+    || bao_loi_va_thoat "Khong doc duoc danh sach snapshot tu kho restic (kho khong mo duoc," \
+                        "sai khoa, hoac mat mang)."
+  local so
+  so=$(printf '%s' "$json" | grep -o '"short_id"' | grep -c . || true)
+  printf '%s\n' "${so:-0}"
+}
+
+# "id-snapshot-nhan <nhan>" -- in ra id cua snapshot MOI NHAT mang tag "nhan=<nhan>".
+# restic in danh sach theo thu tu thoi gian tang dan nen ban cuoi cung la ban moi nhat. CO Y
+# KHONG dung `--latest 1`: no nhom theo (host, PATHS) va moi lan sao luu dung mot thu muc tam
+# khac nhau, nen moi snapshot roi vao mot nhom rieng va `head -1` nhat phai ban CU (bay nay da
+# duoc ghi lai ky trong qlgx-restore.sh, xem json_toan_bo_snapshot o do).
+# Dung cho install.sh de in ID ban sao 'truoc-cap-nhat' trong cau huong dan phuc hoi sau khi quay
+# lui -- dung thu nguoi van hanh can nhat khi dang hoang.
+lenh_id_snapshot_nhan() {
+  local nhan="${1:-}"
+  [ -n "$nhan" ] || bao_loi_va_thoat "id-snapshot-nhan can mot tham so <nhan>."
+  local json
+  json=$(restic snapshots --json --no-lock --tag "nhan=$nhan") \
+    || bao_loi_va_thoat "Khong doc duoc danh sach snapshot tu kho restic."
+  printf '%s' "$json" | grep -o '"short_id":"[0-9a-f]*"' | tail -1 | cut -d'"' -f4
+}
+
+# "khoi-tao-kho" -- mo kho restic, CHUA CO thi tao (restic init).
+#
+# `restic backup` KHONG tu khoi tao kho: voi mot bucket R2 moi tinh no dung lai voi "unable to
+# open config file ... Is there a repository at the following location?". Truoc day khong mot
+# script nao trong bo goi `restic init`, nen buoc "chay sao luu dau tien de chung minh duong ong
+# song that" cua install.sh THAT BAI o MOI lan cai moi.
+#
+# Neu kho DA ton tai nhung mat khau SAI (kich ban cuu ho: may moi sinh RESTIC_PASSWORD moi trong
+# khi kho cu la kho cu), `restic cat config` that bai va `restic init` cung se tu choi ghi de --
+# bao ro rang bang tieng Viet thay vi de nguoi van hanh doc mot loi tieng Anh kho hieu.
+lenh_khoi_tao_kho() {
+  if restic cat config >/dev/null 2>&1; then
+    ghi_log thong-tin "Kho restic da ton tai va mo duoc bang mat khau hien co."
+    return 0
+  fi
+  ghi_log thong-tin "Chua mo duoc kho restic -- thu khoi tao kho moi (restic init)."
+  if restic init; then
+    ghi_log thong-tin "Da khoi tao kho restic moi tai $RESTIC_REPOSITORY."
+    return 0
+  fi
+  bao_loi_va_thoat "Khong mo duoc kho restic va cung khong tao moi duoc." \
+    "Hai nguyen nhan thuong gap:" \
+    "(1) Kho o dia chi nay DA TON TAI nhung MAT KHAU RESTIC khong dung -- neu may nay dang cuu ho" \
+    "mot giao xu cu, hay nhap lai dung MAT KHAU RESTIC ghi tren The phuc hoi (sua" \
+    "RESTIC_PASSWORD trong $TEP_BACKUP_ENV roi chay lai)." \
+    "(2) Khoa R2 sai hoac bucket khong ton tai -- kiem tra RESTIC_REPOSITORY/AWS_* trong" \
+    "$TEP_BACKUP_ENV."
+}
+
 lenh_dong_bo_danh_sach() {
   local tam; tam=$(mktemp)
   # Tu huy trap NGAY khi no chay: `trap ... RETURN` cua bash KHONG tu dong het hieu luc sau
@@ -732,8 +791,14 @@ main_runner() {
     # lenh khac dang giu khoa GHI la tinh huong BINH THUONG can xu ly duoc (vd install.sh's
     # cap_nhat dang doi xac nhan snapshot vua tao boi chinh lenh_sao_luu no goi ngay truoc do).
     dem-snapshot-nhan) lenh_dem_snapshot_nhan "$@" ;;
+    dem-snapshot)      lenh_dem_snapshot ;;
+    id-snapshot-nhan)  lenh_id_snapshot_nhan "$@" ;;
+    # khoi-tao-kho CO gianh khoa: `restic init` ghi vao kho, khong duoc chay chong mot luot
+    # sao-luu/forget dang giu khoa ghi.
+    khoi-tao-kho)      gianh_khoa_hoac_bo_qua "$lenh"; lenh_khoi_tao_kho ;;
     *) bao_loi_va_thoat "Lenh khong hieu: '$lenh'." \
-         "Dung: sao-luu|kiem-tra|dong-bo-danh-sach|tai-ve|don-spool|chay-job|dien-tap|dem-snapshot-nhan" ;;
+         "Dung: sao-luu|kiem-tra|dong-bo-danh-sach|tai-ve|don-spool|chay-job|dien-tap|" \
+         "dem-snapshot-nhan|dem-snapshot|id-snapshot-nhan|khoi-tao-kho" ;;
   esac
 }
 

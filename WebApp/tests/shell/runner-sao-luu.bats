@@ -13,7 +13,14 @@ setup() {
   [ "$(tinh_nguon_tu_nhan '')" = "tu_dong" ]
 }
 
+# N9: loc_snapshot_json dung python3 (co san tren moi ban phan phoi may chu muc tieu, va gio da
+# nam trong danh sach phu thuoc cua install.sh) nhung KHONG co trong container bats. Mot suite do
+# mac dinh se nhanh chong bi bo qua, va luc do mot loi THAT se lan vao ma khong ai nhin ky -- nen
+# bo qua CO DIEU KIEN va noi ro ly do, thay vi de do.
+can_python3() { command -v python3 >/dev/null 2>&1 || skip "can python3 (khong co trong container bats)"; }
+
 @test "loc_snapshot_json doc dung id, thoi diem va so lieu tu tags" {
+  can_python3
   cat > "$BATS_TEST_TMPDIR/sn.json" <<'EOF'
 [{"short_id":"ab12cd34","time":"2026-09-13T06:00:00.123456Z",
   "tags":["nhan=tu-dong","giao_dan=2050","gia_dinh=40"],"summary":{"total_bytes_processed":123456}}]
@@ -27,6 +34,7 @@ EOF
 }
 
 @test "loc_snapshot_json chiu duoc snapshot thieu tags" {
+  can_python3
   cat > "$BATS_TEST_TMPDIR/sn.json" <<'EOF'
 [{"short_id":"ff00ff00","time":"2026-09-13T06:00:00Z","tags":[],"summary":{}}]
 EOF
