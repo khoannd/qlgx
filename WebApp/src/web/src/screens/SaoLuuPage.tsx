@@ -228,15 +228,17 @@ export function SaoLuuPage() {
           {banSaoDangPhucHoi && (
             <SaoLuuPhucHoiModal
               banSao={banSaoDangPhucHoi}
-              // Chua co API dem so ban ghi HIEN TAI cua may chu — dung tam so cua ban sao moi
-              // nhat lam gan dung (banSao da sap theo thoi diem giam dan, xem api.saoLuu.danhSach).
-              // Day chi la thong tin tham khao tren giao dien de nguoi dung thay xu huong tang/
-              // giam, KHONG anh huong toi thao tac phuc hoi that (thao tac do dua vao snapshotId,
-              // khong dua vao con so nay). Neu can con so chinh xac tuyet doi, phai them truong
-              // moi vao TinhTrangSaoLuuDto phia may chu (Task 6) — co chu dinh KHONG lam trong task
-              // nay vi day chi la tieu tiet hien thi.
-              soGiaoDanHienTai={banSao[0]?.soGiaoDan ?? 0}
-              soGiaDinhHienTai={banSao[0]?.soGiaDinh ?? 0}
+              // `null` CO CHU DINH, dung sua thanh mot con so xap xi (C1 cua review-frontend.md).
+              // Ban cu truyen `banSao[0]?.soGiaoDan` — so cua BAN SAO MOI NHAT — duoi nhan "Hien
+              // tai". Khi phuc hoi ve chinh ban moi nhat (thao tac pho bien nhat) hai cot bang
+              // nhau, khong dong nao to do, va lop rao 4 tran an SAI dung luc sap mat toi 6 gio
+              // nhap lieu cua MOI giao xu. Frontend hien khong co nguon nao dem duoc so ban ghi
+              // hien tai cua TOAN MAY CHU: `api.thongKe` chi tinh trong pham vi mot giao xu, con
+              // `TinhTrangSaoLuuDto` chua tra ve so nao. Muon co so that: them
+              // SoGiaoDanHienTai/SoGiaDinhHienTai (hai cau COUNT(*)) vao DTO do roi truyen vao
+              // day — modal tu chay dung, khong phai sua gi them.
+              soGiaoDanHienTai={null}
+              soGiaDinhHienTai={null}
               onDong={() => setBanSaoDangPhucHoi(null)}
               onXacNhan={(snapshotId, xacNhan) => {
                 setBanSaoDangPhucHoi(null)

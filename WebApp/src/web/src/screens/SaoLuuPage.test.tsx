@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -197,6 +197,49 @@ describe('SaoLuuPage', () => {
     await userEvent.click(nutTai)
 
     await waitFor(() => expect(api.saoLuu.taiBanSaoVe).toHaveBeenCalledWith('job-tv'))
+  })
+
+  // C1 (Critical, review-frontend.md): cot "Hien tai" cua bang doi chieu TUNG lay
+  // banSao[0].soGiaoDan — tuc la so cua BAN SAO MOI NHAT, khong phai so hien tai cua he thong.
+  // Khi phuc hoi ve chinh ban moi nhat (thao tac pho bien nhat) hai cot bang nhau, khong dong
+  // nao to do, nguoi dung duoc tran an SAI ngay luc sap mat toi 6 gio nhap lieu cua moi giao xu.
+  // Test nay chay tren ma CHUA SUA phai DO (luc do man hinh hien "2050" o cot Hien tai va khong
+  // he co cau canh bao nao).
+  it('KHONG hien con so "hien tai" gia — noi ro chua tinh duoc va van canh bao mat du lieu', async () => {
+    const { container } = render(<SaoLuuPage />)
+    await screen.findByText(/Bình thường/)
+
+    fireEvent.contextMenu(container.querySelector('.ag-row')!, { clientX: 10, clientY: 10 })
+    await userEvent.click(await screen.findByRole('button', { name: /Phục hồi về bản sao này/ }))
+
+    const hopThoai = await screen.findByRole('dialog')
+    expect(hopThoai.textContent).toMatch(/chưa tính được/i)
+    // Khong duoc lay con so cua ban sao moi nhat lam "hien tai": o ban sao ghi 2050, neu con so
+    // do chi duoc xuat hien DUNG MOT lan trong hop thoai (cot "Sau khi phuc hoi"); xuat hien hai
+    // lan nghia la no da bi dung lai lam cot "Hien tai" — loi cu quay lai.
+    expect(within(hopThoai).getAllByText('2050').length).toBe(1)
+    expect(hopThoai.textContent).toMatch(/đều sẽ mất/i)
+  })
+
+  // T1 (lo hong test, review-frontend.md): mat xich nguy hiem nhat — tu menu chuot phai toi khi
+  // goi taoCongViec('phuc_hoi') — truoc day khong co test nao noi hai dau.
+  it('luong phuc hoi dau-cuoi: go dung chuoi thi tao cong viec phuc_hoi dung tham so', async () => {
+    vi.mocked(api.saoLuu.taoCongViec).mockResolvedValue({ id: 'job-ph' })
+    vi.mocked(api.saoLuu.congViec).mockResolvedValue({
+      id: 'job-ph', loai: 'phuc_hoi', trangThai: 'dang_chay', buocHienTai: 'Đang nạp dữ liệu…',
+      nhatKy: null, taoLuc: '2026-09-13T07:00:00Z', batDauLuc: null, ketThucLuc: null,
+    })
+    const { container } = render(<SaoLuuPage />)
+    await screen.findByText(/Bình thường/)
+
+    fireEvent.contextMenu(container.querySelector('.ag-row')!, { clientX: 10, clientY: 10 })
+    await userEvent.click(await screen.findByRole('button', { name: /Phục hồi về bản sao này/ }))
+    await userEvent.type(screen.getByLabelText(/gõ/i), 'PHUC HOI TOAN BO')
+    await userEvent.click(screen.getByRole('button', { name: /^Phục hồi về 13\/09\/2026/ }))
+
+    await waitFor(() => expect(api.saoLuu.taoCongViec).toHaveBeenCalledWith({
+      loai: 'phuc_hoi', snapshotId: 'ab12cd34', xacNhan: 'PHUC HOI TOAN BO',
+    }))
   })
 
   it('bao loi ro rang khi tai tep that bai, khong im lang', async () => {

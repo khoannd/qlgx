@@ -31,6 +31,40 @@ it('KHONG to do khi so lieu khong giam', () => {
   expect(screen.queryByTestId('canh-bao-giam-giao-dan')).toBeNull()
 })
 
+// C1: khi chua biet so lieu hien tai, THA KHONG HIEN CON SO con hon hien so sai — va van phai
+// canh bao mat du lieu (bang cu im lang dung luc can noi nhat).
+it('chua biet so hien tai thi ghi ro "chua tinh duoc" va VAN canh bao mat du lieu', () => {
+  dung({ soGiaoDanHienTai: null, soGiaDinhHienTai: null })
+  expect(screen.getAllByText(/chưa tính được/i).length).toBeGreaterThan(0)
+  expect(screen.getByTestId('chua-tinh-duoc-so-hien-tai')).toBeDefined()
+  // Khong duoc to do theo mot phep so sanh vo nghia khi chua co so that.
+  expect(screen.queryByTestId('canh-bao-giam-giao-dan')).toBeNull()
+})
+
+it('KHONG hien cau "chua tinh duoc" khi da co so hien tai that', () => {
+  dung()
+  expect(screen.queryByTestId('chua-tinh-duoc-so-hien-tai')).toBeNull()
+})
+
+// N3: chuoi xac nhan hien ngay tren o nhap, boi den + Ctrl+V la qua duoc lop rao "go tay".
+it('chan DAN vao o xac nhan, va noi ro vi sao', async () => {
+  dung()
+  const o = screen.getByLabelText(/gõ/i) as HTMLInputElement
+  o.focus()
+  await userEvent.paste(CHUOI_XAC_NHAN_PHUC_HOI)
+  expect(o.value).toBe('')
+  expect((screen.getByRole('button', { name: /^Phục hồi về/ }) as HTMLButtonElement).disabled)
+    .toBe(true)
+  expect(screen.getByText(/Hãy gõ tay câu xác nhận/i)).toBeDefined()
+})
+
+// I1: chua co man hinh chan toan trang — toi thieu phai bao nguoi sap bam rang ho lam gian
+// doan cong viec cua cac giao xu khac.
+it('canh bao ro rang rang moi nguoi phai ngung nhap lieu', () => {
+  dung()
+  expect(screen.getByText(/phải ngừng nhập liệu/i)).toBeDefined()
+})
+
 it('nut xac nhan bi KHOA khi chua go dung chuoi', async () => {
   dung()
   const nut = screen.getByRole('button', { name: /Phục hồi/ }) as HTMLButtonElement
