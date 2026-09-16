@@ -276,20 +276,26 @@ public class BaoMatTests(QlgxApiFactory app) : IClassFixture<QlgxApiFactory>
     [Fact]
     public async Task Ten_dang_nhap_trung_o_hai_giao_xu_ma_khong_chon_thi_bi_yeu_cau_chon()
     {
+        // Sau khi sua C-7 (review-bao-mat.md), danh sach giao xu CHI duoc tra ve khi nguoi goi
+        // da chung minh biet mat khau — nen de van con mo ho that su, hai tai khoan trung ten o
+        // day phai dung CUNG mot mat khau. Neu chi mot ben khop, he thong khong con gi de hoi va
+        // cho dang nhap thang (xem Trung_ten_nhung_chi_mot_ben_dung_mat_khau_thi_dang_nhap_thang
+        // trong RoRiThongTinDangNhapTests).
         var giaoXuB = await TaoGiaoXuKhac("Giao xu E (can chon giao xu test)");
         const string tenTaiKhoan = "quantri_trung_ten";
+        const string matKhauChung = "MatKhauChung_Manh123!";
         await using (var db = app.TaoContextThuan())
         {
             var tkA = new TaiKhoan { GiaoXuId = app.GiaoXuId, TenTaiKhoan = tenTaiKhoan, HoTenNguoiDung = "A" };
-            tkA.MatKhauBam = new PasswordHasher<TaiKhoan>().HashPassword(tkA, "MatKhauA_Manh123!");
+            tkA.MatKhauBam = new PasswordHasher<TaiKhoan>().HashPassword(tkA, matKhauChung);
             var tkB = new TaiKhoan { GiaoXuId = giaoXuB, TenTaiKhoan = tenTaiKhoan, HoTenNguoiDung = "B" };
-            tkB.MatKhauBam = new PasswordHasher<TaiKhoan>().HashPassword(tkB, "MatKhauB_Manh123!");
+            tkB.MatKhauBam = new PasswordHasher<TaiKhoan>().HashPassword(tkB, matKhauChung);
             db.TaiKhoan.AddRange(tkA, tkB);
             await db.SaveChangesAsync();
         }
 
         var res = await app.CreateClient().PostAsJsonAsync("/api/auth/dang-nhap",
-            new DangNhapRequest(tenTaiKhoan, "MatKhauA_Manh123!"));
+            new DangNhapRequest(tenTaiKhoan, matKhauChung));
 
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest,
             "ten dang nhap trung o hai giao xu, chua chon giao xu nao thi khong duoc doan bat ky ai");
