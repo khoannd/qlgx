@@ -24,8 +24,8 @@ trước, nói rõ sẽ tạo worktree ở đâu và để làm gì.
 
 **Không được làm bất cứ điều gì ảnh hưởng tới người dùng đang chạy phần mềm, cho tới
 khi được duyệt để phát hành rộng rãi.** Cụ thể:
-- Được phép chạy `release.ps1` để build và tự kiểm thử cục bộ (xem
-  `QUY_TRINH_PHAT_HANH.md`) — build ra file nằm trên máy này, chưa ai tải được.
+- Được phép chạy `scripts\release.ps1` để build và tự kiểm thử cục bộ (xem
+  `docs/QUY_TRINH_PHAT_HANH.md`) — build ra file nằm trên máy này, chưa ai tải được.
 - **Không `git push`** file build đó lên `qlgx`/`qlgx_bin` (đây là kho mà máy chủ cập
   nhật đọc thẳng — push tức là phát hành cho toàn bộ người dùng đang có phần mềm).
 - Không sửa `VersionConfig.xml`/`version.txt` trên máy chủ thật (`landing/`) hay bất cứ
@@ -43,7 +43,8 @@ khi được duyệt để phát hành rộng rãi.** Cụ thể:
 | `Release\` | file phát hành đã ký nhận vào kho |
 | `WebApp\` | bản viết lại phần mềm desktop thành web app, nhánh riêng — **không đụng tới khi phát hành bản desktop** |
 | `landing\` | trang **quanlygiaoxu.net** thật (Next.js, chạy trên Cloudflare Workers) — gồm cả trang giới thiệu VÀ API máy chủ cập nhật mà chính phần mềm desktop tự gọi (`/capnhat/*`) |
-| `*.ps1` ở thư mục gốc | các script của quy trình phát hành |
+| `scripts\` | các script PowerShell của quy trình phát hành (`release.ps1` và các script nó gọi) |
+| `docs\` | tài liệu vận hành (`QUY_TRINH_PHAT_HANH.md`, `HOP_DONG_MAY_CHU_CAP_NHAT.md`, `PROMPT_VIET_API_CAP_NHAT.md`) |
 
 Kho nhị phân cho người dùng tải nằm ở `D:\Working\QLGX\qlgx_bin` (repo `qlgx_bin`).
 
@@ -52,15 +53,15 @@ Kho nhị phân cho người dùng tải nằm ở `D:\Working\QLGX\qlgx_bin` (r
 
 ## Phát hành phiên bản mới
 
-**Đọc `QUY_TRINH_PHAT_HANH.md` trước khi làm bất cứ việc gì liên quan tới phát hành.**
+**Đọc `docs/QUY_TRINH_PHAT_HANH.md` trước khi làm bất cứ việc gì liên quan tới phát hành.**
 Tài liệu đó có đủ các bước, các lệnh kiểm chứng, và phụ lục ghi lại những cái bẫy đã làm
 hỏng bản phát hành thật.
 
-Tóm tắt: sửa số phiên bản trong ba file → chạy `release.ps1` → kiểm chứng độc lập →
+Tóm tắt: sửa số phiên bản trong ba file → chạy `scripts\release.ps1` → kiểm chứng độc lập →
 commit và đẩy cả hai kho (`qlgx` và `qlgx_bin`). Máy chủ cập nhật (`quanlygiaoxu.net/capnhat/*`)
 đọc thẳng từ GitHub, **tự lên trong vài phút sau khi push — không cần thao tác gì thêm**.
 Riêng nội dung marketing trên trang chủ (`landing/`) vẫn phải sửa tay và deploy riêng —
-xem `QUY_TRINH_PHAT_HANH.md` mục 5.2.
+xem `docs/QUY_TRINH_PHAT_HANH.md` mục 5.2.
 
 Sáu điều tuyệt đối không được quên:
 
@@ -77,12 +78,12 @@ Sáu điều tuyệt đối không được quên:
    `/4.0/`), và các đường dẫn đó **phải luôn trả lời được qua `http://` thuần**, không
    được ép sang `https`. Máy chạy bản 3.3.7 trở về trước (phần lớn người dùng) và bản
    4.0.0–4.0.1 nằm cứng các địa chỉ này — hỏng chỗ nào là máy đó vĩnh viễn không tự cập
-   nhật được nữa. Xem `HOP_DONG_MAY_CHU_CAP_NHAT.md`.
+   nhật được nữa. Xem `docs/HOP_DONG_MAY_CHU_CAP_NHAT.md`.
 6. **Bộ cài phải chặn (không tự động đóng) khi thấy `GiaoXu.exe` đang chạy trên máy
    người dùng.** Cài đè lên khi chương trình đang mở làm Windows Installer hoãn thay
    các file bị khoá tới lần khởi động lại máy — bộ cài vẫn báo "thành công" nhưng
    chương trình sau đó không mở lên được (đã xảy ra thật, xem
-   `QUY_TRINH_PHAT_HANH.md` bẫy #11). Không tự kill tiến trình để tránh làm hỏng
+   `docs/QUY_TRINH_PHAT_HANH.md` bẫy #11). Không tự kill tiến trình để tránh làm hỏng
    `giaoxu.mdb` đang mở.
 
 ## Vài điều hay vấp khi sửa mã

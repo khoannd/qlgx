@@ -45,7 +45,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$goc = Split-Path -Parent $MyInvocation.MyCommand.Path
+# Script nay nam trong scripts\, goc repo la mot cap cha cua no.
+$goc = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 
 if ($PhienBan -notmatch '^\d+\.\d+\.\d+\.\d+$') {
     Write-Host "LOI: so phien ban phai co dang x.y.z.w, nhan duoc '$PhienBan'"

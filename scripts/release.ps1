@@ -38,7 +38,9 @@ param(
 $ErrorActionPreference = 'Stop'
 
 # ------------------------------------------------------------------ Đường dẫn
-$Root       = Split-Path -Parent $MyInvocation.MyCommand.Path
+# Script nay nam trong scripts\, goc repo la mot cap cha cua no.
+$ScriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path
+$Root       = Split-Path -Parent $ScriptDir
 $Source     = Join-Path $Root 'Source'
 $Bin        = Join-Path $Root 'BIN'
 $Sln        = Join-Path $Source 'GiaoXu.sln'
@@ -319,7 +321,7 @@ else {
     # trong bo cai co so phien ban LON HON file dang co tren may. Truoc day moi file
     # deu mang so 1.0.0.3 co dinh, nen cai ban moi de len may dang dung thi chuong
     # trinh VAN LA BAN CU ma khong bao loi gi - ban 4.0.0 va 4.0.1 deu dinh loi nay.
-    $scriptPb = Join-Path $Root 'dat_phien_ban_file.ps1'
+    $scriptPb = Join-Path $ScriptDir 'dat_phien_ban_file.ps1'
     if (-not (Test-Path $scriptPb)) { Write-Loi "Khong tim thay $scriptPb"; exit 1 }
 
     $kqPb = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptPb -PhienBan $verValue 2>&1
@@ -343,7 +345,7 @@ else {
 
     # Doc so phien ban THAT cua cac file vua build, khong doc lai ma nguon - de
     # chac chan trinh bien dich da nhan so moi.
-    $scriptPb = Join-Path $Root 'dat_phien_ban_file.ps1'
+    $scriptPb = Join-Path $ScriptDir 'dat_phien_ban_file.ps1'
     $kqPb2 = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptPb -PhienBan $verValue -ChiKiemChung 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Loi 'File vua build khong mang dung so phien ban:'
@@ -358,7 +360,7 @@ Write-Buoc '4b. Dua Template / Resources / help vao bo cai'
 if ($SkipInstaller -or $DryRun) { Write-Canh 'Bo qua' }
 else {
     # Sinh lai tu noi dung BIN\ moi lan phat hanh, nen them bieu mau moi la tu co.
-    $scriptTM = Join-Path $Root 'them_thu_muc_vao_bo_cai.ps1'
+    $scriptTM = Join-Path $ScriptDir 'them_thu_muc_vao_bo_cai.ps1'
     if (-not (Test-Path $scriptTM)) { Write-Loi "Khong tim thay $scriptTM"; exit 1 }
 
     $kqTM = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptTM 2>&1
@@ -504,7 +506,7 @@ else {
     # nguoi cai moi bam vao bieu tuong chi mo ra cua so Explorer. Kiem tra moi lan
     # phat hanh de khong tai dien.
     $msiPath = Join-Path $InstOutDir $msiFileName
-    $scriptLt = Join-Path $Root 'kiem_tra_loi_tat.ps1'
+    $scriptLt = Join-Path $ScriptDir 'kiem_tra_loi_tat.ps1'
     if (-not (Test-Path $scriptLt)) { Write-Loi "Khong tim thay $scriptLt"; exit 1 }
 
     $kqLt = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptLt -Msi $msiPath 2>&1
@@ -525,7 +527,7 @@ else {
     # Gọi bằng TIẾN TRÌNH RIÊNG. Nếu gọi trong cùng tiến trình, COM của Windows
     # Installer báo lỗi "Type mismatch" do tiến trình này vừa dùng COM của
     # Visual Studio để build xong.
-    $scriptGhi = Join-Path $Root 'ghi_ten_tieng_viet_vao_msi.ps1'
+    $scriptGhi = Join-Path $ScriptDir 'ghi_ten_tieng_viet_vao_msi.ps1'
     if (-not (Test-Path $scriptGhi)) { Write-Loi "Khong tim thay $scriptGhi"; exit 1 }
 
     $kq = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptGhi `
@@ -558,7 +560,7 @@ else {
     # Tu ban 4.0.0 thu muc mac dinh doi tu D: sang C: (nhieu may khong co o D:).
     # Nhung may DANG DUNG thi phai cai de len dung thu muc cu, neu khong nguoi dung
     # se thay du lieu trong tron. Buoc nay them vao MSI kha nang tu do thu muc cu.
-    $scriptDo = Join-Path $Root 'them_do_tim_thu_muc_cu.ps1'
+    $scriptDo = Join-Path $ScriptDir 'them_do_tim_thu_muc_cu.ps1'
     if (-not (Test-Path $scriptDo)) { Write-Loi "Khong tim thay $scriptDo"; exit 1 }
 
     $kqDo = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptDo -Msi $msiPath 2>&1
@@ -586,7 +588,7 @@ if ($SkipInstaller -or $DryRun) { Write-Canh 'Bo qua' }
 else {
     # Visual Studio khong co san giao dien cai dat tieng Viet (khong co ma 1066) nen
     # phai ghi de chu tieng Viet vao bang Control/RadioButton/Dialog cua file MSI.
-    $scriptDich = Join-Path $Root 'dich_bo_cai_sang_tieng_viet.ps1'
+    $scriptDich = Join-Path $ScriptDir 'dich_bo_cai_sang_tieng_viet.ps1'
     if (-not (Test-Path $scriptDich)) { Write-Loi "Khong tim thay $scriptDich"; exit 1 }
 
     $kqDich = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptDich -Msi $msiPath 2>&1
@@ -611,7 +613,7 @@ else {
     # Chi ghi noi dung dieu khoan. Toan bo chu con lai cua bo cai giu nguyen tieng
     # Anh do Visual Studio sinh ra - ban 4.0.1 tung thu dich het sang tieng Viet va
     # lam man hinh cai dat trong tron.
-    $scriptDk = Join-Path $Root 'nap_dieu_khoan_su_dung.ps1'
+    $scriptDk = Join-Path $ScriptDir 'nap_dieu_khoan_su_dung.ps1'
     if (-not (Test-Path $scriptDk)) { Write-Loi "Khong tim thay $scriptDk"; exit 1 }
 
     $kqDk = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptDk -Msi $msiPath 2>&1
@@ -635,7 +637,7 @@ if ($SkipInstaller -or $DryRun) { Write-Canh 'Bo qua' }
 else {
     # Xoa khoa dang ky va loi tat cua ban cu de may chi con MOT phan mem. Khong goi
     # unins000.exe vi no se xoa luon giaoxu.mdb - tuc la xoa sach du lieu giao xu.
-    $scriptGo = Join-Path $Root 'go_dau_vet_ban_cu.ps1'
+    $scriptGo = Join-Path $ScriptDir 'go_dau_vet_ban_cu.ps1'
     if (-not (Test-Path $scriptGo)) { Write-Loi "Khong tim thay $scriptGo"; exit 1 }
 
     $kqGo = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptGo -Msi $msiPath 2>&1
@@ -665,7 +667,7 @@ else {
     # nay chan viec cai dat NGAY TU DAU neu phat hien GiaoXu.exe dang chay, buoc
     # nguoi dung dong chuong trinh truoc - an toan hon nhieu so voi tu dong dong
     # (ep dong co the lam hong giaoxu.mdb dang mo).
-    $scriptChan = Join-Path $Root 'chan_cai_khi_dang_chay.ps1'
+    $scriptChan = Join-Path $ScriptDir 'chan_cai_khi_dang_chay.ps1'
     if (-not (Test-Path $scriptChan)) { Write-Loi "Khong tim thay $scriptChan"; exit 1 }
 
     $kqChan = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptChan -Msi $msiPath 2>&1
@@ -742,7 +744,7 @@ else {
     # file .exe rồi chạy và gặp lỗi không tìm thấy bộ cài.
     # Bản Inno Setup cũ cũng chỉ có một file, nên giữ đúng như vậy.
     $fileGop   = Join-Path $ReleaseDir "qlgx_$slug.exe"
-    $scriptGop = Join-Path $Root 'gop_bo_cai_thanh_1_file.ps1'
+    $scriptGop = Join-Path $ScriptDir 'gop_bo_cai_thanh_1_file.ps1'
     if (-not (Test-Path $scriptGop)) { Write-Loi "Khong tim thay $scriptGop"; exit 1 }
 
     if ($SkipInstaller) { Write-Canh 'Bo qua gop file vi -SkipInstaller' }

@@ -6,7 +6,7 @@ import { QLGX_BIN_RAW_BASE } from "@/lib/github";
  * mục đích với `/api/tai-ve` (đó là nút tải trên trang web cho NGƯỜI dùng bấm
  * tay). Đây là API mà chính CHƯƠNG TRÌNH gọi tự động để tự kiểm tra bản mới.
  *
- * Hợp đồng đầy đủ nằm ở `HOP_DONG_MAY_CHU_CAP_NHAT.md` tại gốc kho `qlgx` —
+ * Hợp đồng đầy đủ nằm ở `docs/HOP_DONG_MAY_CHU_CAP_NHAT.md` ở kho `qlgx` —
  * đọc tài liệu đó trước khi sửa bất cứ gì ở đây. Vài điểm mấu chốt nhắc lại:
  *
  * - Phần mềm đã phát hành, KHÔNG sửa được nữa. Đây là hợp đồng một chiều.
@@ -26,7 +26,7 @@ import { QLGX_BIN_RAW_BASE } from "@/lib/github";
  * repo đó: toàn "Phat hanh x.y.z"), nên ổn định hơn hẳn làm nguồn cho API
  * công khai. Từ nay, phát hành bản mới phải CHÉP `Release/VersionConfig.xml`
  * và `Release/thong_tin_cap_nhat.htm` từ kho `qlgx` sang `qlgx_bin` rồi mới
- * commit — xem `QUY_TRINH_PHAT_HANH.md` mục 5.1.
+ * commit — xem `docs/QUY_TRINH_PHAT_HANH.md` mục 5.1 ở kho `qlgx`.
  */
 
 const VERSION_CONFIG_URL = `${QLGX_BIN_RAW_BASE}/Release/VersionConfig.xml`;

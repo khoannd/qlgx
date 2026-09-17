@@ -195,7 +195,7 @@ endpoint không bao giờ lệch nhau khi đổi biến môi trường.
 web; nhóm dưới đây là API mà chương trình `GiaoXu.exe` tự động gọi mỗi lần mở lên để
 tự kiểm tra bản mới, không ai bấm gì cả.
 
-Hợp đồng đầy đủ nằm ở `HOP_DONG_MAY_CHU_CAP_NHAT.md` tại **gốc kho `qlgx`** (không phải
+Hợp đồng đầy đủ nằm ở `docs/HOP_DONG_MAY_CHU_CAP_NHAT.md` ở kho `qlgx` (không phải
 trong `landing/`) — đọc file đó trước khi sửa bất cứ gì ở `src/lib/update-server.ts` hay
 các route liệt kê dưới đây. Tóm tắt nhanh:
 
@@ -224,7 +224,7 @@ tên gói `.zip` (từ thuộc tính `display`, theo đúng quy ước `qlgx_<ph
 > khi gói `.zip` tương ứng còn chưa tồn tại trong `qlgx_bin`. Đổi sang đọc `qlgx_bin` (repo
 > chỉ nhận commit đúng lúc phát hành thật) mới đúng — kèm theo đó, quy trình phát hành có
 > thêm một bước: chép `Release/VersionConfig.xml` và `Release/thong_tin_cap_nhat.htm` từ
-> `qlgx` sang `qlgx_bin` rồi mới commit (xem `QUY_TRINH_PHAT_HANH.md` mục 5.1).
+> `qlgx` sang `qlgx_bin` rồi mới commit (xem `docs/QUY_TRINH_PHAT_HANH.md` mục 5.1 ở kho `qlgx`).
 >
 > `qlgx_bin` vốn đã tách khỏi `qlgx` để không làm phình kho mã nguồn bằng file nhị phân —
 > giờ nó còn đóng thêm vai trò "nguồn ổn định" cho API công khai này.
@@ -244,7 +244,7 @@ khi trúng cache, nên sửa các bước đó có hiệu lực ngay, không ph�
 > về. Cùng lúc đó phát hiện thêm: response thật trên Cloudflare Workers có BOM (`EF BB BF`)
 > ở đầu dù bản thử bằng `next start` trên Node thì không (`Response.text()` xử lý BOM khác
 > nhau giữa hai runtime) — đã tự bỏ BOM luôn cho chắc, đúng tinh thần cảnh báo BOM đã có sẵn
-> trong `HOP_DONG_MAY_CHU_CAP_NHAT.md`.
+> trong `docs/HOP_DONG_MAY_CHU_CAP_NHAT.md` ở kho `qlgx`.
 
 **Vì sao các route nằm ở những đường dẫn "lạ"** (`src/app/4.0/`, `src/app/download.asp/`,
 `src/app/capnhat/help/thong_tin_cap_nhat.htm/`): Next.js App Router chấp nhận tên thư mục

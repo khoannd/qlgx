@@ -41,8 +41,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# $PSScriptRoot khong dung duoc trong khoi param() nen gan o day
-$goc = Split-Path -Parent $MyInvocation.MyCommand.Path
+# $PSScriptRoot khong dung duoc trong khoi param() nen gan o day.
+# Script nay nam trong scripts\, goc repo la mot cap cha cua no.
+$goc = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 if (-not $Vdproj) { $Vdproj = Join-Path $goc 'Source\GXInstaller\GXInstaller.vdproj' }
 if (-not $Bin)    { $Bin    = Join-Path $goc 'BIN' }
 

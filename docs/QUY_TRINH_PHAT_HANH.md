@@ -87,7 +87,7 @@ powershell.exe -NoProfile -Command "[xml](Get-Content 'BIN\VersionConfig.xml' -R
 
 ```bash
 cd "D:\Working\QLGX\Github"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File release.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\release.ps1
 ```
 
 Thêm `-Force` nếu cần bỏ qua cảnh báo git (thường gặp khi phiên khác đang làm trên cùng
@@ -134,14 +134,14 @@ sẽ phát hành. Đặt `$MSI` là `Source\GXInstaller\Release\qlgx_<x_y_z>.msi
 ```bash
 MSI="D:\Working\QLGX\Github\Source\GXInstaller\Release\qlgx_4_0_2.msi"
 cd "D:\Working\QLGX\Github"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File kiem_tra_loi_tat.ps1            -Msi "$MSI"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File them_do_tim_thu_muc_cu.ps1      -Msi "$MSI" -ChiKiemChung
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File dich_bo_cai_sang_tieng_viet.ps1 -Msi "$MSI" -ChiKiemChung
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File nap_dieu_khoan_su_dung.ps1      -Msi "$MSI" -ChiKiemChung
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File go_dau_vet_ban_cu.ps1           -Msi "$MSI" -ChiKiemChung
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File them_thu_muc_vao_bo_cai.ps1     -ChiKiemChung
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File dat_phien_ban_file.ps1          -PhienBan 4.0.2.0 -ChiKiemChung
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ghi_ten_tieng_viet_vao_msi.ps1  -Msi "$MSI" -TenSanPham "QLGX - Quản Lý Giáo Xứ" -NhaSanXuat "Nguyễn Đức Khoan" -ChiKiemChung
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\kiem_tra_loi_tat.ps1            -Msi "$MSI"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\them_do_tim_thu_muc_cu.ps1      -Msi "$MSI" -ChiKiemChung
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dich_bo_cai_sang_tieng_viet.ps1 -Msi "$MSI" -ChiKiemChung
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\nap_dieu_khoan_su_dung.ps1      -Msi "$MSI" -ChiKiemChung
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\go_dau_vet_ban_cu.ps1           -Msi "$MSI" -ChiKiemChung
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\them_thu_muc_vao_bo_cai.ps1     -ChiKiemChung
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dat_phien_ban_file.ps1          -PhienBan 4.0.2.0 -ChiKiemChung
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\ghi_ten_tieng_viet_vao_msi.ps1  -Msi "$MSI" -TenSanPham "QLGX - Quản Lý Giáo Xứ" -NhaSanXuat "Nguyễn Đức Khoan" -ChiKiemChung
 ```
 
 Tất cả phải in `KIEM_CHUNG_DAT`.
