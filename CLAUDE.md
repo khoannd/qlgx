@@ -101,6 +101,10 @@ Sáu điều tuyệt đối không được quên:
   sang nhánh khác, dùng `git worktree` NHƯNG phải xin phép trước (xem mục ở đầu file) —
   worktree tạo ra vẫn dùng chung `.git` với phiên kia, tạo/xoá worktree không đúng lúc có
   thể ảnh hưởng tới việc họ đang làm.
+- **Ảnh chụp màn hình khi test (Playwright, kiểm thử web...) phải lưu vào thư mục
+  `/screenshots/`**, không được để rớt ra thẳng thư mục gốc của repo — thư mục gốc đã nhiều
+  lần bị vương vãi ảnh chụp màn hình của các lần test trước. `/screenshots/` đã được đưa vào
+  `.gitignore`.
 - Vì có nhiều phiên chạy song song, **các thay đổi kiểu migration** (schema D1/SQL, đổi
   cấu trúc file cấu hình dùng chung, đổi hợp đồng API giữa `landing/` và phần mềm desktop,
   ...) cần kiểm tra kỹ xem phiên khác có đang đụng vào cùng chỗ không, để tránh xung đột
