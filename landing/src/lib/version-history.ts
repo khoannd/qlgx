@@ -43,6 +43,26 @@ const FORUM_BASE = "https://forum.quanlygiaoxu.net";
 
 export const versionHistory: VersionHistoryEntry[] = [
   {
+    label: "4.0.4",
+    date: "2026-09-17",
+    highlights: [
+      "Sửa lỗi nghiêm trọng: chương trình tự cập nhật (menu Trợ giúp > Kiểm tra phiên bản mới, hoặc tự động khi mở chương trình) đôi khi làm chương trình không mở lên được sau khi cập nhật xong.",
+      "Nguyên nhân: lúc chương trình tự đóng để nhường chỗ ghi đè tập tin mới, Windows chưa kịp giải phóng hết các tập tin cũ, nên một số tập tin bị ghi đè nửa chừng và hỏng.",
+      "Nay chương trình chờ đúng cách cho phần cũ đóng hẳn trước khi ghi đè (báo và chờ quý vị đóng chương trình nếu cần), không còn xảy ra tình trạng đó nữa.",
+      "Quý vị đã gặp hiện tượng \"cập nhật/cài xong nhưng bấm vào chương trình không thấy gì xảy ra\": xin gỡ cài đặt rồi cài lại bản này — dữ liệu giáo xứ không bị ảnh hưởng.",
+    ],
+    download: { fileName: "qlgx_4_0_4.exe", size: "Khoảng 8,3 MB" },
+  },
+  {
+    label: "4.0.3",
+    date: "2026-09-13",
+    highlights: [
+      "Sửa lỗi nghiêm trọng: cài bản mới đè lên máy đang mở sẵn chương trình thì sau khi cài xong, chương trình không mở lên được, vì Windows hoãn thay các tập tin đang bị khoá tới lần khởi động lại máy tiếp theo dù bộ cài vẫn báo \"cài đặt thành công\".",
+      "Nay bộ cài tự kiểm tra: nếu thấy chương trình đang mở, bộ cài dừng lại và báo rõ để quý vị đóng chương trình trước, rồi cài lại.",
+    ],
+    download: { fileName: "qlgx_4_0_3.exe", size: "Khoảng 8,25 MB" },
+  },
+  {
     label: "4.0.2",
     date: "2026-09-07",
     highlights: [

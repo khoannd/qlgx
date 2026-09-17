@@ -21,57 +21,44 @@ import type {
  */
 const DOWNLOAD_ENDPOINT = "/api/tai-ve";
 
-// Nội dung "release note" hiển thị công khai CỐ Ý giữ nguyên theo bản 4.0.0 —
-// 4.0.1 và 4.0.2 chỉ là các bản vá kỹ thuật cho chính đợt phát hành 4.0.0 (lỗi
-// bộ cài thiếu thư mục, rồi lỗi cài đè không thật sự cập nhật chương trình),
-// chưa ai từng cài hai bản đó nên không cần giải thích cho người dùng cuối.
-// Tệp tải và số phiên bản hiển thị vẫn phải là 4.0.2 — đó là bản cài THẬT SỰ
-// hoạt động đúng. Nội dung chi tiết từng bản vẫn lưu đầy đủ, trung thực ở
+// Nội dung "release note" hiển thị công khai cho bản 4.0.4 — bản này đáng nói
+// riêng vì sửa một lỗi có thật, đã có người dùng gặp: chương trình không mở
+// lên được sau khi cài đè hoặc tự cập nhật. Hai bản 4.0.1/4.0.2 trước đó vẫn
+// CỐ Ý giữ nguyên nội dung của 4.0.0 (chưa ai từng cài hai bản vá kỹ thuật đó).
+// Nội dung chi tiết từng bản vẫn lưu đầy đủ, trung thực ở
 // src/lib/version-history.ts (trang /phien-ban) cho ai muốn xem kỹ.
 const release: Release = {
-  version: "4.0.2",
-  publishedAt: "2026-09-07",
-  headline: "Nền tảng mới, chạy khoẻ trên Windows 10 và 11",
+  version: "4.0.4",
+  publishedAt: "2026-09-17",
+  headline: "Sửa lỗi: cập nhật xong chương trình không mở lên được",
   summary:
-    "Bản nâng cấp lớn nhất từ trước tới nay: chương trình được chuyển sang nền tảng .NET Framework 4.8 và làm lại cách kết nối với Microsoft Office đời mới.",
+    "Một số máy sau khi cài đè bản mới hoặc dùng chức năng tự cập nhật trong chương trình bị tình trạng bấm vào chương trình không có gì xảy ra. Bản 4.0.4 sửa tận gốc cả hai nguyên nhân gây ra lỗi này.",
   groups: [
     {
-      id: "nen-tang",
-      title: "Nâng cấp nền tảng",
+      id: "tu-cap-nhat",
+      title: "Sửa lỗi chương trình tự cập nhật làm hỏng chính nó",
       icon: "download",
       items: [
-        "Chuyển từ .NET Framework 2.0 lên 4.8 để chạy ổn định trên Windows 10 và Windows 11.",
-        "Làm lại cách kết nối với Microsoft Word và Excel cho phù hợp các phiên bản Office mới.",
-        "Cập nhật lại toàn bộ các mẫu in.",
+        "Khi dùng menu Trợ giúp > Kiểm tra phiên bản mới (hoặc tự động lúc mở chương trình), chương trình cũ tự đóng để nhường chỗ ghi tập tin mới nhưng Windows chưa kịp giải phóng hết tài nguyên — khiến một số tập tin bị ghi đè nửa chừng và hỏng.",
+        "Nay chương trình chờ đúng cách cho phần cũ đóng hẳn (báo và chờ quý vị đóng nếu cần) trước khi ghi đè, không còn tranh chấp tài nguyên như trước.",
       ],
     },
     {
-      id: "office",
-      title: "Sửa lỗi xuất Word & Excel",
+      id: "cai-dat",
+      title: "Bộ cài chặn khi chương trình đang mở (từ bản 4.0.3)",
       icon: "check-square",
       items: [
-        "Chương trình tự nhận ra lỗi kết nối Office và mời sửa ngay tại chỗ báo lỗi.",
-        "Chỉ xoá thông tin thừa của bản Office cũ, giữ nguyên bản Office đang dùng — an toàn cho máy dùng Office 2010 và 2013.",
-        "Tự sao lưu registry ra tệp trước khi sửa, để có thể khôi phục lại.",
+        "Cài đè lên máy đang mở sẵn chương trình trước đây có thể báo \"cài đặt thành công\" nhưng chương trình sau đó không mở lên được, vì Windows hoãn thay các tập tin đang bị khoá tới lần khởi động lại máy.",
+        "Nay bộ cài tự kiểm tra và dừng lại, báo rõ để quý vị đóng chương trình trước rồi cài lại.",
       ],
     },
     {
-      id: "mgc",
-      title: "Nhập dữ liệu từ phần mềm MGC",
+      id: "da-gap-loi",
+      title: "Quý vị nào đã gặp tình trạng này",
       icon: "database",
       items: [
-        "Nhập đầy đủ cả những người chỉ có tên trong Sổ Rửa tội mà chưa có phần Lý lịch.",
-        "Giữ nguyên lý lịch đã có: ngày qua đời, số điện thoại, dân tộc, địa chỉ.",
-        "Tự kiểm tra và cài giúp Microsoft Access Database Engine khi máy còn thiếu, có xác thực chữ ký số của Microsoft.",
-      ],
-    },
-    {
-      id: "bi-tich",
-      title: "Sổ bí tích & gia đình",
-      icon: "book",
-      items: [
-        "Sửa lỗi mục Hôn phối trong Sổ bí tích chỉ hiện mã số thay vì tên người chồng và người vợ.",
-        "Khi chọn vợ hoặc chồng mà người còn lại đã qua đời, chương trình không tự đưa người đó vào gia đình nữa.",
+        "Gỡ cài đặt chương trình (Windows > Add or Remove Programs / Gỡ cài đặt chương trình, tìm QLGX — không dùng tệp unins000.exe cũ), rồi tải và cài lại bản 4.0.4 là chạy lại bình thường.",
+        "Dữ liệu giáo xứ (tệp .mdb) nằm tách riêng khỏi thư mục chương trình nên không bị ảnh hưởng khi gỡ cài đặt.",
       ],
     },
   ],
@@ -89,14 +76,14 @@ const release: Release = {
     {
       id: "full",
       tag: "Cài mới & cập nhật",
-      title: "Bộ cài đặt QLGX 4.0.2",
+      title: "Bộ cài đặt QLGX 4.0.4",
       summary:
         "Dùng được cho cả máy cài lần đầu lẫn máy đang chạy bản cũ. Nếu máy đã có QLGX, cứ chạy thẳng bộ cài này — nó tự nhận ra và nâng cấp tại chỗ, không cần gỡ bản cũ trước, dữ liệu giáo dân giữ nguyên.",
-      fileName: "qlgx_4_0_2.exe",
-      size: "Khoảng 8,2 MB",
+      fileName: "qlgx_4_0_4.exe",
+      size: "Khoảng 8,3 MB",
       href: `${DOWNLOAD_ENDPOINT}/full`,
       primary: true,
-      cta: "Tải bộ cài QLGX 4.0.2",
+      cta: "Tải bộ cài QLGX 4.0.4",
     },
   ],
   articleSlug: "phat-hanh-phien-ban-4-0-0",
