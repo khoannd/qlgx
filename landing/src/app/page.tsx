@@ -503,6 +503,19 @@ export default async function HomePage() {
                   <ChevronIcon className="h-4 w-4" />
                 </Link>
               </div>
+
+              <div className="rounded-2xl border-l-4 border-l-mint bg-mint/8 p-6">
+                <h3 className="font-sans text-[0.98rem] font-bold text-ink">
+                  Cài/cập nhật xong mà bấm vào chương trình không thấy gì?
+                </h3>
+                <p className="mt-3 text-[0.95rem] leading-relaxed text-ink">
+                  Xin gỡ cài đặt chương trình (vào Windows, mục &quot;Add or Remove
+                  Programs&quot; / &quot;Gỡ cài đặt chương trình&quot;, tìm QLGX để gỡ —
+                  không dùng tệp <code>unins000.exe</code> cũ), rồi tải và cài lại bản mới
+                  nhất ở trên. Dữ liệu giáo xứ nằm tách riêng khỏi thư mục chương trình nên
+                  không bị ảnh hưởng khi gỡ cài đặt.
+                </p>
+              </div>
             </div>
           </Reveal>
         </section>
