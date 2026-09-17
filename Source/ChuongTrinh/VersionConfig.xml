@@ -1,7 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <application value="GiaoXu" xmlns="urn:newversion-schema">
-  <version-info value="4.0.3.0" display="4.0.3" exename="GiaoXu.exe">
+  <version-info value="4.0.4.0" display="4.0.4" exename="GiaoXu.exe">
     <info>
+      Ngày 17-09-2026: cập nhật lên phiên bản 4.0.4
+
+      - Sửa lỗi nghiêm trọng khác: chương trình tự cập nhật (menu Trợ giúp > Kiểm tra phiên bản mới, hoặc tự động khi mở chương trình) đôi khi làm chương trình không mở lên được sau khi cập nhật xong, dù báo cập nhật thành công và các tập tin trong thư mục cài đặt đã đúng ngày giờ mới.
+      + Nguyên nhân: lúc chương trình tự đóng để nhường chỗ ghi đè tập tin mới, Windows chưa kịp giải phóng hết các tập tin cũ, nên một số tập tin bị ghi đè nửa chừng và hỏng.
+      + Nay chương trình chờ đúng cách cho phần cũ đóng hẳn trước khi ghi đè (nếu cần sẽ báo và chờ quý vị đóng chương trình), nên không còn xảy ra tình trạng đó nữa.
+      + Quý vị nào từng gặp hiện tượng "cập nhật/cài xong nhưng bấm vào chương trình không thấy gì xảy ra": xin gỡ cài đặt chương trình (vào Windows, mục "Add or Remove Programs" / "Gỡ cài đặt chương trình", tìm QLGX để gỡ - không dùng file unins000.exe cũ), rồi tải và cài lại bản 4.0.4 này là chạy lại bình thường, dữ liệu giáo xứ (tập tin .mdb) không bị ảnh hưởng vì nằm tách riêng khỏi thư mục chương trình.
+
       Ngày 13-09-2026: cập nhật lên phiên bản 4.0.3
 
       - Sửa lỗi nghiêm trọng: cài bản mới đè lên máy đang mở sẵn chương trình thì sau khi cài xong, chương trình không mở lên được.

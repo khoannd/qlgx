@@ -22,7 +22,13 @@
 <body>
     <h2>Thông tin cập nhật chương trình</h2>
     <div class="info">
-	
+
+	<p><b>17-09-2026</b></p>
+	<p><b>» Sửa lỗi nghiêm trọng khác: chương trình tự cập nhật đôi khi làm chương trình không mở lên được sau khi cập nhật xong</b></p>
+	<p>- Nguyên nhân: lúc chương trình tự đóng để nhường chỗ ghi đè tập tin mới, Windows chưa kịp giải phóng hết các tập tin cũ, nên một số tập tin bị ghi đè nửa chừng và hỏng.</p>
+	<p>- Nay chương trình chờ đúng cách cho phần cũ đóng hẳn trước khi ghi đè (nếu cần sẽ báo và chờ quý vị đóng chương trình), nên không còn xảy ra tình trạng đó nữa.</p>
+	<p>- Quý vị nào từng gặp hiện tượng "cập nhật/cài xong nhưng bấm vào chương trình không thấy gì xảy ra": xin gỡ cài đặt chương trình (vào Windows, mục "Add or Remove Programs" / "Gỡ cài đặt chương trình", tìm QLGX để gỡ - không dùng file unins000.exe cũ), rồi tải và cài lại bản 4.0.4 này là chạy lại bình thường, dữ liệu giáo xứ (tập tin .mdb) không bị ảnh hưởng vì nằm tách riêng khỏi thư mục chương trình.
+
 	<p><b>13-09-2026</b></p>
 	<p><b>» Sửa lỗi nghiêm trọng: cài bản mới đè lên máy đang mở sẵn chương trình thì sau khi cài xong, chương trình không mở lên được</b></p>
 	<p>- Nguyên nhân: khi Windows cần thay các tập tin chương trình mà chương trình đang mở (đang khoá các tập tin đó), Windows chỉ hoãn việc thay tới lần khởi động lại máy tiếp theo, nhưng vẫn báo "cài đặt thành công". Nếu mở chương trình ngay mà chưa khởi động lại máy, chương trình chạy với một số tập tin cũ và một số tập tin mới lẫn lộn nên bị lỗi.</p>

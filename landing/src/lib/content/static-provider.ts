@@ -301,6 +301,15 @@ const landingContent: LandingContent = {
       ],
     },
     {
+      id: "khong-mo-len-duoc",
+      question: "Cài hoặc cập nhật xong nhưng bấm vào chương trình không thấy gì xảy ra thì làm sao?",
+      answer: [
+        "Xin gỡ cài đặt chương trình (vào Windows, mục \"Add or Remove Programs\" / \"Gỡ cài đặt chương trình\", tìm QLGX để gỡ — không dùng file unins000.exe cũ trong thư mục cài đặt), rồi tải bản mới nhất về cài lại từ đầu.",
+        "Dữ liệu giáo xứ (tập tin .mdb) nằm tách riêng khỏi thư mục chương trình nên gỡ cài đặt không ảnh hưởng gì tới dữ liệu.",
+        "Từ bản 4.0.4, lỗi khiến chương trình rơi vào tình trạng này (do quá trình tự cập nhật) đã được sửa tận gốc, nên nếu đang dùng bản 4.0.4 trở lên thì sẽ không gặp lại nữa.",
+      ],
+    },
+    {
       id: "ho-tro",
       question: "Gặp lỗi hoặc cần thêm tính năng thì liên hệ ở đâu?",
       answer: [
